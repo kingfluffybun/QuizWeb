@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+    --primary-color: #9966FF;
+    --secondary-color: #f6f6f6;
+    --text-color: #333;
+    --border-color: #e6e6e6;
+    --selected-color: #7D3FFF;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 2.75rem;
+}
+
+p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+}
+
+body {
+    display: grid;
+    grid-template-areas:
+        "sidebar main"
+        "sidebar footer";
+    grid-template-rows: 1fr 200px; 
+    grid-template-columns: 100px 1fr;
+    min-height: 100vh;
+}
+
+sidebar {
+    grid-area: sidebar;
+    background-color: #fff;
+    /* width: 200px;
+    height: 100vh; */
+    border-right: 1px solid var(--border-color);
+}
+
+main {
+    grid-area: main;
+    background-color: #f6f6f6;
+    /* height: calc(100vh - 120px); */
+    width: 100%;
+    position: relative;
+    display: flex;
+    
+}
+
+main::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 280px;
+    background-color: var(--primary-color);
+    
+    /* Perfect shallow arc across any screen size */
+    clip-path: ellipse(75% 100% at 50% 0%);
+    
+    z-index: 1;
+}
+
+footer {
+    grid-area: footer;
+    background-color: #fff;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16vw;
+    > .options {
+        justify-content: center;
+        height: 100px;
+        width: 560px;
+        > p {font-size: 2rem; font-weight: 700;}
+    }
+    > .options#submit {
+        background-color: var(--selected-color);
+        border: none;
+        color: #fff;
+    } .options#skip {p{color:#AFAFAF;}}
+}
+
+.quiz-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px 16vw;
+    width: 100%;
+    margin-top: 360px;
+}
+
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.options {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+    width: 100%;
+    height: 120px;
+    background-color: #fff;
+    border: 6px solid var(--border-color);
+    border-radius: 48px;
+    box-shadow: 0px 4px 0px rgba(169, 87, 223, 0.1);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    > div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 60px;
+        width: 60px;
+        border-radius: 24px;
+        border: 6px solid var(--border-color);
+        color: #AFAFAF;
+        font-weight: 700;
+        font-size: 1.5rem;
+    }
+}
+
+.options.active {
+    background-color: #EAE4F7;
+    border: 6px solid var(--selected-color);
+    color: var(--selected-color);
+    > div {
+        background-color: var(--selected-color);
+        border: none;
+        color: #fff;
+    }
+}
