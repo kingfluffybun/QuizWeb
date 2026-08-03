@@ -18,12 +18,12 @@ h1 {
     font-family: 'Poppins', sans-serif;
     color: var(--text-color);
     font-weight: 600;
-    font-size: 2.75rem;
+    font-size: clamp(1.5rem, 3.5vw, 2.25rem);
 }
 
 p {
     font-family: 'Montserrat', sans-serif;
-    font-size: 1.75rem;
+    font-size: clamp(1rem, 2vw, 1.5rem);
     font-weight: 500;
 }
 
@@ -32,7 +32,7 @@ body {
     grid-template-areas:
         "sidebar main"
         "sidebar footer";
-    grid-template-rows: 1fr 200px; 
+    grid-template-rows: 1fr clamp(120px, 2vh, 200px); 
     grid-template-columns: 100px 1fr;
     min-height: 100vh;
 }
@@ -61,43 +61,20 @@ main::before {
     top: 0;
     left: 0;
     width: 100%;
-    height: 280px;
+    height: clamp(160px, 20vh, 280px);
     background-color: var(--primary-color);
-    
-    /* Perfect shallow arc across any screen size */
     clip-path: ellipse(75% 100% at 50% 0%);
     
     z-index: 1;
-}
-
-footer {
-    grid-area: footer;
-    background-color: #fff;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16vw;
-    > .options {
-        justify-content: center;
-        height: 100px;
-        width: 560px;
-        > p {font-size: 2rem; font-weight: 700;}
-    }
-    > .options#submit {
-        background-color: var(--selected-color);
-        border: none;
-        color: #fff;
-    } .options#skip {p{color:#AFAFAF;}}
 }
 
 .quiz-container {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    padding: 24px 16vw;
+    padding: 24px clamp(24px, 8vw, 200px);
     width: 100%;
-    margin-top: 360px;
+    margin: clamp(120px, 22vh, 360px) auto 0;
 }
 
 .options-container {
@@ -112,35 +89,59 @@ footer {
     padding: 0 24px;
     gap: 20px;
     width: 100%;
-    height: 120px;
+    min-height: clamp(72px, 10vh, 120px);
     background-color: #fff;
-    border: 6px solid var(--border-color);
-    border-radius: 48px;
-    box-shadow: 0px 4px 0px rgba(169, 87, 223, 0.1);
+    border: 4px solid var(--border-color);
+    border-radius: 36px;
+    border-bottom: 8px solid var(--border-color);
+    /* box-shadow: 0px 4px 0px rgba(169, 87, 223, 0.1); */
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
     cursor: pointer;
+    user-select: none;
     > div {
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 60px;
-        width: 60px;
-        border-radius: 24px;
-        border: 6px solid var(--border-color);
+        height: clamp(44px, 5vh, 60px);
+        width: clamp(44px, 5vh, 60px);
+        border-radius: 12px;
+        border: 4px solid var(--border-color);
         color: #AFAFAF;
         font-weight: 700;
-        font-size: 1.5rem;
+        font-size: clamp(1.1rem, 1.5vw, 1.5rem);
     }
 }
 
 .options.active {
     background-color: #EAE4F7;
-    border: 6px solid var(--selected-color);
+    border-color: var(--selected-color);
     color: var(--selected-color);
     > div {
         background-color: var(--selected-color);
         border: none;
         color: #fff;
     }
+}
+
+footer {
+    grid-area: footer;
+    background-color: #fff;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 clamp(24px, 8vw, 200px);
+    > .options {
+        justify-content: center;
+        min-height: clamp(72px, 6vh, 80px);
+        width: 400px;
+        > p {font-size: clamp(1.1rem, 1.2vw, 2rem); font-weight: 700;}
+    }
+    > .options#submit {
+        background-color: var(--selected-color);
+        border: none;
+        border-bottom: 6px solid #6B36DA;
+        color: #fff;
+    } .options#skip {p{color:#AFAFAF;}}
 }
