@@ -72,7 +72,7 @@ main::before {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    padding: 24px clamp(24px, 8vw, 200px);
+    padding: 24px clamp(24px, 10vw, 200px);
     width: 100%;
     margin: clamp(120px, 22vh, 360px) auto 0;
 }
@@ -80,7 +80,7 @@ main::before {
 .options-container {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 label {
@@ -97,6 +97,9 @@ label {
             color: #fff;
         }
     }
+    input[type="radio"]:active + .options {
+        border-bottom-width: 4px;
+    }
 }
 
 .options {
@@ -110,12 +113,12 @@ label {
     border: 4px solid var(--border-color);
     border-radius: 36px;
     border-bottom: 8px solid var(--border-color);
-    /* box-shadow: 0px 4px 0px rgba(169, 87, 223, 0.1); */
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
     cursor: pointer;
     user-select: none;
     transition: all 250ms ease;
+    transition: border 100ms linear;
     color: #666;
     > div {
         display: flex;
@@ -138,7 +141,7 @@ footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 clamp(24px, 8vw, 200px);
+    padding: 0 clamp(24px, 10vw, 200px);
     > .options {
         justify-content: center;
         min-height: clamp(72px, 6vh, 80px);
