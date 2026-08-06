@@ -83,6 +83,22 @@ main::before {
     gap: 16px;
 }
 
+label {
+    input[type="radio"] {
+        display: none;
+    }
+    input[type="radio"]:checked + .options {
+        background-color: #EAE4F7;
+        border-color: var(--selected-color);
+        color: var(--selected-color);
+        > div {
+            background-color: var(--selected-color);
+            border: none;
+            color: #fff;
+        }
+    }
+}
+
 .options {
     display: flex;
     align-items: center;
@@ -99,6 +115,8 @@ main::before {
     font-weight: 700;
     cursor: pointer;
     user-select: none;
+    transition: all 250ms ease;
+    color: #666;
     > div {
         display: flex;
         align-items: center;
@@ -110,17 +128,6 @@ main::before {
         color: #AFAFAF;
         font-weight: 700;
         font-size: clamp(1.1rem, 1.5vw, 1.5rem);
-    }
-}
-
-.options.active {
-    background-color: #EAE4F7;
-    border-color: var(--selected-color);
-    color: var(--selected-color);
-    > div {
-        background-color: var(--selected-color);
-        border: none;
-        color: #fff;
     }
 }
 
