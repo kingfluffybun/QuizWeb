@@ -8,21 +8,57 @@
 </head>
 <body class="auth-page">
   <main class="auth-card" id="auth">
+    <div class="editor-bar" aria-hidden="true">
+      <span class="editor-dots"><span></span><span></span><span></span></span>
+      <div class="editor-tabs">
+        <span class="editor-tab active"><span class="tab-dot"></span>index.html</span>
+        <span class="editor-tab"><span class="tab-dot"></span>style.css</span>
+      </div>
+    </div>
+
     <section class="info" aria-label="Authentication info">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-        </div>
+        <div class="brand-mark" aria-hidden="true"></div>
         <span>QuizWeb</span>
       </div>
 
       <div class="panel">
-        <p class="tag" id="panelLabel">Minimal access</p>
+        <p class="tag" id="panelLabel"></p>
         <h1 id="panelTitle">Welcome back</h1>
-        <p id="panelText">Continue your quiz streak where you left off.</p>
+        <p id="panelText">Pick up your HTML, CSS, and JS quizzes where you left off.</p>
+        <div class="lang-badges" aria-hidden="true">
+          <span class="lang-chip"><span class="dot html"></span>HTML</span>
+          <span class="lang-chip"><span class="dot css"></span>CSS</span>
+          <span class="lang-chip"><span class="dot js"></span>JS</span>
+        </div>
       </div>
+
+      <p class="code-mark" aria-hidden="true">&lt;/&gt;</p>
+      <div class="ring" aria-hidden="true"></div>
+      <div class="blob" aria-hidden="true"></div>
+       <div class="quiz-preview" aria-hidden="true">
+        <p class="qp-eyebrow">Question 7 · HTML</p>
+        <p class="qp-question">Which tag creates a hyperlink?</p>
+        <div class="qp-options">
+          <div class="qp-option"><span class="qp-letter">1</span><code>&lt;div&gt;</code></div>
+          <div class="qp-option correct">
+            <span class="qp-letter">2</span><code>&lt;a&gt;</code>
+            <svg class="qp-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="qp-option"><span class="qp-letter">3</span><code>&lt;span&gt;</code></div>
+        </div>
+        <div class="qp-progress">
+          <div class="qp-progress-track"><div class="qp-progress-fill"></div></div>
+          <span>7 / 20</span>
+        </div>
+      </div>
+      
     </section>
 
     <section class="formPanel" aria-label="Authentication form">
+      <div class="gutter" aria-hidden="true">
+        <span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span>
+      </div>
       <div class="formCard">
         <header class="formHead">
           <p class="eyebrow" id="formLabel">Access your account</p>
@@ -154,9 +190,9 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const card = document.getElementById('auth');
-      const signIn = document.getElementById('signIn');
-      const signUp = document.getElementById('signUp');
+      const auth = document.getElementById('auth');
+      const inView = document.getElementById('signIn');
+      const upView = document.getElementById('signUp');
       const modal = document.getElementById('forgot');
       const panelLabel = document.getElementById('panelLabel');
       const panelTitle = document.getElementById('panelTitle');
@@ -164,7 +200,7 @@
       const formLabel = document.getElementById('formLabel');
       const formTitle = document.getElementById('formTitle');
       const formText = document.getElementById('formText');
-      const toggleLink = document.getElementById('toggleLink');
+      const toggle = document.getElementById('toggleLink');
       const links = document.querySelectorAll('.link');
       const openForgot = document.querySelector('.forgot-link');
       const closeModal = document.querySelector('.modalClose');
@@ -174,7 +210,7 @@
       const stepText = document.getElementById('stepText');
       const actionButtons = document.querySelectorAll('.modal .submit-btn');
 
-      function showStep(n) {
+      function setStep(n) {
         steps.forEach((step) => step.classList.remove('active'));
         document.getElementById(`step${n}`).classList.add('active');
 
@@ -191,33 +227,31 @@
         stepText.textContent = text;
       }
 
-      function showView(mode) {
+      function setView(mode) {
         if (mode === 'signup') {
-          card.classList.add('is-signup');
-          signIn.classList.remove('active');
-          signUp.classList.add('active');
-          panelLabel.textContent = 'New journey';
+          auth.classList.add('is-signup');
+          inView.classList.remove('active');
+          upView.classList.add('active');
           panelTitle.textContent = 'Create account';
           panelText.textContent = 'Start learning with QuizWeb in minutes.';
           formLabel.textContent = 'Get started';
           formTitle.textContent = 'Create account';
           formText.textContent = 'A few details and you’re ready to go.';
-          toggleLink.textContent = 'Already have an account? Sign in';
-          toggleLink.setAttribute('href', '#signin');
-          toggleLink.setAttribute('data-mode', 'signin');
+          toggle.textContent = 'Already have an account? Sign in';
+          toggle.setAttribute('href', '#signin');
+          toggle.setAttribute('data-mode', 'signin');
         } else {
-          card.classList.remove('is-signup');
-          signIn.classList.add('active');
-          signUp.classList.remove('active');
-          panelLabel.textContent = 'Minimal access';
+          auth.classList.remove('is-signup');
+          inView.classList.add('active');
+          upView.classList.remove('active');
           panelTitle.textContent = 'Welcome back';
-          panelText.textContent = 'Continue your quiz streak where you left off.';
+          panelText.textContent = 'Pick up your HTML, CSS, and JS quizzes where you left off.';
           formLabel.textContent = 'Access your account';
           formTitle.textContent = 'Sign in';
           formText.textContent = 'Use your email and password to continue.';
-          toggleLink.textContent = 'New here? Create account';
-          toggleLink.setAttribute('href', '#signup');
-          toggleLink.setAttribute('data-mode', 'signup');
+          toggle.textContent = 'New here? Create account';
+          toggle.setAttribute('href', '#signup');
+          toggle.setAttribute('data-mode', 'signup');
         }
 
         window.location.hash = mode === 'signup' ? 'signup' : 'signin';
@@ -228,10 +262,10 @@
           event.preventDefault();
           const mode = link.getAttribute('data-mode');
           if (mode === 'signup') {
-            showView('signup');
+            setView('signup');
           } else if (mode === 'signin') {
             modal.classList.remove('visible');
-            showView('signin');
+            setView('signin');
           }
         });
       });
@@ -239,47 +273,51 @@
       openForgot.addEventListener('click', (event) => {
         event.preventDefault();
         modal.classList.add('visible');
-        showStep(1);
+        setStep(1);
         window.location.hash = 'forgot-password';
       });
 
       closeModal.addEventListener('click', () => {
         modal.classList.remove('visible');
-        showStep(1);
+        setStep(1);
         window.location.hash = 'signin';
       });
 
       modal.addEventListener('click', (event) => {
         if (event.target === modal) {
           modal.classList.remove('visible');
-          showStep(1);
+          setStep(1);
           window.location.hash = 'signin';
         }
       });
 
       actionButtons.forEach((button) => {
         button.addEventListener('click', () => {
-          if (button.getAttribute('data-next-step') === '2') {
-            showStep(2);
-          } else if (button.getAttribute('data-next-step') === '3') {
-            showStep(3);
-          } else if (button.getAttribute('data-finish') === 'true') {
-            showStep(4);
-          } else if (button.getAttribute('data-mode') === 'signin') {
+          const next = button.getAttribute('data-next-step');
+          const finish = button.getAttribute('data-finish');
+          const mode = button.getAttribute('data-mode');
+
+          if (next === '2') {
+            setStep(2);
+          } else if (next === '3') {
+            setStep(3);
+          } else if (finish === 'true') {
+            setStep(4);
+          } else if (mode === 'signin') {
             modal.classList.remove('visible');
-            showView('signin');
+            setView('signin');
           }
         });
       });
 
       if (window.location.hash === '#signup') {
-        showView('signup');
+        setView('signup');
       } else if (window.location.hash === '#forgot-password') {
         modal.classList.add('visible');
-        showStep(1);
-        showView('signin');
+        setStep(1);
+        setView('signin');
       } else {
-        showView('signin');
+        setView('signin');
       }
     });
   </script>
