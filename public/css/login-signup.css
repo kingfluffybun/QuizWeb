@@ -57,18 +57,6 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   pointer-events: none;
 }
 
-.auth-card::after {
-  content: '';
-  position: absolute;
-  bottom: 8%;
-  right: 4%;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(153, 102, 255, 0.14), rgba(153, 102, 255, 0));
-  pointer-events: none;
-}
-
 .editor-bar {
   position: absolute;
   top: 0;
@@ -263,6 +251,31 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   align-items: flex-start;
 }
 
+#panelTitle,
+#panelText,
+#formLabel,
+#formTitle,
+#formText,
+#toggleText {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#toggleText {
+  display: inline-block;
+}
+
+#panelTitle.text-fade-out,
+#panelText.text-fade-out,
+#formLabel.text-fade-out,
+#formTitle.text-fade-out,
+#formText.text-fade-out,
+#toggleText.text-fade-out {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
 .panel-toggle {
   position: relative;
   z-index: 1;
@@ -283,6 +296,7 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   cursor: pointer;
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   box-shadow: 0 6px 16px rgba(20, 10, 40, 0.08);
+  overflow: hidden;
 }
 
 .panel-toggle:hover {

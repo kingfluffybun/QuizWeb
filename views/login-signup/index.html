@@ -26,7 +26,7 @@
         <p class="tag" id="panelLabel"></p>
         <h1 id="panelTitle">Welcome back</h1>
         <p id="panelText">Pick up your HTML, CSS, and JS quizzes where you left off.</p>
-        <a id="toggleLink" class="panel-toggle" href="#signup" data-mode="signup">New here? Create account</a>
+        <a id="toggleLink" class="panel-toggle" href="#signup" data-mode="signup"><span id="toggleText">New here? Create account</span></a>
       </div>
 
       <p class="code-mark" aria-hidden="true">&lt;/&gt;</p>
@@ -330,6 +330,7 @@
       const formTitle = document.getElementById('formTitle');
       const formText = document.getElementById('formText');
       const toggle = document.getElementById('toggleLink');
+      const toggleText = document.getElementById('toggleText');
       const links = document.querySelectorAll('.link, .panel-toggle');
       const openForgot = document.querySelector('.forgot-link');
       const closeModal = document.querySelector('.modalClose');
@@ -338,6 +339,21 @@
       const stepTitle = document.getElementById('stepTitle');
       const stepText = document.getElementById('stepText');
       const actionButtons = document.querySelectorAll('.modal .submit-btn');
+      const fadeEls = [panelTitle, panelText, formLabel, formTitle, formText, toggleText];
+      const FADE_MS = 220;
+      let fadeToken = 0;
+
+      function fadeSwapText(applyFn) {
+        const myToken = ++fadeToken;
+        fadeEls.forEach((el) => el.classList.add('text-fade-out'));
+
+        setTimeout(() => {
+          if (myToken !== fadeToken) return;
+          applyFn();
+          void panelTitle.offsetWidth;
+          fadeEls.forEach((el) => el.classList.remove('text-fade-out'));
+        }, FADE_MS);
+      }
 
       function setStep(n) {
         steps.forEach((step) => step.classList.remove('active'));
@@ -356,31 +372,44 @@
         stepText.textContent = text;
       }
 
-      function setView(mode) {
+      function setView(mode, animate = true) {
+        const applyMode = () => {
+          if (mode === 'signup') {
+            inView.classList.remove('active');
+            upView.classList.add('active');
+            panelTitle.textContent = 'Create account';
+            panelText.textContent = 'Start learning with QuizWeb in minutes.';
+            formLabel.textContent = 'Get started';
+            formTitle.textContent = 'Create account';
+            formText.textContent = 'A few details and you’re ready to go.';
+            toggleText.textContent = 'Already have an account? Sign in';
+            toggle.setAttribute('href', '#signin');
+            toggle.setAttribute('data-mode', 'signin');
+          } else {
+            inView.classList.add('active');
+            upView.classList.remove('active');
+            panelTitle.textContent = 'Welcome back';
+            panelText.textContent = 'Pick up your HTML, CSS, and JS quizzes where you left off.';
+            formLabel.textContent = 'Access your account';
+            formTitle.textContent = 'Sign in';
+            formText.textContent = 'Use your email and password to continue.';
+            toggleText.textContent = 'New here? Create account';
+            toggle.setAttribute('href', '#signup');
+            toggle.setAttribute('data-mode', 'signup');
+          }
+        };
+
         if (mode === 'signup') {
           auth.classList.add('is-signup');
-          inView.classList.remove('active');
-          upView.classList.add('active');
-          panelTitle.textContent = 'Create account';
-          panelText.textContent = 'Start learning with QuizWeb in minutes.';
-          formLabel.textContent = 'Get started';
-          formTitle.textContent = 'Create account';
-          formText.textContent = 'A few details and you’re ready to go.';
-          toggle.textContent = 'Already have an account? Sign in';
-          toggle.setAttribute('href', '#signin');
-          toggle.setAttribute('data-mode', 'signin');
         } else {
           auth.classList.remove('is-signup');
-          inView.classList.add('active');
-          upView.classList.remove('active');
-          panelTitle.textContent = 'Welcome back!';
-          panelText.textContent = 'Pick up your HTML, CSS, and JS quizzes where you left off.';
-          formLabel.textContent = 'Access your account';
-          formTitle.textContent = 'Sign in';
-          formText.textContent = 'Use your email and password to continue.';
-          toggle.textContent = 'New here? Create account';
-          toggle.setAttribute('href', '#signup');
-          toggle.setAttribute('data-mode', 'signup');
+        }
+
+        if (animate) {
+          fadeSwapText(applyMode);
+        } else {
+          fadeEls.forEach((el) => el.classList.remove('text-fade-out'));
+          applyMode();
         }
 
         window.location.hash = mode === 'signup' ? 'signup' : 'signin';
@@ -440,13 +469,13 @@
       });
 
       if (window.location.hash === '#signup') {
-        setView('signup');
+        setView('signup', false);
       } else if (window.location.hash === '#forgot-password') {
         modal.classList.add('visible');
         setStep(1);
-        setView('signin');
+        setView('signin', false);
       } else {
-        setView('signin');
+        setView('signin', false);
       }
 
       const slides = Array.from(document.querySelectorAll('.preview-slide'));
