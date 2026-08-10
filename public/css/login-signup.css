@@ -297,10 +297,10 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
 
 .preview-stack {
   position: absolute;
-  right: 4%;
-  bottom: 7%;
-  width: 460px;
-  height: 580px;
+  right: 3%;
+  bottom: 5%;
+  width: 560px;
+  height: 590px;
   z-index: 1;
   transform: rotate(-1.5deg);
   animation: qpFloat 6s ease-in-out infinite;
@@ -411,13 +411,13 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   color: var(--text-color);
 }
 
-.qp-options { 
+.qp-options {
   position: relative;
   flex: 1;
-  display: flex; 
-  flex-direction: column; 
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  gap: 12px; 
+  gap: 12px;
   padding-bottom: 22px;
 }
 
@@ -575,7 +575,7 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1.85fr 0.7fr;
+  grid-template-columns: 1fr 1.55fr 1fr;
   grid-template-rows: auto 1fr;
 }
 
