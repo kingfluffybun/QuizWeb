@@ -460,8 +460,18 @@
           applyMode();
         }
 
-        window.location.hash = mode === 'signup' ? 'signup' : 'signin';
+        // window.location.hash = mode === 'signup' ? 'signup' : 'signin';
       }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const path = window.location.pathname;
+
+        if (path === '/login') {
+          setView('signup', false);
+        } else if (path === '/register') {
+          setView('signin', false);
+        }
+    });
 
       links.forEach((link) => {
         link.addEventListener('click', (event) => {
