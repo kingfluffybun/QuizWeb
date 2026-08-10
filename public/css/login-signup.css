@@ -1075,6 +1075,42 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   height: 18px; 
 }
 
+.toggle-pw {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.toggle-pw:hover {
+  color: var(--primary-color);
+}
+
+.toggle-pw svg {
+  width: 18px;
+  height: 18px;
+  grid-area: 1 / 1;
+}
+
+.toggle-pw .icon-eye {
+  display: none;
+}
+
+.toggle-pw.is-visible .icon-eye {
+  display: block;
+}
+
+.toggle-pw.is-visible .icon-eye-off {
+  display: none;
+}
+
 .input-group input {
   flex: 1;
   width: 100%;
