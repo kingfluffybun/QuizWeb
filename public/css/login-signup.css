@@ -1084,13 +1084,9 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--primary-color);
   cursor: pointer;
   transition: color 0.2s ease;
-}
-
-.toggle-pw:hover {
-  color: var(--primary-color);
 }
 
 .toggle-pw svg {
