@@ -1,4 +1,4 @@
-nav {
+.nav {
     display: flex;
     align-items: center;
     height: 10vh;
@@ -80,7 +80,14 @@ nav {
     bottom: 0;
 }
 
-.hero-description {
+.hero2 {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.heroDescription {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     /* padding: 0 clamp(20px, 8vw, 242px); */
@@ -96,5 +103,4 @@ nav {
         > p {color: #666; line-height: 1.5; font-size: clamp(0.95rem, 1.2vw, 1.25rem); min-width: 400px;}
         > svg {color: #A883EA;}
     }
-
 }
