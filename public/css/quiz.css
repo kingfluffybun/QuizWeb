@@ -1,32 +1,41 @@
 body {
     display: grid;
     grid-template-areas:
+        "navbar navbar"
         "sidebar main"
         "sidebar footer";
-    grid-template-rows: 1fr clamp(120px, 2vh, 200px); 
+    grid-template-rows: 8vh 1fr clamp(120px, 2vh, 200px); 
     grid-template-columns: 100px 1fr;
     min-height: 100vh;
+}
+
+nav {
+    grid-area: navbar;
+    background-color: var(--primary-color);
+    width: 100%;
 }
 
 sidebar {
     grid-area: sidebar;
     background-color: #fff;
-    /* width: 200px;
-    height: 100vh; */
     border-right: 1px solid var(--border-color);
 }
 
 main {
     grid-area: main;
-    background-color: #f6f6f6;
+    background-color: #fff;
     /* height: calc(100vh - 120px); */
     width: 100%;
     position: relative;
     display: flex;
-    
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    padding: 24px clamp(24px, 10vw, 200px);
 }
 
-main::before {
+/* Rounded Header */
+/* main::before {
     content: '';
     position: absolute;
     top: 0;
@@ -35,17 +44,50 @@ main::before {
     height: clamp(160px, 20vh, 280px);
     background-color: var(--primary-color);
     clip-path: ellipse(75% 100% at 50% 0%);
-    
     z-index: 1;
+} */
+
+.quiz-header {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    gap: 20px;
+    width: 100%;
+    > .quiz-navigation {
+        display: flex;
+        gap: 16px;
+        width: 100%;
+        color: #333;
+        > .heart-container {
+            display: flex;
+            margin-left: auto;
+            > svg {
+                margin-left: -12px;
+                color: #fff;
+            }
+        }
+    }
+    > .progress-container {
+        display: flex;
+        width: 100%;
+        gap: 12px;
+        > div {
+            background-color: #e0e0e0;
+            width: 100%;
+            height: 12px;
+            border-radius: 4px;
+        } > .active {
+            background-color: var(--primary-color);
+        }
+    }
 }
 
 .quiz-container {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    padding: 24px clamp(24px, 10vw, 200px);
     width: 100%;
-    margin: clamp(120px, 22vh, 360px) auto 0;
+    /* margin: clamp(120px, 22vh, 360px) auto 0; */
 }
 
 .options-container {
