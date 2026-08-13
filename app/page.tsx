@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import styles from "../public/css/landing-page.module.css";
+import "#css/landing-page.css";
 
 export default function Home() {
     return (
         <body>
-            <section className={styles.hero}>
-                <nav className={styles.nav}>
+            <section className="hero">
+                <nav>
                     <div><a href="test.com"><p>Logo</p></a></div>
                     <div><a href="/quiz/index.html"><p>Learn</p></a></div>
                     <div><a href="test.com"><p>Leaderboard</p></a></div>
@@ -15,7 +15,7 @@ export default function Home() {
                     <div><a href="/login"><p>Log in</p></a></div>
                     <div><a href="/login"><p>Sign Up</p></a></div>
                 </nav>
-                <div className={styles["hero-text"]}>
+                <div className="hero-text">
                     <h1>Code gets easier, QuizWeb makes it stick.</h1>
                     <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                     {/* <div>
@@ -23,16 +23,16 @@ export default function Home() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
                     </div> */}
                 </div>
-                <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id={styles['clouds-topleft']} className={styles.clouds} />
-                <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id={styles['clouds-topright']} className={styles.clouds} />
-                <Image src="/assets/landing-page/Bus.svg" width={100} height={100} alt="" id={styles['bus']} />
-                <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id={styles['clouds-left']} className={styles.clouds} />
-                <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id={styles['clouds-right']} className={styles.clouds} />
-                <div id={styles['ground']}></div>
+                <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds" />
+                <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds" />
+                <Image src="/assets/landing-page/Bus.svg" width={100} height={100} alt="" id="bus" />
+                <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds" />
+                <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds" />
+                <div id="ground"></div>
             </section>
             {/* <section style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}> */}
-            <section className={styles.hero2}>
-                <div className={styles.heroDescription}>
+            <section className="hero2">
+                <div className="heroDescription">
                     <div>
                         {/* <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-xml-icon lucide-code-xml"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg> */}
                         <h1>Learn by doing</h1>

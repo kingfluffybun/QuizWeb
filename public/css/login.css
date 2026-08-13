@@ -1,4 +1,4 @@
-/* :root {
+:root {
   --primary-color: #9966FF;
   --secondary-color: #f6f6f6;
   --text-color: #333;
@@ -6,7 +6,7 @@
   --selected-color: #7D3FFF;
   --ease: cubic-bezier(0.65, 0, 0.35, 1);
   --chrome-h: 45px;
-} */
+}
 
 *, *::before, *::after { 
   box-sizing: border-box; 

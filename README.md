@@ -18,13 +18,10 @@ favicon.ico = logo sa tab ng browser
 ONLY DO ".(style name)" dont css the tag itself, have a className
 
 *Pag gamit ng styles* 
-import (var name ex. styles) from "(relative directory)";
+import "#css/(name ng css nyo)";
 
 Old: <div class="sample">
-New: <div className={styles.sample}>
-
-Old: <div id="sample">
-New: <div id={styles['sample']}>
+New: <div className="sample">
 
 *Pag gamit ng Image*
 import Image from "next/image";
