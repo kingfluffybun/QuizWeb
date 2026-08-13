@@ -15,7 +15,7 @@ export default function Home() {
                     <div><a href="/login"><p>Log in</p></a></div>
                     <div><a href="/login"><p>Sign Up</p></a></div>
                 </nav>
-                <div>
+                <div className={styles["hero-text"]}>
                     <h1>Code gets easier, QuizWeb makes it stick.</h1>
                     <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                     {/* <div>

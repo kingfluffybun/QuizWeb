@@ -5,6 +5,8 @@
     --body-text-color: #666;
     --border-color: #e0e0e0;
     --selected-color: #7D3FFF;
+    --ease: cubic-bezier(0.65, 0, 0.35, 1);
+    --chrome-h: 45px;
 }
 
 * {
