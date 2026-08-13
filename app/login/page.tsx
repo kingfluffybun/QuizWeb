@@ -21,7 +21,7 @@ export default function LoginPage() {
                         <span>QuizWeb</span>
                     </div>
 
-                    {/* tuloy mo dto kev */}
+                    {/* tuloy mo dto kev ung html part lng */}
                 </section>
             </main>
         </body>
