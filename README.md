@@ -20,14 +20,14 @@ ONLY DO ".(style name)" dont css the tag itself, have a className
 *Pag gamit ng styles* 
 import "#css/(name ng css nyo)";
 
-Old: <div class="sample">
-New: <div className="sample">
+Old: < div class="sample">
+New: < div className="sample">
 
 *Pag gamit ng Image*
 import Image from "next/image";
 
-Old: <img class="sample">
-New: <Image className="sample" width={100} height={100}
+Old: < img class="sample">
+New: < Image className="sample" width={100} height={100}
 
 Need ng width and height para ma display nya, pwede din na 0 ung value kung iibahin mo sya sa css
 
