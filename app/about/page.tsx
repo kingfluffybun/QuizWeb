@@ -14,6 +14,7 @@ export default function Home() {
                     <div><a href="test.com"><p>About</p></a></div>
                     <div><a href="/login"><p>Log in</p></a></div>
                     <div><a href="/login"><p>Sign Up</p></a></div>
+                    {/* hater ako ni clarence */}
                 </nav>
             </section>
         </body>
