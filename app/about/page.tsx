@@ -2,7 +2,7 @@
 
 import "#css/landing-page.css";
 
-export default function Home() {
+export default function About() {
     return (
         <body>
             <section className="hero">
