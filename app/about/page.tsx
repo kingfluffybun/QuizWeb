@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import "#css/landing-page.css";
 
 export default function Home() {
