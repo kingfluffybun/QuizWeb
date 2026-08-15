@@ -5,6 +5,8 @@
     --body-text-color: #666;
     --border-color: #e0e0e0;
     --selected-color: #7D3FFF;
+    --background-color: #a883ea;
+    --white-text-color: #fafafa;
 }
 
 * {
@@ -24,4 +26,10 @@ p {
     font-family: 'Montserrat', sans-serif;
     font-size: clamp(1rem, 2vw, 1.5rem);
     font-weight: 500;
+}
+
+small {
+    font-family: 'Montserrat', sans-serif;
+    font-size: clamp(0.5rem, 1.5vw, 1rem);
+    font-weight: 400;
 }

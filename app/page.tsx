@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import "#css/landing-page.css";
+import "#css/nav.css";
 
 export default function Home() {
     return (
-        <body>
+        <main>
             <section className="hero">
                 <nav>
                     <div><a href="test.com"><p>Logo</p></a></div>
@@ -50,6 +51,6 @@ export default function Home() {
                     </div>
                 </div>
             </section>
-        </body>
+        </main>
     )
 }
