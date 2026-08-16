@@ -21,7 +21,7 @@
         justify-content: center;
         gap: 20px;
         z-index: 10;
-        > h1, p, div h1 {text-align: center; color: #fff;}
+        > h1, p, div h1 {text-align: center; color: #fafafa;}
         > h1 {
             font-size: clamp(38px, 5vw, 64px);
             font-weight: 600;
@@ -91,9 +91,6 @@
 }
 
 @media (max-width: 768px) {
-    nav button {display: flex;}
-    .nav-options {display: none;}
-    nav div:first-child {margin-left: 0;}
     .hero .hero-text {top: 22%;}
     /* #clouds-topleft {left: -24vh; top: -4vh;}
     #clouds-topright {right: -40vh; top: -4vh;}   */
