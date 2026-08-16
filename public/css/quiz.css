@@ -1,32 +1,41 @@
 body {
     display: grid;
     grid-template-areas:
+        "navbar navbar"
         "sidebar main"
         "sidebar footer";
-    grid-template-rows: 1fr clamp(120px, 2vh, 200px); 
+    grid-template-rows: 8vh 1fr clamp(140px, 2vh, 220px); 
     grid-template-columns: 100px 1fr;
     min-height: 100vh;
 }
 
-sidebar {
+nav {
+    grid-area: navbar;
+    background-color: var(--primary-color);
+    width: 100%;
+}
+
+.sidebar {
     grid-area: sidebar;
     background-color: #fff;
-    /* width: 200px;
-    height: 100vh; */
-    border-right: 1px solid var(--border-color);
+    border-right: 2px solid var(--border-color);
 }
 
 main {
     grid-area: main;
-    background-color: #f6f6f6;
+    background-color: #fff;
     /* height: calc(100vh - 120px); */
     width: 100%;
     position: relative;
     display: flex;
-    
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 24px clamp(24px, 10vw, 200px);
 }
 
-main::before {
+/* Rounded Header */
+/* main::before {
     content: '';
     position: absolute;
     top: 0;
@@ -35,17 +44,50 @@ main::before {
     height: clamp(160px, 20vh, 280px);
     background-color: var(--primary-color);
     clip-path: ellipse(75% 100% at 50% 0%);
-    
     z-index: 1;
+} */
+
+.quiz-header {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    gap: 20px;
+    width: 100%;
+    > .quiz-navigation {
+        display: flex;
+        gap: 16px;
+        width: 100%;
+        color: #333;
+        > .heart-container {
+            display: flex;
+            margin-left: auto;
+            > svg {
+                margin-left: -12px;
+                color: #fff;
+            }
+        }
+    }
+    > .progress-container {
+        display: flex;
+        width: 100%;
+        gap: 12px;
+        > div {
+            background-color: #e0e0e0;
+            width: 100%;
+            height: 12px;
+            border-radius: 4px;
+        } > .active {
+            background-color: var(--primary-color);
+        }
+    }
 }
 
 .quiz-container {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    padding: 24px clamp(24px, 10vw, 200px);
     width: 100%;
-    margin: clamp(120px, 22vh, 360px) auto 0;
+    /* margin: clamp(120px, 22vh, 360px) auto 0; */
 }
 
 .options-container {
@@ -69,7 +111,7 @@ label {
         }
     }
     input[type="radio"]:active + .options {
-        border-bottom-width: 4px;
+        border-bottom-width: 2px;
     }
 }
 
@@ -81,9 +123,9 @@ label {
     width: 100%;
     min-height: clamp(72px, 10vh, 120px);
     background-color: #fff;
-    border: 4px solid var(--border-color);
+    border: 2px solid var(--border-color);
     border-radius: 36px;
-    border-bottom: 8px solid var(--border-color);
+    border-bottom: 4px solid var(--border-color);
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
     cursor: pointer;
@@ -108,21 +150,22 @@ label {
 footer {
     grid-area: footer;
     background-color: #fff;
-    border-top: 1px solid var(--border-color);
+    border-top: 2px solid var(--border-color);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 clamp(24px, 10vw, 200px);
-    > .options {
+    justify-content: center;
+    padding: 36px clamp(24px, 10vw, 200px);
+    > div {
+        > .options {
         justify-content: center;
-        min-height: clamp(72px, 6vh, 80px);
-        width: 400px;
-        > p {font-size: clamp(1.1rem, 1.2vw, 2rem); font-weight: 700;}
+        min-height: clamp(56px, 6vh, 80px);
+        width: 320px;
+        > p {font-size: clamp(1rem, 1.2vw, 2rem); font-weight: 700;}
+        }
+        > .options#submit {
+            background-color: var(--selected-color);
+            border: none;
+            border-bottom: 6px solid #6B36DA;
+            color: #fff;
+        } .options#skip {p{color:#AFAFAF;}}
     }
-    > .options#submit {
-        background-color: var(--selected-color);
-        border: none;
-        border-bottom: 6px solid #6B36DA;
-        color: #fff;
-    } .options#skip {p{color:#AFAFAF;}}
 }
