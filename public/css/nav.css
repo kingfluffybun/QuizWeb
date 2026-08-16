@@ -16,9 +16,5 @@ nav {
         font-family: Poppins;
     } div:first-child {
         margin-right: auto;
-    } div:last-child {
-        background-color: #fff;
-        border-radius: 8px;
-        > a p {color: #A883EA; padding: 0.5rem 0.75rem;}
     }
 }
