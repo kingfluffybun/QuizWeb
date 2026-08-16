@@ -16,7 +16,6 @@
     pointer-events: none;
 }
 
-
 .about {
     background: var(--background-color);
     color: var(--white-text-color);
@@ -36,7 +35,7 @@
     z-index: 0;
     }
     
-    .clouds { width: 56vh; }
+    .clouds { width: 56vh; user-select:none; pointer-events:none;}
     #clouds-topleft { left: -12vh; top: 12vh; }
     #clouds-topright { right: -24vh; top: 12vh; }
     #clouds-left { left: 0; bottom: 0; }
@@ -78,31 +77,42 @@
         z-index: 20; 
         background: var(--background-color);
         margin-top: 60px;
-        padding: 0 20px 60px;
+        min-height: 80vh;
+        padding: 120px 20%;
         width: 100%;
-        max-width: 1200px;
         align-self: center;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 24px;
-        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 60px;
 
-        > .team-member {
+        > .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 24px;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .team-member {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 16px;
-            padding: 12px 16px;
+            max-width: 200px;
+            padding: 16px;
             height: 200px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
             text-align: center;
-            transition: transform 0.2s ease, background 0.2s ease;
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            color: var(--white-text-color);
 
             &:hover {
                 transform: translateY(-5px);
-                background: var(--primary-color);
+                background: var(--card-hover-color);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
             }
 
             > .avatar-placeholder {
@@ -111,12 +121,42 @@
                 border-radius: 24%;
                 background: var(--primary-color);
                 margin-bottom: 8px;
-                border: 2px solid var(--white-text-color);
+                border: 2px solid var(--card-background-color);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            > small {
+                font-size: 0.85rem;
+                font-weight: 500;
             }
 
             > p {
                 font-size: clamp(12px, 1.2vw, 16px);
                 font-weight: 600;
+            }
+        }
+
+        .team-leader-card {
+            width: 100%;
+            max-width: 200px;
+            height: 200px; 
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            
+            > .avatar-placeholder {
+                width: 100px;
+                height: 100px;
+                margin-bottom: 12px;
+            }
+
+            > small {
+                font-size: 1.1rem;
+            }
+
+            > p {
+                font-size: 1rem;
+                color: var(--white-text-color);
             }
         }
     }
