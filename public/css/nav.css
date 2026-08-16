@@ -18,3 +18,41 @@ nav {
         margin-right: auto;
     }
 }
+
+nav button {
+    background-color: transparent;
+    border: none;
+    font-size: 1.125rem;
+    color: #fff; 
+    font-family: Poppins;
+    display: none;
+    align-items: center;
+    height: 100%;
+    margin-left: auto;
+    gap: 8px;
+}
+
+nav {
+    height: 10vh;
+    width: 100%;
+    padding: 0 2rem;
+    > div:first-child {margin-right: auto;}
+}
+
+nav, .nav-options {
+    display: flex;
+    align-items: center;
+    div {margin: 0 0.75rem;} 
+    div a {text-decoration: none;}
+    div a p {
+        font-size: 1.125rem;
+        color: #fff; 
+        font-family: Poppins;
+    } 
+}
+
+.nav-options div:last-child {
+    background-color: #fff;
+    border-radius: 8px;
+    > a p {color: #A883EA; padding: 0.5rem 0.75rem;}
+}
