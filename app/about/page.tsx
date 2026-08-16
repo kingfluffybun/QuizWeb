@@ -67,13 +67,19 @@ export default function About() {
 
     return (
         <section className="about">
-            <nav style={{ backgroundColor: "var(--background-color)" }}>
+            <nav>
                 <div><a href="/"><p>Logo</p></a></div>
-                <div><a href="/quiz/index.html"><p>Learn</p></a></div>
-                <div><a href="test.com"><p>Leaderboard</p></a></div>
-                <div><a href="/"><p>Home</p></a></div>
-                <div><a href="/login"><p>Log in</p></a></div>
-                <div><a href="/login"><p>Sign Up</p></a></div>
+                <button className="menu-btn"> {/* for mobile 'to */}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu-icon lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+                    <p>Menu</p>
+                </button>
+                <div className="nav-options">
+                    <div><a href="/quiz"><p>Learn</p></a></div>
+                    <div><a href="test.com"><p>Leaderboard</p></a></div>
+                    <div><a href="/about"><p>About</p></a></div>
+                    <div><a href="/login"><p>Log in</p></a></div>
+                    <div><a href="/login"><p>Sign Up</p></a></div>
+                </div>
             </nav>
             
             <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds" />
