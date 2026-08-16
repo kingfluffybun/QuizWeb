@@ -6,7 +6,7 @@ export default function QuizPage() {
   return (
     <>
       <nav></nav>
-      <sidebar></sidebar>
+      <div className="sidebar"></div>
       <main>
         <div style={{ maxWidth: "1200px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <div className="quiz-header">
