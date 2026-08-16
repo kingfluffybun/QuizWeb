@@ -1,3 +1,22 @@
+.scroll-section {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    will-change: opacity, transform;
+}
+
+.scroll-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.spacer {
+    width: 100%;
+    height: 25vh;
+    pointer-events: none;
+}
+
+
 .about {
     background: var(--background-color);
     color: var(--white-text-color);
@@ -9,7 +28,23 @@
     overflow-x: hidden;
     h1 {color: var(--white-text-color);}
 
+    > img {
+    position: absolute;
+    -webkit-user-drag: none;
+    max-width: 100%;
+    height: auto;
+    z-index: 0;
+    }
+    
+    .clouds { width: 56vh; }
+    #clouds-topleft { left: -12vh; top: 12vh; }
+    #clouds-topright { right: -24vh; top: 12vh; }
+    #clouds-left { left: 0; bottom: 0; }
+    #clouds-right { right: 0; bottom: 0; }
+
     > .about-hero {
+        position: sticky;
+        top: 25vh;
         width: 100%;
         max-width: 1000px;
         padding: 0 20px;
@@ -39,6 +74,9 @@
     }
 
     > .about-team {
+        position: relative;
+        z-index: 20; 
+        background: var(--background-color);
         margin-top: 60px;
         padding: 0 20px 60px;
         width: 100%;
@@ -84,6 +122,8 @@
     }
 
     > .about-tech {
+        position: relative;
+        z-index: 20;
         width: 100%;
         max-width: 1200px;
         align-self: center;
@@ -98,6 +138,7 @@
             flex-wrap: wrap;
             justify-content: center;
             gap: 24px;
+
             > .tech-item {
                 display: flex;
                 flex-direction: column;
@@ -107,6 +148,7 @@
                 text-align: center;
                 color: var(--white-text-color);
                 text-decoration:none;
+
                 > .tech-icon-placeholder {
                     width: 64px;
                     height: 64px;
