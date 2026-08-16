@@ -29,6 +29,10 @@ import Image from "next/image";
 Old: < img class="sample">
 New: < Image className="sample" width={100} height={100}
 
+*Pag dagdag ng Image*
+Ilagay nyo sa public/assets
+Gawa kayo per-page based kung anong page yung pag gagamitan nyo
+
 Need ng width and height para ma display nya, pwede din na 0 ung value kung iibahin mo sya sa css
 
 *Pag comment*

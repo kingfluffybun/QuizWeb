@@ -66,19 +66,19 @@ export default function About() {
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 96 96">
                 <defs>
                     <linearGradient id="e399c19f-b68f-429d-b176-18c2117ff73c" x1="-1032.172" x2="-1059.213" y1="145.312" y2="65.426" gradientTransform="matrix(1 0 0 -1 1075 158)" gradientUnits="userSpaceOnUse">
-                        <stop offset="0" stop-color="#bababa"/>
-                        <stop offset="1" stop-color="#e6e6e6"/>
+                        <stop offset="0" stopColor="#bababa"/>
+                        <stop offset="1" stopColor="#e6e6e6"/>
                     </linearGradient>
                     <linearGradient id="ac2a6fc2-ca48-4327-9a3c-d4dcc3256e15" x1="-1023.725" x2="-1029.98" y1="108.083" y2="105.968" gradientTransform="matrix(1 0 0 -1 1075 158)" gradientUnits="userSpaceOnUse">
-                        <stop offset="0" stop-opacity=".3"/>
-                        <stop offset=".071" stop-opacity=".2"/>
-                        <stop offset=".321" stop-opacity=".1"/>
-                        <stop offset=".623" stop-opacity=".05"/>
-                        <stop offset="1" stop-opacity="0"/>
+                        <stop offset="0" stopOpacity=".3"/>
+                        <stop offset=".071" stopOpacity=".2"/>
+                        <stop offset=".321" stopOpacity=".1"/>
+                        <stop offset=".623" stopOpacity=".05"/>
+                        <stop offset="1" stopOpacity="0"/>
                     </linearGradient>
                     <linearGradient id="a7fee970-a784-4bb1-af8d-63d18e5f7db9" x1="-1027.165" x2="-997.482" y1="147.642" y2="68.561" gradientTransform="matrix(1 0 0 -1 1075 158)" gradientUnits="userSpaceOnUse">
-                        <stop offset="0" stop-color="var(--white-text-color)"/>
-                        <stop offset="1" stop-color="#eeeeee"/>
+                        <stop offset="0" stopColor="var(--white-text-color)"/>
+                        <stop offset="1" stopColor="#eeeeee"/>
                     </linearGradient>
                 </defs>
                 <path fill="url(#e399c19f-b68f-429d-b176-18c2117ff73c)" d="M33.338 6.544h26.038l-27.03 80.087a4.152 4.152 0 0 1-3.933 2.824H8.149a4.145 4.145 0 0 1-3.928-5.47L29.404 9.368a4.152 4.152 0 0 1 3.934-2.825z"/>
@@ -87,7 +87,7 @@ export default function About() {
                 <path fill="url(#a7fee970-a784-4bb1-af8d-63d18e5f7db9)" d="M66.595 9.364a4.145 4.145 0 0 0-3.928-2.82H33.648a4.146 4.146 0 0 1 3.928 2.82l25.184 74.62a4.146 4.146 0 0 1-3.928 5.472h29.02a4.146 4.146 0 0 0 3.927-5.472z"/>
             </svg>
         },
-        { name: "Name.com", url: "https://www.name.com/", icon: <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#4285F4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg> },
+        { name: "Name.com", url: "https://www.name.com/", icon: <Image src="/assets/about/name-com.png" className="designs" width={64} height={64} alt="" /> },
         { name: "GitHub Student", url: "https://education.github.com/pack", icon: <svg height="48" width="48" fill="var(--white-text-color)" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>GitHub</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>},
     ];
 
@@ -95,23 +95,29 @@ export default function About() {
         <section className="about">
             <nav>
                 <div><a href="/"><p>Logo</p></a></div>
-                <button className="menu-btn"> {/* for mobile 'to */}
+                <button className="menu-btn" aria-label="Toggle menu"> {/* for mobile */}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu-icon lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
                     <p>Menu</p>
                 </button>
                 <div className="nav-options">
                     <div><a href="/quiz"><p>Learn</p></a></div>
-                    <div><a href="test.com"><p>Leaderboard</p></a></div>
+                    <div><a href="/leaderboard"><p>Leaderboard</p></a></div>
                     <div><a href="/about"><p>About</p></a></div>
                     <div><a href="/login"><p>Log in</p></a></div>
                     <div><a href="/login"><p>Sign Up</p></a></div>
                 </div>
             </nav>
             
-            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds" priority aria-hidden="true" />
-            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds" priority aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="designs" priority aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="designs" priority aria-hidden="true" />
+
+            
+            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-middleright" className="designs" priority aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-middleleft" className="designs" priority aria-hidden="true" />
             
             <div className="spacer"></div>
+
+            <Image src="/assets/about/Hotair-baloon.svg" width={200} height={200} alt="" id="hotair-baloon" className="designs" priority aria-hidden="true" />
 
             <header className="about-hero scroll-section" ref={addToRefs}>
                 <h1>About Us</h1>
@@ -120,8 +126,48 @@ export default function About() {
             </header>
 
             <div className="spacer"></div>
-            
+            <div className="spacer"></div>
+
+            <div className="about-description scroll-section" ref={addToRefs}>
+                <div className="column">
+                    <h1>Our Mission</h1>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                </div>
+                <div className="column">
+                    <h1>Our Vision</h1>
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </div>
+            </div>
+
+            <div className="spacer"></div>
+
+            <Image src="/assets/about/Plane-banner.svg" width={600} height={100} alt="" id="plane-banner" className="designs" priority aria-hidden="true" />
+
+            <div className="about-values">
+                <h1>Our Core Values</h1>
+                <div className="values-grid">
+                    <article className="value-card">
+                        <p>Ethics and Integrity</p>
+                    </article>
+                    <article className="value-card">
+                        <p>Quality and Excellence</p>
+                    </article>
+                    <article className="value-card">
+                        <p>Unity and Collaboration</p>
+                    </article>
+                    <article className="value-card">
+                        <p>Achievement and Passion</p>
+                    </article>
+                    <article className="value-card">
+                        <p>Leadership and Innovation</p>
+                    </article>
+                </div>
+            </div>
+
+            <div className="spacer"></div>
+
             <div className="about-team scroll-section" ref={addToRefs}>
+                <h1>Meet the Team</h1>
                 <article className="team-member team-leader-card">
                     <div className="avatar-placeholder"></div>
                     <small>{teamLeader.name}</small>
@@ -153,14 +199,15 @@ export default function About() {
                 </div>
             </div>
             
-            <footer className="about-footer scroll-sec">
+            <footer className="about-footer">
                 <p>System Analysis and Design</p>
                 <small>Created with <b>Love</b> by students of <strong>Universidad de Manila</strong></small>
                 <small>&copy; {new Date().getFullYear()} QuizWeb. All rights reserved.</small>
             </footer>
-
-            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds" aria-hidden="true" />
-            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds" aria-hidden="true" />
+            
+            <Image src="/assets/about/Sun-cloud.svg" width={200} height={200} alt="" id="sun-cloud" className="designs" priority aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="designs" aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="designs" aria-hidden="true" />
         </section>
     );
 }
