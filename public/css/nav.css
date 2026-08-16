@@ -54,3 +54,9 @@ nav, .nav-options {
     border-radius: 8px;
     > a p {color: #A883EA; padding: 0.5rem 0.75rem;}
 }
+
+@media (max-width:768px) {
+    nav button {display: flex;}
+    .nav-options {display: none;}
+    nav div:first-child {margin-left: 0;}
+}

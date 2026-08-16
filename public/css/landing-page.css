@@ -91,9 +91,6 @@
 }
 
 @media (max-width: 768px) {
-    nav button {display: flex;}
-    .nav-options {display: none;}
-    nav div:first-child {margin-left: 0;}
     .hero .hero-text {top: 22%;}
     /* #clouds-topleft {left: -24vh; top: -4vh;}
     #clouds-topright {right: -40vh; top: -4vh;}   */
