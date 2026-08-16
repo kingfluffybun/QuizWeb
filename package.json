@@ -24,5 +24,8 @@
     },
     "imports": {
         "#css/*": "./public/css/*"
+    },
+    "allowScripts": {
+        "unrs-resolver@1.12.2": true
     }
 }
