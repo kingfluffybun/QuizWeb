@@ -15,7 +15,7 @@ nav {
     height: 10vh;
     width: 100%;
     padding: 0 2rem;
-    > div:first-child {margin-right: auto; margin-left: 0;}
+    > div:first-child {margin-right: auto;}
 }
 
 nav, .nav-options {
@@ -37,7 +37,7 @@ nav, .nav-options {
 }
 
 .hero {
-    z-index: -1;
+    z-index: 1;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -131,6 +131,7 @@ nav, .nav-options {
 @media (max-width: 768px) {
     nav button {display: flex;}
     .nav-options {display: none;}
+    nav div:first-child {margin-left: 0;}
     .hero .hero-text {top: 22%;}
     /* #clouds-topleft {left: -24vh; top: -4vh;}
     #clouds-topright {right: -40vh; top: -4vh;}   */
