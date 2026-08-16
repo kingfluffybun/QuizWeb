@@ -280,7 +280,7 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
 #formTitle,
 #formText,
 #toggleText {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition: opacity 0.26s ease, transform 0.26s ease;
   opacity: 1;
   transform: translateY(0);
 }

@@ -5,6 +5,7 @@ import "#css/login.css";
 
 export default function AuthPage() {
     const [mode, setMode] = useState<"login" | "signup">("login");
+    const [contentMode, setContentMode] = useState<"login" | "signup">("login");
     const [isFading, setIsFading] = useState(false);
     const [showForgot, setShowForgot] = useState(false);
     const [forgotStep, setForgotStep] = useState(1);
@@ -12,6 +13,7 @@ export default function AuthPage() {
     const [pwVisible, setPwVisible] = useState<Record<string, boolean>>({});
 
     const fadeToken = useRef(0);
+    const FADE_MS = 260;
 
     const loginPwRef = useRef<HTMLInputElement>(null);
     const signupPwRef = useRef<HTMLInputElement>(null);
@@ -32,9 +34,18 @@ export default function AuthPage() {
         if (newMode === mode || isFading) return;
         setIsFading(true);
         setMode(newMode);
+
+        fadeToken.current += 1;
+        const myToken = fadeToken.current;
+
         setTimeout(() => {
-            setIsFading(false);
-        }, 220);
+            if (myToken !== fadeToken.current) return;
+            setContentMode(newMode);
+            setTimeout(() => {
+                if (myToken !== fadeToken.current) return;
+                setIsFading(false);
+            }, FADE_MS);
+        }, FADE_MS);
     };
 
     // Password Toggle
@@ -69,15 +80,16 @@ export default function AuthPage() {
 
     // Custom content
     const isSignup = mode === 'signup';
+    const isSignupContent = contentMode === 'signup';
     const fadeClass = isFading ? 'text-fade-out' : '';
 
-    const panelTitle = isSignup ? 'Create account' : 'Welcome back';
-    const panelText = isSignup ? 'Start learning with QuizWeb in minutes.' : 'Pick up your HTML, CSS, and JS quizzes where you left off.';
-    const toggleText = isSignup ? 'Already have an account? Sign in' : 'New here? Create account';
+    const panelTitle = isSignupContent ? 'Create account' : 'Welcome back';
+    const panelText = isSignupContent ? 'Start learning with QuizWeb in minutes.' : 'Pick up your HTML, CSS, and JS quizzes where you left off.';
+    const toggleText = isSignupContent ? 'Already have an account? Sign in' : 'New here? Create account';
 
-    const formLabelText = isSignup ? 'Get started' : 'Access your account';
-    const formTitleText = isSignup ? 'Create account' : 'Sign in';
-    const formTextText = isSignup ? "A few details and you're ready to go." : 'Use your email and password to continue.';
+    const formLabelText = isSignupContent ? 'Get started' : 'Access your account';
+    const formTitleText = isSignupContent ? 'Create account' : 'Sign in';
+    const formTextText = isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
 
     // HTML
     return (
@@ -100,8 +112,8 @@ export default function AuthPage() {
 
                     <div className="panel">
                         <p className={`tag ${fadeClass}`} id="panelLabel"></p>
-                        <h1 id="panelTitle">{panelTitle}</h1>
-                        <p id="panelText">{panelText}</p>
+                        <h1 className={fadeClass} id="panelTitle">{panelTitle}</h1>
+                        <p className={fadeClass} id="panelText">{panelText}</p>
                         <a id="toggleLink" 
                             className={`panel-toggle ${fadeClass}`} 
                             href="#" 
@@ -298,7 +310,7 @@ export default function AuthPage() {
 
                         <div className="stack">
                             {/* Login Form */}
-                            <form id="signIn" className={`formView ${!isSignup ? 'active' : ''}`} noValidate>
+                            <form id="signIn" className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
@@ -356,7 +368,7 @@ export default function AuthPage() {
                             </form>
 
                             {/* Signup Form */}
-                            <form id="signUp" className={`formView ${isSignup ? 'active' : ''}`} noValidate>
+                            <form id="signUp" className={`formView ${isSignupContent ? 'active' : ''}`} noValidate>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
