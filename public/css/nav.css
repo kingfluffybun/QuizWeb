@@ -14,9 +14,7 @@ nav {
         font-size: 1.125rem;
         color: #fff; 
         font-family: Poppins;
-    } div:first-child {
-        margin-right: auto;
-    }
+    }   
 }
 
 nav button {
