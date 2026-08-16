@@ -9,14 +9,20 @@ export default function Home() {
             <section className="hero">
                 <nav>
                     <div><a href="test.com"><p>Logo</p></a></div>
-                    <div><a href="/quiz/index.html"><p>Learn</p></a></div>
-                    <div><a href="test.com"><p>Leaderboard</p></a></div>
-                    <div><a href="/about"><p>About</p></a></div>
-                    <div><a href="/login"><p>Log in</p></a></div>
-                    <div><a href="/login"><p>Sign Up</p></a></div>
+                    <button className="menu-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu-icon lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+                        <p>Menu</p>
+                    </button>
+                    <div className="nav-options">
+                        <div><a href="/quiz/index.html"><p>Learn</p></a></div>
+                        <div><a href="test.com"><p>Leaderboard</p></a></div>
+                        <div><a href="/about"><p>About</p></a></div>
+                        <div><a href="/login"><p>Log in</p></a></div>
+                        <div><a href="/login"><p>Sign Up</p></a></div>
+                    </div>
                 </nav>
                 <div className="hero-text">
-                    <h1>Code gets easier, QuizWeb makes it stick.</h1>
+                    <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
                     <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                     {/* <div>
                         <h1>Start Learning</h1>
