@@ -10,7 +10,7 @@ export async function signUp(formData: FormData) {
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !confirmPassword) {
         return { error: "All fields are required." };
     }
     if (password !== confirmPassword) {

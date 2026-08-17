@@ -32,10 +32,14 @@ export default function AuthPage() {
     async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
+
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
 
+        console.log("email:", email);
+        console.log("password:", password);
+        
         const res = await signIn("credentials", {
             email,
             password,
@@ -53,19 +57,23 @@ export default function AuthPage() {
     async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
-        const result = await signUp(new FormData(e.currentTarget));
+        const formData = new FormData(e.currentTarget);
+        const result = await signUp(formData);
+
+        console.log(result);
 
         if (result?.error) {
             setError(result.error);
-        } else {
-            const formData = new FormData(e.currentTarget);
-            await signIn("credentials", {
-                email: formData.get("email") as string,
-                password: formData.get("password") as string,
-                redirect: false,
-            });
-            router.push("/");
+            return;
         }
+        
+        await signIn("credentials", {
+            email: formData.get("email") as string,
+            password: formData.get("password") as string,
+            redirect: false,
+        });
+        
+        router.push("/");
     }
 
     // Quiz Carousel
@@ -362,7 +370,7 @@ export default function AuthPage() {
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                                     </span>
-                                    <input type="email" placeholder="Email address" autoComplete="email" />
+                                    <input type="email" placeholder="Email address" name="email" autoComplete="email" />
                                 </label>
 
                                 <label className="input-group">
@@ -373,6 +381,7 @@ export default function AuthPage() {
                                         ref={loginPwRef}
                                         type={pwVisible['login'] ? 'text' : 'password'}
                                         placeholder="Password"
+                                        name="password"
                                         autoComplete="current-password"
                                     />
                                     <button type="button" 
@@ -420,14 +429,14 @@ export default function AuthPage() {
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                     </span>
-                                    <input type="text" placeholder="Username" autoComplete="name" />
+                                    <input type="text" placeholder="Username" name="username" autoComplete="name" />
                                 </label>
 
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                                     </span>
-                                    <input type="email" placeholder="Email address" autoComplete="email" />
+                                    <input type="email" placeholder="Email address" name="email" autoComplete="email" />
                                 </label>
 
                                 <label className="input-group">
@@ -438,6 +447,7 @@ export default function AuthPage() {
                                         ref={signupPwRef}
                                         type={pwVisible['signup'] ? 'text' : 'password'}
                                         placeholder="Create password"
+                                        name="password"
                                         autoComplete="new-password"
                                     />
                                     <button type="button"
@@ -458,6 +468,7 @@ export default function AuthPage() {
                                         ref={singupConfirmPwRef}
                                         type={pwVisible['signupConfirm'] ? 'text' : 'password'}
                                         placeholder="Confirm password"
+                                        name="confirmPassword"
                                         autoComplete="new-password"
                                     />
                                     <button type="button"
