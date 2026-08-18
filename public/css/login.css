@@ -1280,3 +1280,54 @@ button:focus-visible, a:focus-visible {
   color: #5f3acb;
   font-size: 0.88rem;
 }
+
+.password-strength {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -4px;
+  animation: strengthFadeIn 0.22s ease;
+}
+
+@keyframes strengthFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.strength-bar-track {
+  display: flex;
+  gap: 4px;
+}
+
+.strength-bar-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: #e7e2f2;
+  transition: background 0.35s ease;
+}
+
+.strength-hint {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.3s ease;
+}
+
+.strength-hint.is-good {
+  color: #2f8a4e;
+}
+
+.form-error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fdecec;
+  border: 1px solid #f5c2c2;
+  color: #b3261e;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+}

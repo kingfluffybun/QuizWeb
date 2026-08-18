@@ -6,6 +6,16 @@ import { signUp } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import "#css/login.css";
 
+const passwordRules = [
+    { key: "length", label: "8+ characters", test: (pw: string) => pw.length >= 8 },
+    { key: "upper", label: "uppercase", test: (pw: string) => /[A-Z]/.test(pw) },
+    { key: "lower", label: "lowercase", test: (pw: string) => /[a-z]/.test(pw) },
+    { key: "number", label: "number", test: (pw: string) => /[0-9]/.test(pw) },
+    { key: "special", label: "symbol", test: (pw: string) => /[!@#$%^&*]/.test(pw) },
+];
+
+const strengthLevels = ["#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
+
 export default function AuthPage() {
     const [mode, setMode] = useState<"login" | "signup">("login");
     const [contentMode, setContentMode] = useState<"login" | "signup">("login");
@@ -16,12 +26,16 @@ export default function AuthPage() {
 
     const [error, setError] = useState("");
 
+    // Signup password validation
+    const [signupPassword, setSignupPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
     const fadeToken = useRef(0);
     const FADE_MS = 260;
 
     const router = useRouter();
 
-    // Login
     async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
@@ -29,6 +43,11 @@ export default function AuthPage() {
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
+
+        if (!email || !password) {
+            setError("Please enter your email and password.");
+            return;
+        }
 
         const res = await signIn("credentials", {
             email,
@@ -47,20 +66,35 @@ export default function AuthPage() {
     async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
+        setAttemptedSubmit(true);
+
         const formData = new FormData(e.currentTarget);
+        const password = formData.get("password") as string;
+        const confirmPass = formData.get("confirmPassword") as string;
+
+        const failedRules = passwordRules.filter((rule) => !rule.test(password));
+        const mismatched = password !== confirmPass;
+
+        if (failedRules.length > 0 || mismatched) {
+            if (mismatched) {
+                setError("Passwords do not match.");
+            }
+            return;
+        }
+
         const result = await signUp(formData);
 
         if (result?.error) {
             setError(result.error);
             return;
         }
-        
+
         await signIn("credentials", {
             email: formData.get("email") as string,
-            password: formData.get("password") as string,
+            password,
             redirect: false,
         });
-        
+
         router.push("/");
     }
 
@@ -77,6 +111,8 @@ export default function AuthPage() {
         if (newMode === mode || isFading) return;
         setIsFading(true);
         setMode(newMode);
+        setError("");
+        setAttemptedSubmit(false);
 
         fadeToken.current += 1;
         const myToken = fadeToken.current;
@@ -122,6 +158,13 @@ export default function AuthPage() {
     const formLabelText = isSignupContent ? 'Get started' : 'Access your account';
     const formTitleText = isSignupContent ? 'Create account' : 'Sign in';
     const formTextText = isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
+
+    const passwordsMismatch = attemptedSubmit && confirmPassword.length > 0 && signupPassword !== confirmPassword;
+
+    const passedRulesCount = passwordRules.filter((rule) => rule.test(signupPassword)).length;
+    const allRulesPassed = passedRulesCount === passwordRules.length;
+    const missingLabels = passwordRules.filter((rule) => !rule.test(signupPassword)).map((rule) => rule.label);
+    const strengthColor = strengthLevels[passedRulesCount];
 
     // HTML
     return (
@@ -330,7 +373,7 @@ export default function AuthPage() {
                         </div>
                     </div>
                 </section>
-                
+
                 {/* Form */}
                 <section className="formPanel" aria-label="Authentication form">
                     <div className="formCard">
@@ -361,6 +404,10 @@ export default function AuthPage() {
                                         autoComplete="current-password"
                                     />
                                 </label>
+
+                                {!isSignupContent && error && (
+                                    <p className="form-error" role="alert">{error}</p>
+                                )}
 
                                 <div className="formActions">
                                     <label className="remember-row" htmlFor="remember-me">
@@ -415,8 +462,11 @@ export default function AuthPage() {
                                         placeholder="Create password"
                                         name="password"
                                         autoComplete="new-password"
+                                        value={signupPassword}
+                                        onChange={(e) => setSignupPassword(e.target.value)}
                                     />
                                 </label>
+
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -426,8 +476,37 @@ export default function AuthPage() {
                                         placeholder="Confirm password"
                                         name="confirmPassword"
                                         autoComplete="new-password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
                                     />
                                 </label>
+
+                                {signupPassword.length > 0 && (
+                                    <div className="password-strength">
+                                        <div className="strength-bar-track">
+                                            {passwordRules.map((_, i) => (
+                                                <span
+                                                    key={i}
+                                                    className="strength-bar-seg"
+                                                    style={{
+                                                        background: i < passedRulesCount ? strengthColor : undefined,
+                                                    }}
+                                                ></span>
+                                            ))}
+                                        </div>
+                                        <p className={`strength-hint ${allRulesPassed ? "is-good" : ""}`}>
+                                            {allRulesPassed ? "Strong password" : `Needs: ${missingLabels.join(", ")}`}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {passwordsMismatch && (
+                                    <p className="form-error" role="alert">Passwords do not match.</p>
+                                )}
+
+                                {isSignupContent && error && !passwordsMismatch && (
+                                    <p className="form-error" role="alert">{error}</p>
+                                )}
 
                                 <button type="submit" className="submit-btn">Create account</button>
                             </form>
