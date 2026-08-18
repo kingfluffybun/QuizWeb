@@ -13,18 +13,11 @@ export default function AuthPage() {
     const [showForgot, setShowForgot] = useState(false);
     const [forgotStep, setForgotStep] = useState(1);
     const [activeSlide, setActiveSlide] = useState(0);
-    const [pwVisible, setPwVisible] = useState<Record<string, boolean>>({});
 
     const [error, setError] = useState("");
 
     const fadeToken = useRef(0);
     const FADE_MS = 260;
-
-    const loginPwRef = useRef<HTMLInputElement>(null);
-    const signupPwRef = useRef<HTMLInputElement>(null);
-    const singupConfirmPwRef = useRef<HTMLInputElement>(null);
-    const forgotNewPWRef = useRef<HTMLInputElement>(null);
-    const forgotConfirmPWRef = useRef<HTMLInputElement>(null);
 
     const router = useRouter();
 
@@ -37,9 +30,6 @@ export default function AuthPage() {
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
 
-        console.log("email:", email);
-        console.log("password:", password);
-        
         const res = await signIn("credentials", {
             email,
             password,
@@ -59,8 +49,6 @@ export default function AuthPage() {
         setError("");
         const formData = new FormData(e.currentTarget);
         const result = await signUp(formData);
-
-        console.log(result);
 
         if (result?.error) {
             setError(result.error);
@@ -101,17 +89,6 @@ export default function AuthPage() {
                 setIsFading(false);
             }, FADE_MS);
         }, FADE_MS);
-    };
-
-    // Password Toggle
-    const togglePw = (key: string, inputRef: React.RefObject<HTMLInputElement | null>) => {
-        const input = inputRef.current;
-        const cursor = input?.selectionStart ?? null;
-        setPwVisible((prev) => ({ ...prev, [key]: !prev[key] }));
-        requestAnimationFrame(() => {
-            input?.focus();
-            if (cursor !== null) input?.setSelectionRange(cursor, cursor);
-        });
     };
 
     // Forgot Password
@@ -378,21 +355,11 @@ export default function AuthPage() {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                     </span>
                                     <input 
-                                        ref={loginPwRef}
-                                        type={pwVisible['login'] ? 'text' : 'password'}
+                                        type="password"
                                         placeholder="Password"
                                         name="password"
                                         autoComplete="current-password"
                                     />
-                                    <button type="button" 
-                                        className={`toggle-pw ${pwVisible['login'] ? 'is-visible' : ''}`} 
-                                        aria-label={pwVisible['login'] ? 'Hide password' : 'Show password'}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => togglePw('login', loginPwRef)}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye-off"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-                                    </button>
                                 </label>
 
                                 <div className="formActions">
@@ -444,42 +411,22 @@ export default function AuthPage() {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                     </span>
                                     <input
-                                        ref={signupPwRef}
-                                        type={pwVisible['signup'] ? 'text' : 'password'}
+                                        type="password"
                                         placeholder="Create password"
                                         name="password"
                                         autoComplete="new-password"
                                     />
-                                    <button type="button"
-                                        className={`toggle-pw ${pwVisible['signup'] ? 'is-visible' : ''}`}
-                                        aria-label={pwVisible['signup'] ? 'Hide password' : 'Show password'}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => togglePw('signup', signupPwRef)}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye-off"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-                                    </button>
                                 </label>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                     </span>
                                     <input 
-                                        ref={singupConfirmPwRef}
-                                        type={pwVisible['signupConfirm'] ? 'text' : 'password'}
+                                        type="password"
                                         placeholder="Confirm password"
                                         name="confirmPassword"
                                         autoComplete="new-password"
                                     />
-                                    <button type="button"
-                                        className={`toggle-pw ${pwVisible['signupConfirm'] ? 'is-visible' : ''}`}
-                                        aria-label={pwVisible['signupConfirm'] ? 'Hide password' : 'Show password'}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => togglePw('signupConfirm', singupConfirmPwRef)}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye-off"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-                                    </button>
                                 </label>
 
                                 <button type="submit" className="submit-btn">Create account</button>
@@ -526,40 +473,20 @@ export default function AuthPage() {
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
                             <input
-                                ref={forgotNewPWRef}
-                                type={pwVisible['forgotNew'] ? 'text' : 'password'}
+                                type="password"
                                 placeholder="New password"
                                 autoComplete="new-password"
                             />
-                            <button type="button" 
-                                className={`toggle-pw ${pwVisible['forgotNew'] ? 'is-visible' : ''}`}
-                                aria-label={pwVisible['forgotNew'] ? 'Hide password' : 'Show password'}
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => togglePw('forgotNew', forgotNewPWRef)}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye-off"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-                            </button>
                         </label>
                         <label className="input-group modal-input">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
                             <input
-                                ref={forgotConfirmPWRef}
-                                type={pwVisible['forgotConfirm'] ? 'text' : 'password'}
+                                type="password"
                                 placeholder="Confirm password"
                                 autoComplete="new-password"
                             />
-                            <button type="button"
-                                className={`toggle-pw ${pwVisible['forgotConfirm'] ? 'is-visible' : ''}`}
-                                aria-label={pwVisible['forgotConfirm'] ? 'Hide password' : 'Show password'}
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => togglePw('forgotConfirm', forgotConfirmPWRef)}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-eye-off"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-                            </button>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(4)}>Reset Password</button>
                     </div>
