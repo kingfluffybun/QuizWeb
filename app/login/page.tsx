@@ -8,6 +8,7 @@ import "#css/login.css";
 
 const passwordRules = [
     { key: "length", label: "8+ characters", test: (pw: string) => pw.length >= 8 },
+    { key: "maxlength", label: "24 max characters", test: (pw: string) => pw.length <= 24 },
     { key: "upper", label: "uppercase", test: (pw: string) => /[A-Z]/.test(pw) },
     { key: "lower", label: "lowercase", test: (pw: string) => /[a-z]/.test(pw) },
     { key: "number", label: "number", test: (pw: string) => /[0-9]/.test(pw) },
