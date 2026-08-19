@@ -95,6 +95,7 @@ export default function AuthPage() {
 
         setIsLoading(true);
 
+        // Create account
         const result = await signUp(formData);
 
         if (result?.error) {
@@ -103,11 +104,20 @@ export default function AuthPage() {
             return;
         }
 
-        await signIn("credentials", {
+        // Automatically login user
+        const res = await signIn("credentials", {
             email: formData.get("email") as string,
             password,
             redirect: false,
         });
+
+        // Catch autologin failures
+        if (res?.error) {
+            setError("Account created successfully, but auto-login failed. Please sign in manually.");
+            setIsLoading(false);
+            switchMode('login');
+            return;
+        }
 
         router.push("/");
     }

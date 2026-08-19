@@ -2,14 +2,13 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import argon2 from "argon2";
-import {db} from "@/lib/db";
-import type { RowDataPacket } from "mysql2";
+import { db } from "@/lib/db";
+import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     session: { strategy: "jwt" },
     providers: [
         Google,
-
         Credentials({
             name: "credentials",
             credentials: {
@@ -21,46 +20,92 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const password = credentials?.password as string;
                 if (!email || !password) return null;
 
+                // Query user_auth_tbl and join player_tbl for the username
                 const [rows] = await db.query<RowDataPacket[]>(
-                    "SELECT * FROM user_tb WHERE email = ? LIMIT 1",
+                    `SELECT a.user_id, a.email, a.password_hash, p.username 
+                     FROM user_auth_tbl a 
+                     LEFT JOIN player_tbl p ON a.user_id = p.user_id 
+                     WHERE a.email = ? LIMIT 1`,
                     [email]
                 );
                 const user = rows[0];
-                if (!user || !user.password) return null;
 
-                const valid = await argon2.verify(password, user.password);
+                if (!user || !user.password_hash) return null;
+
+                const valid = await argon2.verify(user.password_hash, password);
                 if (!valid) return null;
 
                 return {
-                    id: String(user.id),
+                    id: String(user.user_id),
                     email: user.email,
-                    name: user.name,
-                    image: user.image,
+                    name: user.username,
                 };
             },
         }),
     ],
 
-    events: {
-        async signIn({ user, account }) {
-            if (account?.provider !== "google" || !user.email) return;
-
-            await db.query(
-                `INSERT INTO user_tb (email, username, image, createdAt)
-                VALUES (?, ?, ?, NOW())
-                ON DUPLICATE KEY UPDATE image = VALUES(image)`,
-                [user.email, user.name, user.image]
-            );
-        },
-    },
-
     callbacks: {
+        async signIn({ user, account }) {
+            // Handle database syncing for new Google Logins
+            if (account?.provider === "google" && user.email) {
+                try {
+                    // 1. Check if user already exists in user_auth_tbl
+                    const [existingUser] = await db.query<RowDataPacket[]>(
+                        "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
+                        [user.email]
+                    );
+
+                    let userId: number;
+
+                    if (existingUser.length === 0) {
+                        // Insert new user authentication record
+                        const [authResult] = await db.query<ResultSetHeader>(
+                            "INSERT INTO user_auth_tbl (email, is_email_verified) VALUES (?, ?)",
+                            [user.email, true]
+                        );
+                        userId = authResult.insertId;
+
+                        // Insert new player profile
+                        await db.query(
+                            "INSERT INTO player_tbl (user_id, username) VALUES (?, ?)",
+                            [userId, user.name || `player_${userId}`]
+                        );
+                    } else {
+                        userId = existingUser[0].user_id;
+                    }
+
+                    // 2. Link OAuth connection in user_oauth_tbl
+                    const [existingOAuth] = await db.query<RowDataPacket[]>(
+                        "SELECT oauth_id FROM user_oauth_tbl WHERE provider_name = ? AND provider_account_id = ? LIMIT 1",
+                        [account.provider, account.providerAccountId]
+                    );
+
+                    if (existingOAuth.length === 0) {
+                        await db.query(
+                            "INSERT INTO user_oauth_tbl (user_id, provider_name, provider_account_id) VALUES (?, ?, ?)",
+                            [userId, account.provider, account.providerAccountId]
+                        );
+                    }
+
+                    // Attach the true DB user_id to the user object for the JWT callback
+                    user.id = String(userId);
+                    return true;
+                } catch (error) {
+                    console.error("Database error during Google sign-in:", error);
+                    return false; 
+                }
+            }
+            // Allow standard credentials login to pass through
+            return true;
+        },
         async jwt({ token, user }) {
             if (user) token.id = user.id;
             return token;
         },
         async session({ session, token }) {
-            if (token) session.user.id = token.id as string;
+            if (token && session.user) {
+                session.user.id = token.id as string;
+            }
             return session;
         },
     },
