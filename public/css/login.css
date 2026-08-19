@@ -918,6 +918,7 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
   z-index: 1;
   transition: transform 0.6s var(--ease);
   will-change: transform;
+  user-select: none;
 }
 
 .auth-card.is-signup .formPanel { 
@@ -1164,6 +1165,11 @@ h1, h2, .tag, .eyebrow { font-family: 'Poppins', sans-serif; }
 
 .submit-btn:active { 
   transform: scale(0.98); 
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .btn-icon { 

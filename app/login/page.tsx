@@ -23,10 +23,13 @@ export default function AuthPage() {
     const [showForgot, setShowForgot] = useState(false);
     const [forgotStep, setForgotStep] = useState(1);
     const [activeSlide, setActiveSlide] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [error, setError] = useState("");
 
     // Signup password validation
+    const [signupUsername, setSignupUsername] = useState("");
+    const [signupEmail, setSignupEmail] = useState("");
     const [signupPassword, setSignupPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -36,9 +39,12 @@ export default function AuthPage() {
 
     const router = useRouter();
 
+    // Login
     async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        if (isLoading) return;
         setError("");
+        setIsLoading(true);
 
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
@@ -46,6 +52,7 @@ export default function AuthPage() {
 
         if (!email || !password) {
             setError("Please enter your email and password.");
+            setIsLoading(false);
             return;
         }
 
@@ -57,6 +64,8 @@ export default function AuthPage() {
 
         if (res?.error) {
             setError("Invalid email or password.");
+            setIsLoading(false);
+            return;
         } else {
             router.push("/");
         }
@@ -65,6 +74,7 @@ export default function AuthPage() {
     // Signup
     async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        if (isLoading) return;
         setError("");
         setAttemptedSubmit(true);
 
@@ -82,10 +92,13 @@ export default function AuthPage() {
             return;
         }
 
+        setIsLoading(true);
+
         const result = await signUp(formData);
 
         if (result?.error) {
             setError(result.error);
+            setIsLoading(false);
             return;
         }
 
@@ -165,6 +178,14 @@ export default function AuthPage() {
     const allRulesPassed = passedRulesCount === passwordRules.length;
     const missingLabels = passwordRules.filter((rule) => !rule.test(signupPassword)).map((rule) => rule.label);
     const strengthColor = strengthLevels[passedRulesCount];
+
+    // Signup all fields needed
+    const isSignupComplete = 
+    signupUsername.trim() !== "" &&
+    /\S+@\S+\.\S+/.test(signupEmail) &&
+    allRulesPassed &&
+    signupPassword === confirmPassword &&
+    confirmPassword !== "";
 
     // HTML
     return (
@@ -421,7 +442,9 @@ export default function AuthPage() {
                                     </a>
                                 </div>
 
-                                <button type="submit" className="submit-btn">Sign in</button>
+                                <button type="submit" className="submit-btn" id="signInBtn" disabled={isLoading}>
+                                    {isLoading ? "Signing in..." : "Sign in"}
+                                </button>
 
                                 <div className="divider-row" aria-hidden="true">
                                     <span className="divider-line"></span>
@@ -443,14 +466,28 @@ export default function AuthPage() {
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                     </span>
-                                    <input type="text" placeholder="Username" name="username" autoComplete="name" />
+                                    <input 
+                                        type="text"
+                                        placeholder="Username"
+                                        name="username" 
+                                        autoComplete="name"
+                                        value={signupUsername}
+                                        onChange={(e) => setSignupUsername(e.target.value)}
+                                    />
                                 </label>
 
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                                     </span>
-                                    <input type="email" placeholder="Email address" name="email" autoComplete="email" />
+                                    <input
+                                        type="email"
+                                        placeholder="Email address" 
+                                        name="email"
+                                        autoComplete="email"
+                                        value={signupEmail}
+                                        onChange={(e) => setSignupEmail(e.target.value)}
+                                    />
                                 </label>
 
                                 <label className="input-group">
@@ -508,7 +545,9 @@ export default function AuthPage() {
                                     <p className="form-error" role="alert">{error}</p>
                                 )}
 
-                                <button type="submit" className="submit-btn">Create account</button>
+                                <button type="submit" className="submit-btn" disabled={isLoading || !isSignupComplete}>
+                                    {isLoading ? "Creating account..." : "Create account"}
+                                </button>
                             </form>
                         </div>
                     </div>
