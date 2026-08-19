@@ -2,7 +2,7 @@
 
 import argon2 from "argon2";
 import { db } from "@/lib/db";
-import type { RowDataPacket } from "mysql2";
+import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
 export async function signUp(formData: FormData) {
     const username = formData.get("username") as string;
@@ -20,19 +20,51 @@ export async function signUp(formData: FormData) {
         return { error: "Password must be at least 8 characters." };
     }
 
-    const [existing] = await db.query<RowDataPacket[]>(
-        "SELECT id FROM user_tb WHERE email = ? LIMIT 1",
-        [email]
-    );
-    if (existing.length > 0) {
-        return { error: "An account with this email already exists." };
+    const connection = await db.getConnection();
+
+    try {
+        const [existingEmail] = await connection.query<RowDataPacket[]>(
+            "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
+            [email]
+        );
+        if (existingEmail.length > 0) {
+            return { error: "An account with this email already exists." };
+        }
+
+        const [existingUsername] = await connection.query<RowDataPacket[]>(
+            "SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1",
+            [username]
+        );
+        if (existingUsername.length > 0) {
+            return { error: "This username is already taken." };
+        }
+
+        const hashed = await argon2.hash(password);
+
+        await connection.beginTransaction();
+
+        const [authResult] = await connection.query<ResultSetHeader>(
+            "INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, created_at) VALUES (?, ?, false, NOW())",
+            [email, hashed]
+        );
+
+        const newUserId = authResult.insertId;
+        
+        await connection.query(
+            "INSERT INTO player_tbl (user_id, username, xp, max_streak) VALUES (?, ?, 0, 0)",
+            [newUserId, username]
+        );
+
+        await connection.commit();
+        return { success: true };
+
+    } catch (error) {
+        
+        await connection.rollback();
+        console.error("Database error during sign up:", error);
+        return { error: "An internal server error occurred." };
+    } finally {
+        
+        connection.release();
     }
-
-    const hashed = await argon2.hash(password);
-    await db.query(
-        "INSERT INTO user_tb (username, email, password, createdAt) VALUES (?, ?, ?, NOW())",
-        [username, email, hashed]
-    );
-
-    return { success: true };
 }
