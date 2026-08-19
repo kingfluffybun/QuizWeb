@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
+import argon2 from "argon2";
 import {db} from "@/lib/db";
 import type { RowDataPacket } from "mysql2";
 
@@ -28,7 +28,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const user = rows[0];
                 if (!user || !user.password) return null;
 
-                const valid = await bcrypt.compare(password, user.password);
+                const valid = await argon2.verify(password, user.password);
                 if (!valid) return null;
 
                 return {

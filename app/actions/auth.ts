@@ -1,6 +1,6 @@
 "use server";
 
-import bcrypt from "bcryptjs";
+import argon2 from "argon2";
 import { db } from "@/lib/db";
 import type { RowDataPacket } from "mysql2";
 
@@ -28,7 +28,7 @@ export async function signUp(formData: FormData) {
         return { error: "An account with this email already exists." };
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await argon2.hash(password);
     await db.query(
         "INSERT INTO user_tb (username, email, password, createdAt) VALUES (?, ?, ?, NOW())",
         [username, email, hashed]
