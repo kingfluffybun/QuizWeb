@@ -16,7 +16,7 @@ const passwordRules = [
     { key: "special", label: "symbol", test: (pw: string) => /[!@#$%^&*]/.test(pw) },
 ];
 
-const strengthLevels = ["#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
+const strengthLevels = ["#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759", "#34c759"];
 
 export default function AuthPage() {
     const [mode, setMode] = useState<"login" | "signup">("login");
@@ -89,6 +89,8 @@ export default function AuthPage() {
         if (failedRules.length > 0 || mismatched) {
             if (mismatched) {
                 setError("Passwords do not match.");
+            } else {
+                setError("Please meet all password requirements.");
             }
             return;
         }
@@ -165,7 +167,7 @@ export default function AuthPage() {
     const formTitleText = isSignupContent ? 'Create account' : 'Sign in';
     const formTextText = isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
 
-    const passwordsMismatch = attemptedSubmit && confirmPassword.length > 0 && signupPassword !== confirmPassword;
+    const passwordsMismatch = confirmPassword.length > 0 && signupPassword !== confirmPassword;
 
     const passedRulesCount = passwordRules.filter((rule) => rule.test(signupPassword)).length;
     const allRulesPassed = passedRulesCount === passwordRules.length;
@@ -371,9 +373,10 @@ export default function AuthPage() {
                                     <p className="form-error" role="alert">{error}</p>
                                 )}
 
-                                <button type="submit" className="submit-btn" disabled={isLoading || !isSignupComplete}>
+                                <button type="submit" className="submit-btn" disabled={isLoading}>
                                     {isLoading ? "Creating account..." : "Create account"}
                                 </button>
+                                
                             </form>
                         </div>
                     </div>
