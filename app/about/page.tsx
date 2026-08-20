@@ -4,6 +4,7 @@ import { useEffect, useRef, ReactNode } from "react";
 import "#css/about.css";
 import "#css/nav.css";
 import Image from "next/image";
+import PublicNav from "@/app/components/publicNav";
 
 interface TeamMember {
     name: string;
@@ -92,21 +93,9 @@ export default function About() {
     ];
 
     return (
+        <>
+        <PublicNav />
         <section className="about">
-            <nav>
-                <div><a href="/"><p>Logo</p></a></div>
-                <button className="menu-btn" aria-label="Toggle menu"> {/* for mobile */}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu-icon lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
-                    <p>Menu</p>
-                </button>
-                <div className="nav-options">
-                    <div><a href="/quiz"><p>Learn</p></a></div>
-                    <div><a href="/leaderboard"><p>Leaderboard</p></a></div>
-                    <div><a href="/about"><p>About</p></a></div>
-                    <div><a href="/login"><p>Log in</p></a></div>
-                    <div><a href="/login"><p>Sign Up</p></a></div>
-                </div>
-            </nav>
             
             <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="designs" priority aria-hidden="true" />
             <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="designs" priority aria-hidden="true" />
@@ -209,5 +198,6 @@ export default function About() {
             <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="designs" aria-hidden="true" />
             <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="designs" aria-hidden="true" />
         </section>
+        </>
     );
 }
