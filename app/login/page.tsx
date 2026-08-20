@@ -171,7 +171,7 @@ export default function AuthPage() {
     const fadeClass = isFading ? 'text-fade-out' : '';
 
     const panelTitle = isSignupContent ? 'Create account' : 'Welcome back';
-    const panelText = isSignupContent ? 'Start learning with QuizWeb in minutes.' : 'Pick up your HTML, CSS, and JS quizzes where you left off.';
+    const panelText = isSignupContent ? 'Start learning with QuizWeb in minutes.' : 'Pick up your WebDev quizzes where you left off.';
     const toggleText = isSignupContent ? 'Already have an account? Sign in' : 'New here? Create account';
 
     const formLabelText = isSignupContent ? 'Get started' : 'Access your account';
