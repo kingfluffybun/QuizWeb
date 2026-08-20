@@ -6,6 +6,8 @@ import { signUp } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import LoginQuiz from "@/app/components/loginQuiz";
 import "#css/login.css";
+import "#css/nav.css";
+import PublicNav from "../components/publicNav";
 
 const passwordRules = [
     { key: "length", label: "8+ characters", test: (pw: string) => pw.length >= 8 },
@@ -16,7 +18,7 @@ const passwordRules = [
     { key: "special", label: "symbol", test: (pw: string) => /[!@#$%^&*]/.test(pw) },
 ];
 
-const strengthLevels = ["#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
+const strengthLevels = ["#333333","#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
 
 export default function AuthPage() {
     const [mode, setMode] = useState<"login" | "signup">("login");
@@ -192,6 +194,8 @@ export default function AuthPage() {
 
     // HTML
     return (
+        <>
+        <PublicNav />
         <div className="auth-page">
             <main className={`auth-card ${isSignup ? 'is-signup' : ''}`} id="auth">
                 <div className="editor-bar" aria-hidden="true">
@@ -458,5 +462,6 @@ export default function AuthPage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

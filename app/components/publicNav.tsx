@@ -38,7 +38,7 @@ export default function PublicNav() {
         <div><Link href="/quiz"><p>Learn</p></Link></div>
         <div><Link href="https://test.com"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
-        <div><Link href="/login"><p>Log in</p></Link></div>
+        <div><Link href="/settings"><p>Settings</p></Link></div>
         <div><Link href="/login"><p>Sign Up</p></Link></div>
       </div>
     </nav>

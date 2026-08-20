@@ -2,36 +2,6 @@ nav {
     display: flex;
     align-items: center;
     height: 10vh;
-    width: 100%;
-    padding: 0 2rem;
-    background-color: var(--background-color);
-    > div {
-        margin: 0 0.75rem;
-    } div a {
-        text-decoration: none;
-    }
-    > div a p {
-        font-size: 1.125rem;
-        color: #fff; 
-        font-family: Poppins;
-    }   
-}
-
-nav button {
-    background-color: transparent;
-    border: none;
-    font-size: 1.125rem;
-    color: #fff; 
-    font-family: Poppins;
-    display: none;
-    align-items: center;
-    height: 100%;
-    margin-left: auto;
-    gap: 8px;
-}
-
-nav {
-    height: 10vh;
     min-height: 10vh;
     max-height: 10vh;
     flex: 0 0 10vh;
@@ -39,29 +9,66 @@ nav {
     padding: 0 2rem;
     position: relative;
     z-index: 1000;
+    background-color: var(--background-color);
+
     > div:first-child {margin-right: auto;}
+    
+    > div {
+        margin: 0 0.75rem;
+    } 
+    
+    div a {
+        text-decoration: none;
+    }
+    
+    > div a p {
+        font-size: 1.125rem;
+        color: var(--text-inverse); 
+        font-family: Poppins;
+    }
+    
+    button {
+        background-color: transparent;
+        border: none;
+        font-size: 1.125rem;
+        color: var(--text-inverse); 
+        font-family: Poppins;
+        display: none;
+        align-items: center;
+        height: 100%;
+        margin-left: auto;
+        gap: 8px;
+    }
 }
 
-nav, .nav-options {
+.nav-options {
     display: flex;
     align-items: center;
+    
     div {margin: 0 0.75rem;} 
+    
     div a {text-decoration: none;}
+    
     div a p {
         font-size: 1.125rem;
-        color: #fff; 
+        color: var(--text-inverse); 
         font-family: Poppins;
     } 
-}
-
-.nav-options div:last-child {
-    background-color: #fff;
-    border-radius: 8px;
-    > a p {color: #A883EA; padding: 0.5rem 0.75rem;}
+    
+    div:last-child {
+        background-color: var(--bg-card);
+        border-radius: 8px;
+        
+        > a p {
+            color: var(--primary-color); 
+            padding: 0.5rem 0.75rem;
+        }
+    }
 }
 
 @media (max-width:768px) {
     nav button {display: flex;}
+    
     .nav-options {
         position: fixed;
         inset: 0;
@@ -75,12 +82,13 @@ nav, .nav-options {
         justify-content: flex-start;
         gap: 1rem;
         padding: 4.5rem 2.5rem;
-        background-color: #A883EA;
+        background-color: var(--background-color);
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
         transition: none;
     }
+    
     nav div:first-child {margin-left: 0;}
 
     nav::before {
@@ -88,7 +96,7 @@ nav, .nav-options {
         position: absolute;
         inset: 0;
         z-index: 0;
-        background-color: #A883EA;
+        background-color: var(--background-color);
         opacity: 0;
         pointer-events: none;
         transition: none;
@@ -103,11 +111,23 @@ nav, .nav-options {
         max-height: none;
         flex: none;
         background-color: transparent;
-    }
-
-    nav.menu-open::before {
-        opacity: 1;
-        transition: opacity 200ms ease;
+        
+        ::before {
+            opacity: 1;
+            transition: opacity 200ms ease;
+        }
+        
+        > div:first-child {display: none;}
+        
+        button {
+            position: absolute;
+            top: 0;
+            right: 2rem;
+            z-index: 31;
+            height: 10vh;
+            margin-left: 0;
+            color: var(--text-inverse);
+        }
     }
 
     .nav-options.is-open {
@@ -115,36 +135,24 @@ nav, .nav-options {
         visibility: visible;
         pointer-events: auto;
         transition: opacity 200ms ease;
-    }
-
-    nav.menu-open > div:first-child {display: none;}
-
-    nav.menu-open button {
-        position: absolute;
-        top: 0;
-        right: 2rem;
-        z-index: 31;
-        height: 10vh;
-        margin-left: 0;
-        color: white;
-    }
-
-    .nav-options.is-open div {
-        margin: 0;
-    }
-
-    .nav-options.is-open div a p {
-        font-size: 1.75rem;
-        color: white;
-    }
-
-    .nav-options.is-open div:last-child {
-        margin-top: 0;
-        background-color: transparent;
-        border-radius: 0;
-    }
-
-    .nav-options.is-open div:last-child > a p {
-        padding: 0;
+        
+        div {
+            margin: 0;
+            
+            a p {
+                font-size: 1.75rem;
+                color: var(--text-inverse);
+            }
+        }
+        
+        div:last-child {
+            margin-top: 0;
+            background-color: transparent;
+            border-radius: 0;
+            
+            > a p {
+                padding: 0;
+            }
+        }
     }
 }

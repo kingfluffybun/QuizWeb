@@ -1,0 +1,351 @@
+:root {
+  --settings-primary: #9966FF;
+  --settings-primary-hover: #7D3FFF;
+  --settings-bg: #f4f7ff;
+  --settings-card-bg: #ffffff;
+  --settings-text-main: #333333;
+  --settings-text-muted: #888888;
+  --settings-border: #e7e2f2;
+  --settings-base-scale: 100%;
+}
+
+/* 1. Explicit Dark Mode */
+[data-theme="dark"] {
+  --settings-primary: #a377ff; 
+  --settings-bg: #0f0f13;
+  --settings-card-bg: #1c1c24;
+  --settings-text-main: #fcfbff;
+  --settings-text-muted: #a0a0b0;
+  --settings-border: #2d2d3d;
+  
+  &[data-contrast="high"] {
+    --settings-text-main: #ffffff;
+    --settings-bg: #000000;
+    --settings-border: #ffffff;
+  }
+}
+
+/* 2. System Default Mode (Checks OS Preference) */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"], 
+  :root:not([data-theme]) {
+    --settings-primary: #a377ff; 
+    --settings-bg: #0f0f13;
+    --settings-card-bg: #1c1c24;
+    --settings-text-main: #fcfbff;
+    --settings-text-muted: #a0a0b0;
+    --settings-border: #2d2d3d;
+    
+    &[data-contrast="high"] {
+      --settings-text-main: #ffffff;
+      --settings-bg: #000000;
+      --settings-border: #ffffff;
+    }
+  }
+}
+
+/* High Contrast Overrides (Light Mode) */
+[data-contrast="high"] {
+  --settings-text-main: #000000;
+  --settings-bg: #ffffff;
+  --settings-border: #000000;
+}
+
+/* Core HTML Scaling hook */
+html {
+  font-size: var(--settings-base-scale);
+}
+
+/* Reduced Motion Override */
+[data-motion="reduce"] {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================
+   SETTINGS PAGE LAYOUT & COMPONENTS
+   ========================================= */
+
+.settings-main {
+  min-height: 100vh;
+  width: 100%;
+  padding: 60px 24px;
+  background-color: var(--settings-bg);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--settings-text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+
+  .settings-card {
+    width: 100%;
+    max-width: 680px;
+    background: var(--settings-card-bg);
+    border: 1px solid var(--settings-border);
+    border-radius: 24px;
+    padding: clamp(24px, 5vw, 48px);
+    box-shadow: 0 12px 32px rgba(20, 10, 40, 0.04);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+
+    .settings-header {
+      margin-bottom: 32px;
+
+      h1 {
+        font-family: 'Poppins', sans-serif;
+        font-size: clamp(1.8rem, 3vw, 2.4rem);
+        font-weight: 700;
+        margin: 0 0 8px 0;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        color: var(--settings-text-muted);
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+    }
+
+    .settings-section-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--settings-border);
+    }
+
+    /* --- Theme Grid --- */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+
+      .theme-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 16px;
+        background: transparent;
+        border: 2px solid var(--settings-border);
+        border-radius: 16px;
+        color: var(--settings-text-muted);
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          border-color: var(--settings-primary);
+          background: rgba(153, 102, 255, 0.04);
+        }
+
+        &.active {
+          border-color: var(--settings-primary);
+          color: var(--settings-primary);
+          background: rgba(153, 102, 255, 0.08);
+
+          .theme-icon {
+            background: var(--settings-primary);
+            border-color: var(--settings-primary);
+            color: #fff;
+          }
+        }
+
+        .theme-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: grid;
+          place-items: center;
+          background: var(--settings-card-bg);
+          border: 2px solid var(--settings-border);
+          transition: inherit;
+        }
+      }
+    }
+
+    /* --- Range Slider (UI Scaling) --- */
+    .scale-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        strong {
+          font-weight: 600;
+          font-size: 1rem;
+        }
+
+        span {
+          font-size: 0.85rem;
+          color: var(--settings-text-muted);
+        }
+      }
+
+      .scale-badge {
+        font-size: 0.85rem;
+        color: var(--settings-primary);
+        background: rgba(153, 102, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+      }
+    }
+
+    .range-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--settings-card-bg);
+      border: 1.5px solid var(--settings-border);
+      border-radius: 14px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &:focus-within {
+        border-color: var(--settings-primary);
+        box-shadow: 0 0 0 4px rgba(153, 102, 255, 0.1);
+      }
+
+      .range-icon {
+        color: var(--settings-text-muted);
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &.small { font-size: 0.9rem; }
+        &.large { font-size: 1.4rem; }
+      }
+
+      .range-slider {
+        flex: 1;
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        background: var(--settings-border);
+        border-radius: 4px;
+        outline: none;
+        transition: background 0.2s ease;
+
+        &::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: var(--settings-primary);
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(153, 102, 255, 0.4);
+          transition: transform 0.1s ease;
+
+          &:hover, &:active {
+            transform: scale(1.15);
+          }
+        }
+
+        &::-moz-range-thumb {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: var(--settings-primary);
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 2px 8px rgba(153, 102, 255, 0.4);
+          transition: transform 0.1s ease;
+
+          &:hover, &:active {
+            transform: scale(1.15);
+          }
+        }
+      }
+    }
+
+    /* --- Toggles (Motion & Contrast) --- */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        strong {
+          font-weight: 600;
+          font-size: 1rem;
+        }
+
+        span {
+          font-size: 0.85rem;
+          color: var(--settings-text-muted);
+        }
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+        flex-shrink: 0;
+
+        input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+
+          &:checked + .slider {
+            background-color: var(--settings-primary);
+
+            &:before {
+              transform: translateX(22px);
+            }
+          }
+
+          &:focus-visible + .slider {
+            outline: 2px solid var(--settings-text-main);
+            outline-offset: 2px;
+          }
+        }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          inset: 0;
+          background-color: var(--settings-border);
+          transition: 0.3s;
+          border-radius: 34px;
+
+          &:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+        }
+      }
+    }
+  }
+}

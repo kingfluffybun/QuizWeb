@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
+import AccessibilityInit from "@/app/components/AccessibilityInit";
 
 const poppins = Poppins({
     variable: "--font-poppins",
@@ -30,6 +31,7 @@ export default function RootLayout({
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             </head>
             <body>
+                <AccessibilityInit />
                 {children}
             </body>
         </html>
