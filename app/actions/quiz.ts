@@ -25,7 +25,6 @@ export interface QuizRow extends RowDataPacket {
     type_name: string;
     question_text: string;
     quiz_payload: any;
-    created_at: Date;
 }
 
 async function seedIfNeeded() {
@@ -98,12 +97,12 @@ export async function getRecentQuizzes() {
         await seedIfNeeded();
         const [quizzes] = await db.query<QuizRow[]>(`
             SELECT q.quiz_id, q.question_text, q.quiz_payload,
-                   c.cat_name, d.difficulty_name, t.type_name, q.created_at
+                   c.cat_name, d.difficulty_name, t.type_name
             FROM quiz_tbl q
             JOIN cat_tbl c ON q.cat_id = c.cat_id
             JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
-            ORDER BY q.created_at DESC LIMIT 20
+            ORDER BY q.quiz_id DESC LIMIT 20
         `);
         return quizzes.map(q => ({
             ...q,
