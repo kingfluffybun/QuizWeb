@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import type { RowDataPacket } from "mysql2";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
 export interface Category {
     cat_id: number;
@@ -20,11 +20,69 @@ export interface QuizType {
 
 export interface QuizRow extends RowDataPacket {
     quiz_id: number;
+    cat_id: number;
+    difficulty_id: number;
+    quiz_type_id: number;
     cat_name: string;
     difficulty_name: string;
     type_name: string;
     question_text: string;
     quiz_payload: any;
+}
+
+function getQuizPayload(typeName: string, formData: FormData) {
+    if (typeName === "MCQ") {
+        const options = [0, 1, 2, 3].map(index => formData.get(`option_${index}`) as string);
+        const correctIndex = formData.get("correct_option_index");
+
+        if (options.some(option => !option) || correctIndex === null) {
+            return { error: "All 4 options and the correct answer selection are required for MCQ." };
+        }
+
+        return {
+            payload: {
+                options: options.map(option => option.trim()),
+                correct_index: parseInt(correctIndex as string, 10)
+            }
+        };
+    }
+
+    if (typeName === "FITB") {
+        const answer = formData.get("fitb_answer") as string;
+        return answer
+            ? { payload: { answer: answer.trim() } }
+            : { error: "Correct answer is required for FITB." };
+    }
+
+    if (typeName === "Order") {
+        const items = [0, 1, 2, 3].map(index => formData.get(`order_${index}`) as string);
+        return items.some(item => !item)
+            ? { error: "All 4 items are required for Order syntax arrangement." }
+            : { payload: { items: items.map(item => item.trim()) } };
+    }
+
+    if (typeName === "Pair") {
+        const pairs = [];
+        for (let index = 0; index < 4; index++) {
+            const left = formData.get(`pair_left_${index}`) as string;
+            const right = formData.get(`pair_right_${index}`) as string;
+            if (!left || !right) {
+                return { error: `Both parts of Pair ${index + 1} are required.` };
+            }
+            pairs.push({ left: left.trim(), right: right.trim() });
+        }
+        return { payload: { pairs } };
+    }
+
+    if (typeName === "CP") {
+        const template = formData.get("cp_template") as string;
+        const expected = formData.get("cp_expected") as string;
+        return !template || !expected
+            ? { error: "Both initial template code and expected output/test code are required for CP." }
+            : { payload: { template: template.trim(), expected: expected.trim() } };
+    }
+
+    return { error: "Unsupported quiz type." };
 }
 
 async function seedIfNeeded() {
@@ -96,7 +154,8 @@ export async function getRecentQuizzes() {
     try {
         await seedIfNeeded();
         const [quizzes] = await db.query<QuizRow[]>(`
-            SELECT q.quiz_id, q.question_text, q.quiz_payload,
+            SELECT q.quiz_id, q.cat_id, q.difficulty_id, q.quiz_type_id,
+                   q.question_text, q.quiz_payload,
                    c.cat_name, d.difficulty_name, t.type_name
             FROM quiz_tbl q
             JOIN cat_tbl c ON q.cat_id = c.cat_id
@@ -135,72 +194,14 @@ export async function createQuiz(state: any, formData: FormData) {
         }
 
         const typeName = typeRow[0].type_name;
-        let payload: any;
-
-        if (typeName === "MCQ") {
-            const opt0 = formData.get("option_0") as string;
-            const opt1 = formData.get("option_1") as string;
-            const opt2 = formData.get("option_2") as string;
-            const opt3 = formData.get("option_3") as string;
-            const correctIndexStr = formData.get("correct_option_index");
-
-            if (!opt0 || !opt1 || !opt2 || !opt3 || correctIndexStr === null) {
-                return { error: "All 4 options and the correct answer selection are required for MCQ." };
-            }
-
-            payload = {
-                options: [opt0.trim(), opt1.trim(), opt2.trim(), opt3.trim()],
-                correct_index: parseInt(correctIndexStr as string, 10)
-            };
-        } else if (typeName === "FITB") {
-            const answer = formData.get("fitb_answer") as string;
-            if (!answer) {
-                return { error: "Correct answer is required for FITB." };
-            }
-            payload = {
-                answer: answer.trim()
-            };
-        } else if (typeName === "Order") {
-            const item0 = formData.get("order_0") as string;
-            const item1 = formData.get("order_1") as string;
-            const item2 = formData.get("order_2") as string;
-            const item3 = formData.get("order_3") as string;
-
-            if (!item0 || !item1 || !item2 || !item3) {
-                return { error: "All 4 items are required for Order syntax arrangement." };
-            }
-
-            payload = {
-                items: [item0.trim(), item1.trim(), item2.trim(), item3.trim()]
-            };
-        } else if (typeName === "Pair") {
-            const pairs = [];
-            for (let i = 0; i < 4; i++) {
-                const left = formData.get(`pair_left_${i}`) as string;
-                const right = formData.get(`pair_right_${i}`) as string;
-                if (!left || !right) {
-                    return { error: `Both parts of Pair ${i + 1} are required.` };
-                }
-                pairs.push({ left: left.trim(), right: right.trim() });
-            }
-            payload = { pairs };
-        } else if (typeName === "CP") {
-            const template = formData.get("cp_template") as string;
-            const expected = formData.get("cp_expected") as string;
-            if (!template || !expected) {
-                return { error: "Both initial template code and expected output/test code are required for CP." };
-            }
-            payload = {
-                template: template.trim(),
-                expected: expected.trim()
-            };
-        } else {
-            return { error: "Unsupported quiz type." };
+        const parsedPayload = getQuizPayload(typeName, formData);
+        if (parsedPayload.error) {
+            return { error: parsedPayload.error };
         }
 
         await db.query(
             "INSERT INTO quiz_tbl (cat_id, difficulty_id, quiz_type_id, question_text, quiz_payload) VALUES (?, ?, ?, ?, ?)",
-            [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(payload)]
+            [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload)]
         );
 
         return { success: true };
@@ -220,5 +221,43 @@ export async function deleteQuiz(quizId: number) {
     } catch (error) {
         console.error("Failed to delete quiz:", error);
         return { error: "An error occurred while deleting the quiz from the database." };
+    }
+}
+
+export async function updateQuiz(quizId: number, formData: FormData) {
+    const catId = formData.get("cat_id");
+    const difficultyId = formData.get("difficulty_id");
+    const quizTypeId = formData.get("quiz_type_id");
+    const questionText = formData.get("question_text");
+
+    if (!quizId || !catId || !difficultyId || !quizTypeId || !questionText) {
+        return { error: "Quiz ID, category, difficulty, type, and question are all required." };
+    }
+
+    try {
+        const [typeRows] = await db.query<RowDataPacket[]>(
+            "SELECT type_name FROM quiz_type_tbl WHERE quiz_type_id = ?",
+            [quizTypeId]
+        );
+        if (typeRows.length === 0) {
+            return { error: "Invalid quiz type selected." };
+        }
+
+        const parsedPayload = getQuizPayload(typeRows[0].type_name, formData);
+        if (parsedPayload.error) {
+            return { error: parsedPayload.error };
+        }
+
+        const [result] = await db.query<ResultSetHeader>(
+            "UPDATE quiz_tbl SET cat_id = ?, difficulty_id = ?, quiz_type_id = ?, question_text = ?, quiz_payload = ? WHERE quiz_id = ?",
+            [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload), quizId]
+        );
+
+        return result.affectedRows === 0
+            ? { error: "Quiz question was not found." }
+            : { success: true };
+    } catch (error) {
+        console.error("Failed to update quiz:", error);
+        return { error: "An error occurred while updating the quiz in the database." };
     }
 }
