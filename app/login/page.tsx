@@ -8,6 +8,7 @@ import LoginQuiz from "@/app/components/loginQuiz";
 import "#css/login.css";
 import "#css/nav.css";
 import PublicNav from "../components/publicNav";
+import Link from "next/link";
 
 const passwordRules = [
     { key: "length", label: "8+ characters", test: (pw: string) => pw.length >= 8 },
@@ -194,8 +195,6 @@ export default function AuthPage() {
 
     // HTML
     return (
-        <>
-        <PublicNav />
         <div className="auth-page">
             <main className={`auth-card ${isSignup ? 'is-signup' : ''}`} id="auth">
                 <div className="editor-bar" aria-hidden="true">
@@ -203,6 +202,12 @@ export default function AuthPage() {
                     <div className="editor-tabs">
                         <span className="editor-tab active"><span className="tab-dot"></span>index.html</span>
                         <span className="editor-tab"><span className="tab-dot"></span>style.css</span>
+                        <Link href="/settings" style={{ textDecoration: "none" }}>
+                            <span className="editor-tab"><span className="tab-dot"></span>settings.tsx</span>
+                        </Link>
+                        <Link href="/about" style={{ textDecoration: "none" }}>
+                            <span className="editor-tab"><span className="tab-dot"></span>about.tsx</span>
+                        </Link>
                     </div>
                 </div>
 
@@ -462,6 +467,5 @@ export default function AuthPage() {
                 </div>
             </div>
         </div>
-        </>
     );
 }
