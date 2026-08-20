@@ -1,20 +1,46 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import "#css/landing-page.css";
 import "#css/nav.css";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+    const [menuOpen, setMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const bodyOverflow = document.body.style.overflow;
+        const rootOverflow = document.documentElement.style.overflow;
+
+        if (menuOpen) {
+            document.body.style.overflow = "hidden";
+            document.documentElement.style.overflow = "hidden";
+        }
+
+        return () => {
+            document.body.style.overflow = bodyOverflow;
+            document.documentElement.style.overflow = rootOverflow;
+        };
+    }, [menuOpen]);
+
     return (
         <main>
             <section className="hero">
-                <nav>
-                    <div><a href="/"><p>Logo</p></a></div>
-                    <button className="menu-btn"> {/* for mobile 'to */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu-icon lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
-                        <p>Menu</p>
+                <nav className={menuOpen ? "menu-open" : ""}>
+                    <div><Link href="/"><p>Logo</p></Link></div>
+                    <button className="menu-btn" type="button"
+                        // aria-expanded={menuOpen}
+                        // aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+                        onClick={() => setMenuOpen((isOpen) => !isOpen)}>
+                        {menuOpen ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+                        )}
+                        <p>{menuOpen ? "Close" : "Menu"}</p>
                     </button>
-                    <div className="nav-options">
+                    <div className={`nav-options${menuOpen ? " is-open" : ""}`}>
                         <div><a href="/quiz"><p>Learn</p></a></div>
                         <div><a href="test.com"><p>Leaderboard</p></a></div>
                         <div><a href="/about"><p>About</p></a></div>

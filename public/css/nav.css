@@ -32,8 +32,13 @@ nav button {
 
 nav {
     height: 10vh;
+    min-height: 10vh;
+    max-height: 10vh;
+    flex: 0 0 10vh;
     width: 100%;
     padding: 0 2rem;
+    position: relative;
+    z-index: 1000;
     > div:first-child {margin-right: auto;}
 }
 
@@ -57,6 +62,89 @@ nav, .nav-options {
 
 @media (max-width:768px) {
     nav button {display: flex;}
-    .nav-options {display: none;}
+    .nav-options {
+        position: fixed;
+        inset: 0;
+        width: auto;
+        height: auto;
+        margin: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 1rem;
+        padding: 4.5rem 2.5rem;
+        background-color: #A883EA;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: none;
+    }
     nav div:first-child {margin-left: 0;}
+
+    nav::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-color: #A883EA;
+        opacity: 0;
+        pointer-events: none;
+        transition: none;
+    }
+
+    nav.menu-open {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100dvh;
+        min-height: 100dvh;
+        max-height: none;
+        flex: none;
+        background-color: transparent;
+    }
+
+    nav.menu-open::before {
+        opacity: 1;
+        transition: opacity 200ms ease;
+    }
+
+    .nav-options.is-open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: opacity 200ms ease;
+    }
+
+    nav.menu-open > div:first-child {display: none;}
+
+    nav.menu-open button {
+        position: absolute;
+        top: 0;
+        right: 2rem;
+        z-index: 31;
+        height: 10vh;
+        margin-left: 0;
+        color: white;
+    }
+
+    .nav-options.is-open div {
+        margin: 0;
+    }
+
+    .nav-options.is-open div a p {
+        font-size: 1.75rem;
+        color: white;
+    }
+
+    .nav-options.is-open div:last-child {
+        margin-top: 0;
+        background-color: transparent;
+        border-radius: 0;
+    }
+
+    .nav-options.is-open div:last-child > a p {
+        padding: 0;
+    }
 }
