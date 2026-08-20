@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createQuiz, getRecentQuizzes, deleteQuiz } from "../actions/quiz";
+import { createQuiz, getRecentQuizzes, updateQuiz, deleteQuiz } from "../actions/quiz";
 import type { Category, Difficulty, QuizType } from "../actions/quiz";
 
 interface QuizInputFormProps {
@@ -20,6 +20,7 @@ export default function QuizInputForm({
     const [selectedTypeId, setSelectedTypeId] = useState<string>("");
     const [recentQuizzes, setRecentQuizzes] = useState<any[]>(initialRecentQuizzes);
     const [isPending, setIsPending] = useState(false);
+    const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
     const selectedType = types.find(t => t.quiz_type_id.toString() === selectedTypeId);
@@ -39,20 +40,19 @@ export default function QuizInputForm({
         const formData = new FormData(event.currentTarget);
 
         try {
-            const result = await createQuiz(null, formData);
+            const result = editingQuiz
+                ? await updateQuiz(editingQuiz.quiz_id, formData)
+                : await createQuiz(null, formData);
             if (result.error) {
                 setMessage({ type: "error", text: result.error });
             } else if (result.success) {
-                setMessage({ type: "success", text: "Quiz successfully added to database!" });
+                setMessage({
+                    type: "success",
+                    text: editingQuiz ? "Quiz successfully updated!" : "Quiz successfully added to database!"
+                });
 
                 // Reset only question and type-specific text inputs/textareas to allow fast batch entries
-                const form = event.target as HTMLFormElement;
-                form.querySelectorAll<HTMLInputElement>('input[type="text"]').forEach(input => {
-                    input.value = "";
-                });
-                form.querySelectorAll<HTMLTextAreaElement>('textarea').forEach(textarea => {
-                    textarea.value = "";
-                });
+                setEditingQuiz(null);
 
                 // Refresh list
                 const updatedQuizzes = await getRecentQuizzes();
@@ -64,6 +64,18 @@ export default function QuizInputForm({
         } finally {
             setIsPending(false);
         }
+    };
+
+    const handleEdit = (quiz: any) => {
+        setEditingQuiz(quiz);
+        setSelectedTypeId(quiz.quiz_type_id.toString());
+        setMessage(null);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingQuiz(null);
+        setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
+        setMessage(null);
     };
 
     const handleDelete = async (quizId: number) => {
@@ -92,7 +104,7 @@ export default function QuizInputForm({
         <>
             {/* Form Section */}
             <div className="admin-card">
-                <h2>Create New Quiz Question</h2>
+                <h2>{editingQuiz ? "Edit Quiz Question" : "Create New Quiz Question"}</h2>
 
                 {message && (
                     <div className={`status-message status-${message.type}`}>
@@ -100,10 +112,10 @@ export default function QuizInputForm({
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
+                <form key={editingQuiz?.quiz_id ?? "new"} onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label htmlFor="cat_id">Category</label>
-                        <select id="cat_id" name="cat_id" className="form-select" required defaultValue="">
+                        <select id="cat_id" name="cat_id" className="form-select" required defaultValue={editingQuiz?.cat_id?.toString() ?? ""}>
                             <option value="" disabled>Select Category</option>
                             {categories.map((cat) => (
                                 <option key={cat.cat_id} value={cat.cat_id}>
@@ -115,7 +127,7 @@ export default function QuizInputForm({
 
                     <div className="form-group">
                         <label htmlFor="difficulty_id">Difficulty</label>
-                        <select id="difficulty_id" name="difficulty_id" className="form-select" required defaultValue="">
+                        <select id="difficulty_id" name="difficulty_id" className="form-select" required defaultValue={editingQuiz?.difficulty_id?.toString() ?? ""}>
                             <option value="" disabled>Select Difficulty</option>
                             {difficulties.map((diff) => (
                                 <option key={diff.difficulty_id} value={diff.difficulty_id}>
@@ -156,6 +168,7 @@ export default function QuizInputForm({
                             name="question_text"
                             className="form-textarea"
                             placeholder="Enter the question text here..."
+                            defaultValue={editingQuiz?.question_text ?? ""}
                             required
                         />
                     </div>
@@ -174,13 +187,14 @@ export default function QuizInputForm({
                                             id={`correct_${idx}`}
                                             className="radio-check"
                                             required
-                                            defaultChecked={idx === 0}
+                                            defaultChecked={editingQuiz ? editingQuiz.quiz_payload?.correct_index === idx : idx === 0}
                                         />
                                         <input
                                             type="text"
                                             name={`option_${idx}`}
                                             placeholder={`Option ${idx + 1}`}
                                             className="form-input"
+                                            defaultValue={editingQuiz?.quiz_payload?.options?.[idx] ?? ""}
                                             required
                                         />
                                     </div>
@@ -199,6 +213,7 @@ export default function QuizInputForm({
                                 name="fitb_answer"
                                 placeholder="Enter the correct answer word(s)..."
                                 className="form-input"
+                                defaultValue={editingQuiz?.quiz_payload?.answer ?? ""}
                                 required
                             />
                         </div>
@@ -217,6 +232,7 @@ export default function QuizInputForm({
                                             name={`order_${idx}`}
                                             placeholder={`Sequence Item ${idx + 1}`}
                                             className="form-input"
+                                            defaultValue={editingQuiz?.quiz_payload?.items?.[idx] ?? ""}
                                             required
                                         />
                                     </div>
@@ -238,6 +254,7 @@ export default function QuizInputForm({
                                             name={`pair_left_${idx}`}
                                             placeholder="Left Key"
                                             className="form-input"
+                                            defaultValue={editingQuiz?.quiz_payload?.pairs?.[idx]?.left ?? ""}
                                             required
                                         />
                                         <span style={{ color: "#aaa" }}>&harr;</span>
@@ -246,6 +263,7 @@ export default function QuizInputForm({
                                             name={`pair_right_${idx}`}
                                             placeholder="Right Value"
                                             className="form-input"
+                                            defaultValue={editingQuiz?.quiz_payload?.pairs?.[idx]?.right ?? ""}
                                             required
                                         />
                                     </div>
@@ -265,6 +283,7 @@ export default function QuizInputForm({
                                     className="form-textarea"
                                     style={{ fontFamily: "monospace" }}
                                     placeholder="e.g. function test() {\n  // your code here\n}"
+                                    defaultValue={editingQuiz?.quiz_payload?.template ?? ""}
                                     required
                                 />
                             </div>
@@ -276,6 +295,7 @@ export default function QuizInputForm({
                                     className="form-textarea"
                                     style={{ fontFamily: "monospace" }}
                                     placeholder="e.g. return true;"
+                                    defaultValue={editingQuiz?.quiz_payload?.expected ?? ""}
                                     required
                                 />
                             </div>
@@ -288,8 +308,19 @@ export default function QuizInputForm({
                         disabled={isPending}
                         style={{ marginTop: "10px" }}
                     >
-                        {isPending ? "Adding Quiz..." : "Add Quiz Question"}
+                        {isPending ? (editingQuiz ? "Saving Quiz..." : "Adding Quiz...") : (editingQuiz ? "Save Changes" : "Add Quiz Question")}
                     </button>
+                    {editingQuiz && (
+                        <button
+                            type="button"
+                            className="btn-delete"
+                            onClick={handleCancelEdit}
+                            disabled={isPending}
+                            style={{ marginTop: "10px", marginLeft: "10px" }}
+                        >
+                            Cancel
+                        </button>
+                    )}
                 </form>
             </div>
 
@@ -309,14 +340,25 @@ export default function QuizInputForm({
                                 <div key={quiz.quiz_id} className="quiz-list-item">
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
                                         <div className="quiz-list-question" style={{ marginBottom: 0 }}>{quiz.question_text}</div>
-                                        <button
-                                            type="button"
-                                            className="btn-delete"
-                                            onClick={() => handleDelete(quiz.quiz_id)}
-                                            title="Delete Question"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
-                                        </button>
+                                                    <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-delete"
+                                                            onClick={() => handleEdit(quiz)}
+                                                            title="Edit Question"
+                                                            aria-label="Edit Question"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></svg>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-delete"
+                                                            onClick={() => handleDelete(quiz.quiz_id)}
+                                                            title="Delete Question"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+                                                        </button>
+                                                    </div>
                                     </div>
                                     <div className="quiz-badge-row">
                                         <span className="badge badge-cat">{quiz.cat_name}</span>
