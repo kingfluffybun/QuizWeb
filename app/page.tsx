@@ -28,6 +28,7 @@ export default function Home() {
     return (
         <>
         <PublicNav />
+        <div className="overlay"></div>
         <section className="hero">
             <div className="hero-text">
                 <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
@@ -39,11 +40,11 @@ export default function Home() {
             </div>
             
             {/* Added priority and aria-hidden to decorative images */}
-            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds" priority aria-hidden="true" />
-            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds" priority aria-hidden="true" />
-            <Image src="/assets/landing-page/Bus.svg" width={100} height={100} alt="QuizWeb Bus" id="bus" priority />
-            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds" aria-hidden="true" />
-            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds" aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds designs" priority aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds designs" priority aria-hidden="true" />
+            <Image src="/assets/landing-page/Bus.svg" width={100} height={100} alt="QuizWeb Bus" id="bus" className="designs" priority />
+            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" />
             <div id="ground"></div>
         </section>
         

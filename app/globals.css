@@ -20,9 +20,9 @@
     --bg-brand: #1f1433;
     --bg-main: #0f0f13;
     --bg-card: #1c1c24;
-    --text-main: #fcfbff;
+    --text-main: #fafafa;
     --text-muted: #a0a0b0;
-    --text-inverse: #fcfbff;
+    --text-inverse: #fafafa;
     --border-main: #2d2d3d;
 }
 
@@ -96,9 +96,9 @@ small {
         --bg-brand: #1f1433;
         --bg-main: #0f0f13;
         --bg-card: #1c1c24;
-        --text-main: #fcfbff;
+        --text-main: #fafafa;
         --text-muted: #a0a0b0;
-        --text-inverse: #fcfbff;
+        --text-inverse: #fafafa;
         --border-main: #2d2d3d;
     }
 

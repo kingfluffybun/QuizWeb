@@ -5,7 +5,6 @@
     flex-direction: column;
     width: 100%;
     min-height: 85vh;
-    background-color: var(--background-color);
     overflow-x: hidden;
 
     > img, #ground, .hero-text {
@@ -32,7 +31,6 @@
         
         > h1, p, div h1 {
             text-align: center; 
-            color: var(--text-inverse);
         }
         
         > h1 {
@@ -52,6 +50,7 @@
 }
 
 .clouds {width: 56vh;}
+.designs {user-select: none; pointer-events: none; z-index: 5;}
 #clouds-topleft {left: -12vh; top: 12vh;}
 #clouds-topright {right: -24vh; top: 12vh;}
 #clouds-left {left: 0; bottom: 12vh;}
@@ -61,7 +60,6 @@
 #ground {
     width: 100%;
     height: calc(12vh + 1px);
-    background-color: #fcfbff ;
     bottom: 0;
 }
 
@@ -71,7 +69,6 @@
     align-items: center;
     justify-content: center;
     z-index: 1;
-    background-color: var(--bg-main);
 }
 
 .heroDescription {
@@ -89,18 +86,40 @@
         
         > h1, p {text-align: center;}
         
-        > h1 { 
-            font-size: clamp(1.5rem, 2vw, 1.75rem); 
-            color: var(--text-main);
-        }
-        
-        > p {
-            color: var(--text-muted); 
-            line-height: 1.5; 
-            font-size: clamp(1rem, 1vw, 1.25rem);
-        }
-        
-        > svg {color: var(--primary-color);}
+        > h1 { font-size: clamp(1.5rem, 2vw, 1.75rem); }
+        > p { line-height: 1.5; font-size: clamp(1rem, 1vw, 1.25rem); }
+    }
+}
+
+:root, [data-theme="light"] {
+    .hero { background-color: var(--background-color); }
+    .hero .hero-text > h1, 
+    .hero .hero-text p, 
+    .hero .hero-text div h1 { color: var(--text-inverse); }
+    
+    #ground { background-color: var(--bg-main); }
+    .hero2 { background-color: var(--bg-main); }
+    
+    .heroDescription > div {
+        > h1 { color: var(--text-main); }
+        > p { color: var(--text-muted); }
+        > svg { color: var(--primary-color); }
+    }
+}
+
+[data-theme="dark"] {
+    .hero { background-color: var(--bg-main); }
+    
+    .hero .hero-text > h1, 
+    .hero .hero-text p, 
+    .hero .hero-text div h1 { color: var(--text-inverse); }
+    #ground { background-color: var(--bg-brand); }
+    .hero2 { background-color: var(--bg-brand); }
+    
+    .heroDescription > div {
+        > h1 { color: var(--text-main); }
+        > p { color: var(--text-muted); }
+        > svg { color: var(--primary-color); }
     }
 }
 
@@ -120,8 +139,6 @@
     
     .heroDescription {
         flex-direction: column;
-        > div {
-            padding: 12px 24px;
-        }
+        > div { padding: 12px 24px; }
     } 
 }
