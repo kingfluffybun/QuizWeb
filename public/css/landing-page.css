@@ -91,6 +91,9 @@
     }
 }
 
+/* clarence eto yung ibahin mo if gusto mo icustomize yung itsura ng landing page sa lightmode if ayaw mo sya na mag follow sa global na color scheme */
+/* vvvvvvvv */
+
 :root, [data-theme="light"] {
     .hero { background-color: var(--background-color); }
     .hero .hero-text > h1, 
@@ -106,6 +109,9 @@
         > svg { color: var(--primary-color); }
     }
 }
+
+/* clarence eto yung ibahin mo if gusto mo baguhin yung color-scheme ng darkmode na landing page */
+/* vvvvvvvv */
 
 [data-theme="dark"] {
     .hero { background-color: var(--bg-main); }
