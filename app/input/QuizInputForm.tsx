@@ -343,7 +343,7 @@ export default function QuizInputForm({
                                                     <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
                                                         <button
                                                             type="button"
-                                                            className="btn-delete"
+                                                            className="btn-edit"
                                                             onClick={() => handleEdit(quiz)}
                                                             title="Edit Question"
                                                             aria-label="Edit Question"
