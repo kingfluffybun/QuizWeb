@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { signUp } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
-import LoginQuiz from "@/app/components/loginQuiz";
 import "#css/login.css";
 import "#css/nav.css";
-import PublicNav from "../components/publicNav";
+import LoginQuiz from "@/app/components/loginQuiz";
 import Link from "next/link";
 
 const passwordRules = [
@@ -196,21 +196,7 @@ export default function AuthPage() {
     // HTML
     return (
         <div className="auth-page">
-            <main className={`auth-card ${isSignup ? 'is-signup' : ''}`} id="auth">
-                <div className="editor-bar" aria-hidden="true">
-                    <span className="editor-dots"><span></span><span></span><span></span></span>
-                    <div className="editor-tabs">
-                        <span className="editor-tab active"><span className="tab-dot"></span>index.html</span>
-                        <span className="editor-tab"><span className="tab-dot"></span>style.css</span>
-                        <Link href="/settings" style={{ textDecoration: "none" }}>
-                            <span className="editor-tab"><span className="tab-dot"></span>settings.tsx</span>
-                        </Link>
-                        <Link href="/about" style={{ textDecoration: "none" }}>
-                            <span className="editor-tab"><span className="tab-dot"></span>about.tsx</span>
-                        </Link>
-                    </div>
-                </div>
-
+            <main className={`auth-card ${isSignup ? 'is-signup' : ''}`}>
                 {/* Info */}
                 <section className="info" aria-label="Authentication info">
                     <div className="brand">
@@ -219,11 +205,10 @@ export default function AuthPage() {
                     </div>
 
                     <div className="panel">
-                        <p className={`tag ${fadeClass}`} id="panelLabel"></p>
                         <h1 className={fadeClass} id="panelTitle">{panelTitle}</h1>
                         <p className={fadeClass} id="panelText">{panelText}</p>
-                        <a id="toggleLink" 
-                            className={`panel-toggle ${fadeClass}`} 
+                        <a
+                            className={`panel-toggle ${fadeClass}`}
                             href="#" 
                             onClick={(e) => {
                                 e.preventDefault();
@@ -235,7 +220,20 @@ export default function AuthPage() {
                     </div>
 
                     <p className="code-mark" aria-hidden="true">&lt;/&gt;</p>
-                    <div className="blob" aria-hidden="true"></div>
+
+                    <div className="login-cloudscape" aria-hidden="true">
+                        {/* Light */}
+                        <Image src="/assets/landing-page/Clouds-topleft.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left dark:hidden" priority data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-topright.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right dark:hidden" priority data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-left.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left dark:hidden" data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-right.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right dark:hidden" data-hide-on-theme="dark"/>
+
+                        {/* Dark */}
+                        <Image src="/assets/landing-page/Clouds-topleft-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left hidden dark:block" priority data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-topright-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right hidden dark:block" priority data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-left-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left hidden dark:block" data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-right-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right hidden dark:block" data-hide-on-theme="light"/>
+                    </div>
 
                     <LoginQuiz />
                 </section>
@@ -251,12 +249,13 @@ export default function AuthPage() {
 
                         <div className="stack">
                             {/* Login Form */}
-                            <form id="signIn" className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate onSubmit={handleLogin}>
+                            <form className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate onSubmit={handleLogin}>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                                     </span>
-                                    <input type="email" placeholder="Email address" name="email" autoComplete="email" />
+                                    <input type="email" placeholder=" " name="email" autoComplete="email" />
+                                    <span className="floating-label">Email address</span>
                                 </label>
 
                                 <label className="input-group">
@@ -265,10 +264,11 @@ export default function AuthPage() {
                                     </span>
                                     <input 
                                         type="password"
-                                        placeholder="Password"
+                                        placeholder=" "
                                         name="password"
                                         autoComplete="current-password"
                                     />
+                                    <span className="floating-label">Password</span>
                                 </label>
 
                                 {!isSignupContent && error && (
@@ -287,38 +287,50 @@ export default function AuthPage() {
                                     </a>
                                 </div>
 
-                                <button type="submit" className="submit-btn" id="signInBtn" disabled={isLoading}>
+                                <button type="submit" className="submit-btn" disabled={isLoading}>
                                     {isLoading ? "Signing in..." : "Sign in"}
                                 </button>
 
                                 <div className="divider-row" aria-hidden="true">
                                     <span className="divider-line"></span>
-                                    <span className="divider-text">OR</span>
+                                    <span className="divider-text">Or sign in with</span>
                                     <span className="divider-line"></span>
                                 </div>
 
-                                <button type="button" className="social-btn" onClick={() => signIn("google", { callbackUrl: "/" })}>
-                                    <span className="social-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30"><path d="M 15.003906 3 C 8.3749062 3 3 8.373 3 15 C 3 21.627 8.3749062 27 15.003906 27 C 25.013906 27 27.269078 17.707 26.330078 13 L 25 13 L 22.732422 13 L 15 13 L 15 17 L 22.738281 17 C 21.848702 20.448251 18.725955 23 15 23 C 10.582 23 7 19.418 7 15 C 7 10.582 10.582 7 15 7 C 17.009 7 18.839141 7.74575 20.244141 8.96875 L 23.085938 6.1289062 C 20.951937 4.1849063 18.116906 3 15.003906 3 z"/></svg>
-                                    </span>
-                                    <span>Continue with Google</span>
-                                </button>
+                                <div className="social-row">
+                                    <button type="button" className="social-btn" onClick={() => signIn("google", { callbackUrl: "/" })}>
+                                        <span className="social-icon" aria-hidden="true">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30"><path d="M 15.003906 3 C 8.3749062 3 3 8.373 3 15 C 3 21.627 8.3749062 27 15.003906 27 C 25.013906 27 27.269078 17.707 26.330078 13 L 25 13 L 22.732422 13 L 15 13 L 15 17 L 22.738281 17 C 21.848702 20.448251 18.725955 23 15 23 C 10.582 23 7 19.418 7 15 C 7 10.582 10.582 7 15 7 C 17.009 7 18.839141 7.74575 20.244141 8.96875 L 23.085938 6.1289062 C 20.951937 4.1849063 18.116906 3 15.003906 3 z"/></svg>
+                                        </span>
+                                        <span>Google</span>
+                                    </button>
+
+                                    <button type="button" className="social-btn" onClick={() => signIn("github", { callbackUrl: "/" })}>
+                                        <span className="social-icon" aria-hidden="true">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-github" viewBox="0 0 16 16">
+                                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+                                            </svg>
+                                        </span>
+                                        <span>Github</span>
+                                    </button>
+                                </div>
                             </form>
 
                             {/* Signup Form */}
-                            <form id="signUp" className={`formView ${isSignupContent ? 'active' : ''}`} onSubmit={handleSignup} noValidate>
+                            <form className={`formView ${isSignupContent ? 'active' : ''}`} onSubmit={handleSignup} noValidate>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                     </span>
                                     <input 
                                         type="text"
-                                        placeholder="Username"
+                                        placeholder=" "
                                         name="username" 
                                         autoComplete="name"
                                         value={signupUsername}
                                         onChange={(e) => setSignupUsername(e.target.value)}
                                     />
+                                    <span className="floating-label">Username</span>
                                 </label>
 
                                 <label className="input-group">
@@ -327,12 +339,13 @@ export default function AuthPage() {
                                     </span>
                                     <input
                                         type="email"
-                                        placeholder="Email address" 
+                                        placeholder=" " 
                                         name="email"
                                         autoComplete="email"
                                         value={signupEmail}
                                         onChange={(e) => setSignupEmail(e.target.value)}
                                     />
+                                    <span className="floating-label">Email address</span>
                                 </label>
 
                                 <label className="input-group">
@@ -341,12 +354,13 @@ export default function AuthPage() {
                                     </span>
                                     <input
                                         type="password"
-                                        placeholder="Create password"
+                                        placeholder=" "
                                         name="password"
                                         autoComplete="new-password"
                                         value={signupPassword}
                                         onChange={(e) => setSignupPassword(e.target.value)}
                                     />
+                                    <span className="floating-label">Create password</span>
                                 </label>
 
                                 <label className="input-group">
@@ -355,12 +369,13 @@ export default function AuthPage() {
                                     </span>
                                     <input 
                                         type="password"
-                                        placeholder="Confirm password"
+                                        placeholder=" "
                                         name="confirmPassword"
                                         autoComplete="new-password"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                     />
+                                    <span className="floating-label">Confirm password</span>
                                 </label>
 
                                 {signupPassword.length > 0 && (
@@ -396,65 +411,76 @@ export default function AuthPage() {
                             </form>
                         </div>
                     </div>
+                    <Link href="/" className="back-landing" aria-label="Back to Landing Page" title="Back to Landing Page">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M9 14 4 9l5-5" />
+                            <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
+                        </svg>
+                        <span>Back</span>
+                    </Link>
                 </section>
             </main>
 
             {/* Forgot Password Model */}
-            <div id="forgot" className={`modal ${showForgot ? 'visible' : ''}`} role="dialog" aria-modal="true" aria-label="Forgot password">
+            <div className={`modal ${showForgot ? 'visible' : ''}`} role="dialog" aria-modal="true" aria-label="Forgot password">
                 <div className="modalBox">
                     <button type="button" className="modalClose" aria-label="Close forgot password" onClick={closeForgot}>×</button>
 
                     <div className="modalHead">
-                        <p className="eyebrow" id="stepLabel">{stepLabel}</p>
-                        <h3 id="stepTitle">{stepTitle}</h3>
-                        <p className="modalCopy" id="stepText">{stepText}</p>
+                        <p className="eyebrow">{stepLabel}</p>
+                        <h3>{stepTitle}</h3>
+                        <p className="modalCopy">{stepText}</p>
                     </div>
 
-                    <div className={`step ${forgotStep === 1 ? 'active' : ''}`} id="step1">
-                        <label className="input-group modal-input">
+                    <div className={`step ${forgotStep === 1 ? 'active' : ''}`}>
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                             </span>
-                            <input type="email" placeholder="Registered email address" autoComplete="email" />
+                            <input type="email" placeholder=" " autoComplete="email" />
+                            <span className="floating-label">Registered email address</span>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(2)}>Send OTP</button>
                     </div>
 
-                    <div className={`step ${forgotStep === 2 ? 'active' : ''}`} id="step2">
-                        <label className="input-group modal-input">
+                    <div className={`step ${forgotStep === 2 ? 'active' : ''}`}>
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
-                            <input type="text" placeholder="Enter 6-digit OTP" maxLength={6} />
+                            <input type="text" placeholder=" " maxLength={6} />
+                            <span className="floating-label">Enter 6-digit OTP</span>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(3)}>Verify OTP</button>
                     </div>
 
-                    <div className={`step ${forgotStep === 3 ? 'active' : ''}`} id="step3">
-                        <label className="input-group modal-input">
+                    <div className={`step ${forgotStep === 3 ? 'active' : ''}`}>
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
                             <input
                                 type="password"
-                                placeholder="New password"
+                                placeholder=" "
                                 autoComplete="new-password"
                             />
+                            <span className="floating-label">New password</span>
                         </label>
-                        <label className="input-group modal-input">
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
                             <input
                                 type="password"
-                                placeholder="Confirm password"
+                                placeholder=" "
                                 autoComplete="new-password"
                             />
+                            <span className="floating-label">Confirm password</span>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(4)}>Reset Password</button>
                     </div>
 
-                    <div className={`step ${forgotStep === 4 ? 'active' : ''}`} id="step4">
+                    <div className={`step ${forgotStep === 4 ? 'active' : ''}`}>
                         <p className="doneMsg">Password reset complete. You can now return to Sign In.</p>
                         <button type="button" className="submit-btn"
                             onClick={() => { closeForgot(); switchMode('login'); }}
