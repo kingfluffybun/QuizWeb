@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { signUp } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
-import LoginQuiz from "@/app/components/loginQuiz";
 import "#css/login.css";
 import "#css/nav.css";
-import PublicNav from "../components/publicNav";
 import Link from "next/link";
 
 const passwordRules = [
@@ -196,21 +195,7 @@ export default function AuthPage() {
     // HTML
     return (
         <div className="auth-page">
-            <main className={`auth-card ${isSignup ? 'is-signup' : ''}`} id="auth">
-                <div className="editor-bar" aria-hidden="true">
-                    <span className="editor-dots"><span></span><span></span><span></span></span>
-                    <div className="editor-tabs">
-                        <span className="editor-tab active"><span className="tab-dot"></span>index.html</span>
-                        <span className="editor-tab"><span className="tab-dot"></span>style.css</span>
-                        <Link href="/settings" style={{ textDecoration: "none" }}>
-                            <span className="editor-tab"><span className="tab-dot"></span>settings.tsx</span>
-                        </Link>
-                        <Link href="/about" style={{ textDecoration: "none" }}>
-                            <span className="editor-tab"><span className="tab-dot"></span>about.tsx</span>
-                        </Link>
-                    </div>
-                </div>
-
+            <main className={`auth-card ${isSignup ? 'is-signup' : ''}`}>
                 {/* Info */}
                 <section className="info" aria-label="Authentication info">
                     <div className="brand">
@@ -219,11 +204,10 @@ export default function AuthPage() {
                     </div>
 
                     <div className="panel">
-                        <p className={`tag ${fadeClass}`} id="panelLabel"></p>
                         <h1 className={fadeClass} id="panelTitle">{panelTitle}</h1>
                         <p className={fadeClass} id="panelText">{panelText}</p>
-                        <a id="toggleLink" 
-                            className={`panel-toggle ${fadeClass}`} 
+                        <a
+                            className={`panel-toggle ${fadeClass}`}
                             href="#" 
                             onClick={(e) => {
                                 e.preventDefault();
@@ -235,9 +219,13 @@ export default function AuthPage() {
                     </div>
 
                     <p className="code-mark" aria-hidden="true">&lt;/&gt;</p>
-                    <div className="blob" aria-hidden="true"></div>
 
-                    <LoginQuiz />
+                    <div className="login-cloudscape" aria-hidden="true">
+                        <Image src="/assets/landing-page/Clouds-topleft.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left" priority />
+                        <Image src="/assets/landing-page/Clouds-topright.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right" priority />
+                        <Image src="/assets/landing-page/Clouds-left.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left" />
+                        <Image src="/assets/landing-page/Clouds-right.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right" />
+                    </div>
                 </section>
 
                 {/* Form */}
@@ -251,7 +239,7 @@ export default function AuthPage() {
 
                         <div className="stack">
                             {/* Login Form */}
-                            <form id="signIn" className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate onSubmit={handleLogin}>
+                            <form className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate onSubmit={handleLogin}>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
@@ -287,7 +275,7 @@ export default function AuthPage() {
                                     </a>
                                 </div>
 
-                                <button type="submit" className="submit-btn" id="signInBtn" disabled={isLoading}>
+                                <button type="submit" className="submit-btn" disabled={isLoading}>
                                     {isLoading ? "Signing in..." : "Sign in"}
                                 </button>
 
@@ -306,7 +294,7 @@ export default function AuthPage() {
                             </form>
 
                             {/* Signup Form */}
-                            <form id="signUp" className={`formView ${isSignupContent ? 'active' : ''}`} onSubmit={handleSignup} noValidate>
+                            <form className={`formView ${isSignupContent ? 'active' : ''}`} onSubmit={handleSignup} noValidate>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -396,22 +384,29 @@ export default function AuthPage() {
                             </form>
                         </div>
                     </div>
+                    <Link href="/" className="back-landing" aria-label="Back to Landing Page" title="Back to Landing Page">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M9 14 4 9l5-5" />
+                            <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
+                        </svg>
+                        <span>Back</span>
+                    </Link>
                 </section>
             </main>
 
             {/* Forgot Password Model */}
-            <div id="forgot" className={`modal ${showForgot ? 'visible' : ''}`} role="dialog" aria-modal="true" aria-label="Forgot password">
+            <div className={`modal ${showForgot ? 'visible' : ''}`} role="dialog" aria-modal="true" aria-label="Forgot password">
                 <div className="modalBox">
                     <button type="button" className="modalClose" aria-label="Close forgot password" onClick={closeForgot}>×</button>
 
                     <div className="modalHead">
-                        <p className="eyebrow" id="stepLabel">{stepLabel}</p>
-                        <h3 id="stepTitle">{stepTitle}</h3>
-                        <p className="modalCopy" id="stepText">{stepText}</p>
+                        <p className="eyebrow">{stepLabel}</p>
+                        <h3>{stepTitle}</h3>
+                        <p className="modalCopy">{stepText}</p>
                     </div>
 
-                    <div className={`step ${forgotStep === 1 ? 'active' : ''}`} id="step1">
-                        <label className="input-group modal-input">
+                    <div className={`step ${forgotStep === 1 ? 'active' : ''}`}>
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                             </span>
@@ -420,8 +415,8 @@ export default function AuthPage() {
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(2)}>Send OTP</button>
                     </div>
 
-                    <div className={`step ${forgotStep === 2 ? 'active' : ''}`} id="step2">
-                        <label className="input-group modal-input">
+                    <div className={`step ${forgotStep === 2 ? 'active' : ''}`}>
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
@@ -430,8 +425,8 @@ export default function AuthPage() {
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(3)}>Verify OTP</button>
                     </div>
 
-                    <div className={`step ${forgotStep === 3 ? 'active' : ''}`} id="step3">
-                        <label className="input-group modal-input">
+                    <div className={`step ${forgotStep === 3 ? 'active' : ''}`}>
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
@@ -441,7 +436,7 @@ export default function AuthPage() {
                                 autoComplete="new-password"
                             />
                         </label>
-                        <label className="input-group modal-input">
+                        <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
@@ -454,7 +449,7 @@ export default function AuthPage() {
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(4)}>Reset Password</button>
                     </div>
 
-                    <div className={`step ${forgotStep === 4 ? 'active' : ''}`} id="step4">
+                    <div className={`step ${forgotStep === 4 ? 'active' : ''}`}>
                         <p className="doneMsg">Password reset complete. You can now return to Sign In.</p>
                         <button type="button" className="submit-btn"
                             onClick={() => { closeForgot(); switchMode('login'); }}
