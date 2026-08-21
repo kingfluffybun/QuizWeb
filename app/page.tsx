@@ -27,9 +27,9 @@ export default function Home() {
 
     return (
         <>
-        <PublicNav />
-        <div className="overlay"></div>
         <section className="hero">
+            <PublicNav />
+            <div className="overlay"></div>
             <div className="hero-text">
                 <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
                 <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
