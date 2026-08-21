@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Github from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import argon2 from "argon2";
 import { db } from "@/lib/db";
@@ -9,6 +10,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session: { strategy: "jwt" },
     providers: [
         Google,
+        Github({
+            clientId: process.env.AUTH_GITHUB_ID!,
+            clientSecret: process.env.AUTH_GITHUB_SECRET!,
+        }),
         Credentials({
             name: "credentials",
             credentials: {
@@ -23,9 +28,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 // Query user_auth_tbl and join player_tbl for the username
                 const [rows] = await db.query<RowDataPacket[]>(
                     `SELECT a.user_id, a.email, a.password_hash, p.username 
-                     FROM user_auth_tbl a 
-                     LEFT JOIN player_tbl p ON a.user_id = p.user_id 
-                     WHERE a.email = ? LIMIT 1`,
+                    FROM user_auth_tbl a 
+                    LEFT JOIN player_tbl p ON a.user_id = p.user_id 
+                    WHERE a.email = ? LIMIT 1`,
                     [email]
                 );
                 const user = rows[0];
@@ -46,8 +51,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     callbacks: {
         async signIn({ user, account }) {
-            // Handle database syncing for new Google Logins
-            if (account?.provider === "google" && user.email) {
+            // Handle database syncing for new OAuth Logins
+            if (account?.provider === "google" || account?.provider === "github" && user.email) {
                 try {
                     // 1. Check if user already exists in user_auth_tbl
                     const [existingUser] = await db.query<RowDataPacket[]>(
