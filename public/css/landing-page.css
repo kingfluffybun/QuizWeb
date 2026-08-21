@@ -125,7 +125,6 @@
 }
 
 .section-container {
-    height: 100%;
     max-width: 1200px;
     gap: 48px;
 }
@@ -156,7 +155,7 @@
 }
 
 #laptop, #calendar {height: auto; width:100%;}
-#laptop {width:150%; transform: translateY(40px);}
+#laptop {width:125%; transform: translateY(40px);}
 
 /* clarence eto yung ibahin mo if gusto mo icustomize yung itsura ng landing page sa lightmode if ayaw mo sya na mag follow sa global na color scheme */
 /* vvvvvvvv */
@@ -171,18 +170,29 @@
 }
 
 @media (max-width: 768px) {
+    .call-to-action {padding-top: 0; padding-bottom: 0;}
+    .section.section.row {
+        padding-top: 0;
+    }
+
     .section-container .row {flex-direction: column;}
     .section .row {flex-direction: column;}
     .section .col {justify-content: flex-start;}
-    .section-content {align-items: center;}
-    .section {padding: 10dvh 24px; height: 90dvh;}
-    #laptop {width:100%;}
+    .section-content {
+        align-items: center; text-align: center;
+        > p {font-size: 18px}
+    }
+    .section {padding: 10vh 36px; height: 100vh;}
+    #laptop {width:110%; transform: translateY(0);}
+    .pos-1 {order: 2;}
+    .pos-2 {order: 1;}
 
-    .hero .hero-text {top: 16%;}
+    .hero .hero-text {top: 10%;}
     #clouds-topleft, #clouds-topright {display: none;}
-    #bus {width: 36vh; bottom: 7vh;}
-    #clouds-left {left: -34vh; bottom: 12vh;}
-    #clouds-right {right: -34vh; bottom: 12vh;}
+    #bus {width: 36vh; bottom: 15vh;}
+    #clouds-left {left: -34vh; bottom: 20vh;}
+    #clouds-right {right: -34vh; bottom: 20vh;}
+    #ground {height: calc(20vh + 1px);}
     
     .heroDescription {
         flex-direction: column;

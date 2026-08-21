@@ -50,12 +50,12 @@ export default function Home() {
         
         <section className="section row">
             <div className="section-container row">
-                <div className="section-illustration row">
-                    <Image src="/assets/landing-page/Laptop.svg" width={100} height={100} alt="" id="laptop"/>
-                </div>
-                <div className="section-content col">
+                <div className="section-content col pos-1">
                     <h1>Learn By Doing</h1>
                     <p>Reading about code only gets you so far. QuizWeb puts you straight into the action with bite-sized, interactive quizzes that let you write and test real HTML, CSS, and JavaScript as you go. </p>
+                </div>
+                <div className="section-illustration row pos-2">
+                    <Image src="/assets/landing-page/Laptop.svg" width={100} height={100} alt="" id="laptop"/>
                 </div>
             </div>
         </section>
@@ -74,11 +74,11 @@ export default function Home() {
 
         <section className="section row">
             <div className="section-container row">
-                <div className="section-content col">
+                <div className="section-content col pos-1">
                     <h1>Built for beginners</h1>
                     <p>No prior experience, no confusing jargon, no overwhelming setup — just start from zero and learn HTML, CSS, and JavaScript one small win at a time. All you need is curiosity and a few minutes a day.</p>
                 </div>
-                {/* <div className="section-illustration">
+                {/* <div className="section-illustration pos-2">
                     
                 </div> */}
             </div>
