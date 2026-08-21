@@ -254,7 +254,8 @@ export default function AuthPage() {
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                                     </span>
-                                    <input type="email" placeholder="Email address" name="email" autoComplete="email" />
+                                    <input type="email" placeholder=" " name="email" autoComplete="email" />
+                                    <span className="floating-label">Email address</span>
                                 </label>
 
                                 <label className="input-group">
@@ -263,10 +264,11 @@ export default function AuthPage() {
                                     </span>
                                     <input 
                                         type="password"
-                                        placeholder="Password"
+                                        placeholder=" "
                                         name="password"
                                         autoComplete="current-password"
                                     />
+                                    <span className="floating-label">Password</span>
                                 </label>
 
                                 {!isSignupContent && error && (
@@ -322,12 +324,13 @@ export default function AuthPage() {
                                     </span>
                                     <input 
                                         type="text"
-                                        placeholder="Username"
+                                        placeholder=" "
                                         name="username" 
                                         autoComplete="name"
                                         value={signupUsername}
                                         onChange={(e) => setSignupUsername(e.target.value)}
                                     />
+                                    <span className="floating-label">Username</span>
                                 </label>
 
                                 <label className="input-group">
@@ -336,12 +339,13 @@ export default function AuthPage() {
                                     </span>
                                     <input
                                         type="email"
-                                        placeholder="Email address" 
+                                        placeholder=" " 
                                         name="email"
                                         autoComplete="email"
                                         value={signupEmail}
                                         onChange={(e) => setSignupEmail(e.target.value)}
                                     />
+                                    <span className="floating-label">Email address</span>
                                 </label>
 
                                 <label className="input-group">
@@ -350,12 +354,13 @@ export default function AuthPage() {
                                     </span>
                                     <input
                                         type="password"
-                                        placeholder="Create password"
+                                        placeholder=" "
                                         name="password"
                                         autoComplete="new-password"
                                         value={signupPassword}
                                         onChange={(e) => setSignupPassword(e.target.value)}
                                     />
+                                    <span className="floating-label">Create password</span>
                                 </label>
 
                                 <label className="input-group">
@@ -364,12 +369,13 @@ export default function AuthPage() {
                                     </span>
                                     <input 
                                         type="password"
-                                        placeholder="Confirm password"
+                                        placeholder=" "
                                         name="confirmPassword"
                                         autoComplete="new-password"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                     />
+                                    <span className="floating-label">Confirm password</span>
                                 </label>
 
                                 {signupPassword.length > 0 && (
@@ -431,7 +437,8 @@ export default function AuthPage() {
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                             </span>
-                            <input type="email" placeholder="Registered email address" autoComplete="email" />
+                            <input type="email" placeholder=" " autoComplete="email" />
+                            <span className="floating-label">Registered email address</span>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(2)}>Send OTP</button>
                     </div>
@@ -441,7 +448,8 @@ export default function AuthPage() {
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
-                            <input type="text" placeholder="Enter 6-digit OTP" maxLength={6} />
+                            <input type="text" placeholder=" " maxLength={6} />
+                            <span className="floating-label">Enter 6-digit OTP</span>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(3)}>Verify OTP</button>
                     </div>
@@ -453,9 +461,10 @@ export default function AuthPage() {
                             </span>
                             <input
                                 type="password"
-                                placeholder="New password"
+                                placeholder=" "
                                 autoComplete="new-password"
                             />
+                            <span className="floating-label">New password</span>
                         </label>
                         <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
@@ -463,9 +472,10 @@ export default function AuthPage() {
                             </span>
                             <input
                                 type="password"
-                                placeholder="Confirm password"
+                                placeholder=" "
                                 autoComplete="new-password"
                             />
+                            <span className="floating-label">Confirm password</span>
                         </label>
                         <button type="button" className="submit-btn" onClick={() => setForgotStep(4)}>Reset Password</button>
                     </div>
