@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { signUp } from "@/app/actions/auth";
+import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import { useRouter } from "next/navigation";
 import "#css/login.css";
 import "#css/nav.css";
@@ -21,7 +22,7 @@ const passwordRules = [
 
 const strengthLevels = ["#333333","#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
 
-export default function AuthPage() {
+function AuthPage() {
     const [mode, setMode] = useState<"login" | "signup">("login");
     const [contentMode, setContentMode] = useState<"login" | "signup">("login");
     const [isFading, setIsFading] = useState(false);
@@ -38,10 +39,15 @@ export default function AuthPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
+    // ReCaptcha
+    const [recaptchaVerified, setRecaptchaVerified] = useState(false);
+    const [recaptchaLoading, setRecaptchaLoading] = useState(false);
+
     const fadeToken = useRef(0);
     const FADE_MS = 260;
 
     const router = useRouter();
+    const { executeRecaptcha } = useGoogleReCaptcha();
 
     // Login
     async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -96,6 +102,12 @@ export default function AuthPage() {
             return;
         }
 
+        // Check ReCaptcha
+        if (!recaptchaVerified) {
+            setError("Please verify that you are not a robot.");
+            return;
+        }
+
         setIsLoading(true);
 
         // Create account
@@ -125,6 +137,42 @@ export default function AuthPage() {
         router.push("/");
     }
 
+    // ReCaptcha
+    const handleReCaptchaVerify = async () => {
+        if (!executeRecaptcha) {
+            setError("ReCaptcha failed to load. Please refresh the page");
+            return;
+        }
+        setRecaptchaLoading(true);
+        setError("");
+
+        try {
+            const token = await executeRecaptcha("signup");
+
+            // Verify token
+            const res = await fetch("/api/recaptcha", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token }),
+            });
+
+            const data = await res.json();
+
+            if (data.success && data.score >= 0.5) {
+                setRecaptchaVerified(true);
+            } else {
+                setError("ReCaptcha failed to verify. Please try again.");
+                setRecaptchaVerified(false);
+            }
+        } catch (err) {
+            console.error(err);
+            setError("ReCaptcha failed to verify. Please try again.");
+            setRecaptchaVerified(false);
+        } finally {
+            setRecaptchaLoading(false);
+        }
+    }
+
     // Switching
     const switchMode = (newMode: 'login' | 'signup') => {
         if (newMode === mode || isFading) return;
@@ -132,6 +180,7 @@ export default function AuthPage() {
         setMode(newMode);
         setError("");
         setAttemptedSubmit(false);
+        setRecaptchaVerified(false);
 
         fadeToken.current += 1;
         const myToken = fadeToken.current;
@@ -187,12 +236,12 @@ export default function AuthPage() {
 
     // Signup all fields needed
     const isSignupComplete = 
-    signupUsername.trim() !== "" &&
-    /\S+@\S+\.\S+/.test(signupEmail) &&
-    allRulesPassed &&
-    signupPassword === confirmPassword &&
-    confirmPassword !== "";
-
+        signupUsername.trim() !== "" &&
+        /\S+@\S+\.\S+/.test(signupEmail) &&
+        allRulesPassed &&
+        signupPassword === confirmPassword &&
+        confirmPassword !== "" &&
+        recaptchaVerified;
     // HTML
     return (
         <div className="auth-page">
@@ -405,6 +454,40 @@ export default function AuthPage() {
                                     <p className="form-error" role="alert">{error}</p>
                                 )}
 
+                                {isSignupContent && (
+                                    <div className="recaptcha-container">
+                                        <button
+                                            type="button"
+                                            className={`recaptcha-btn ${isLoading ? "Verified" : ""}`}
+                                            onClick={handleReCaptchaVerify}
+                                            disabled={recaptchaLoading || recaptchaVerified}
+                                        >
+                                            {recaptchaVerified ? (
+                                                <>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                    <span>Verified</span>
+                                                </>
+                                            ) : recaptchaLoading ? (
+                                                <>
+                                                    <span className="loader" />
+                                                    <span>Verifying...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                                    <span>I'm not a robot</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        <p className="recaptcha-terms">
+                                            Protected by reCAPTCHA and subject to the Google{" "}
+                                            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                                            {" "}and{" "}
+                                            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <button type="submit" className="submit-btn" disabled={isLoading || !isSignupComplete}>
                                     {isLoading ? "Creating account..." : "Create account"}
                                 </button>
@@ -493,5 +576,21 @@ export default function AuthPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function AuthLoad() {
+    return (
+        <GoogleReCaptchaProvider 
+            reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+            scriptProps={{
+                async: false,
+                defer: false,
+                appendTo: "head",
+                nonce: undefined
+            }}
+        >
+                <AuthPage />
+        </GoogleReCaptchaProvider>
     );
 }
