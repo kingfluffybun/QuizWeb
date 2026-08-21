@@ -51,7 +51,7 @@ h1, h2, .eyebrow { font-family: 'Poppins', sans-serif; }
   padding: clamp(36px, 5vw, 72px);
   color: var(--text-inverse);
   background: var(--background-color);
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-inverse) 16%, transparent) 1.4px, transparent 1.4px);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--dots) 16%, transparent) 1.4px, transparent 1.4px);
   background-size: 24px 24px;
   background-position: -4px -4px;
   z-index: 2;

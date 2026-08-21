@@ -221,10 +221,17 @@ export default function AuthPage() {
                     <p className="code-mark" aria-hidden="true">&lt;/&gt;</p>
 
                     <div className="login-cloudscape" aria-hidden="true">
-                        <Image src="/assets/landing-page/Clouds-topleft.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left" priority />
-                        <Image src="/assets/landing-page/Clouds-topright.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right" priority />
-                        <Image src="/assets/landing-page/Clouds-left.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left" />
-                        <Image src="/assets/landing-page/Clouds-right.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right" />
+                        {/* Light */}
+                        <Image src="/assets/landing-page/Clouds-topleft.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left dark:hidden" priority data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-topright.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right dark:hidden" priority data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-left.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left dark:hidden" data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-right.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right dark:hidden" data-hide-on-theme="dark"/>
+
+                        {/* Dark */}
+                        <Image src="/assets/landing-page/Clouds-topleft-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left hidden dark:block" priority data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-topright-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right hidden dark:block" priority data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-left-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left hidden dark:block" data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-right-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right hidden dark:block" data-hide-on-theme="light"/>
                     </div>
                 </section>
 
