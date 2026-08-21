@@ -27,16 +27,16 @@ export default function Home() {
 
     return (
         <>
+        <PublicNav />
         <section className="hero">
-            <PublicNav />
             <div className="overlay"></div>
             <div className="hero-text">
                 <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
                 <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
-                {/* <div>
+                <div className="call-to-action row">
                     <h1>Start Learning</h1>
                     <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
-                </div> */}
+                </div>
             </div>
             
             {/* Added priority and aria-hidden to decorative images */}
@@ -48,23 +48,39 @@ export default function Home() {
             <div id="ground"></div>
         </section>
         
-        <section className="hero2">
-            <div className="heroDescription">
-                <div>
-                    {/* <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-code-xml-icon lucide-code-xml"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg> */}
-                    <h1>Learn by doing</h1>
-                    <p>Practice HTML, CSS, and JavaScript through bite-sized, interactive quizzes.</p>
+        <section className="section row">
+            <div className="section-container row">
+                <div className="section-illustration row">
+                    <Image src="/assets/landing-page/Laptop.svg" width={100} height={100} alt="" id="laptop"/>
                 </div>
-                <div>
-                    {/* <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-flame-icon lucide-flame"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg> */}
+                <div className="section-content col">
+                    <h1>Learn By Doing</h1>
+                    <p>Reading about code only gets you so far. QuizWeb puts you straight into the action with bite-sized, interactive quizzes that let you write and test real HTML, CSS, and JavaScript as you go. </p>
+                </div>
+            </div>
+        </section>
+
+        <section className="section row">
+            <div className="section-container row">
+                <div className="section-illustration row">
+                    <Image src="/assets/landing-page/Calendar.svg" width={100} height={100} alt="" id="calendar"/>
+                </div>
+                <div className="section-content col">
                     <h1>Track your progress</h1>
-                    <p>Earn streaks, unlock levels, and watch your coding skills grow every day.</p>
+                    <p>Every quiz you finish adds to your daily streak, keeping you motivated to come back and level up. QuizWeb turns your learning into a game you actually want to keep playing.</p>
                 </div>
-                <div>
-                    {/* <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sprout-icon lucide-sprout"><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg> */}
+            </div>
+        </section>
+
+        <section className="section row">
+            <div className="section-container row">
+                <div className="section-content col">
                     <h1>Built for beginners</h1>
-                    <p>No experience needed — just curiosity and a few minutes a day.</p>
+                    <p>No prior experience, no confusing jargon, no overwhelming setup — just start from zero and learn HTML, CSS, and JavaScript one small win at a time. All you need is curiosity and a few minutes a day.</p>
                 </div>
+                {/* <div className="section-illustration">
+                    
+                </div> */}
             </div>
         </section>
         </>
