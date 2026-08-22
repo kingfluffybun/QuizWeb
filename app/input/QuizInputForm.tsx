@@ -8,6 +8,7 @@ interface QuizInputFormProps {
     categories: Category[];
     difficulties: Difficulty[];
     types: QuizType[];
+    sections?: { sec_id: number; sec_num: string }[];
     initialRecentQuizzes: any[];
 }
 
@@ -15,6 +16,7 @@ export default function QuizInputForm({
     categories,
     difficulties,
     types,
+    sections = [],
     initialRecentQuizzes,
 }: QuizInputFormProps) {
     const [selectedTypeId, setSelectedTypeId] = useState<string>("");
@@ -120,6 +122,18 @@ export default function QuizInputForm({
                             {categories.map((cat) => (
                                 <option key={cat.cat_id} value={cat.cat_id}>
                                     {cat.cat_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="sec_id">Section</label>
+                        <select id="sec_id" name="sec_id" className="form-select" required defaultValue={editingQuiz?.sec_id?.toString() ?? ""}>
+                            <option value="" disabled>Select Section</option>
+                            {sections.map((section) => (
+                                <option key={section.sec_id} value={section.sec_id}>
+                                    {section.sec_num}
                                 </option>
                             ))}
                         </select>
@@ -333,7 +347,7 @@ export default function QuizInputForm({
                         No quiz questions created yet. Use the form on the left to add one!
                     </div>
                 ) : (
-                    <div style={{ maxHeight: "750px", overflowY: "auto", paddingRight: "10px" }}>
+                    <div style={{ maxHeight: "844px", overflowY: "auto", paddingRight: "10px" }}>
                         {recentQuizzes.map((quiz) => {
                             const payload = quiz.quiz_payload;
                             return (
@@ -362,6 +376,7 @@ export default function QuizInputForm({
                                     </div>
                                     <div className="quiz-badge-row">
                                         <span className="badge badge-cat">{quiz.cat_name}</span>
+                                        {quiz.sec_num && <span className="badge badge-type">{quiz.sec_num}</span>}
                                         <span className="badge badge-diff">{quiz.difficulty_name}</span>
                                         <span className="badge badge-type">{quiz.type_name}</span>
                                     </div>

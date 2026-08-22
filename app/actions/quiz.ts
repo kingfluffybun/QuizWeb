@@ -8,6 +8,11 @@ export interface Category {
     cat_name: string;
 }
 
+export interface Section {
+    sec_id: number;
+    sec_num: string;
+}
+
 export interface Difficulty {
     difficulty_id: number;
     difficulty_name: string;
@@ -21,9 +26,11 @@ export interface QuizType {
 export interface QuizRow extends RowDataPacket {
     quiz_id: number;
     cat_id: number;
+    sec_id?: number;
     difficulty_id: number;
     quiz_type_id: number;
     cat_name: string;
+    sec_num?: string;
     difficulty_name: string;
     type_name: string;
     question_text: string;
@@ -132,6 +139,30 @@ async function seedIfNeeded() {
     }
 }
 
+async function getSectionTableName() {
+    const candidates = ["sec_tbl", "section_tbl", "sections_tbl"];
+
+    for (const tableName of candidates) {
+        try {
+            await db.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
+            return tableName;
+        } catch {
+            // try the next known section table name
+        }
+    }
+
+    return null;
+}
+
+async function quizHasColumn(columnName: string) {
+    try {
+        const [columns] = await db.query<RowDataPacket[]>("SHOW COLUMNS FROM quiz_tbl LIKE ?", [columnName]);
+        return columns.length > 0;
+    } catch {
+        return false;
+    }
+}
+
 export async function getQuizMetadata() {
     try {
         await seedIfNeeded();
@@ -139,32 +170,48 @@ export async function getQuizMetadata() {
         const [difficulties] = await db.query<RowDataPacket[]>("SELECT * FROM difficulty_tbl ORDER BY difficulty_id");
         const [types] = await db.query<RowDataPacket[]>("SELECT * FROM quiz_type_tbl ORDER BY quiz_type_id");
 
+        const sectionTableName = await getSectionTableName();
+        let sections: Section[] = [];
+
+        if (sectionTableName) {
+            const [sectionRows] = await db.query<RowDataPacket[]>(`SELECT * FROM ${sectionTableName} ORDER BY sec_id`);
+            sections = sectionRows as Section[];
+        }
+
         return {
             categories: categories as Category[],
             difficulties: difficulties as Difficulty[],
-            types: types as QuizType[]
+            types: types as QuizType[],
+            sections
         };
     } catch (error) {
         console.error("Failed to fetch quiz metadata:", error);
-        return { categories: [], difficulties: [], types: [] };
+        return { categories: [], difficulties: [], types: [], sections: [] };
     }
 }
 
 export async function getRecentQuizzes() {
     try {
         await seedIfNeeded();
+        const sectionTableName = await getSectionTableName();
+        const hasSecId = await quizHasColumn("sec_id");
+
         const [quizzes] = await db.query<QuizRow[]>(`
             SELECT q.quiz_id, q.cat_id, q.difficulty_id, q.quiz_type_id,
                    q.question_text, q.quiz_payload,
+                   ${hasSecId && sectionTableName ? "q.sec_id, s.sec_num," : ""}
                    c.cat_name, d.difficulty_name, t.type_name
             FROM quiz_tbl q
             JOIN cat_tbl c ON q.cat_id = c.cat_id
             JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+            ${hasSecId && sectionTableName ? `LEFT JOIN ${sectionTableName} s ON q.sec_id = s.sec_id` : ""}
             ORDER BY q.quiz_id DESC LIMIT 20
         `);
+
         return quizzes.map(q => ({
             ...q,
+            sec_num: q.sec_num ?? undefined,
             quiz_payload: typeof q.quiz_payload === 'string' ? JSON.parse(q.quiz_payload) : q.quiz_payload
         }));
     } catch (error) {
@@ -175,6 +222,7 @@ export async function getRecentQuizzes() {
 
 export async function createQuiz(state: any, formData: FormData) {
     const catId = formData.get("cat_id");
+    const secId = formData.get("sec_id");
     const difficultyId = formData.get("difficulty_id");
     const quizTypeId = formData.get("quiz_type_id");
     const questionText = formData.get("question_text");
@@ -199,9 +247,18 @@ export async function createQuiz(state: any, formData: FormData) {
             return { error: parsedPayload.error };
         }
 
+        const hasSecId = await quizHasColumn("sec_id");
+        const columns = ["cat_id", "difficulty_id", "quiz_type_id", "question_text", "quiz_payload"];
+        const values: any[] = [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload)];
+
+        if (hasSecId && secId && secId !== "") {
+            columns.push("sec_id");
+            values.push(secId);
+        }
+
         await db.query(
-            "INSERT INTO quiz_tbl (cat_id, difficulty_id, quiz_type_id, question_text, quiz_payload) VALUES (?, ?, ?, ?, ?)",
-            [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload)]
+            `INSERT INTO quiz_tbl (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+            values
         );
 
         return { success: true };
@@ -226,6 +283,7 @@ export async function deleteQuiz(quizId: number) {
 
 export async function updateQuiz(quizId: number, formData: FormData) {
     const catId = formData.get("cat_id");
+    const secId = formData.get("sec_id");
     const difficultyId = formData.get("difficulty_id");
     const quizTypeId = formData.get("quiz_type_id");
     const questionText = formData.get("question_text");
@@ -248,9 +306,20 @@ export async function updateQuiz(quizId: number, formData: FormData) {
             return { error: parsedPayload.error };
         }
 
+        const hasSecId = await quizHasColumn("sec_id");
+        const updateFields = ["cat_id = ?", "difficulty_id = ?", "quiz_type_id = ?", "question_text = ?", "quiz_payload = ?"];
+        const values: any[] = [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload)];
+
+        if (hasSecId && secId && secId !== "") {
+            updateFields.push("sec_id = ?");
+            values.push(secId);
+        }
+
+        values.push(quizId);
+
         const [result] = await db.query<ResultSetHeader>(
-            "UPDATE quiz_tbl SET cat_id = ?, difficulty_id = ?, quiz_type_id = ?, question_text = ?, quiz_payload = ? WHERE quiz_id = ?",
-            [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload), quizId]
+            `UPDATE quiz_tbl SET ${updateFields.join(", ")} WHERE quiz_id = ?`,
+            values
         );
 
         return result.affectedRows === 0
