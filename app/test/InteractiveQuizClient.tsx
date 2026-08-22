@@ -81,7 +81,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 isCorrect = JSON.stringify(currentAnswer) === JSON.stringify(payload.items);
                 break;
             case "Pair":
-                isCorrect = currentAnswer?.left?.every((leftVal: string, i: number) => 
+                isCorrect = currentAnswer?.left?.every((leftVal: string, i: number) =>
                     payload.pairs?.some((p) => p.left === leftVal && p.right === currentAnswer.right[i])
                 );
                 break;
@@ -111,11 +111,15 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     if (!isMounted || !activeQuiz) return null;
 
     if (status === "finished") {
-        return <main><GameOverCard lives={lives} score={score} totalQuizzes={quizzes.length} /></main>;
+        return (
+            <div className="test-page">
+                <main><GameOverCard lives={lives} score={score} totalQuizzes={quizzes.length} /></main>
+            </div>
+        );
     }
 
     return (
-        <>
+        <div className="test-page">
             <nav />
             <div className="sidebar" />
             <main>
@@ -124,7 +128,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
 
                     <div key={currentIndex} className={`quiz-container anim-enter ${status === "incorrect" ? "anim-shake" : ""} ${status === "correct" ? "anim-pop" : ""}`}>
                         <h1 className="quiz-question-title">{activeQuiz.question_text}</h1>
-                        
+
                         <div className="options-container">
                             {activeQuiz.type_name === "MCQ" && quizState?.options && (
                                 <QuizMCQ options={quizState.options} correctId={quizState.correctId} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
@@ -149,6 +153,6 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 </div>
             </main>
             <QuizFooter status={status} onSkip={nextQuestion} onSubmit={handleCheckAnswer} onContinue={nextQuestion} />
-        </>
+        </div>
     );
 }

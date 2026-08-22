@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 interface GameOverCardProps {
     lives: number;
@@ -22,6 +23,12 @@ export default function GameOverCard({ lives, score, totalQuizzes }: GameOverCar
             >
                 Play Again
             </button>
+            <Link
+                href="/input"
+                className="options footer-btn back-to-input-btn"
+            >
+                Back to Quiz Input
+            </Link>
         </div>
     );
 }
