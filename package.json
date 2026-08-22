@@ -9,6 +9,7 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "animejs": "^4.5.0",
         "argon2": "^0.45.1",
         "argon2id": "^1.0.1",
         "mysql2": "^3.23.3",

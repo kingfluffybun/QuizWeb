@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import "#css/landing-page.css";
+import BusDark from "@/public/assets/landing-page/svg/svg_assets";
 import "#css/nav.css";
 import { useEffect, useState } from "react";
 import PublicNav from "@/app/components/publicNav";
@@ -40,12 +41,20 @@ export default function Home() {
             </div>
             
             {/* Added priority and aria-hidden to decorative images */}
-            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds designs" priority aria-hidden="true" />
-            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds designs" priority aria-hidden="true" />
-            <Image src="/assets/landing-page/Bus.svg" width={100} height={100} alt="QuizWeb Bus" id="bus" className="designs" priority />
-            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" />
-            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" />
+            <Image src="/assets/landing-page/Clouds-topleft.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds designs" priority aria-hidden="true" data-hide-on-theme="dark"/>
+            <Image src="/assets/landing-page/Clouds-topright.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds designs" priority aria-hidden="true" data-hide-on-theme="dark"/>
+            <Image src="/assets/landing-page/Bus.svg" width={100} height={100} alt="QuizWeb Bus" id="bus" className="designs" priority data-hide-on-theme="dark"/>
+            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/>
+            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/>
+
+            <Image src="/assets/landing-page/Clouds-topleft-dark.svg" width={100} height={100} alt="" id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/>
+            <Image src="/assets/landing-page/Clouds-topright-dark.svg" width={100} height={100} alt="" id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/>
+            <Image src="/assets/landing-page/Bus-dark.svg" width={100} height={100} alt="QuizWeb Bus" id="bus" className="designs" aria-hidden="true" data-hide-on-theme="light"/>
+            <Image src="/assets/landing-page/Clouds-left-dark.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/>
+            <Image src="/assets/landing-page/Clouds-right-dark.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/>
+
             <div id="ground"></div>
+
         </section>
         
         <section className="section row">
