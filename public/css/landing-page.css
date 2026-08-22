@@ -85,6 +85,7 @@
 }
 
 .call-to-action {
+    margin-top: 20px;
     border-radius: 24px;
     gap: 0;
     padding: 4px 0;
@@ -114,27 +115,35 @@
 /* .section-container {margin-top: 10vh;} */
 
 .section {
-    height: 80vh;
+    height: 70vh;
     padding: 10vh 0;
     margin: 0 auto;
     width: 100%;
 }
 
 .section:nth-child(odd) {
-    background-color: #f7f7f7;
+    .section-container.row .section-illustration.row.pos-2 {
+        justify-content:flex-start;
+    }
+}
+
+.section:nth-child(even) {
+    .section-container.row .section-illustration.row.pos-2 {
+        justify-content:flex-end;
+    }
 }
 
 .section-container {
     max-width: 1200px;
-    gap: 48px;
+    height: 100%;
+    width: 100%;
 }
 
 .section-content {
     flex: 1;
     align-items: flex-start;
     justify-content: center;
-    max-width: 580px;
-    min-width: 0;
+    width: 520px;
     > h1 {
         font-size: clamp(1.75rem, 5vw, 3rem);
         font-weight: 700;
@@ -142,20 +151,19 @@
         margin-bottom: 12px;
     } p {
         font-size: 20px;
-        line-height: 1.5;
+        line-height: 1.7;
     }
 }
 
 .section-illustration {
-    flex: 1;
-    /* background-color: #e0e0e0; */
+    flex: 1;    
     height: 100%;
-    width: 100%;
-    
 }
 
-#laptop, #calendar {height: auto; width:100%;}
-#laptop {width:125%; transform: translateY(40px);}
+#laptop, #calendar, #books {height: 100%; width:auto; transform:scale(1.2)}
+#laptop {
+    transform: translateY(40px) scale(1);
+}
 
 /* clarence eto yung ibahin mo if gusto mo icustomize yung itsura ng landing page sa lightmode if ayaw mo sya na mag follow sa global na color scheme */
 /* vvvvvvvv */
@@ -172,23 +180,21 @@
 @media (max-width: 768px) {
     nav {position: relative !important;}
     .call-to-action {padding-top: 0; padding-bottom: 0;}
-    /* .section.section.row:first-child {
-        padding-top: 0;
-    } */
-
     .section-container .row {flex-direction: column;}
+    .section-container {height: auto;}
     .section .row {flex-direction: column;}
     .section .col {justify-content: flex-start;}
     .section-content {
         align-items: center; text-align: center;
         > p {font-size: 18px}
     }
-    .section {padding: 10vh 36px; height: 95vh;}
-    #laptop {width:110%; transform: translateY(0);}
+    .section {padding: 10vh 36px; height: 80vh;}
+    #laptop, #calendar, #books {width: 100%; height:auto; transform:scale(0.75);}
+    #laptop {width:110%; transform: translateY(20px) scale(0.85);}
     .pos-1 {order: 1;}
     .pos-2 {order: 2;}
 
-    .hero .hero-text {top: 10%;}
+    .hero .hero-text {top: 10%; max-width: 400px;}
     #clouds-topleft, #clouds-topright {display: none;}
     #bus {width: 36vh; bottom: 10vh;}
     #clouds-left {left: -34vh; bottom: 15vh;}

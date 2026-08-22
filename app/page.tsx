@@ -35,7 +35,7 @@ export default function Home() {
                 <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                 <div className="call-to-action row">
                     <h1>Start Learning</h1>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
                 </div>
             </div>
             
@@ -78,9 +78,9 @@ export default function Home() {
                     <h1>Built for beginners</h1>
                     <p>No prior experience, no confusing jargon, no overwhelming setup — just start from zero and learn HTML, CSS, and JavaScript one small win at a time. All you need is curiosity and a few minutes a day.</p>
                 </div>
-                {/* <div className="section-illustration pos-2">
-                    
-                </div> */}
+                <div className="section-illustration row pos-2">
+                    <Image src="/assets/landing-page/Books.svg" width={100} height={100} alt="" id="books"/>
+                </div>
             </div>
         </section>
         </>
