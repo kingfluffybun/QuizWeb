@@ -85,7 +85,7 @@ export default function Home() {
             <div className="section-container row">
                 <div className="section-content col pos-1">
                     <h1>Built for beginners</h1>
-                    <p>No prior experience, no confusing jargon, no overwhelming setup — just start from zero and learn HTML, CSS, and JavaScript one small win at a time. All you need is curiosity and a few minutes a day.</p>
+                    <p>No experience, no jargon, no overwhelming setup — just start from zero and learn HTML, CSS, and JavaScript one small win at a time. All you need is curiosity and a few minutes a day.</p>
                 </div>
                 <div className="section-illustration row pos-2">
                     <Image src="/assets/landing-page/Books.svg" width={100} height={100} alt="" id="books"/>
