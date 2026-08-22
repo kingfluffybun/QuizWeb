@@ -38,6 +38,7 @@ export default function QuizInputForm({
   const [sectionFilter, setSectionFilter] = useState<string>("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [optionCount, setOptionCount] = useState(4);
 
   const hasActiveFilters =
     categoryFilter !== "" ||
@@ -80,6 +81,10 @@ export default function QuizInputForm({
   );
   const selectedTypeName = selectedType ? selectedType.type_name : "";
 
+  const handleAddOption = () => {
+    setOptionCount((count) => count + 1);
+  };
+
   useEffect(() => {
     if (types.length > 0) {
       setSelectedTypeId(types[0].quiz_type_id.toString());
@@ -109,6 +114,7 @@ export default function QuizInputForm({
 
         // Reset only question and type-specific text inputs/textareas to allow fast batch entries
         setEditingQuiz(null);
+        setOptionCount(4);
 
         // Refresh list
         const updatedQuizzes = await getRecentQuizzes();
@@ -128,12 +134,20 @@ export default function QuizInputForm({
   const handleEdit = (quiz: any) => {
     setEditingQuiz(quiz);
     setSelectedTypeId(quiz.quiz_type_id.toString());
+    setOptionCount(
+      quiz.type_name === "Order"
+        ? Math.max(4, quiz.quiz_payload?.items?.length ?? 0)
+        : quiz.type_name === "Pair"
+          ? Math.max(4, quiz.quiz_payload?.pairs?.length ?? 0)
+          : 4,
+    );
     setMessage(null);
   };
 
   const handleCancelEdit = () => {
     setEditingQuiz(null);
     setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
+    setOptionCount(4);
     setMessage(null);
   };
 
@@ -248,7 +262,10 @@ export default function QuizInputForm({
               className="form-select"
               required
               value={selectedTypeId}
-              onChange={(e) => setSelectedTypeId(e.target.value)}
+              onChange={(e) => {
+                setSelectedTypeId(e.target.value);
+                setOptionCount(4);
+              }}
             >
               {types.map((t) => (
                 <option key={t.quiz_type_id} value={t.quiz_type_id}>
@@ -339,11 +356,27 @@ export default function QuizInputForm({
           {/* Order Options */}
           {selectedTypeName === "Order" && (
             <div className="form-group">
-              <label style={{ marginBottom: "12px" }}>
+              <label
+                style={{
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 Items to Order (Enter in the CORRECT sequence)
+                <button
+                  type="button"
+                  className="btn-add-option"
+                  onClick={handleAddOption}
+                  title="Add item"
+                  aria-label="Add item"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                </button>
               </label>
-              <div className="options-grid">
-                {[0, 1, 2, 3].map((idx) => (
+              <div className="options-grid options-grid-scrollable">
+                {Array.from({ length: optionCount }, (_, idx) => idx).map((idx) => (
                   <div key={idx} className="option-row">
                     <span
                       style={{
@@ -372,11 +405,27 @@ export default function QuizInputForm({
           {/* Pair Options */}
           {selectedTypeName === "Pair" && (
             <div className="form-group">
-              <label style={{ marginBottom: "12px" }}>
+              <label
+                style={{
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 Matching Pairs (Enter Left and matching Right values)
+                <button
+                  type="button"
+                  className="btn-add-option"
+                  onClick={handleAddOption}
+                  title="Add pair"
+                  aria-label="Add pair"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                </button>
               </label>
-              <div className="options-grid">
-                {[0, 1, 2, 3].map((idx) => (
+              <div className="options-grid options-grid-scrollable">
+                {Array.from({ length: optionCount }, (_, idx) => idx).map((idx) => (
                   <div key={idx} className="option-row" style={{ gap: "10px" }}>
                     <span style={{ fontWeight: "bold" }}>{idx + 1}.</span>
                     <input
@@ -463,11 +512,11 @@ export default function QuizInputForm({
               Cancel
             </button>
           )}
-        </form>
-      </div>
+        </form >
+      </div >
 
       {/* List Section */}
-      <div className="admin-card">
+      < div className="admin-card" >
         <div
           style={{
             display: "flex",
@@ -511,336 +560,340 @@ export default function QuizInputForm({
         </div>
 
         {/* Collapsible Filter Panel containing Dropdown Selects */}
-        {isFilterOpen && (
-          <div className="filter-panel">
-            <div className="filter-panel-header">
-              <span className="filter-label-container">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="lucide lucide-funnel-icon lucide-funnel"
-                >
-                  <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
-                </svg>
-                <span>Filter Options</span>
-              </span>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className="filter-clear-btn"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-            <div className="filter-grid">
-              {/* Category Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Category</span>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="filter-select"
-                  aria-label="Filter by category"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat.cat_id} value={cat.cat_name}>
-                      {cat.cat_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Section Filter */}
-              {sections.length > 0 && (
-                <div className="filter-group">
-                  <span className="filter-group-title">Section</span>
-                  <select
-                    value={sectionFilter}
-                    onChange={(e) => setSectionFilter(e.target.value)}
-                    className="filter-select"
-                    aria-label="Filter by section"
+        {
+          isFilterOpen && (
+            <div className="filter-panel">
+              <div className="filter-panel-header">
+                <span className="filter-label-container">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-funnel-icon lucide-funnel"
                   >
-                    <option value="">All Sections</option>
-                    {sections.map((sec) => (
-                      <option key={sec.sec_id} value={sec.sec_num.toString()}>
-                        Section {sec.sec_num}
+                    <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+                  </svg>
+                  <span>Filter Options</span>
+                </span>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="filter-clear-btn"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              <div className="filter-grid">
+                {/* Category Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Category</span>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by category"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.cat_id} value={cat.cat_name}>
+                        {cat.cat_name}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
 
-              {/* Difficulty Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Difficulty</span>
-                <select
-                  value={difficultyFilter}
-                  onChange={(e) => setDifficultyFilter(e.target.value)}
-                  className="filter-select"
-                  aria-label="Filter by difficulty"
-                >
-                  <option value="">All Difficulties</option>
-                  {difficulties.map((diff) => (
-                    <option
-                      key={diff.difficulty_id}
-                      value={diff.difficulty_name}
+                {/* Section Filter */}
+                {sections.length > 0 && (
+                  <div className="filter-group">
+                    <span className="filter-group-title">Section</span>
+                    <select
+                      value={sectionFilter}
+                      onChange={(e) => setSectionFilter(e.target.value)}
+                      className="filter-select"
+                      aria-label="Filter by section"
                     >
-                      {diff.difficulty_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                      <option value="">All Sections</option>
+                      {sections.map((sec) => (
+                        <option key={sec.sec_id} value={sec.sec_num.toString()}>
+                          Section {sec.sec_num}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {/* Type Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Quiz Type</span>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="filter-select"
-                  aria-label="Filter by quiz type"
-                >
-                  <option value="">All Types</option>
-                  {types.map((t) => (
-                    <option key={t.quiz_type_id} value={t.type_name}>
-                      {t.type_name}
-                    </option>
-                  ))}
-                </select>
+                {/* Difficulty Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Difficulty</span>
+                  <select
+                    value={difficultyFilter}
+                    onChange={(e) => setDifficultyFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by difficulty"
+                  >
+                    <option value="">All Difficulties</option>
+                    {difficulties.map((diff) => (
+                      <option
+                        key={diff.difficulty_id}
+                        value={diff.difficulty_name}
+                      >
+                        {diff.difficulty_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Type Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Quiz Type</span>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by quiz type"
+                  >
+                    <option value="">All Types</option>
+                    {types.map((t) => (
+                      <option key={t.quiz_type_id} value={t.type_name}>
+                        {t.type_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
-        {recentQuizzes.length === 0 ? (
-          <div className="empty-state">
-            No quiz questions created yet. Use the form on the left to add one!
-          </div>
-        ) : filteredQuizzes.length === 0 ? (
-          <div className="empty-state">
-            No quiz questions found matching the selected filters.
-          </div>
-        ) : (
-          <div
-            style={{
-              maxHeight: "844px",
-              overflowY: "auto",
-              paddingRight: "10px",
-            }}
-          >
-            {filteredQuizzes.map((quiz) => {
-              const payload = quiz.quiz_payload;
-              return (
-                <div key={quiz.quiz_id} className="quiz-list-item">
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: "16px",
-                    }}
-                  >
-                    <div
-                      className="quiz-list-question"
-                      style={{ marginBottom: 0 }}
-                    >
-                      {quiz.question_text}
-                    </div>
+        {
+          recentQuizzes.length === 0 ? (
+            <div className="empty-state">
+              No quiz questions created yet. Use the form on the left to add one!
+            </div>
+          ) : filteredQuizzes.length === 0 ? (
+            <div className="empty-state">
+              No quiz questions found matching the selected filters.
+            </div>
+          ) : (
+            <div
+              style={{
+                maxHeight: "844px",
+                overflowY: "auto",
+                paddingRight: "10px",
+              }}
+            >
+              {filteredQuizzes.map((quiz) => {
+                const payload = quiz.quiz_payload;
+                return (
+                  <div key={quiz.quiz_id} className="quiz-list-item">
                     <div
                       style={{
                         display: "flex",
-                        gap: "8px",
-                        flexShrink: 0,
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "16px",
                       }}
                     >
-                      <button
-                        type="button"
-                        className="btn-edit"
-                        onClick={() => handleEdit(quiz)}
-                        title="Edit Question"
-                        aria-label="Edit Question"
+                      <div
+                        className="quiz-list-question"
+                        style={{ marginBottom: 0 }}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-pencil"
-                        >
-                          <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
-                          <path d="m16 5 3 3" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={() => handleDelete(quiz.quiz_id)}
-                        title="Delete Question"
+                        {quiz.question_text}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexShrink: 0,
+                        }}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-trash-2"
+                        <button
+                          type="button"
+                          className="btn-edit"
+                          onClick={() => handleEdit(quiz)}
+                          title="Edit Question"
+                          aria-label="Edit Question"
                         >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          <line x1="10" x2="10" y1="11" y2="17" />
-                          <line x1="14" x2="14" y1="11" y2="17" />
-                        </svg>
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-pencil"
+                          >
+                            <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                            <path d="m16 5 3 3" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          onClick={() => handleDelete(quiz.quiz_id)}
+                          title="Delete Question"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-trash-2"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" x2="10" y1="11" y2="17" />
+                            <line x1="14" x2="14" y1="11" y2="17" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="quiz-badge-row">
-                    <span className="badge badge-cat">{quiz.cat_name}</span>
-                    {quiz.sec_num && (
-                      <span className="badge badge-type">
-                        Section {quiz.sec_num}
+                    <div className="quiz-badge-row">
+                      <span className="badge badge-cat">{quiz.cat_name}</span>
+                      {quiz.sec_num && (
+                        <span className="badge badge-type">
+                          Section {quiz.sec_num}
+                        </span>
+                      )}
+                      <span className="badge badge-diff">
+                        {quiz.difficulty_name}
                       </span>
-                    )}
-                    <span className="badge badge-diff">
-                      {quiz.difficulty_name}
-                    </span>
-                    <span className="badge badge-type">{quiz.type_name}</span>
-                  </div>
-                  {payload && (
-                    <div className="quiz-payload-preview">
-                      {/* MCQ Rendering */}
-                      {quiz.type_name === "MCQ" && payload.options && (
-                        <div>
-                          <strong>Options:</strong>
-                          {payload.options.map((opt: string, i: number) => {
-                            const isCorrect = payload.correct_index === i;
-                            return (
-                              <div key={i} className="quiz-payload-option">
-                                <span>
-                                  {i + 1}. {opt}
-                                </span>
-                                {isCorrect && (
-                                  <span className="correct-text">
-                                    (Correct)
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* FITB Rendering */}
-                      {quiz.type_name === "FITB" && (
-                        <div>
-                          <strong>Correct Answer:</strong>{" "}
-                          <span className="correct-text">{payload.answer}</span>
-                        </div>
-                      )}
-
-                      {/* Order Rendering */}
-                      {quiz.type_name === "Order" && payload.items && (
-                        <div>
-                          <strong>Correct Order:</strong>
-                          {payload.items.map((item: string, i: number) => (
-                            <div
-                              key={i}
-                              style={{
-                                margin: "4px 0",
-                              }}
-                            >
-                              {i + 1}. {item}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Pair Rendering */}
-                      {quiz.type_name === "Pair" && payload.pairs && (
-                        <div>
-                          <strong>Matching Pairs:</strong>
-                          {payload.pairs.map((pair: any, i: number) => (
-                            <div
-                              key={i}
-                              style={{
-                                margin: "4px 0",
-                              }}
-                            >
-                              <code>{pair.left}</code> &harr;{" "}
-                              <code>{pair.right}</code>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* CP Rendering */}
-                      {quiz.type_name === "CP" && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }}
-                        >
-                          <div>
-                            <strong>Template:</strong>
-                            <pre
-                              style={{
-                                margin: "4px 0",
-                                backgroundColor: "#eee",
-                                padding: "6px",
-                                borderRadius: "4px",
-                                fontSize: "0.8rem",
-                                overflowX: "auto",
-                              }}
-                            >
-                              {payload.template}
-                            </pre>
-                          </div>
-                          <div>
-                            <strong>Expected Output:</strong>
-                            <pre
-                              style={{
-                                margin: "4px 0",
-                                backgroundColor: "#e2f0d9",
-                                padding: "6px",
-                                borderRadius: "4px",
-                                fontSize: "0.8rem",
-                                overflowX: "auto",
-                              }}
-                            >
-                              {payload.expected}
-                            </pre>
-                          </div>
-                        </div>
-                      )}
+                      <span className="badge badge-type">{quiz.type_name}</span>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    {payload && (
+                      <div className="quiz-payload-preview">
+                        {/* MCQ Rendering */}
+                        {quiz.type_name === "MCQ" && payload.options && (
+                          <div>
+                            <strong>Options:</strong>
+                            {payload.options.map((opt: string, i: number) => {
+                              const isCorrect = payload.correct_index === i;
+                              return (
+                                <div key={i} className="quiz-payload-option">
+                                  <span>
+                                    {i + 1}. {opt}
+                                  </span>
+                                  {isCorrect && (
+                                    <span className="correct-text">
+                                      (Correct)
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* FITB Rendering */}
+                        {quiz.type_name === "FITB" && (
+                          <div>
+                            <strong>Correct Answer:</strong>{" "}
+                            <span className="correct-text">{payload.answer}</span>
+                          </div>
+                        )}
+
+                        {/* Order Rendering */}
+                        {quiz.type_name === "Order" && payload.items && (
+                          <div>
+                            <strong>Correct Order:</strong>
+                            {payload.items.map((item: string, i: number) => (
+                              <div
+                                key={i}
+                                style={{
+                                  margin: "4px 0",
+                                }}
+                              >
+                                {i + 1}. {item}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Pair Rendering */}
+                        {quiz.type_name === "Pair" && payload.pairs && (
+                          <div>
+                            <strong>Matching Pairs:</strong>
+                            {payload.pairs.map((pair: any, i: number) => (
+                              <div
+                                key={i}
+                                style={{
+                                  margin: "4px 0",
+                                }}
+                              >
+                                <code>{pair.left}</code> &harr;{" "}
+                                <code>{pair.right}</code>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* CP Rendering */}
+                        {quiz.type_name === "CP" && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            <div>
+                              <strong>Template:</strong>
+                              <pre
+                                style={{
+                                  margin: "4px 0",
+                                  backgroundColor: "#eee",
+                                  padding: "6px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.8rem",
+                                  overflowX: "auto",
+                                }}
+                              >
+                                {payload.template}
+                              </pre>
+                            </div>
+                            <div>
+                              <strong>Expected Output:</strong>
+                              <pre
+                                style={{
+                                  margin: "4px 0",
+                                  backgroundColor: "#e2f0d9",
+                                  padding: "6px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.8rem",
+                                  overflowX: "auto",
+                                }}
+                              >
+                                {payload.expected}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        }
+      </div >
     </>
   );
 }

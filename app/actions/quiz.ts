@@ -37,6 +37,18 @@ export interface QuizRow extends RowDataPacket {
     quiz_payload: any;
 }
 
+function getIndexedFormValues(formData: FormData, prefix: string) {
+    const values: string[] = [];
+    for (let index = 0; ; index++) {
+        const value = formData.get(`${prefix}${index}`);
+        if (typeof value !== "string") {
+            break;
+        }
+        values.push(value);
+    }
+    return values;
+}
+
 function getQuizPayload(typeName: string, formData: FormData) {
     if (typeName === "MCQ") {
         const options = [0, 1, 2, 3].map(
@@ -66,29 +78,36 @@ function getQuizPayload(typeName: string, formData: FormData) {
     }
 
     if (typeName === "Order") {
-        const items = [0, 1, 2, 3].map(
-            (index) => formData.get(`order_${index}`) as string,
-        );
-        return items.some((item) => !item)
+        const items = getIndexedFormValues(formData, "order_");
+        return items.length < 4 || items.some((item) => !item.trim())
             ? {
-                  error: "All 4 items are required for Order syntax arrangement.",
+                  error: "At least 4 items are required for Order syntax arrangement.",
               }
             : { payload: { items: items.map((item) => item.trim()) } };
     }
 
     if (typeName === "Pair") {
-        const pairs = [];
-        for (let index = 0; index < 4; index++) {
-            const left = formData.get(`pair_left_${index}`) as string;
-            const right = formData.get(`pair_right_${index}`) as string;
-            if (!left || !right) {
-                return {
-                    error: `Both parts of Pair ${index + 1} are required.`,
-                };
-            }
-            pairs.push({ left: left.trim(), right: right.trim() });
+        const leftValues = getIndexedFormValues(formData, "pair_left_");
+        const rightValues = getIndexedFormValues(formData, "pair_right_");
+        if (
+            leftValues.length < 4 ||
+            leftValues.length !== rightValues.length ||
+            leftValues.some(
+                (left, index) => !left.trim() || !rightValues[index].trim(),
+            )
+        ) {
+            return {
+                error: "At least 4 complete matching pairs are required.",
+            };
         }
-        return { payload: { pairs } };
+        return {
+            payload: {
+                pairs: leftValues.map((left, index) => ({
+                    left: left.trim(),
+                    right: rightValues[index].trim(),
+                })),
+            },
+        };
     }
 
     if (typeName === "CP") {
