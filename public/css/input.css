@@ -342,6 +342,32 @@ body {
     transform: scale(0.95);
 }
 
+.btn-preview {
+    background: none;
+    border: none;
+    color: #0088ff;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.1s;
+    flex-shrink: 0;
+}
+
+.btn-preview:hover {
+    background-color: #e6f7ff;
+    color: #006fcc;
+}
+
+.btn-preview:active {
+    transform: scale(0.95);
+}
+
 .filter-toggle-btn {
     background: none;
     border: 2px solid #e0e0e0;

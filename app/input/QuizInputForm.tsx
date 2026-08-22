@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   createQuiz,
   getRecentQuizzes,
@@ -24,6 +25,7 @@ export default function QuizInputForm({
   sections = [],
   initialRecentQuizzes,
 }: QuizInputFormProps) {
+  const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
   const [recentQuizzes, setRecentQuizzes] =
     useState<any[]>(initialRecentQuizzes);
@@ -715,6 +717,31 @@ export default function QuizInputForm({
                           flexShrink: 0,
                         }}
                       >
+                        <button
+                          type="button"
+                          className="btn-preview"
+                          onClick={() =>
+                            router.push(`/test?quizId=${quiz.quiz_id}`)
+                          }
+                          title="Preview Question"
+                          aria-label="Preview Question"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-eye"
+                          >
+                            <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
                         <button
                           type="button"
                           className="btn-edit"
