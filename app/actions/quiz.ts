@@ -39,18 +39,22 @@ export interface QuizRow extends RowDataPacket {
 
 function getQuizPayload(typeName: string, formData: FormData) {
     if (typeName === "MCQ") {
-        const options = [0, 1, 2, 3].map(index => formData.get(`option_${index}`) as string);
+        const options = [0, 1, 2, 3].map(
+            (index) => formData.get(`option_${index}`) as string,
+        );
         const correctIndex = formData.get("correct_option_index");
 
-        if (options.some(option => !option) || correctIndex === null) {
-            return { error: "All 4 options and the correct answer selection are required for MCQ." };
+        if (options.some((option) => !option) || correctIndex === null) {
+            return {
+                error: "All 4 options and the correct answer selection are required for MCQ.",
+            };
         }
 
         return {
             payload: {
-                options: options.map(option => option.trim()),
-                correct_index: parseInt(correctIndex as string, 10)
-            }
+                options: options.map((option) => option.trim()),
+                correct_index: parseInt(correctIndex as string, 10),
+            },
         };
     }
 
@@ -62,10 +66,14 @@ function getQuizPayload(typeName: string, formData: FormData) {
     }
 
     if (typeName === "Order") {
-        const items = [0, 1, 2, 3].map(index => formData.get(`order_${index}`) as string);
-        return items.some(item => !item)
-            ? { error: "All 4 items are required for Order syntax arrangement." }
-            : { payload: { items: items.map(item => item.trim()) } };
+        const items = [0, 1, 2, 3].map(
+            (index) => formData.get(`order_${index}`) as string,
+        );
+        return items.some((item) => !item)
+            ? {
+                  error: "All 4 items are required for Order syntax arrangement.",
+              }
+            : { payload: { items: items.map((item) => item.trim()) } };
     }
 
     if (typeName === "Pair") {
@@ -74,7 +82,9 @@ function getQuizPayload(typeName: string, formData: FormData) {
             const left = formData.get(`pair_left_${index}`) as string;
             const right = formData.get(`pair_right_${index}`) as string;
             if (!left || !right) {
-                return { error: `Both parts of Pair ${index + 1} are required.` };
+                return {
+                    error: `Both parts of Pair ${index + 1} are required.`,
+                };
             }
             pairs.push({ left: left.trim(), right: right.trim() });
         }
@@ -85,8 +95,15 @@ function getQuizPayload(typeName: string, formData: FormData) {
         const template = formData.get("cp_template") as string;
         const expected = formData.get("cp_expected") as string;
         return !template || !expected
-            ? { error: "Both initial template code and expected output/test code are required for CP." }
-            : { payload: { template: template.trim(), expected: expected.trim() } };
+            ? {
+                  error: "Both initial template code and expected output/test code are required for CP.",
+              }
+            : {
+                  payload: {
+                      template: template.trim(),
+                      expected: expected.trim(),
+                  },
+              };
     }
 
     return { error: "Unsupported quiz type." };
@@ -94,26 +111,37 @@ function getQuizPayload(typeName: string, formData: FormData) {
 
 async function seedIfNeeded() {
     // Check if we need to reset the tables (if the categories, difficulties, or types are out of sync)
-    const [currentTypes] = await db.query<RowDataPacket[]>("SELECT type_name FROM quiz_type_tbl");
-    const typeNames = currentTypes.map(t => t.type_name);
+    const [currentTypes] = await db.query<RowDataPacket[]>(
+        "SELECT type_name FROM quiz_type_tbl",
+    );
+    const typeNames = currentTypes.map((t) => t.type_name);
     const targetTypes = ["MCQ", "FITB", "Order", "Pair", "CP"];
-    
+
     // Also check categories and difficulties
-    const [currentCats] = await db.query<RowDataPacket[]>("SELECT cat_name FROM cat_tbl");
-    const catNames = currentCats.map(c => c.cat_name);
+    const [currentCats] = await db.query<RowDataPacket[]>(
+        "SELECT cat_name FROM cat_tbl",
+    );
+    const catNames = currentCats.map((c) => c.cat_name);
     const targetCats = ["HTML", "CSS", "JavaScript"];
 
-    const [currentDiffs] = await db.query<RowDataPacket[]>("SELECT difficulty_name FROM difficulty_tbl");
-    const diffNames = currentDiffs.map(d => d.difficulty_name);
+    const [currentDiffs] = await db.query<RowDataPacket[]>(
+        "SELECT difficulty_name FROM difficulty_tbl",
+    );
+    const diffNames = currentDiffs.map((d) => d.difficulty_name);
     const targetDiffs = ["Beginner", "Intermediate", "Advanced"];
 
-    const needsReset = 
-        typeNames.length !== targetTypes.length || !targetTypes.every(t => typeNames.includes(t)) ||
-        catNames.length !== targetCats.length || !targetCats.every(c => catNames.includes(c)) ||
-        diffNames.length !== targetDiffs.length || !targetDiffs.every(d => diffNames.includes(d));
+    const needsReset =
+        typeNames.length !== targetTypes.length ||
+        !targetTypes.every((t) => typeNames.includes(t)) ||
+        catNames.length !== targetCats.length ||
+        !targetCats.every((c) => catNames.includes(c)) ||
+        diffNames.length !== targetDiffs.length ||
+        !targetDiffs.every((d) => diffNames.includes(d));
 
     if (needsReset) {
-        console.log("Database schema/lookup out of sync. Resetting lookup tables...");
+        console.log(
+            "Database schema/lookup out of sync. Resetting lookup tables...",
+        );
         await db.query("SET FOREIGN_KEY_CHECKS = 0");
         await db.query("TRUNCATE TABLE quiz_tbl");
         await db.query("TRUNCATE TABLE cat_tbl");
@@ -128,12 +156,17 @@ async function seedIfNeeded() {
 
         // 2. Seed difficulties
         for (const diff of targetDiffs) {
-            await db.query("INSERT INTO difficulty_tbl (difficulty_name) VALUES (?)", [diff]);
+            await db.query(
+                "INSERT INTO difficulty_tbl (difficulty_name) VALUES (?)",
+                [diff],
+            );
         }
 
         // 3. Seed quiz types
         for (const type of targetTypes) {
-            await db.query("INSERT INTO quiz_type_tbl (type_name) VALUES (?)", [type]);
+            await db.query("INSERT INTO quiz_type_tbl (type_name) VALUES (?)", [
+                type,
+            ]);
         }
         console.log("Database reset and seeded successfully.");
     }
@@ -156,7 +189,10 @@ async function getSectionTableName() {
 
 async function quizHasColumn(columnName: string) {
     try {
-        const [columns] = await db.query<RowDataPacket[]>("SHOW COLUMNS FROM quiz_tbl LIKE ?", [columnName]);
+        const [columns] = await db.query<RowDataPacket[]>(
+            "SHOW COLUMNS FROM quiz_tbl LIKE ?",
+            [columnName],
+        );
         return columns.length > 0;
     } catch {
         return false;
@@ -166,23 +202,24 @@ async function quizHasColumn(columnName: string) {
 export async function getQuizMetadata() {
     try {
         await seedIfNeeded();
-        const [categories] = await db.query<RowDataPacket[]>("SELECT * FROM cat_tbl ORDER BY cat_name");
-        const [difficulties] = await db.query<RowDataPacket[]>("SELECT * FROM difficulty_tbl ORDER BY difficulty_id");
-        const [types] = await db.query<RowDataPacket[]>("SELECT * FROM quiz_type_tbl ORDER BY quiz_type_id");
-
-        const sectionTableName = await getSectionTableName();
-        let sections: Section[] = [];
-
-        if (sectionTableName) {
-            const [sectionRows] = await db.query<RowDataPacket[]>(`SELECT * FROM ${sectionTableName} ORDER BY sec_id`);
-            sections = sectionRows as Section[];
-        }
+        const [categories] = await db.query<RowDataPacket[]>(
+            "SELECT * FROM cat_tbl ORDER BY cat_name",
+        );
+        const [sections] = await db.query<RowDataPacket[]>(
+            "SELECT * FROM sec_tbl ORDER BY sec_id",
+        );
+        const [difficulties] = await db.query<RowDataPacket[]>(
+            "SELECT * FROM difficulty_tbl ORDER BY difficulty_id",
+        );
+        const [types] = await db.query<RowDataPacket[]>(
+            "SELECT * FROM quiz_type_tbl ORDER BY quiz_type_id",
+        );
 
         return {
             categories: categories as Category[],
             difficulties: difficulties as Difficulty[],
             types: types as QuizType[],
-            sections
+            sections: sections as Section[],
         };
     } catch (error) {
         console.error("Failed to fetch quiz metadata:", error);
@@ -193,26 +230,25 @@ export async function getQuizMetadata() {
 export async function getRecentQuizzes() {
     try {
         await seedIfNeeded();
-        const sectionTableName = await getSectionTableName();
-        const hasSecId = await quizHasColumn("sec_id");
-
         const [quizzes] = await db.query<QuizRow[]>(`
-            SELECT q.quiz_id, q.cat_id, q.difficulty_id, q.quiz_type_id,
+            SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
                    q.question_text, q.quiz_payload,
-                   ${hasSecId && sectionTableName ? "q.sec_id, s.sec_num," : ""}
                    c.cat_name, d.difficulty_name, t.type_name
             FROM quiz_tbl q
             JOIN cat_tbl c ON q.cat_id = c.cat_id
             JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
-            ${hasSecId && sectionTableName ? `LEFT JOIN ${sectionTableName} s ON q.sec_id = s.sec_id` : ""}
+            JOIN sec_tbl s ON q.sec_id = s.sec_id
             ORDER BY q.quiz_id DESC LIMIT 20
         `);
 
-        return quizzes.map(q => ({
+        return quizzes.map((q) => ({
             ...q,
             sec_num: q.sec_num ?? undefined,
-            quiz_payload: typeof q.quiz_payload === 'string' ? JSON.parse(q.quiz_payload) : q.quiz_payload
+            quiz_payload:
+                typeof q.quiz_payload === "string"
+                    ? JSON.parse(q.quiz_payload)
+                    : q.quiz_payload,
         }));
     } catch (error) {
         console.error("Failed to fetch recent quizzes:", error);
@@ -228,13 +264,15 @@ export async function createQuiz(state: any, formData: FormData) {
     const questionText = formData.get("question_text");
 
     if (!catId || !difficultyId || !quizTypeId || !questionText) {
-        return { error: "Category, difficulty, type, and question are all required." };
+        return {
+            error: "Category, difficulty, type, and question are all required.",
+        };
     }
 
     try {
         const [typeRow] = await db.query<RowDataPacket[]>(
             "SELECT type_name FROM quiz_type_tbl WHERE quiz_type_id = ?",
-            [quizTypeId]
+            [quizTypeId],
         );
 
         if (typeRow.length === 0) {
@@ -248,8 +286,20 @@ export async function createQuiz(state: any, formData: FormData) {
         }
 
         const hasSecId = await quizHasColumn("sec_id");
-        const columns = ["cat_id", "difficulty_id", "quiz_type_id", "question_text", "quiz_payload"];
-        const values: any[] = [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload)];
+        const columns = [
+            "cat_id",
+            "difficulty_id",
+            "quiz_type_id",
+            "question_text",
+            "quiz_payload",
+        ];
+        const values: any[] = [
+            catId,
+            difficultyId,
+            quizTypeId,
+            questionText.toString().trim(),
+            JSON.stringify(parsedPayload.payload),
+        ];
 
         if (hasSecId && secId && secId !== "") {
             columns.push("sec_id");
@@ -258,13 +308,15 @@ export async function createQuiz(state: any, formData: FormData) {
 
         await db.query(
             `INSERT INTO quiz_tbl (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
-            values
+            values,
         );
 
         return { success: true };
     } catch (error) {
         console.error("Failed to insert quiz:", error);
-        return { error: "An error occurred while saving the quiz to the database." };
+        return {
+            error: "An error occurred while saving the quiz to the database.",
+        };
     }
 }
 
@@ -277,7 +329,9 @@ export async function deleteQuiz(quizId: number) {
         return { success: true };
     } catch (error) {
         console.error("Failed to delete quiz:", error);
-        return { error: "An error occurred while deleting the quiz from the database." };
+        return {
+            error: "An error occurred while deleting the quiz from the database.",
+        };
     }
 }
 
@@ -289,13 +343,15 @@ export async function updateQuiz(quizId: number, formData: FormData) {
     const questionText = formData.get("question_text");
 
     if (!quizId || !catId || !difficultyId || !quizTypeId || !questionText) {
-        return { error: "Quiz ID, category, difficulty, type, and question are all required." };
+        return {
+            error: "Quiz ID, category, difficulty, type, and question are all required.",
+        };
     }
 
     try {
         const [typeRows] = await db.query<RowDataPacket[]>(
             "SELECT type_name FROM quiz_type_tbl WHERE quiz_type_id = ?",
-            [quizTypeId]
+            [quizTypeId],
         );
         if (typeRows.length === 0) {
             return { error: "Invalid quiz type selected." };
@@ -307,8 +363,20 @@ export async function updateQuiz(quizId: number, formData: FormData) {
         }
 
         const hasSecId = await quizHasColumn("sec_id");
-        const updateFields = ["cat_id = ?", "difficulty_id = ?", "quiz_type_id = ?", "question_text = ?", "quiz_payload = ?"];
-        const values: any[] = [catId, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload)];
+        const updateFields = [
+            "cat_id = ?",
+            "difficulty_id = ?",
+            "quiz_type_id = ?",
+            "question_text = ?",
+            "quiz_payload = ?",
+        ];
+        const values: any[] = [
+            catId,
+            difficultyId,
+            quizTypeId,
+            questionText.toString().trim(),
+            JSON.stringify(parsedPayload.payload),
+        ];
 
         if (hasSecId && secId && secId !== "") {
             updateFields.push("sec_id = ?");
@@ -319,7 +387,7 @@ export async function updateQuiz(quizId: number, formData: FormData) {
 
         const [result] = await db.query<ResultSetHeader>(
             `UPDATE quiz_tbl SET ${updateFields.join(", ")} WHERE quiz_id = ?`,
-            values
+            values,
         );
 
         return result.affectedRows === 0
@@ -327,6 +395,8 @@ export async function updateQuiz(quizId: number, formData: FormData) {
             : { success: true };
     } catch (error) {
         console.error("Failed to update quiz:", error);
-        return { error: "An error occurred while updating the quiz in the database." };
+        return {
+            error: "An error occurred while updating the quiz in the database.",
+        };
     }
 }
