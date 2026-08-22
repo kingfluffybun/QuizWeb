@@ -22,7 +22,8 @@ export default async function InputPage() {
                 <QuizInputForm 
                     categories={metadata.categories} 
                     difficulties={metadata.difficulties} 
-                    types={metadata.types} 
+                    types={metadata.types}
+                    sections={metadata.sections ?? []}
                     initialRecentQuizzes={recentQuizzes}
                 />
             </main>

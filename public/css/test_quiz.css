@@ -9,7 +9,7 @@
     padding: 0;
 }
 
-body {
+.test-page {
     display: grid;
     grid-template-areas:
         "navbar navbar"
@@ -20,22 +20,23 @@ body {
     min-height: 100vh;
     background-color: var(--bg-main);
     color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-nav {
+.test-page nav {
     grid-area: navbar;
     background-color: var(--primary-color);
     width: 100%;
 }
 
-.sidebar {
+.test-page .sidebar {
     grid-area: sidebar;
     background-color: var(--bg-card);
     border-right: 2px solid var(--border-main);
 }
 
-main {
+.test-page main {
     grid-area: main;
     background-color: var(--bg-main);
     width: 100%;
@@ -78,7 +79,9 @@ main {
 
 .heart-icon {
     margin-left: -8px;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+    transition:
+        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 0.3s ease;
 }
 
 .heart-lost {
@@ -97,7 +100,9 @@ main {
     width: 100%;
     height: 10px;
     border-radius: 9999px;
-    transition: background-color 0.4s ease, transform 0.3s ease;
+    transition:
+        background-color 0.4s ease,
+        transform 0.3s ease;
 }
 
 .progress-bar-segment.active {
@@ -142,7 +147,11 @@ main {
     cursor: pointer;
     user-select: none;
     color: var(--text-main);
-    transition: transform 0.15s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.15s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .options:hover:not(.disabled) {
@@ -225,7 +234,8 @@ label input[type="radio"]:checked + .options .options-badge {
 }
 
 /* Inputs */
-.fitb-input, .cp-textarea {
+.fitb-input,
+.cp-textarea {
     width: 100%;
     background: transparent;
     border: none;
@@ -238,7 +248,8 @@ label input[type="radio"]:checked + .options .options-badge {
 
 .cp-textarea {
     min-height: 140px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.95rem;
     line-height: 1.5;
     resize: vertical;
@@ -320,6 +331,20 @@ footer {
     margin-bottom: 24px;
 }
 
+.back-to-input-btn {
+    display: flex;
+    align-items: center;
+    margin: 14px auto 0;
+    background-color: transparent;
+    border: 2px solid var(--border-main);
+    color: var(--text-main);
+    text-decoration: none;
+}
+
+.back-to-input-btn:hover {
+    background-color: var(--bg-main);
+}
+
 /* Animations and Feedback */
 .anim-enter {
     animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -338,25 +363,51 @@ footer {
 }
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-8px); }
-    40%, 80% { transform: translateX(8px); }
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    20%,
+    60% {
+        transform: translateX(-8px);
+    }
+    40%,
+    80% {
+        transform: translateX(8px);
+    }
 }
 
 @keyframes pop {
-    0% { transform: scale(0.97); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(0.97);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-    50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
+    }
 }
 
 .feedback-msg {

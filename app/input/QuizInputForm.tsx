@@ -1,444 +1,926 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createQuiz, getRecentQuizzes, updateQuiz, deleteQuiz } from "../actions/quiz";
+import { useRouter } from "next/navigation";
+import {
+  createQuiz,
+  getRecentQuizzes,
+  updateQuiz,
+  deleteQuiz,
+} from "../actions/quiz";
 import type { Category, Difficulty, QuizType } from "../actions/quiz";
 
 interface QuizInputFormProps {
-    categories: Category[];
-    difficulties: Difficulty[];
-    types: QuizType[];
-    initialRecentQuizzes: any[];
+  categories: Category[];
+  difficulties: Difficulty[];
+  types: QuizType[];
+  sections?: { sec_id: number; sec_num: string }[];
+  initialRecentQuizzes: any[];
 }
 
 export default function QuizInputForm({
-    categories,
-    difficulties,
-    types,
-    initialRecentQuizzes,
+  categories,
+  difficulties,
+  types,
+  sections = [],
+  initialRecentQuizzes,
 }: QuizInputFormProps) {
-    const [selectedTypeId, setSelectedTypeId] = useState<string>("");
-    const [recentQuizzes, setRecentQuizzes] = useState<any[]>(initialRecentQuizzes);
-    const [isPending, setIsPending] = useState(false);
-    const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const router = useRouter();
+  const [selectedTypeId, setSelectedTypeId] = useState<string>("");
+  const [recentQuizzes, setRecentQuizzes] =
+    useState<any[]>(initialRecentQuizzes);
+  const [isPending, setIsPending] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [sectionFilter, setSectionFilter] = useState<string>("");
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [optionCount, setOptionCount] = useState(4);
 
-    const selectedType = types.find(t => t.quiz_type_id.toString() === selectedTypeId);
-    const selectedTypeName = selectedType ? selectedType.type_name : "";
+  const hasActiveFilters =
+    categoryFilter !== "" ||
+    sectionFilter !== "" ||
+    difficultyFilter !== "" ||
+    typeFilter !== "";
 
-    useEffect(() => {
-        if (types.length > 0) {
-            setSelectedTypeId(types[0].quiz_type_id.toString());
-        }
-    }, [types]);
+  const activeFilterCount =
+    (categoryFilter !== "" ? 1 : 0) +
+    (sectionFilter !== "" ? 1 : 0) +
+    (difficultyFilter !== "" ? 1 : 0) +
+    (typeFilter !== "" ? 1 : 0);
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setIsPending(true);
-        setMessage(null);
+  const handleClearFilters = () => {
+    setCategoryFilter("");
+    setSectionFilter("");
+    setDifficultyFilter("");
+    setTypeFilter("");
+  };
 
-        const formData = new FormData(event.currentTarget);
+  const filteredQuizzes = recentQuizzes.filter((quiz) => {
+    if (categoryFilter !== "" && quiz.cat_name !== categoryFilter) {
+      return false;
+    }
+    const quizSecNum = quiz.sec_num?.toString() ?? "";
+    if (sectionFilter !== "" && quizSecNum !== sectionFilter) {
+      return false;
+    }
+    if (difficultyFilter !== "" && quiz.difficulty_name !== difficultyFilter) {
+      return false;
+    }
+    if (typeFilter !== "" && quiz.type_name !== typeFilter) {
+      return false;
+    }
+    return true;
+  });
 
-        try {
-            const result = editingQuiz
-                ? await updateQuiz(editingQuiz.quiz_id, formData)
-                : await createQuiz(null, formData);
-            if (result.error) {
-                setMessage({ type: "error", text: result.error });
-            } else if (result.success) {
-                setMessage({
-                    type: "success",
-                    text: editingQuiz ? "Quiz successfully updated!" : "Quiz successfully added to database!"
-                });
+  const selectedType = types.find(
+    (t) => t.quiz_type_id.toString() === selectedTypeId,
+  );
+  const selectedTypeName = selectedType ? selectedType.type_name : "";
 
-                // Reset only question and type-specific text inputs/textareas to allow fast batch entries
-                setEditingQuiz(null);
+  const handleAddOption = () => {
+    setOptionCount((count) => count + 1);
+  };
 
-                // Refresh list
-                const updatedQuizzes = await getRecentQuizzes();
-                setRecentQuizzes(updatedQuizzes);
-            }
-        } catch (err) {
-            console.error("Submission error:", err);
-            setMessage({ type: "error", text: "An unexpected error occurred during submission." });
-        } finally {
-            setIsPending(false);
-        }
-    };
+  useEffect(() => {
+    if (types.length > 0) {
+      setSelectedTypeId(types[0].quiz_type_id.toString());
+    }
+  }, [types]);
 
-    const handleEdit = (quiz: any) => {
-        setEditingQuiz(quiz);
-        setSelectedTypeId(quiz.quiz_type_id.toString());
-        setMessage(null);
-    };
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsPending(true);
+    setMessage(null);
 
-    const handleCancelEdit = () => {
+    const formData = new FormData(event.currentTarget);
+
+    try {
+      const result = editingQuiz
+        ? await updateQuiz(editingQuiz.quiz_id, formData)
+        : await createQuiz(null, formData);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+      } else if (result.success) {
+        setMessage({
+          type: "success",
+          text: editingQuiz
+            ? "Quiz successfully updated!"
+            : "Quiz successfully added to database!",
+        });
+
+        // Reset only question and type-specific text inputs/textareas to allow fast batch entries
         setEditingQuiz(null);
-        setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
-        setMessage(null);
-    };
+        setOptionCount(4);
 
-    const handleDelete = async (quizId: number) => {
-        if (!confirm("Are you sure you want to delete this quiz question?")) {
-            return;
-        }
+        // Refresh list
+        const updatedQuizzes = await getRecentQuizzes();
+        setRecentQuizzes(updatedQuizzes);
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred during submission.",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
 
-        try {
-            const result = await deleteQuiz(quizId);
-            if (result.error) {
-                setMessage({ type: "error", text: result.error });
-            } else if (result.success) {
-                setMessage({ type: "success", text: "Quiz successfully deleted!" });
+  const handleEdit = (quiz: any) => {
+    setEditingQuiz(quiz);
+    setSelectedTypeId(quiz.quiz_type_id.toString());
+    setOptionCount(
+      quiz.type_name === "Order"
+        ? Math.max(4, quiz.quiz_payload?.items?.length ?? 0)
+        : quiz.type_name === "Pair"
+          ? Math.max(4, quiz.quiz_payload?.pairs?.length ?? 0)
+          : 4,
+    );
+    setMessage(null);
+  };
 
-                // Refresh list
-                const updatedQuizzes = await getRecentQuizzes();
-                setRecentQuizzes(updatedQuizzes);
-            }
-        } catch (err) {
-            console.error("Delete error:", err);
-            setMessage({ type: "error", text: "An unexpected error occurred during deletion." });
-        }
-    };
+  const handleCancelEdit = () => {
+    setEditingQuiz(null);
+    setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
+    setOptionCount(4);
+    setMessage(null);
+  };
 
-    return (
-        <>
-            {/* Form Section */}
-            <div className="admin-card">
-                <h2>{editingQuiz ? "Edit Quiz Question" : "Create New Quiz Question"}</h2>
+  const handleDelete = async (quizId: number) => {
+    if (!confirm("Are you sure you want to delete this quiz question?")) {
+      return;
+    }
 
-                {message && (
-                    <div className={`status-message status-${message.type}`}>
-                        {message.text}
-                    </div>
+    try {
+      const result = await deleteQuiz(quizId);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+      } else if (result.success) {
+        setMessage({
+          type: "success",
+          text: "Quiz successfully deleted!",
+        });
+
+        // Refresh list
+        const updatedQuizzes = await getRecentQuizzes();
+        setRecentQuizzes(updatedQuizzes);
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred during deletion.",
+      });
+    }
+  };
+
+  return (
+    <>
+      {/* Form Section */}
+      <div className="admin-card">
+        <h2>
+          {editingQuiz ? "Edit Quiz Question" : "Create New Quiz Question"}
+        </h2>
+
+        {message && (
+          <div className={`status-message status-${message.type}`}>
+            {message.text}
+          </div>
+        )}
+
+        <form key={editingQuiz?.quiz_id ?? "new"} onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="cat_id">Category</label>
+            <select
+              id="cat_id"
+              name="cat_id"
+              className="form-select"
+              required
+              defaultValue={editingQuiz?.cat_id?.toString() ?? ""}
+            >
+              <option value="" disabled>
+                Select Category
+              </option>
+              {categories.map((cat) => (
+                <option key={cat.cat_id} value={cat.cat_id}>
+                  {cat.cat_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="difficulty_id">Difficulty</label>
+            <select
+              id="difficulty_id"
+              name="difficulty_id"
+              className="form-select"
+              required
+              defaultValue={editingQuiz?.difficulty_id?.toString() ?? ""}
+            >
+              <option value="" disabled>
+                Select Difficulty
+              </option>
+              {difficulties.map((diff) => (
+                <option key={diff.difficulty_id} value={diff.difficulty_id}>
+                  {diff.difficulty_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="sec_id">Section</label>
+            <select
+              id="sec_id"
+              name="sec_id"
+              className="form-select"
+              required
+              defaultValue={editingQuiz?.sec_id?.toString() ?? ""}
+            >
+              <option value="" disabled>
+                Select Section
+              </option>
+              {sections.map((section) => (
+                <option key={section.sec_id} value={section.sec_id}>
+                  {section.sec_num}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="quiz_type_id">Quiz Type</label>
+            <select
+              id="quiz_type_id"
+              name="quiz_type_id"
+              className="form-select"
+              required
+              value={selectedTypeId}
+              onChange={(e) => {
+                setSelectedTypeId(e.target.value);
+                setOptionCount(4);
+              }}
+            >
+              {types.map((t) => (
+                <option key={t.quiz_type_id} value={t.quiz_type_id}>
+                  {t.type_name} (
+                  {t.type_name === "MCQ"
+                    ? "Multiple Choice"
+                    : t.type_name === "FITB"
+                      ? "Fill in the Blank"
+                      : t.type_name === "Order"
+                        ? "Syntax Arrangement"
+                        : t.type_name === "Pair"
+                          ? "Matching Type"
+                          : t.type_name === "CP"
+                            ? "Coding Problem"
+                            : t.type_name}
+                  )
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="question_text">Question Text / Prompt</label>
+            <textarea
+              id="question_text"
+              name="question_text"
+              className="form-textarea"
+              placeholder="Enter the question text here..."
+              defaultValue={editingQuiz?.question_text ?? ""}
+              required
+            />
+          </div>
+
+          {/* MCQ Options */}
+          {selectedTypeName === "MCQ" && (
+            <div className="form-group">
+              <label style={{ marginBottom: "12px" }}>
+                Answer Options (Select correct answer radio)
+              </label>
+              <div className="options-grid">
+                {[0, 1, 2, 3].map((idx) => (
+                  <div key={idx} className="option-row">
+                    <input
+                      type="radio"
+                      name="correct_option_index"
+                      value={idx}
+                      id={`correct_${idx}`}
+                      className="radio-check"
+                      required
+                      defaultChecked={
+                        editingQuiz
+                          ? editingQuiz.quiz_payload?.correct_index === idx
+                          : idx === 0
+                      }
+                    />
+                    <input
+                      type="text"
+                      name={`option_${idx}`}
+                      placeholder={`Option ${idx + 1}`}
+                      className="form-input"
+                      defaultValue={
+                        editingQuiz?.quiz_payload?.options?.[idx] ?? ""
+                      }
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* FITB Options */}
+          {selectedTypeName === "FITB" && (
+            <div className="form-group">
+              <label htmlFor="fitb_answer">Correct Blank Answer</label>
+              <input
+                type="text"
+                id="fitb_answer"
+                name="fitb_answer"
+                placeholder="Enter the correct answer word(s)..."
+                className="form-input"
+                defaultValue={editingQuiz?.quiz_payload?.answer ?? ""}
+                required
+              />
+            </div>
+          )}
+
+          {/* Order Options */}
+          {selectedTypeName === "Order" && (
+            <div className="form-group">
+              <label
+                style={{
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                Items to Order (Enter in the CORRECT sequence)
+                <button
+                  type="button"
+                  className="btn-add-option"
+                  onClick={handleAddOption}
+                  title="Add item"
+                  aria-label="Add item"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                </button>
+              </label>
+              <div className="options-grid options-grid-scrollable">
+                {Array.from({ length: optionCount }, (_, idx) => idx).map((idx) => (
+                  <div key={idx} className="option-row">
+                    <span
+                      style={{
+                        minWidth: "30px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {idx + 1}.
+                    </span>
+                    <input
+                      type="text"
+                      name={`order_${idx}`}
+                      placeholder={`Sequence Item ${idx + 1}`}
+                      className="form-input"
+                      defaultValue={
+                        editingQuiz?.quiz_payload?.items?.[idx] ?? ""
+                      }
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pair Options */}
+          {selectedTypeName === "Pair" && (
+            <div className="form-group">
+              <label
+                style={{
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                Matching Pairs (Enter Left and matching Right values)
+                <button
+                  type="button"
+                  className="btn-add-option"
+                  onClick={handleAddOption}
+                  title="Add pair"
+                  aria-label="Add pair"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                </button>
+              </label>
+              <div className="options-grid options-grid-scrollable">
+                {Array.from({ length: optionCount }, (_, idx) => idx).map((idx) => (
+                  <div key={idx} className="option-row" style={{ gap: "10px" }}>
+                    <span style={{ fontWeight: "bold" }}>{idx + 1}.</span>
+                    <input
+                      type="text"
+                      name={`pair_left_${idx}`}
+                      placeholder="Left Key"
+                      className="form-input"
+                      defaultValue={
+                        editingQuiz?.quiz_payload?.pairs?.[idx]?.left ?? ""
+                      }
+                      required
+                    />
+                    <span style={{ color: "#aaa" }}>&harr;</span>
+                    <input
+                      type="text"
+                      name={`pair_right_${idx}`}
+                      placeholder="Right Value"
+                      className="form-input"
+                      defaultValue={
+                        editingQuiz?.quiz_payload?.pairs?.[idx]?.right ?? ""
+                      }
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CP Options */}
+          {selectedTypeName === "CP" && (
+            <div className="form-group">
+              <div style={{ marginBottom: "15px" }}>
+                <label htmlFor="cp_template">Initial Code Template</label>
+                <textarea
+                  id="cp_template"
+                  name="cp_template"
+                  className="form-textarea"
+                  style={{ fontFamily: "monospace" }}
+                  placeholder="e.g. function test() {\n  // your code here\n}"
+                  defaultValue={editingQuiz?.quiz_payload?.template ?? ""}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="cp_expected">
+                  Expected Output / Answer Key Code
+                </label>
+                <textarea
+                  id="cp_expected"
+                  name="cp_expected"
+                  className="form-textarea"
+                  style={{ fontFamily: "monospace" }}
+                  placeholder="e.g. return true;"
+                  defaultValue={editingQuiz?.quiz_payload?.expected ?? ""}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isPending}
+            style={{ marginTop: "10px" }}
+          >
+            {isPending
+              ? editingQuiz
+                ? "Saving Quiz..."
+                : "Adding Quiz..."
+              : editingQuiz
+                ? "Save Changes"
+                : "Add Quiz Question"}
+          </button>
+          {editingQuiz && (
+            <button
+              type="button"
+              className="btn-delete"
+              onClick={handleCancelEdit}
+              disabled={isPending}
+              style={{ marginTop: "10px", marginLeft: "10px" }}
+            >
+              Cancel
+            </button>
+          )}
+        </form >
+      </div >
+
+      {/* List Section */}
+      < div className="admin-card" >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "2px solid #e0e0e0",
+            paddingBottom: "10px",
+            marginBottom: "20px",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
+            Recently Added Quizzes
+          </h2>
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`filter-toggle-btn ${isFilterOpen || hasActiveFilters ? "active" : ""}`}
+            aria-expanded={isFilterOpen}
+            title="Toggle Filters"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-funnel-icon lucide-funnel"
+            >
+              <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+            </svg>
+            {activeFilterCount > 0 && (
+              <span className="filter-badge">{activeFilterCount}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Collapsible Filter Panel containing Dropdown Selects */}
+        {
+          isFilterOpen && (
+            <div className="filter-panel">
+              <div className="filter-panel-header">
+                <span className="filter-label-container">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-funnel-icon lucide-funnel"
+                  >
+                    <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+                  </svg>
+                  <span>Filter Options</span>
+                </span>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="filter-clear-btn"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              <div className="filter-grid">
+                {/* Category Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Category</span>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by category"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.cat_id} value={cat.cat_name}>
+                        {cat.cat_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Section Filter */}
+                {sections.length > 0 && (
+                  <div className="filter-group">
+                    <span className="filter-group-title">Section</span>
+                    <select
+                      value={sectionFilter}
+                      onChange={(e) => setSectionFilter(e.target.value)}
+                      className="filter-select"
+                      aria-label="Filter by section"
+                    >
+                      <option value="">All Sections</option>
+                      {sections.map((sec) => (
+                        <option key={sec.sec_id} value={sec.sec_num.toString()}>
+                          Section {sec.sec_num}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 )}
 
-                <form key={editingQuiz?.quiz_id ?? "new"} onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label htmlFor="cat_id">Category</label>
-                        <select id="cat_id" name="cat_id" className="form-select" required defaultValue={editingQuiz?.cat_id?.toString() ?? ""}>
-                            <option value="" disabled>Select Category</option>
-                            {categories.map((cat) => (
-                                <option key={cat.cat_id} value={cat.cat_id}>
-                                    {cat.cat_name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                {/* Difficulty Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Difficulty</span>
+                  <select
+                    value={difficultyFilter}
+                    onChange={(e) => setDifficultyFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by difficulty"
+                  >
+                    <option value="">All Difficulties</option>
+                    {difficulties.map((diff) => (
+                      <option
+                        key={diff.difficulty_id}
+                        value={diff.difficulty_name}
+                      >
+                        {diff.difficulty_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                    <div className="form-group">
-                        <label htmlFor="difficulty_id">Difficulty</label>
-                        <select id="difficulty_id" name="difficulty_id" className="form-select" required defaultValue={editingQuiz?.difficulty_id?.toString() ?? ""}>
-                            <option value="" disabled>Select Difficulty</option>
-                            {difficulties.map((diff) => (
-                                <option key={diff.difficulty_id} value={diff.difficulty_id}>
-                                    {diff.difficulty_name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                {/* Type Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Quiz Type</span>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by quiz type"
+                  >
+                    <option value="">All Types</option>
+                    {types.map((t) => (
+                      <option key={t.quiz_type_id} value={t.type_name}>
+                        {t.type_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )
+        }
 
-                    <div className="form-group">
-                        <label htmlFor="quiz_type_id">Quiz Type</label>
-                        <select
-                            id="quiz_type_id"
-                            name="quiz_type_id"
-                            className="form-select"
-                            required
-                            value={selectedTypeId}
-                            onChange={(e) => setSelectedTypeId(e.target.value)}
+        {
+          recentQuizzes.length === 0 ? (
+            <div className="empty-state">
+              No quiz questions created yet. Use the form on the left to add one!
+            </div>
+          ) : filteredQuizzes.length === 0 ? (
+            <div className="empty-state">
+              No quiz questions found matching the selected filters.
+            </div>
+          ) : (
+            <div
+              style={{
+                maxHeight: "844px",
+                overflowY: "auto",
+                paddingRight: "10px",
+              }}
+            >
+              {filteredQuizzes.map((quiz) => {
+                const payload = quiz.quiz_payload;
+                return (
+                  <div key={quiz.quiz_id} className="quiz-list-item">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "16px",
+                      }}
+                    >
+                      <div
+                        className="quiz-list-question"
+                        style={{ marginBottom: 0 }}
+                      >
+                        {quiz.question_text}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="btn-preview"
+                          onClick={() =>
+                            router.push(`/test?quizId=${quiz.quiz_id}`)
+                          }
+                          title="Preview Question"
+                          aria-label="Preview Question"
                         >
-                            {types.map((t) => (
-                                <option key={t.quiz_type_id} value={t.quiz_type_id}>
-                                    {t.type_name} ({
-                                        t.type_name === "MCQ" ? "Multiple Choice" :
-                                            t.type_name === "FITB" ? "Fill in the Blank" :
-                                                t.type_name === "Order" ? "Syntax Arrangement" :
-                                                    t.type_name === "Pair" ? "Matching Type" :
-                                                        t.type_name === "CP" ? "Coding Problem" : t.type_name
-                                    })
-                                </option>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-eye"
+                          >
+                            <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-edit"
+                          onClick={() => handleEdit(quiz)}
+                          title="Edit Question"
+                          aria-label="Edit Question"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-pencil"
+                          >
+                            <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                            <path d="m16 5 3 3" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          onClick={() => handleDelete(quiz.quiz_id)}
+                          title="Delete Question"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-trash-2"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" x2="10" y1="11" y2="17" />
+                            <line x1="14" x2="14" y1="11" y2="17" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="quiz-badge-row">
+                      <span className="badge badge-cat">{quiz.cat_name}</span>
+                      {quiz.sec_num && (
+                        <span className="badge badge-type">
+                          Section {quiz.sec_num}
+                        </span>
+                      )}
+                      <span className="badge badge-diff">
+                        {quiz.difficulty_name}
+                      </span>
+                      <span className="badge badge-type">{quiz.type_name}</span>
+                    </div>
+                    {payload && (
+                      <div className="quiz-payload-preview">
+                        {/* MCQ Rendering */}
+                        {quiz.type_name === "MCQ" && payload.options && (
+                          <div>
+                            <strong>Options:</strong>
+                            {payload.options.map((opt: string, i: number) => {
+                              const isCorrect = payload.correct_index === i;
+                              return (
+                                <div key={i} className="quiz-payload-option">
+                                  <span>
+                                    {i + 1}. {opt}
+                                  </span>
+                                  {isCorrect && (
+                                    <span className="correct-text">
+                                      (Correct)
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* FITB Rendering */}
+                        {quiz.type_name === "FITB" && (
+                          <div>
+                            <strong>Correct Answer:</strong>{" "}
+                            <span className="correct-text">{payload.answer}</span>
+                          </div>
+                        )}
+
+                        {/* Order Rendering */}
+                        {quiz.type_name === "Order" && payload.items && (
+                          <div>
+                            <strong>Correct Order:</strong>
+                            {payload.items.map((item: string, i: number) => (
+                              <div
+                                key={i}
+                                style={{
+                                  margin: "4px 0",
+                                }}
+                              >
+                                {i + 1}. {item}
+                              </div>
                             ))}
-                        </select>
-                    </div>
+                          </div>
+                        )}
 
-                    <div className="form-group">
-                        <label htmlFor="question_text">Question Text / Prompt</label>
-                        <textarea
-                            id="question_text"
-                            name="question_text"
-                            className="form-textarea"
-                            placeholder="Enter the question text here..."
-                            defaultValue={editingQuiz?.question_text ?? ""}
-                            required
-                        />
-                    </div>
+                        {/* Pair Rendering */}
+                        {quiz.type_name === "Pair" && payload.pairs && (
+                          <div>
+                            <strong>Matching Pairs:</strong>
+                            {payload.pairs.map((pair: any, i: number) => (
+                              <div
+                                key={i}
+                                style={{
+                                  margin: "4px 0",
+                                }}
+                              >
+                                <code>{pair.left}</code> &harr;{" "}
+                                <code>{pair.right}</code>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                    {/* MCQ Options */}
-                    {selectedTypeName === "MCQ" && (
-                        <div className="form-group">
-                            <label style={{ marginBottom: "12px" }}>Answer Options (Select correct answer radio)</label>
-                            <div className="options-grid">
-                                {[0, 1, 2, 3].map((idx) => (
-                                    <div key={idx} className="option-row">
-                                        <input
-                                            type="radio"
-                                            name="correct_option_index"
-                                            value={idx}
-                                            id={`correct_${idx}`}
-                                            className="radio-check"
-                                            required
-                                            defaultChecked={editingQuiz ? editingQuiz.quiz_payload?.correct_index === idx : idx === 0}
-                                        />
-                                        <input
-                                            type="text"
-                                            name={`option_${idx}`}
-                                            placeholder={`Option ${idx + 1}`}
-                                            className="form-input"
-                                            defaultValue={editingQuiz?.quiz_payload?.options?.[idx] ?? ""}
-                                            required
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* FITB Options */}
-                    {selectedTypeName === "FITB" && (
-                        <div className="form-group">
-                            <label htmlFor="fitb_answer">Correct Blank Answer</label>
-                            <input
-                                type="text"
-                                id="fitb_answer"
-                                name="fitb_answer"
-                                placeholder="Enter the correct answer word(s)..."
-                                className="form-input"
-                                defaultValue={editingQuiz?.quiz_payload?.answer ?? ""}
-                                required
-                            />
-                        </div>
-                    )}
-
-                    {/* Order Options */}
-                    {selectedTypeName === "Order" && (
-                        <div className="form-group">
-                            <label style={{ marginBottom: "12px" }}>Items to Order (Enter in the CORRECT sequence)</label>
-                            <div className="options-grid">
-                                {[0, 1, 2, 3].map((idx) => (
-                                    <div key={idx} className="option-row">
-                                        <span style={{ minWidth: "30px", fontWeight: "bold" }}>{idx + 1}.</span>
-                                        <input
-                                            type="text"
-                                            name={`order_${idx}`}
-                                            placeholder={`Sequence Item ${idx + 1}`}
-                                            className="form-input"
-                                            defaultValue={editingQuiz?.quiz_payload?.items?.[idx] ?? ""}
-                                            required
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Pair Options */}
-                    {selectedTypeName === "Pair" && (
-                        <div className="form-group">
-                            <label style={{ marginBottom: "12px" }}>Matching Pairs (Enter Left and matching Right values)</label>
-                            <div className="options-grid">
-                                {[0, 1, 2, 3].map((idx) => (
-                                    <div key={idx} className="option-row" style={{ gap: "10px" }}>
-                                        <span style={{ fontWeight: "bold" }}>{idx + 1}.</span>
-                                        <input
-                                            type="text"
-                                            name={`pair_left_${idx}`}
-                                            placeholder="Left Key"
-                                            className="form-input"
-                                            defaultValue={editingQuiz?.quiz_payload?.pairs?.[idx]?.left ?? ""}
-                                            required
-                                        />
-                                        <span style={{ color: "#aaa" }}>&harr;</span>
-                                        <input
-                                            type="text"
-                                            name={`pair_right_${idx}`}
-                                            placeholder="Right Value"
-                                            className="form-input"
-                                            defaultValue={editingQuiz?.quiz_payload?.pairs?.[idx]?.right ?? ""}
-                                            required
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* CP Options */}
-                    {selectedTypeName === "CP" && (
-                        <div className="form-group">
-                            <div style={{ marginBottom: "15px" }}>
-                                <label htmlFor="cp_template">Initial Code Template</label>
-                                <textarea
-                                    id="cp_template"
-                                    name="cp_template"
-                                    className="form-textarea"
-                                    style={{ fontFamily: "monospace" }}
-                                    placeholder="e.g. function test() {\n  // your code here\n}"
-                                    defaultValue={editingQuiz?.quiz_payload?.template ?? ""}
-                                    required
-                                />
+                        {/* CP Rendering */}
+                        {quiz.type_name === "CP" && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            <div>
+                              <strong>Template:</strong>
+                              <pre
+                                style={{
+                                  margin: "4px 0",
+                                  backgroundColor: "#eee",
+                                  padding: "6px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.8rem",
+                                  overflowX: "auto",
+                                }}
+                              >
+                                {payload.template}
+                              </pre>
                             </div>
                             <div>
-                                <label htmlFor="cp_expected">Expected Output / Answer Key Code</label>
-                                <textarea
-                                    id="cp_expected"
-                                    name="cp_expected"
-                                    className="form-textarea"
-                                    style={{ fontFamily: "monospace" }}
-                                    placeholder="e.g. return true;"
-                                    defaultValue={editingQuiz?.quiz_payload?.expected ?? ""}
-                                    required
-                                />
+                              <strong>Expected Output:</strong>
+                              <pre
+                                style={{
+                                  margin: "4px 0",
+                                  backgroundColor: "#e2f0d9",
+                                  padding: "6px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.8rem",
+                                  overflowX: "auto",
+                                }}
+                              >
+                                {payload.expected}
+                              </pre>
                             </div>
-                        </div>
+                          </div>
+                        )}
+                      </div>
                     )}
-
-                    <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={isPending}
-                        style={{ marginTop: "10px" }}
-                    >
-                        {isPending ? (editingQuiz ? "Saving Quiz..." : "Adding Quiz...") : (editingQuiz ? "Save Changes" : "Add Quiz Question")}
-                    </button>
-                    {editingQuiz && (
-                        <button
-                            type="button"
-                            className="btn-delete"
-                            onClick={handleCancelEdit}
-                            disabled={isPending}
-                            style={{ marginTop: "10px", marginLeft: "10px" }}
-                        >
-                            Cancel
-                        </button>
-                    )}
-                </form>
+                  </div>
+                );
+              })}
             </div>
-
-            {/* List Section */}
-            <div className="admin-card">
-                <h2>Recently Added Quizzes</h2>
-
-                {recentQuizzes.length === 0 ? (
-                    <div className="empty-state">
-                        No quiz questions created yet. Use the form on the left to add one!
-                    </div>
-                ) : (
-                    <div style={{ maxHeight: "750px", overflowY: "auto", paddingRight: "10px" }}>
-                        {recentQuizzes.map((quiz) => {
-                            const payload = quiz.quiz_payload;
-                            return (
-                                <div key={quiz.quiz_id} className="quiz-list-item">
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
-                                        <div className="quiz-list-question" style={{ marginBottom: 0 }}>{quiz.question_text}</div>
-                                                    <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-edit"
-                                                            onClick={() => handleEdit(quiz)}
-                                                            title="Edit Question"
-                                                            aria-label="Edit Question"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></svg>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-delete"
-                                                            onClick={() => handleDelete(quiz.quiz_id)}
-                                                            title="Delete Question"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
-                                                        </button>
-                                                    </div>
-                                    </div>
-                                    <div className="quiz-badge-row">
-                                        <span className="badge badge-cat">{quiz.cat_name}</span>
-                                        <span className="badge badge-diff">{quiz.difficulty_name}</span>
-                                        <span className="badge badge-type">{quiz.type_name}</span>
-                                    </div>
-                                    {payload && (
-                                        <div className="quiz-payload-preview">
-                                            {/* MCQ Rendering */}
-                                            {quiz.type_name === "MCQ" && payload.options && (
-                                                <div>
-                                                    <strong>Options:</strong>
-                                                    {payload.options.map((opt: string, i: number) => {
-                                                        const isCorrect = payload.correct_index === i;
-                                                        return (
-                                                            <div key={i} className="quiz-payload-option">
-                                                                <span>{i + 1}. {opt}</span>
-                                                                {isCorrect && <span className="correct-text">(Correct)</span>}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-
-                                            {/* FITB Rendering */}
-                                            {quiz.type_name === "FITB" && (
-                                                <div>
-                                                    <strong>Correct Answer:</strong> <span className="correct-text">{payload.answer}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Order Rendering */}
-                                            {quiz.type_name === "Order" && payload.items && (
-                                                <div>
-                                                    <strong>Correct Order:</strong>
-                                                    {payload.items.map((item: string, i: number) => (
-                                                        <div key={i} style={{ margin: "4px 0" }}>
-                                                            {i + 1}. {item}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Pair Rendering */}
-                                            {quiz.type_name === "Pair" && payload.pairs && (
-                                                <div>
-                                                    <strong>Matching Pairs:</strong>
-                                                    {payload.pairs.map((pair: any, i: number) => (
-                                                        <div key={i} style={{ margin: "4px 0" }}>
-                                                            <code>{pair.left}</code> &harr; <code>{pair.right}</code>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* CP Rendering */}
-                                            {quiz.type_name === "CP" && (
-                                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                                    <div>
-                                                        <strong>Template:</strong>
-                                                        <pre style={{ margin: "4px 0", backgroundColor: "#eee", padding: "6px", borderRadius: "4px", fontSize: "0.8rem", overflowX: "auto" }}>
-                                                            {payload.template}
-                                                        </pre>
-                                                    </div>
-                                                    <div>
-                                                        <strong>Expected Output:</strong>
-                                                        <pre style={{ margin: "4px 0", backgroundColor: "#e2f0d9", padding: "6px", borderRadius: "4px", fontSize: "0.8rem", overflowX: "auto" }}>
-                                                            {payload.expected}
-                                                        </pre>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-        </>
-    );
+          )
+        }
+      </div >
+    </>
+  );
 }

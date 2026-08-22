@@ -1,6 +1,6 @@
 body {
     background-color: #f6f6f6;
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     color: #333;
     min-height: 100vh;
     padding: 0;
@@ -14,7 +14,7 @@ body {
     justify-content: space-between;
     align-items: center;
     color: #fafafa;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .admin-header h1 {
@@ -74,27 +74,33 @@ body {
 
 .form-group label {
     display: block;
-    font-family: 'Poppins', sans-serif;
+    font-family: "Poppins", sans-serif;
     font-weight: 600;
     margin-bottom: 8px;
     color: #333;
     font-size: 0.95rem;
 }
 
-.form-select, .form-textarea, .form-input {
+.form-select,
+.form-textarea,
+.form-input {
     width: 100%;
     padding: 12px 16px;
     border: 2px solid #e0e0e0;
     border-radius: 12px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: "Montserrat", sans-serif;
     font-size: 1rem;
     color: #666;
     outline: none;
     background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
-.form-select:focus, .form-textarea:focus, .form-input:focus {
+.form-select:focus,
+.form-textarea:focus,
+.form-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(153, 102, 255, 0.15);
 }
@@ -114,6 +120,11 @@ body {
     border: 1px solid #e0e0e0;
 }
 
+.options-grid-scrollable {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
 .option-row {
     display: flex;
     align-items: center;
@@ -130,16 +141,18 @@ body {
 .btn-primary {
     background-color: var(--selected-color);
     color: #ffffff;
-    font-family: 'Poppins', sans-serif;
+    font-family: "Poppins", sans-serif;
     font-weight: 700;
     font-size: 1.1rem;
     padding: 14px 28px;
     border: none;
     border-radius: 14px;
-    border-bottom: 4px solid #6B36DA;
+    border-bottom: 4px solid #6b36da;
     cursor: pointer;
     width: 100%;
-    transition: transform 0.1s, border-bottom-width 0.1s;
+    transition:
+        transform 0.1s,
+        border-bottom-width 0.1s;
 }
 
 .btn-primary:active {
@@ -168,7 +181,7 @@ body {
     font-size: 1.05rem;
     margin-bottom: 12px;
     color: #333;
-    font-family: 'Poppins', sans-serif;
+    font-family: "Poppins", sans-serif;
 }
 
 .quiz-badge-row {
@@ -179,7 +192,7 @@ body {
 }
 
 .badge {
-    font-family: 'Montserrat', sans-serif;
+    font-family: "Montserrat", sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     padding: 4px 10px;
@@ -188,22 +201,22 @@ body {
 }
 
 .badge-cat {
-    background-color: #EAE4F7;
+    background-color: #eae4f7;
     color: var(--selected-color);
 }
 
 .badge-diff {
-    background-color: #FFF2E6;
-    color: #FF8800;
+    background-color: #fff2e6;
+    color: #ff8800;
 }
 
 .badge-type {
-    background-color: #E6F7FF;
-    color: #0088FF;
+    background-color: #e6f7ff;
+    color: #0088ff;
 }
 
 .quiz-payload-preview {
-    font-family: 'Montserrat', sans-serif;
+    font-family: "Montserrat", sans-serif;
     font-size: 0.85rem;
     color: #666;
     background-color: #fafafa;
@@ -228,7 +241,7 @@ body {
     padding: 14px 18px;
     border-radius: 12px;
     margin-bottom: 25px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: "Montserrat", sans-serif;
     font-size: 0.95rem;
     font-weight: 600;
 }
@@ -249,7 +262,7 @@ body {
     text-align: center;
     padding: 40px 0;
     color: #aaa;
-    font-family: 'Montserrat', sans-serif;
+    font-family: "Montserrat", sans-serif;
 }
 
 .btn-delete {
@@ -262,7 +275,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.1s;
     flex-shrink: 0;
 }
 
@@ -272,6 +288,32 @@ body {
 }
 
 .btn-delete:active {
+    transform: scale(0.95);
+}
+
+.btn-add-option {
+    background: none;
+    border: none;
+    color: #28a745;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.1s;
+    flex-shrink: 0;
+}
+
+.btn-add-option:hover {
+    background-color: #e6f9e6;
+    color: #28a745;
+}
+
+.btn-add-option:active {
     transform: scale(0.95);
 }
 .btn-edit {
@@ -284,7 +326,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.1s;
     flex-shrink: 0;
 }
 
@@ -295,4 +340,177 @@ body {
 
 .btn-edit:active {
     transform: scale(0.95);
+}
+
+.btn-preview {
+    background: none;
+    border: none;
+    color: #0088ff;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.1s;
+    flex-shrink: 0;
+}
+
+.btn-preview:hover {
+    background-color: #e6f7ff;
+    color: #006fcc;
+}
+
+.btn-preview:active {
+    transform: scale(0.95);
+}
+
+.filter-toggle-btn {
+    background: none;
+    border: 2px solid #e0e0e0;
+    color: #666;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.filter-toggle-btn:hover {
+    border-color: var(--selected-color);
+    color: var(--selected-color);
+    background-color: #fcfaff;
+}
+
+.filter-toggle-btn.active {
+    border-color: var(--selected-color);
+    color: #fff;
+    background-color: var(--selected-color);
+}
+
+.filter-badge {
+    background-color: #ff4d4d;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-panel {
+    background-color: #fafafa;
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filter-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+
+.filter-label-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--selected-color);
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 480px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-group-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-select {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #555;
+    outline: none;
+    cursor: pointer;
+    background-color: #fff;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    width: 100%;
+}
+
+.filter-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(153, 102, 255, 0.15);
+}
+
+.filter-clear-btn {
+    background: none;
+    border: none;
+    color: #ff4d4d;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.filter-clear-btn:hover {
+    background-color: #ffe6e6;
 }
