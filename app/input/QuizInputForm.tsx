@@ -33,6 +33,50 @@ export default function QuizInputForm({
         type: "success" | "error";
         text: string;
     } | null>(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState<string>("");
+    const [sectionFilter, setSectionFilter] = useState<string>("");
+    const [difficultyFilter, setDifficultyFilter] = useState<string>("");
+    const [typeFilter, setTypeFilter] = useState<string>("");
+
+    const hasActiveFilters =
+        categoryFilter !== "" ||
+        sectionFilter !== "" ||
+        difficultyFilter !== "" ||
+        typeFilter !== "";
+
+    const activeFilterCount =
+        (categoryFilter !== "" ? 1 : 0) +
+        (sectionFilter !== "" ? 1 : 0) +
+        (difficultyFilter !== "" ? 1 : 0) +
+        (typeFilter !== "" ? 1 : 0);
+
+    const handleClearFilters = () => {
+        setCategoryFilter("");
+        setSectionFilter("");
+        setDifficultyFilter("");
+        setTypeFilter("");
+    };
+
+    const filteredQuizzes = recentQuizzes.filter((quiz) => {
+        if (categoryFilter !== "" && quiz.cat_name !== categoryFilter) {
+            return false;
+        }
+        const quizSecNum = quiz.sec_num?.toString() ?? "";
+        if (sectionFilter !== "" && quizSecNum !== sectionFilter) {
+            return false;
+        }
+        if (
+            difficultyFilter !== "" &&
+            quiz.difficulty_name !== difficultyFilter
+        ) {
+            return false;
+        }
+        if (typeFilter !== "" && quiz.type_name !== typeFilter) {
+            return false;
+        }
+        return true;
+    });
 
     const selectedType = types.find(
         (t) => t.quiz_type_id.toString() === selectedTypeId,
@@ -472,12 +516,166 @@ export default function QuizInputForm({
 
             {/* List Section */}
             <div className="admin-card">
-                <h2>Recently Added Quizzes</h2>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: "2px solid #e0e0e0",
+                        paddingBottom: "10px",
+                        marginBottom: "20px",
+                        flexWrap: "wrap",
+                        gap: "12px",
+                    }}
+                >
+                    <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
+                        Recently Added Quizzes
+                    </h2>
+                    <button
+                        type="button"
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className={`filter-toggle-btn ${isFilterOpen || hasActiveFilters ? "active" : ""}`}
+                        aria-expanded={isFilterOpen}
+                        title="Toggle Filters"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-funnel-icon lucide-funnel"
+                        >
+                            <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+                        </svg>
+                        <span>Filter</span>
+                        {activeFilterCount > 0 && (
+                            <span className="filter-badge">{activeFilterCount}</span>
+                        )}
+                    </button>
+                </div>
+
+                {/* Collapsible Filter Panel containing Dropdown Selects */}
+                {isFilterOpen && (
+                    <div className="filter-panel">
+                        <div className="filter-panel-header">
+                            <span className="filter-label-container">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="lucide lucide-funnel-icon lucide-funnel"
+                                >
+                                    <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+                                </svg>
+                                <span>Filter Options</span>
+                            </span>
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearFilters}
+                                    className="filter-clear-btn"
+                                >
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+                        <div className="filter-grid">
+                            {/* Category Filter */}
+                            <div className="filter-group">
+                                <span className="filter-group-title">Category</span>
+                                <select
+                                    value={categoryFilter}
+                                    onChange={(e) => setCategoryFilter(e.target.value)}
+                                    className="filter-select"
+                                    aria-label="Filter by category"
+                                >
+                                    <option value="">All Categories</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.cat_id} value={cat.cat_name}>
+                                            {cat.cat_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Section Filter */}
+                            {sections.length > 0 && (
+                                <div className="filter-group">
+                                    <span className="filter-group-title">Section</span>
+                                    <select
+                                        value={sectionFilter}
+                                        onChange={(e) => setSectionFilter(e.target.value)}
+                                        className="filter-select"
+                                        aria-label="Filter by section"
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sections.map((sec) => (
+                                            <option key={sec.sec_id} value={sec.sec_num.toString()}>
+                                                Section {sec.sec_num}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Difficulty Filter */}
+                            <div className="filter-group">
+                                <span className="filter-group-title">Difficulty</span>
+                                <select
+                                    value={difficultyFilter}
+                                    onChange={(e) => setDifficultyFilter(e.target.value)}
+                                    className="filter-select"
+                                    aria-label="Filter by difficulty"
+                                >
+                                    <option value="">All Difficulties</option>
+                                    {difficulties.map((diff) => (
+                                        <option key={diff.difficulty_id} value={diff.difficulty_name}>
+                                            {diff.difficulty_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Type Filter */}
+                            <div className="filter-group">
+                                <span className="filter-group-title">Quiz Type</span>
+                                <select
+                                    value={typeFilter}
+                                    onChange={(e) => setTypeFilter(e.target.value)}
+                                    className="filter-select"
+                                    aria-label="Filter by quiz type"
+                                >
+                                    <option value="">All Types</option>
+                                    {types.map((t) => (
+                                        <option key={t.quiz_type_id} value={t.type_name}>
+                                            {t.type_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {recentQuizzes.length === 0 ? (
                     <div className="empty-state">
                         No quiz questions created yet. Use the form on the left
                         to add one!
+                    </div>
+                ) : filteredQuizzes.length === 0 ? (
+                    <div className="empty-state">
+                        No quiz questions found matching the selected filters.
                     </div>
                 ) : (
                     <div
@@ -487,7 +685,7 @@ export default function QuizInputForm({
                             paddingRight: "10px",
                         }}
                     >
-                        {recentQuizzes.map((quiz) => {
+                        {filteredQuizzes.map((quiz) => {
                             const payload = quiz.quiz_payload;
                             return (
                                 <div
