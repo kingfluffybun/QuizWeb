@@ -9,8 +9,8 @@ interface SendEmailParams {
     from?: string;
 }
 
-export async function sendEmail({ to, subject, html, from }: SendEmailParams) {
-    const sender = from || "Quizweb <quizweb.dev>";
+export async function sendEmail({ to, subject, html }: SendEmailParams) {
+    const sender = "Quizweb <noreply@quizweb.dev>";
 
     try {
         const { data, error } = await resend.emails.send({
