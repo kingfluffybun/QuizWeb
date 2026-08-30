@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
-import Image from "next/image";
-import { signIn } from "next-auth/react";
-import { signUp } from "@/app/actions/auth";
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
+import { signUp, reqPassReset, verifyOTP, resetPass } from "@/app/actions/auth";
+import { useState, useRef } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import LoginQuiz from "@/app/components/loginQuiz";
+import Image from "next/image";
+import Link from "next/link";
 import "#css/login.css";
 import "#css/nav.css";
-import LoginQuiz from "@/app/components/loginQuiz";
-import Link from "next/link";
+import { set } from "animejs";
 
 const passwordRules = [
     { key: "length", label: "8+ characters", test: (pw: string) => pw.length >= 8 },
@@ -23,13 +24,15 @@ const passwordRules = [
 const strengthLevels = ["#333333","#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
 
 function AuthPage() {
+    const { executeRecaptcha } = useGoogleReCaptcha();
+    const router = useRouter();
+
     const [mode, setMode] = useState<"login" | "signup">("login");
     const [contentMode, setContentMode] = useState<"login" | "signup">("login");
     const [isFading, setIsFading] = useState(false);
     const [showForgot, setShowForgot] = useState(false);
     const [forgotStep, setForgotStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
-
     const [error, setError] = useState("");
 
     // Signup password validation
@@ -43,13 +46,17 @@ function AuthPage() {
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
     const [recaptchaLoading, setRecaptchaLoading] = useState(false);
 
+    // Forgot pass states
+    const [forgotEmail, setForgotEmail] = useState("");
+    const [forgotOTP, setForgotOTP] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmNewPassword, setConfirmNewPassword] = useState("");
+    const [otpSent, setOTPSent] = useState(false);
+
     const fadeToken = useRef(0);
     const FADE_MS = 260;
 
-    const router = useRouter();
-    const { executeRecaptcha } = useGoogleReCaptcha();
-
-    // Login
+    // === Login ===
     async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (isLoading) return;
@@ -81,7 +88,7 @@ function AuthPage() {
         }
     }
 
-    // Signup
+    // === Signup ===
     async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (isLoading) return;
@@ -137,7 +144,7 @@ function AuthPage() {
         router.push("/");
     }
 
-    // ReCaptcha
+    // === ReCaptcha ===
     const handleReCaptchaVerify = async () => {
         if (!executeRecaptcha) {
             setError("ReCaptcha failed to load. Please refresh the page");
@@ -173,7 +180,91 @@ function AuthPage() {
         }
     }
 
-    // Switching
+    // === Forgot Pass ===
+    const openForgot = () => {
+        setShowForgot(true);
+        setForgotStep(1);
+        setForgotEmail("");
+        setForgotOTP("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setOTPSent(false);
+        setError("");
+    };
+    const closeForgot = () => {
+        setShowForgot(false);
+        setForgotStep(1);
+        setError("");
+    };
+
+    const handleSendOTP = async () => {
+        if (!forgotEmail || !/\S+@\S+\.\S+/.test(forgotEmail)) {
+            setError("Please enter a valid email address.");
+            return;
+        }
+        setIsLoading(true);
+        setError("");
+
+        const result = await reqPassReset(forgotEmail);
+
+        if (result?.error) {
+            setError(result.error);
+            setIsLoading(false);
+            return;
+        }
+
+        setOTPSent(true);
+        setForgotStep(2);
+        setIsLoading(false);
+        setError("");
+    };
+
+    const handleVerifyOTP = async () => {
+        if (!forgotOTP || forgotOTP.length !== 6) {
+            setError("Please enter the sent OTP.");
+            return;
+        }
+        setIsLoading(true);
+        setError("");
+
+        const result = await verifyOTP(forgotEmail, forgotOTP);
+
+        if (result?.error) {
+            setError(result.error);
+            setIsLoading(false);
+            return;
+        }
+
+        setForgotStep(3);
+        setIsLoading(false);
+    }
+
+    const handleResetPass = async () => {
+        if (newPassword.length < 8 ) {
+            setError("Password must be at least 8 characters long.");
+            return;
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+        setIsLoading(true);
+        setError("");
+
+        const result = await resetPass(forgotEmail, forgotOTP, newPassword);
+
+        if (result?.error) {
+            setError(result.error);
+            setIsLoading(false);
+            return;
+        }
+
+        setForgotStep(4);
+        setIsLoading(false);
+    };
+
+    // === Switching ===
     const switchMode = (newMode: 'login' | 'signup') => {
         if (newMode === mode || isFading) return;
         setIsFading(true);
@@ -195,29 +286,41 @@ function AuthPage() {
         }, FADE_MS);
     };
 
-    // Forgot Password
-    const openForgot = () => {
-        setShowForgot(true);
-        setForgotStep(1);
-    };
-    const closeForgot = () => {
-        setShowForgot(false);
-        setForgotStep(1);
-    };
-
-    // Forgot Content
-    const forgotCopy: Record<number, [string, string, string]> = {
-        1: ['Step 1', 'Enter your email', 'Use the registered email address for your account.'],
-        2: ['Step 2', '', ''],
-        3: ['Step 3', '', ''],
-        4: ['Step 4', '', ''],
-    };
-    const [stepLabel, stepTitle, stepText] = forgotCopy[forgotStep];
-
-    // Custom content
+    // === Rendering ===
     const isSignup = mode === 'signup';
     const isSignupContent = contentMode === 'signup';
     const fadeClass = isFading ? 'text-fade-out' : '';
+
+    const passedRulesCount = passwordRules.filter((rule) => rule.test(signupPassword)).length;
+    const allRulesPassed = passedRulesCount === passwordRules.length;
+    const missingLabels = passwordRules.filter((rule) => !rule.test(signupPassword)).map((rule) => rule.label);
+    const strengthColor = strengthLevels[passedRulesCount];
+
+    const isSignupComplete = 
+        signupUsername.trim() !== "" &&
+        /\S+@\S+\.\S+/.test(signupEmail) &&
+        allRulesPassed &&
+        signupPassword === confirmPassword &&
+        confirmPassword !== "" &&
+        recaptchaVerified;
+    
+    const isForgotComplete = 
+        /\S+@\S+\.\S+/.test(forgotEmail) &&
+        forgotOTP.length === 6 &&
+        newPassword.length >= 8 &&
+        newPassword === confirmNewPassword &&
+        allRulesPassed;
+
+    const forgotCopy: Record<number, [string, string, string]> = {
+        1: ['Step 1', 'Enter your email', 'Use the registered email address for your account.'],
+        2: ['Step 2', 'Enter the sent OTP', 'An OTP has been sent to your email.'],
+        3: ['Step 3', 'Enter your new password', 'Create a new password for your account.'],
+        4: ['Step 4', 'Password reset complete', ''],
+    };
+    const [stepLabel, stepTitle, stepText] = forgotCopy[forgotStep];
+
+    const passwordsMismatch = attemptedSubmit && confirmPassword.length > 0 && signupPassword !== confirmPassword;
+    const newPasswordMismatch = attemptedSubmit && newPassword.length > 0 && newPassword !== confirmPassword;
 
     const panelTitle = isSignupContent ? 'Create account' : 'Welcome back';
     const panelText = isSignupContent ? 'Start learning with QuizWeb in minutes.' : 'Pick up your WebDev quizzes where you left off.';
@@ -227,21 +330,6 @@ function AuthPage() {
     const formTitleText = isSignupContent ? 'Create account' : 'Sign in';
     const formTextText = isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
 
-    const passwordsMismatch = attemptedSubmit && confirmPassword.length > 0 && signupPassword !== confirmPassword;
-
-    const passedRulesCount = passwordRules.filter((rule) => rule.test(signupPassword)).length;
-    const allRulesPassed = passedRulesCount === passwordRules.length;
-    const missingLabels = passwordRules.filter((rule) => !rule.test(signupPassword)).map((rule) => rule.label);
-    const strengthColor = strengthLevels[passedRulesCount];
-
-    // Signup all fields needed
-    const isSignupComplete = 
-        signupUsername.trim() !== "" &&
-        /\S+@\S+\.\S+/.test(signupEmail) &&
-        allRulesPassed &&
-        signupPassword === confirmPassword &&
-        confirmPassword !== "" &&
-        recaptchaVerified;
     // HTML
     return (
         <div className="auth-page">
@@ -515,28 +603,68 @@ function AuthPage() {
                         <p className="modalCopy">{stepText}</p>
                     </div>
 
+                    {/* Step 1 */}
                     <div className={`step ${forgotStep === 1 ? 'active' : ''}`}>
                         <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                             </span>
-                            <input type="email" placeholder=" " autoComplete="email" />
+                            <input
+                                type="email"
+                                placeholder=" "
+                                autoComplete="email" 
+                                value={forgotEmail}
+                                onChange={(e) => setForgotEmail(e.target.value)}
+                                disabled={isLoading}
+                            />
                             <span className="floating-label">Registered email address</span>
                         </label>
-                        <button type="button" className="submit-btn" onClick={() => setForgotStep(2)}>Send OTP</button>
+                        {otpSent && <p className="form-success">If an account exists, an OTP has been sent.</p>}
+                        <button
+                            type="button"
+                            className="submit-btn" 
+                            onClick={handleSendOTP}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "Sending OTP..." : "Send OTP"}
+                        </button>
                     </div>
 
+                    {/* Step 2 */}
                     <div className={`step ${forgotStep === 2 ? 'active' : ''}`}>
                         <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             </span>
-                            <input type="text" placeholder=" " maxLength={6} />
+                            <input
+                                type="text"
+                                placeholder=" "
+                                maxLength={6}
+                                value={forgotOTP}
+                                onChange={(e) => setForgotOTP(e.target.value.replace(/\D/g, ''))}
+                                disabled={isLoading}
+                            />
                             <span className="floating-label">Enter 6-digit OTP</span>
                         </label>
-                        <button type="button" className="submit-btn" onClick={() => setForgotStep(3)}>Verify OTP</button>
+                        <button
+                            type="button"
+                            className="submit-btn"
+                            onClick={handleVerifyOTP}
+                            disabled={isLoading || forgotOTP.length !== 6}
+                        >
+                            {isLoading ? "Verifying OTP..." : "Verify OTP"}
+                        </button>
+                        <button
+                            type="button"
+                            className="link-btn"
+                            onClick={handleSendOTP}
+                            disabled={isLoading}
+                        >
+                            Resend OTP
+                        </button>
                     </div>
-
+                    
+                    {/* Step 3 */}
                     <div className={`step ${forgotStep === 3 ? 'active' : ''}`}>
                         <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
@@ -546,9 +674,33 @@ function AuthPage() {
                                 type="password"
                                 placeholder=" "
                                 autoComplete="new-password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                disabled={isLoading}
                             />
                             <span className="floating-label">New password</span>
                         </label>
+                        
+                        {newPassword.length > 0 && (
+                            <div className="password-strength">
+                                <div className="strength-bar-track">
+                                    {passwordRules.map((_, i) => (
+                                        <span
+                                            key={i}
+                                            className="strength-bar-seg"
+                                            style={{
+                                                background: i < passwordRules.filter(r => r.test(newPassword)).length ?
+                                                strengthLevels[passwordRules.filter(r => r.test(newPassword)).length] : undefined,
+                                            }}
+                                        ></span>
+                                    ))}
+                                </div>
+                                <p className="strength-hint">
+                                    {passwordRules.filter(r => !r.test(newPassword)).map(r => r.label).join(", ")}
+                                </p>
+                            </div>
+                        )}
+
                         <label className="input-group">
                             <span className="field-icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -557,20 +709,40 @@ function AuthPage() {
                                 type="password"
                                 placeholder=" "
                                 autoComplete="new-password"
+                                value={confirmNewPassword}
+                                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                                disabled={isLoading}
                             />
                             <span className="floating-label">Confirm password</span>
                         </label>
-                        <button type="button" className="submit-btn" onClick={() => setForgotStep(4)}>Reset Password</button>
-                    </div>
 
+                        {newPasswordMismatch && (
+                            <p className="form-error" role="alert">Passwords do not match.</p>
+                        )}
+
+                        <button
+                            type="button"
+                            className="submit-btn"
+                            onClick={handleResetPass}
+                            disabled={isLoading || newPassword.length < 8 || newPassword !== confirmNewPassword}
+                        >
+                            {isLoading ? "Resetting password..." : "Reset Password"}
+                        </button>
+                    </div>
+                    
+                    {/* Step 4 */}
                     <div className={`step ${forgotStep === 4 ? 'active' : ''}`}>
                         <p className="doneMsg">Password reset complete. You can now return to Sign In.</p>
-                        <button type="button" className="submit-btn"
+                        <button
+                            type="button"
+                            className="submit-btn"
                             onClick={() => { closeForgot(); switchMode('login'); }}
                         >
                             Return to Sign In
                         </button>
                     </div>
+
+                    {error && <p className="form-error" role="alert">{error}</p>}
 
                     <a className="link" href="#" onClick={(e) => { e.preventDefault(); closeForgot(); switchMode('login'); }}>Back to sign in</a>
                 </div>
