@@ -1040,6 +1040,10 @@ h1, h2, .eyebrow { font-family: 'Poppins', sans-serif; }
   box-shadow: 0 4px 12px rgba(20, 10, 40, 0.04);
 }
 
+/* .modalBox .social-btn {
+  margin-bottom: 12px;
+} */
+
 .formView {
   display: flex;
   flex-direction: column;
@@ -1212,6 +1216,11 @@ button:focus-visible, a:focus-visible {
   text-decoration: underline; 
 }
 
+.modalBox .link {
+  margin-top: 12px;
+  display: block;
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -1343,6 +1352,10 @@ button:focus-visible, a:focus-visible {
   font-family: 'Montserrat', sans-serif;
   font-size: 0.82rem;
   font-weight: 600;
+}
+
+.modalBox .form-error {
+  margin-top: 12px;
 }
 
 .recaptcha-container {
