@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate } from "animejs";
+import { animate, spring } from "animejs";
 
 export function BusDark() {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -401,6 +401,176 @@ export function Bus() {
             <path id="book-10" d="M370.542 232.163L353.464 236.105L354.778 241.798L371.856 237.855L370.542 232.163Z" fill="#EBE3F9"/>
             <path id="bus-table" d="M383.058 248.229H60.9634C58.7542 248.229 56.9634 250.019 56.9634 252.229V263.216C56.9634 265.425 58.7542 267.216 60.9634 267.216H383.058C385.267 267.216 387.058 265.425 387.058 263.216V252.229C387.058 250.019 385.267 248.229 383.058 248.229Z" fill="#EBE3F9"/>
             <path id="bus-rooftop" d="M589.761 72.8073H48.0256V12C48.0256 5.37258 53.3982 0 60.0256 0H577.761C584.388 0 589.761 5.37257 589.761 12V72.8073Z" fill="#EBE3F9"/>
+        </svg>
+    )
+}
+
+export function CloudsTopLeft() {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = svgRef.current;
+
+        const anims: (() => void)[] = [];
+
+        // slide in clouds
+        for (let i = 1; i <= 3; i++) {
+            const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+            if (!clouds) continue;
+
+            const delay = i * 100;
+
+            const runCloudsTopLeft = () => {
+                animate(clouds, {
+                    x: [-500, 0],
+                    ease: spring({
+                        bounce: 0.3,
+                        duration: 500,
+                    }),
+                    delay,
+                })
+            };
+            runCloudsTopLeft();
+        }
+
+        return () => {
+            anims.forEach((anim) => anim());
+        };
+    }, []);
+
+    return (
+        <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 510 169" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+            <path id="clouds-topleft-1" d="M60.5 84.7008C94.5 -5.79911 203 41.2007 203 79.7001C226.167 66.5335 277.3 57.1002 296.5 124.7C310.667 120.2 341.7 119 352.5 150.2H60.5V84.7008Z" fill="#ECDFFD"/>
+            <path id="clouds-topleft-2" d="M163.5 150.701C183.5 141.901 198.167 158.701 203 168.201H-1V106.701C38 57.2009 86.5 92.7005 97 115.7C137.8 98.1004 158.333 131.7 163.5 150.701Z" fill="white"/>
+            <path id="clouds-topleft-3" d="M508 70.2004H331C333 50.6006 348.5 49.7003 356 51.7002C360 21.7002 389.333 23.5336 403.5 28.2003C424 -23.3001 480 6.20028 478.5 34.2004C511.3 31.4004 511.833 57.0337 508 70.2004Z" fill="#ECDFFD"/>
+        </svg>
+    );
+}
+
+export function CloudsTopLeftDark() {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = svgRef.current;
+
+        const anims: (() => void)[] = [];
+
+        // slide in clouds
+        for (let i = 1; i <= 3; i++) {
+            const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+            if (!clouds) continue;
+
+            const delay = i * 100;
+
+            const runCloudsTopLeft = () => {
+                animate(clouds, {
+                    x: [-500, 0],
+                    ease: spring({
+                        bounce: 0.3,
+                        duration: 500,
+                    }),
+                    delay,
+                })
+            };
+            runCloudsTopLeft();
+        }
+
+        return () => {
+            anims.forEach((anim) => anim());
+        };
+    }, []);
+
+    return (
+        <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 510 169" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+            <path id="clouds-topleft-1" d="M60.5 84.7008C94.5 -5.79911 203 41.2007 203 79.7001C226.167 66.5335 277.3 57.1002 296.5 124.7C310.667 120.2 341.7 119 352.5 150.2H60.5V84.7008Z" fill="#6A35AD"/>
+            <path id="clouds-topleft-2" d="M163.5 150.701C183.5 141.901 198.167 158.701 203 168.201H-1V106.701C38 57.2009 86.5 92.7005 97 115.7C137.8 98.1004 158.333 131.7 163.5 150.701Z" fill="#994DFF"/>
+            <path id="clouds-topleft-3" d="M508 70.2004H331C333 50.6006 348.5 49.7003 356 51.7002C360 21.7002 389.333 23.5336 403.5 28.2003C424 -23.3001 480 6.20028 478.5 34.2004C511.3 31.4004 511.833 57.0337 508 70.2004Z" fill="#4C0890"/>
+        </svg>
+    )
+}
+
+export function CloudsTopRight() {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = svgRef.current;
+
+        const anims: (() => void)[] = [];
+
+        // slide in clouds
+        for (let i = 1; i <= 3; i++) {
+            const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+            if (!clouds) continue;
+
+            const delay = i * 100;
+
+            const runCloudsTopLeft = () => {
+                animate(clouds, {
+                    x: [500, 0],
+                    ease: spring({
+                        bounce: 0.3,
+                        duration: 500,
+                    }),
+                    delay,
+                })
+            };
+            runCloudsTopLeft();
+        }
+
+        return () => {
+            anims.forEach((anim) => anim());
+        };
+    }, []);
+
+    return (
+        <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 471 168" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+            <path id="clouds-topright-1" d="M60 107.174C22.8 93.9742 4.5 119.008 0 133.174H402.5C390.5 59.9745 344.5 56.674 323 64.1737C284 -45.8259 172.5 10.1739 160.5 51.6745C92.5 25.2745 65.1667 77.6743 60 107.174Z" fill="#ECDFFD"/>
+            <path id="clouds-topright-2" d="M273.5 150.174C253.1 139.374 238 157.007 233 167.174H471V126.174C469.5 116.174 455.5 111.674 445.5 120.674C422.5 51.1741 346.5 79.1737 338.5 114.674C295.7 92.274 277.333 129.007 273.5 150.174Z" fill="white"/>
+        </svg>
+    )
+}
+
+export function CloudsTopRightDark() {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = svgRef.current;
+
+        const anims: (() => void)[] = [];
+
+        // slide in clouds
+        for (let i = 1; i <= 3; i++) {
+            const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+            if (!clouds) continue;
+
+            const delay = i * 100;
+
+            const runCloudsTopLeft = () => {
+                animate(clouds, {
+                    x: [500, 0],
+                    ease: spring({
+                        bounce: 0.3,
+                        duration: 500,
+                    }),
+                    delay,
+                })
+            };
+            runCloudsTopLeft();
+        }
+
+        return () => {
+            anims.forEach((anim) => anim());
+        };
+    }, []);
+
+    return (
+        <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 471 168" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+            <path id="clouds-topright-1" d="M60 107.174C22.8 93.9742 4.5 119.008 0 133.174H402.5C390.5 59.9745 344.5 56.674 323 64.1737C284 -45.8259 172.5 10.1739 160.5 51.6745C92.5 25.2745 65.1667 77.6743 60 107.174Z" fill="#6A35AD"/>
+            <path id="clouds-topright-2" d="M273.5 150.174C253.1 139.374 238 157.007 233 167.174H471V126.174C469.5 116.174 455.5 111.674 445.5 120.674C422.5 51.1741 346.5 79.1737 338.5 114.674C295.7 92.274 277.333 129.007 273.5 150.174Z" fill="#994DFF"/>
         </svg>
     )
 }
