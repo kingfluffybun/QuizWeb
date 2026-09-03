@@ -12,7 +12,7 @@ export function BusDark() {
 
         const bodyParts = svg.querySelectorAll("path, rect, circle");
         const windows = svg.querySelectorAll("[fill='#FEFFC6']");
-        const lights = svg.querySelectorAll("#bus-headlight");
+        const lights = svg.querySelectorAll("#bus-headlight, #bus-headlight-cone");
         const road = svg.querySelector("#bus-shadow");
         const awning = svg.querySelectorAll("[id^=bus-awning-]");
         const wheels = svg.querySelectorAll(".wheel");
@@ -123,7 +123,19 @@ export function BusDark() {
 
         // Headlights pulse
         if (lights) {
-            
+            const runLights = () => {
+                animate(lights, {
+                    opacity: [
+                        { to: 0.9, duration: 400 },
+                        { to: 1, duration: 400 },
+                        { to: 0.95, duration: 300 },
+                        { to: 1, duration: 300 },
+                    ],
+                    ease: "inOutQuad",
+                    loop: true,
+                });
+            };
+            runLights();
         }
 
         return () => {
