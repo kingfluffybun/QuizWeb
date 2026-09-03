@@ -656,7 +656,7 @@ function AuthPage() {
                         </button>
                         <button
                             type="button"
-                            className="link-btn"
+                            className="social-btn"
                             onClick={handleSendOTP}
                             disabled={isLoading}
                         >
