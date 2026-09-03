@@ -1,109 +1,394 @@
 "use client";
 
-export default function BusDark() {
-    return (
-        <section>
-        <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" width="512.64pt" height="318.96pt" viewBox="0 0 512.64 318.96">
-            <defs/>
-            <ellipse id="shape0" transform="matrix(0.72 0 0 0.72 5.33088 286.043472)" rx="347.994" ry="22.8294" cx="347.994" cy="22.8294" fill="#411972" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <path id="shape1" transform="matrix(0.72 0 0 0.72 25.2393120000001 67.6380647348643)" fill="#7440a4" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 0L575.225 0C578.824 0 581.98 2.4032 582.937 5.8724L615.484 123.854C616.052 125.913 617.419 127.659 619.282 128.704L672.17 158.373C674.693 159.789 676.256 162.457 676.256 165.35L676.256 269.513C676.256 273.931 672.674 277.513 668.256 277.513L581.317 277.513L8 277.513C3.5817 277.513 0 273.931 0 269.513Z" />
-            <path id="shape2" transform="matrix(0.72 0 0 0.72 10.5161760000001 68.303952)" fill="#7440a4" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 0L586.339 0L620.8 123.85C621.374 125.911 622.749 127.657 624.619 128.697L677.987 158.378C680.524 159.79 682.098 162.466 682.098 165.37L682.098 269.513C682.098 273.931 678.516 277.513 674.098 277.513L586.339 277.513L8 277.513C3.5818 277.513 0 273.931 0 269.513Z" />
-            <path id="shape3" transform="matrix(0.72 0 0 0.72 116.73072 153.48528)" fill="#90a07b" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M59.885 0L4 0C1.791 0 0 1.791 0 4L0 13.527C0 15.736 1.791 17.527 4 17.527L59.885 17.527Z"/>
-            <path id="shape4" transform="matrix(0.72 0 0 0.72 116.73072 166.10544)" fill="#ab6269" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M59.885 0L4 0C1.791 0 0 1.791 0 4L0 13.527C0 15.736 1.791 17.527 4 17.527L59.885 17.527Z"/>
-            <path id="shape5" transform="matrix(0.72 0 0 0.72 121.98888 157.69224)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 4.763L0 4C0 1.79 1.791 0 4 0L49.66 0L49.66 8.763L4 8.763C1.791 8.763 0 6.972 0 4.763Z"/>
-            <rect id="shape6" transform="matrix(0.72 0 0 0.72 46.271664 112.62384)" fill="#feffc6" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" width="314.028" height="90.557"/>
-            <path id="shape7" transform="matrix(0.72 0 0 0.72 451.67472 196.07688)" fill="#ec8e48" stroke="#ec8e48" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M18.622 10.954L5.477 10.954C2.452 10.954 0 8.502 0 5.477C0 2.452 2.452 0 5.477 0L18.622 0C21.647 0 24.1 2.452 24.1 5.477C24.1 8.502 21.647 10.954 18.622 10.954Z"/>
-            <path id="shape8" transform="matrix(0.72 0 0 0.72 38.910312 216.5832)" fill="#c299e7" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M134.375 73.03L0 73.03C0 32.697 30.0808 0 67.1879 0C104.294 0 134.375 32.697 134.375 73.03Z"/>
-            <path id="shape9" transform="matrix(0.72 0 0 0.72 368.06976 216.5832)" fill="#c299e7" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M134.375 73.03L0 73.03C0 32.697 30.081 0 67.188 0C104.294 0 134.375 32.697 134.375 73.03Z"/>
-            <path id="shape10" transform="matrix(0.72 0 0 0.72 377.53488 227.10024)" fill="#4e3867" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M108.084 58.423L0 58.423C0 26.157 24.195 0 54.042 0C83.888 0 108.084 26.157 108.084 58.423Z"/>
-            <path id="shape11" transform="matrix(0.72 0 0 0.72 48.374856 227.10024)" fill="#4e3867" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M108.084 58.423L0 58.423C0 26.157 24.1955 0 54.0417 0C83.8887 0 108.084 26.157 108.084 58.423Z"/>
-            <circle id="shape12" transform="matrix(0.72 0 0 0.72 382.792968 231.306408)" r="46.7391" cx="46.7391" cy="46.7391" fill="#141413" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape13" transform="matrix(0.72 0 0 0.72 53.632728 231.306408)" r="46.7391" cx="46.7391" cy="46.7391" fill="#141413" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape14" transform="matrix(0.72 0 0 0.72 70.45956 247.77252)" r="23.3695" cx="23.3695" cy="23.3695" fill="#592481" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape15" transform="matrix(0.72 0 0 0.72 399.61908 248.13252)" r="23.3695" cx="23.3695" cy="23.3695" fill="#592481" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <rect id="shape16" transform="matrix(0.72 0 0 0.72 0 243.92592)" fill="#d9d9d9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" width="54.0421" height="37.9755" rx="4" ry="4"/>
-            <rect id="shape17" transform="matrix(0.72 0 0 0.72 5.2581024 210.27384)" fill="#ee4b49" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" width="17.5272" height="37.9755" rx="8" ry="8"/>
-            <rect id="shape18" transform="matrix(0.72 0 0 0.72 464.82048 243.92592)" fill="#d9d9d9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" width="54.0421" height="37.9755" rx="4" ry="4"/>
-            <rect id="shape19" transform="matrix(0.72 0 0 0.72 5.25810240000017 51.6203687348643)" fill="#7440a4" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" width="618.245" height="23.4464" rx="8" ry="8"/>
-            <path id="shape20" transform="matrix(0.72 0 0 0.72 308.6532 78.2654293068866)" fill="none" stroke="#b989e8" stroke-width="4" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M113.927 176.947C113.927 120.644 113.927 64.3398 113.927 8.03617C113.927 3.61717 110.345 -0.42625 105.927 0.0361715C60.2277 0.0361715 27.5854 0.0361715 8 0.0361715C3.582 0.0361715 0 3.61717 0 8.03617L0 235.225C0 239.643 3.582 243.225 8 243.225L61.779 243.225C65.4 243.225 68.533 240.778 69.739 237.364C78.418 212.797 98.524 192.867 110.543 183.624C112.628 182.02 113.927 179.578 113.927 176.947Z"/>
-            <path id="shape21" transform="matrix(0.72 0 0 0.72 401.72256 91.0512)" fill="#feffc6" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 90.939L0 4C0 1.791 1.791 0 4 0L44.437 0C46.16 0 47.69 1.103 48.233 2.739L75.375 84.416C77.096 89.595 73.241 94.939 67.783 94.939L39.436 94.939L4 94.939C1.791 94.939 0 93.148 0 90.939Z"/>
-            <path id="shape22" transform="matrix(0.72 0 0 0.72 318.62952 88.73928)" fill="#feffc6" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M79.254 0L4 0C1.791 0 0 1.791 0 4L0 92.4C0 94.609 1.791 96.4 4 96.4L79.254 96.4C81.463 96.4 83.254 94.609 83.254 92.4L83.254 4C83.254 1.791 81.463 0 79.254 0Z"/>
-            <path id="shape23" transform="matrix(0.72 0 0 0.72 319.16952 172.985801499624)" fill="#dab5ff" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M24.465 0.205521C17.8923 0.205521 11.3197 -0.256901 4.747 0.205521C2.125 0.205521 0 2.33152 0 4.95252C0 7.57452 2.125 9.69952 4.747 9.69952L24.465 9.69952C27.087 9.69952 29.212 7.57452 29.212 4.95252C29.212 2.33152 27.087 0.205521 24.465 0.205521Z"/>
-            <path id="shape24" transform="matrix(0.72 0 0 0.72 485.85312 202.38624)" fill="#f3c068" stroke="#f3c068" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M0 34.324L0 7.303C0 3.27 3.269 0 7.303 0C11.336 0 14.606 3.27 14.606 7.303L14.606 34.324C14.606 38.358 11.336 41.627 7.303 41.627C3.269 41.627 0 38.358 0 34.324Z"/>
-            <path id="shape25" transform="matrix(0.72 0 0 0.72 25.7399237616047 80.39736)" fill="#c4a4e7" stroke="#c4a4e7" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M1.02141 32.538L30.2522 1.268C31.0086 0.459 32.0667 0 33.1744 0L75.2561 0L54.6934 32.616C54.2907 33.254 54.0771 33.994 54.0771 34.749L54.0771 43.512C54.0771 43.715 54.0635 43.914 54.0276 44.114C52.8779 50.52 45.5735 62.34 24.8653 60.614C4.98851 58.958 0.0698059 43.692 0.000105887 35.033C-0.00739411 34.1 0.384006 33.22 1.02141 32.538Z"/>
-            <path id="shape26" transform="matrix(0.72 0 0 0.72 238.72032 80.39736)" fill="#c4a4e7" stroke="#c4a4e7" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M74.234 32.538L45.003 1.268C44.247 0.459 43.189 0 42.081 0L0 0L20.562 32.616C20.965 33.254 21.178 33.994 21.178 34.749L21.178 43.512C21.178 43.715 21.192 43.914 21.228 44.114C22.377 50.52 29.682 62.34 50.39 60.614C70.267 58.958 75.186 43.692 75.255 35.033C75.263 34.1 74.871 33.22 74.234 32.538Z"/>
-            <path id="shape27" transform="matrix(0.72 0 0 0.72 65.201184 79.49736)" fill="#592481" stroke="#592481" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M0.5503 32.656L18.5588 1.975C19.2768 0.751 20.5898 0 22.0088 0L65.7268 0L51.4528 32.83C51.2338 33.334 51.1208 33.877 51.1208 34.425L51.1208 44.851C51.1208 45.607 50.9148 46.352 50.4698 46.963C46.9448 51.795 37.7418 59.884 24.0338 59.884C10.0978 59.884 2.6583 51.524 0.3227 46.726C0.0942 46.256 0 45.74 0 45.218L0 34.681C0 33.969 0.19 33.27 0.5503 32.656Z" />
-            <path id="shape28" transform="matrix(0.72 0 0 0.72 206.11944 79.67736)" fill="#592481" stroke="#7440a4" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M65.177 32.656C59.174 22.3275 53.171 11.1189 47.168 1.975C46.45 0.751 45.138 0 43.719 0L0 0L14.275 32.83C14.493 33.334 14.606 33.877 14.606 34.425L14.606 44.851C14.606 45.607 14.812 46.352 15.258 46.963C18.783 51.795 27.986 59.884 41.694 59.884C55.629 59.884 63.069 51.524 65.404 46.726C65.633 46.256 65.727 45.74 65.727 45.218L65.727 34.681C65.727 33.969 65.537 33.27 65.177 32.656Z" />
-            <path id="shape29" transform="matrix(0.72 0 0 0.72 102.031769328409 80.39736)" fill="#c4a4e7" stroke="#c4a4e7" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M0.334209 32.037L13.5172 2.375C14.1592 0.931 15.5912 0 17.1722 0L56.9302 0L54.7392 15.701L52.5482 31.402L52.5482 43.087C52.3052 48.93 46.7062 60.614 26.2572 60.614C6.45421 60.614 0.578209 43.263 0.00620926 33.766C-0.0297907 33.172 0.0922093 32.581 0.334209 32.037Z"/>
-            <path id="shape30" transform="matrix(0.72 0 0 0.72 139.867163973168 80.03736)" fill="#592481" stroke="#592481" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M46.2021 0L7.83805 0C5.85305 0 4.16805 1.456 3.88005 3.42L0.04105 29.654C0.01305 29.846 -0.000949963 30.047 5.00372e-05 30.241C0.17605 57.994 24.8291 59.154 24.8291 59.154C24.8291 59.154 53.8631 62.783 54.0401 30.242C54.0411 30.048 54.0271 29.846 53.9991 29.654L50.1601 3.42C49.8721 1.456 48.1871 0 46.2021 0Z"/>
-            <path id="shape31" transform="matrix(0.72 0 0 0.72 175.62168 80.39736)" fill="#c4a4e7" stroke="#c4a4e7" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2" d="M56.596 32.037L43.413 2.375C42.771 0.931 41.339 0 39.758 0L0 0L2.191 15.701L4.382 31.402L4.382 43.087C4.625 48.93 10.224 60.614 30.673 60.614C50.476 60.614 56.352 43.263 56.924 33.766C56.96 33.172 56.838 32.581 56.596 32.037Z"/>
-            <path id="shape32" transform="matrix(0.72 0 0 0.72 53.632872 136.66032)" fill="#9870d9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M17.5272 0L0 0L0 9.737L0 58.423L17.5272 58.423Z"/>
-            <path id="shape33" transform="matrix(0.72 0 0 0.72 53.632872 144.0216)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M17.5271 0L0 0L0 5.842L17.5271 5.842Z"/>
-            <path id="shape34" transform="matrix(0.72 0 0 0.72 53.632872 169.2612)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M17.5271 0L0 0L0 5.842L17.5271 5.842Z"/>
-            <path id="shape35" transform="matrix(0.72 0 0 0.72 66.25224 136.6596)" fill="#e88c3f" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 9.738L0 58.424L16.067 58.424Z"/>
-            <path id="shape36" transform="matrix(0.72 0 0 0.72 66.25224 144.0216)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.842L16.067 5.842Z"/>
-            <path id="shape37" transform="matrix(0.72 0 0 0.72 66.25224 169.2612)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.842L16.067 5.842Z"/>
-            <path id="shape38" transform="matrix(0.72 0 0 0.72 77.82048 136.6596)" fill="#479cf5" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 9.738L0 58.424L16.067 58.424Z"/>
-            <path id="shape39" transform="matrix(0.72 0 0 0.72 77.82048 169.2612)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.842L16.067 5.842Z"/>
-            <path id="shape40" transform="matrix(0.72 0 0 0.72 77.82048 144.0216)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.842L16.067 5.842Z"/>
-            <path id="shape41" transform="matrix(0.72 0 0 0.72 88.79256 135.84096)" fill="#f5b56b" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M15.655 0L0 3.614L2.316 13.649L13.9 63.822L29.555 60.208Z"/>
-            <path id="shape42" transform="matrix(0.72 0 0 0.72 90.43992 142.77384)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M15.655 0L0 3.614L1.315 9.307L16.969 5.693Z"/>
-            <path id="shape43" transform="matrix(0.72 0 0 0.72 96.22368 168.20856)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M15.655 0L0 3.615L1.315 9.307L16.969 5.693Z"/>
-            <path id="shape44" transform="matrix(0.72 0 0 0.72 208.89288 138.70512)" fill="#9870d9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M9.153 0L26.487 2.596L24.962 12.781L17.334 63.706L0 61.11Z"/>
-            <path id="shape45" transform="matrix(0.72 0 0 0.72 213.48072 148.2264)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 5.778L17.334 8.374L18.199 2.596L0.866 0Z"/>
-            <path id="shape46" transform="matrix(0.72 0 0 0.72 210.348 169.38504)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 5.778L17.334 8.375L18.199 2.597L0.866 0Z"/>
-            <path id="shape47" transform="matrix(0.72 0 0 0.72 225.04824 136.6596)" fill="#f5b56b" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 9.738L0 58.424L16.067 58.424Z"/>
-            <path id="shape48" transform="matrix(0.72 0 0 0.72 225.04824 144.0216)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.842L16.067 5.842Z"/>
-            <path id="shape49" transform="matrix(0.72 0 0 0.72 225.04824 171.3636)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.843L16.067 5.843Z"/>
-            <path id="shape50" transform="matrix(0.72 0 0 0.72 236.61648 136.6596)" fill="#479cf5" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 9.738L0 58.424L16.067 58.424Z"/>
-            <path id="shape51" transform="matrix(0.72 0 0 0.72 236.61648 171.3636)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.843L16.067 5.843Z"/>
-            <path id="shape52" transform="matrix(0.72 0 0 0.72 236.61648 144.0216)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M16.067 0L0 0L0 5.842L16.067 5.842Z"/>
-            <path id="shape53" transform="matrix(0.72 0 0 0.72 247.1328 135.60408)" fill="#f7686e" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M17.078 0L0 3.942L2.317 13.977L13.9 64.15L30.978 60.207Z"/>
-            <path id="shape54" transform="matrix(0.72 0 0 0.72 248.71032 142.53696)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M17.078 0L0 3.943L1.314 9.635L18.392 5.693Z"/>
-            <path id="shape55" transform="matrix(0.72 0 0 0.72 254.49408 167.15736)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M17.078 0L0 3.942L1.314 9.635L18.392 5.692Z"/>
-            <path id="shape56" transform="matrix(0.72 0 0 0.72 41.013576 178.72488)" fill="#592481" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M326.095 0L4 0C1.7908 0 0 1.791 0 4L0 14.988C0 17.197 1.7908 18.988 4 18.988L326.095 18.988C328.304 18.988 330.095 17.197 330.095 14.988L330.095 4C330.095 1.791 328.304 0 326.095 0Z"/>
-            <path id="shape57" transform="matrix(0.72 0 0 0.72 34.5784320000001 -0.33294363256784)" fill="#4a3367" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M541.735 72.8073L0 72.8073L0 12C0 5.37258 5.3726 0 12 0L529.735 0C536.362 0 541.735 5.37257 541.735 12Z"/>
-            <path id="shape58" transform="matrix(0.72 0 0 0.72 116.73072 153.48528)" fill="#90a07b" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M59.885 0L4 0C1.791 0 0 1.791 0 4L0 13.527C0 15.736 1.791 17.527 4 17.527L59.885 17.527Z"/>
-            <path id="shape59" transform="matrix(0.72 0 0 0.72 116.73072 166.10544)" fill="#ab6269" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M59.885 0L4 0C1.791 0 0 1.791 0 4L0 13.527C0 15.736 1.791 17.527 4 17.527L59.885 17.527Z"/>
-            <path id="shape60" transform="matrix(0.72 0 0 0.72 121.98888 157.69224)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 4.763L0 4C0 1.79 1.791 0 4 0L49.66 0L49.66 8.763L4 8.763C1.791 8.763 0 6.972 0 4.763Z"/>
-            <path id="shape61" transform="matrix(0.72 0 0 0.72 121.98888 170.31168)" fill="#ebe3f9" stroke-opacity="0" stroke="#000000" stroke-width="0" stroke-linecap="square" stroke-linejoin="bevel" d="M0 4.764L0 4C0 1.791 1.791 0 4 0L49.66 0L49.66 8.764L4 8.764C1.791 8.764 0 6.973 0 4.764Z"/>
+import { useEffect, useRef } from "react";
+import { animate } from "animejs";
+
+export function BusDark() {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = svgRef.current;
+
+        const bodyParts = svg.querySelectorAll("path, rect, circle");
+        const windows = svg.querySelectorAll("[fill='#FEFFC6']");
+        const lights = svg.querySelectorAll("#bus-headlight");
+        const road = svg.querySelector("#bus-shadow");
+        const awning = svg.querySelectorAll("[id^=bus-awning-]");
+        const wheels = svg.querySelectorAll(".wheel");
+
+        const anims: (() => void)[] = [];
+
+        // Body
+        if (bodyParts) {
+            const runBody = () => {
+                animate(bodyParts, {
+                    translateY: [
+                        { to: -3, duration: 400, ease: "inOutSine" },
+                        { to: 0, duration: 400, ease: "inOutSine" },
+                        { to: -2, duration: 300, ease: "inOutSine" },
+                        { to: 0, duration: 300, ease: "inOutSine" },
+                    ],
+                    loop: true,
+                });
+            };
+            runBody();
+        }
+
+        // Road shadow
+        if (road) {
+            const runRoad = () => {
+                animate(road, {
+                    opacity: [
+                        { to: 0.6, duration: 400, ease: "inOutSine" },
+                        { to: 1, duration: 400, ease: "inOutSine" },
+                        { to: 0.8, duration: 300, ease: "inOutSine" },
+                        { to: 1, duration: 300, ease: "inOutSine" },
+                    ],
+                    loop: true,
+                });
+            };
+            runRoad();
+        }
+
+        // Wheels
+        if (wheels) {
+            const runWheels = () => {
+                animate(wheels, {
+                    rotate: '360deg',
+                    ease: "linear",
+                    duration: 1500,
+                    loop: true,
+                });
+            };
+            runWheels();
+        }
+
+        // Awning vibration
+        if (awning) {
+            const runAwning = () => {
+                animate(awning, {
+                    translateX: [
+                        { to: -2, duration: 400, ease: "inOutSine" },
+                        { to: 0, duration: 400, ease: "inOutSine" },
+                        { to: -1, duration: 300, ease: "inOutSine" },
+                        { to: 0, duration: 300, ease: "inOutSine" },
+                    ],
+                    loop: true,
+                });
+            };
+            runAwning();
+        }
+
+        // Books
+        for (let i = 1; i <= 10; i++) {
+            const book = svg.querySelectorAll(`#book-${i}`);
+            if (!book.length) continue;
+
+            const delay = i * 25;
+            const intensity  = 0.8 + (i % 3) * 0.8;
+
+            const runBook = () => {
+                animate(book, {
+                    translateY: [
+                        { to: -1 * intensity, duration: 400, ease: "inOutSine" },
+                        { to: 0 * intensity, duration: 400, ease: "inOutSine" },
+                        { to: -0.5 * intensity, duration: 300, ease: "inOutSine" },
+                        { to: 0, duration: 300, ease: "inOutSine" },
+                    ],
+                    transformOrigin: "50% 100%",
+                    delay,
+                    loop: true,
+                });
+            };
+            runBook();
+        }
+
+        // Windows flicker
+        if (windows) {
+            const runWindows = () => {
+                animate(windows, {
+                    opacity: [
+                        { to: 0.8, duration: 400 },
+                        { to: 1, duration: 400 },
+                        { to: 0.9, duration: 300 },
+                        { to: 1, duration: 300 },
+                    ],
+                    ease: "inOutQuad",
+                    loop: true,
+                });
+            };
+            runWindows();
+        };
+
+        // Headlights pulse
+        if (lights) {
             
-            <ellipse id="shape62" transform="translate(7.2, 53.9100000000001)" rx="1.8" ry="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <ellipse id="shape63" transform="translate(20.16, 61.9650000000001)" rx="1.8" ry="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <ellipse id="shape64" transform="translate(36.72, 68.5800000000001)" rx="1.8" ry="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <ellipse id="shape65" transform="translate(56.16, 62.8200000000001)" rx="1.8" ry="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape66" transform="translate(71.28, 54.9000000000001)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape01" transform="translate(71.82, 54.72)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape110" transform="translate(84.78, 62.775)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape210" transform="translate(101.34, 69.39)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape310" transform="translate(120.78, 63.63)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape410" transform="translate(135.9, 55.71)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape02" transform="translate(135.6680285707, 55.4870285706998)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape111" transform="translate(148.6280285707, 63.5420285706997)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape211" transform="translate(165.1880285707, 70.1570285706998)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape311" transform="translate(184.6280285707, 64.3970285706998)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape411" transform="translate(199.7480285707, 56.4770285706998)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape03" transform="translate(199.5160571414, 56.7940571413995)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape112" transform="translate(212.4760571414, 64.8490571413994)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape212" transform="translate(229.0360571414, 71.4640571413995)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape312" transform="translate(248.4760571414, 65.7040571413995)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape412" transform="translate(263.5960571414, 57.7840571413996)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape04" transform="translate(263.3640857121, 57.9210857120993)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape113" transform="translate(276.3240857121, 65.9760857120991)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape213" transform="translate(292.8840857121, 72.5910857120992)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape313" transform="translate(312.3240857121, 66.8310857120993)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape413" transform="translate(327.4440857121, 58.9110857120994)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape05" transform="translate(327.0321142828, 58.688114282799)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape114" transform="translate(339.9921142828, 66.7431142827988)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape214" transform="translate(356.5521142828, 73.3581142827989)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape314" transform="translate(375.9921142828, 67.598114282799)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape414" transform="translate(391.1121142828, 59.6781142827991)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape06" transform="translate(391.330142853499, 59.7251428534988)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape115" transform="translate(404.290142853499, 67.7801428534986)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape215" transform="translate(422.065142853499, 73.8551428534987)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
-            <circle id="shape315" transform="translate(438.940142853499, 65.9351428534988)" r="1.8" cx="1.8" cy="1.8" fill="none" stroke="#f8ff48" stroke-width="3.6" stroke-linecap="square" stroke-linejoin="bevel"/>
+        }
+
+        return () => {
+            anims.forEach((anim) => anim());
+        };
+    }, []);
+
+    return (
+        <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 704 443" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+            {/* <defs>
+                <filter id="glow" x="-100%" y="-100%" width="500%" height="500%">
+                    <feGaussianBlur stdDeviation="8" result="blur"/>
+                    <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs> */}
+
+            <defs>
+                <filter id="glow" x="-100%" y="-100%" width="500%" height="500%">
+                    <feGaussianBlur stdDeviation="7" result="blur"/>
+                    <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                <linearGradient id="cone-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#F3C068" stopOpacity="0.8"/>
+                    <stop offset="50%" stopColor="#F3C068" stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor="#F3C068" stopOpacity="0"/>
+                </linearGradient>
+            </defs>
+
+            <ellipse id="bus-shadow" cx="355.398" cy="420.112" rx="347.994" ry="22.8294" fill="#4A3367"/>
+            <path id="bus-body" d="M14 96H606.395L648.05 221.588C648.598 223.24 649.67 224.668 651.103 225.656L692.638 254.281C694.805 255.774 696.098 258.237 696.098 260.868V365.513C696.098 369.932 692.517 373.513 688.098 373.513H600.339H22C17.5817 373.513 14 369.932 14 365.513V96Z" fill="#7440A4"/>
+            <rect id="bus-side" x="64.2661" y="157.672" width="314.028" height="90.557" fill="#FEFFC6"/>
+            <path id="bus-signal" d="M645.948 283.284H632.803C629.778 283.284 627.326 280.831 627.326 277.806C627.326 274.781 629.778 272.329 632.803 272.329H645.948C648.973 272.329 651.426 274.781 651.426 277.806C651.426 280.831 648.973 283.284 645.948 283.284Z" fill="#EC8E48" stroke="#EC8E48" strokeWidth="2" filter="url(#glow)"/>
+            <path id="bus-wheel-well-back" d="M188.417 373.84H54.042C54.042 333.507 84.1228 300.811 121.229 300.811C158.336 300.811 188.417 333.507 188.417 373.84Z" fill="#4A3367"/>
+            <path id="bus-wheel-well-front" d="M645.583 373.84H511.208C511.208 333.507 541.289 300.811 578.396 300.811C615.502 300.811 645.583 333.507 645.583 373.84Z" fill="#4A3367"/>
+            <path id="bus-wheel-well-front-inside" d="M632.438 373.841H524.354C524.354 341.574 548.549 315.417 578.396 315.417C608.242 315.417 632.438 341.574 632.438 373.841Z" fill="#42156C"/>
+            <path id="bus-wheel-well-back-inside" d="M175.272 373.841H67.1875C67.1875 341.574 91.383 315.417 121.23 315.417C151.076 315.417 175.272 341.574 175.272 373.841Z" fill="#42156C"/>
+            <circle id="bus-wheel-front" cx="578.396" cy="367.998" r="46.7391" fill="#141413"/>
+            <circle id="bus-wheel-back" cx="121.229" cy="367.998" r="46.7391" fill="#141413"/>
+            <path id="bus-wheel-back-shine" className="wheel" d="M92.9123 404.32C90.2655 402.278 88.942 401.257 88.6309 399.834C88.5813 399.608 88.5516 399.377 88.542 399.146C88.4816 397.69 89.5024 396.367 91.544 393.72L138.342 333.048C140.384 330.401 141.405 329.078 142.828 328.767C143.054 328.717 143.285 328.687 143.516 328.678C144.972 328.617 146.295 329.638 148.942 331.68C151.589 333.721 152.912 334.742 153.224 336.165C153.273 336.392 153.303 336.622 153.313 336.854C153.373 338.309 152.352 339.633 150.311 342.28L103.512 402.952C101.471 405.598 100.45 406.922 99.0267 407.233C98.8001 407.283 98.5697 407.312 98.338 407.322C96.8826 407.382 95.5592 406.361 92.9123 404.32Z" fill="white" fillOpacity="0.1"/>
+            <path id="bus-wheel-front-shine" className="wheel" d="M534.441 353.559C535.489 350.385 536.012 348.798 537.252 348.032C537.449 347.91 537.656 347.806 537.872 347.72C539.225 347.18 540.812 347.704 543.986 348.751L616.749 372.766C619.924 373.814 621.511 374.338 622.276 375.577C622.398 375.774 622.503 375.981 622.589 376.197C623.129 377.55 622.605 379.137 621.557 382.311C620.51 385.486 619.986 387.073 618.747 387.839C618.549 387.96 618.342 388.065 618.127 388.151C616.774 388.691 615.186 388.167 612.012 387.119L539.249 363.105C536.075 362.057 534.488 361.533 533.722 360.294C533.6 360.097 533.495 359.889 533.409 359.674C532.87 358.321 533.393 356.734 534.441 353.559Z" fill="white" fillOpacity="0.1"/>
+            <circle id="bus-wheel-back-rim" cx="121.23" cy="367.998" r="23.3695" fill="#CBB3DD"/>
+            <circle id="bus-wheel-front-rim" cx="578.396" cy="367.998" r="23.3695" fill="#CBB3DD"/>
+            <rect id="bus-bumper-back" y="338.786" width="54.0421" height="37.9755" rx="4" fill="#D9D9D9"/>
+            <rect id="bus-bumper-front" x="645.584" y="338.786" width="54.0421" height="37.9755" rx="4" fill="#D9D9D9"/>
+            <rect id="bus-brake-light" x="7.30273" y="292.047" width="17.5272" height="37.9755" rx="8" fill="#EE4B49" filter="url(#glow)"/>
+            <rect id="bus-roof" x="7.30322" y="72.8076" width="618.245" height="23.4464" rx="8" fill="#7440A4"/>
+            <path id="bus-door" d="M542.612 288.575V119.663C542.612 115.245 539.03 111.663 534.612 111.663H436.685C432.267 111.663 428.685 115.245 428.685 119.663V346.852C428.685 351.271 432.267 354.852 436.685 354.852H490.464C494.085 354.852 497.218 352.405 498.424 348.991C507.103 324.424 527.209 304.495 539.228 295.251C541.313 293.647 542.612 291.206 542.612 288.575Z" stroke="#9750DD" strokeWidth="4"/>
+            <path id="bus-door-window" d="M522.545 126.999H447.291C445.082 126.999 443.291 128.79 443.291 130.999V219.398C443.291 221.608 445.082 223.398 447.291 223.398H522.545C524.754 223.398 526.545 221.608 526.545 219.398V130.999C526.545 128.79 524.754 126.999 522.545 126.999Z" fill="#FEFFC6"/>
+            <path id="bus-door-handle" d="M467.756 240.927H448.038C445.416 240.927 443.291 243.052 443.291 245.674C443.291 248.295 445.416 250.421 448.038 250.421H467.756C470.378 250.421 472.503 248.295 472.503 245.674C472.503 243.052 470.378 240.927 467.756 240.927Z" fill="#9750DD"/>
+            <path id="bus-windshield" d="M557.948 219.399V132.46C557.948 130.251 559.739 128.46 561.948 128.46H602.385C604.108 128.46 605.638 129.563 606.181 131.199L633.323 212.876C635.044 218.055 631.189 223.399 625.731 223.399H597.384H561.948C559.739 223.399 557.948 221.608 557.948 219.399Z" fill="#FEFFC6"/>
+            <path id="bus-headlight-cone" d="M680 305 L 950 150 L 950 480 Z" fill="url(#cone-gradient)" style={{ pointerEvents: "none" }} />
+            <path id="bus-headlight" d="M674.796 315.417V288.396C674.796 284.362 678.066 281.093 682.099 281.093C686.132 281.093 689.402 284.362 689.402 288.396V315.417C689.402 319.45 686.132 322.72 682.099 322.72C678.066 322.72 674.796 319.45 674.796 315.417Z" fill="#F3C068" stroke="#F3C068" strokeWidth="2" filter="url(#glow)"/>
+            <path id="bus-awning-1" d="M36.7715 144.202L66.0024 112.932C66.7588 112.122 67.8168 111.663 68.9245 111.663H111.006L90.4435 144.279C90.0409 144.918 89.8272 145.657 89.8272 146.412V155.175C89.8272 155.379 89.8137 155.578 89.7777 155.778C88.628 162.184 81.3237 174.004 60.6154 172.278C40.7387 170.621 35.8199 155.355 35.7503 146.696C35.7428 145.763 36.1342 144.884 36.7715 144.202Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="bus-awning-2" d="M91.1075 144.319L109.116 113.638C109.834 112.415 111.147 111.663 112.565 111.663H156.284L142.01 144.494C141.791 144.997 141.678 145.54 141.678 146.089V156.514C141.678 157.271 141.472 158.016 141.027 158.627C137.501 163.458 128.299 171.548 114.59 171.548C100.655 171.548 93.2154 163.188 90.8799 158.389C90.6514 157.919 90.5571 157.403 90.5571 156.881V146.344C90.5571 145.632 90.7471 144.933 91.1075 144.319Z" fill="#592481" stroke="#592481" strokeWidth="2"/>
+            <path id="bus-awning-3" d="M142.045 143.7L155.228 114.039C155.87 112.594 157.302 111.663 158.883 111.663H198.641L196.45 127.364L194.259 143.066V154.751C194.016 160.593 188.417 172.278 167.968 172.278C148.166 172.278 142.289 154.927 141.717 145.429C141.681 144.835 141.803 144.244 142.045 143.7Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="bus-awning-4" d="M240.462 111.663H202.098C200.113 111.663 198.428 113.119 198.14 115.084L194.301 141.317C194.273 141.509 194.259 141.71 194.26 141.904C194.436 169.657 219.089 170.817 219.089 170.817C219.089 170.817 248.123 174.446 248.301 141.906C248.302 141.712 248.287 141.509 248.259 141.317L244.42 115.084C244.133 113.119 242.448 111.663 240.462 111.663Z" fill="#592481" stroke="#592481" strokeWidth="2"/>
+            <path id="bus-awning-5" d="M300.516 143.7L287.333 114.039C286.691 112.594 285.258 111.663 283.677 111.663H243.92L246.11 127.364L248.301 143.066V154.751C248.545 160.593 254.144 172.278 274.592 172.278C294.395 172.278 300.271 154.927 300.843 145.429C300.879 144.835 300.757 144.244 300.516 143.7Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="bus-awning-6" d="M351.454 144.319L333.445 113.638C332.727 112.415 331.414 111.663 329.996 111.663H286.277L300.551 144.494C300.77 144.997 300.883 145.54 300.883 146.089V156.514C300.883 157.271 301.089 158.016 301.534 158.627C305.06 163.458 314.262 171.548 327.971 171.548C341.906 171.548 349.346 163.188 351.681 158.389C351.91 157.919 352.004 157.403 352.004 156.881V146.344C352.004 145.632 351.814 144.933 351.454 144.319Z" fill="#592481" stroke="#592481" strokeWidth="2"/>
+            <path id="bus-awning-7" d="M405.79 144.202L376.559 112.932C375.803 112.122 374.745 111.663 373.637 111.663H331.556L352.118 144.279C352.521 144.918 352.734 145.657 352.734 146.412V155.175C352.734 155.379 352.748 155.578 352.784 155.778C353.934 162.184 361.238 174.004 381.946 172.278C401.823 170.621 406.742 155.355 406.811 146.696C406.819 145.763 406.427 144.884 405.79 144.202Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="book-1" d="M92.0174 189.806H74.4902V199.543V248.23H92.0174V189.806Z" fill="#9870D9"/>
+            <path id="book-1" d="M92.0174 200.03H74.4902V205.873H92.0174V200.03Z" fill="#EBE3F9"/>
+            <path id="book-1" d="M92.0174 235.085H74.4902V240.927H92.0174V235.085Z" fill="#EBE3F9"/>
+            <path id="book-2" d="M108.084 189.806H92.0171V199.543V248.229H108.084V189.806Z" fill="#E88C3F"/>
+            <path id="book-2" d="M108.084 200.03H92.0171V205.873H108.084V200.03Z" fill="#EBE3F9"/>
+            <path id="book-2" d="M108.084 235.085H92.0171V240.927H108.084V235.085Z" fill="#EBE3F9"/>
+            <path id="book-3" d="M124.151 189.806H108.084V199.543V248.23H124.151V189.806Z" fill="#479CF5"/>
+            <path id="book-3" d="M124.151 235.085H108.084V240.927H124.151V235.085Z" fill="#EBE3F9"/>
+            <path id="book-3" d="M124.151 200.03H108.084V205.873H124.151V200.03Z" fill="#EBE3F9"/>
+            <path id="book-4" d="M138.978 188.668L123.323 192.282L125.639 202.317L137.223 252.49L152.878 248.876L138.978 188.668Z" fill="#F5B56B"/>
+            <path id="book-4" d="M141.266 198.297L125.611 201.911L126.926 207.604L142.58 203.99L141.266 198.297Z" fill="#EBE3F9"/>
+            <path id="book-4" d="M149.299 233.623L133.645 237.237L134.959 242.93L150.614 239.316L149.299 233.623Z" fill="#EBE3F9"/>
+            <path id="book-5" d="M222.01 213.174H166.126C163.917 213.174 162.126 214.965 162.126 217.174V226.701C162.126 228.91 163.917 230.701 166.126 230.701H222.01V213.174Z" fill="#90A07B"/>
+            <path id="book-5" d="M169.429 223.78V223.017C169.429 220.807 171.22 219.017 173.429 219.017H219.089V227.78H173.429C171.22 227.78 169.429 225.989 169.429 223.78Z" fill="#EBE3F9"/>
+            <path id="book-6" d="M222.01 230.702H166.126C163.917 230.702 162.126 232.493 162.126 234.702V244.229C162.126 246.438 163.917 248.229 166.126 248.229H222.01V230.702Z" fill="#AB6269"/>
+            <path id="book-6" d="M169.429 241.308V240.544C169.429 238.335 171.22 236.544 173.429 236.544H219.089V245.308H173.429C171.22 245.308 169.429 243.517 169.429 241.308Z" fill="#EBE3F9"/>
+            <path id="book-7" d="M299.282 192.646L316.616 195.242L315.091 205.427L307.463 256.352L290.129 253.756L299.282 192.646Z" fill="#9870D9"/>
+            <path id="book-7" d="M296.501 211.647L313.835 214.244L314.701 208.466L297.367 205.87L296.501 211.647Z" fill="#EBE3F9"/>
+            <path id="book-7" d="M292.15 241.035L309.484 243.632L310.349 237.854L293.016 235.257L292.15 241.035Z" fill="#EBE3F9"/>
+            <path id="book-8" d="M328.634 189.806H312.567V199.543V248.229H328.634V189.806Z" fill="#F5B56B"/>
+            <path id="book-8" d="M328.634 200.03H312.567V205.873H328.634V200.03Z" fill="#EBE3F9"/>
+            <path id="book-8" d="M328.634 238.005H312.567V243.847H328.634V238.005Z" fill="#EBE3F9"/>
+            <path id="book-9" d="M344.701 189.806H328.634V199.543V248.229H344.701V189.806Z" fill="#479CF5"/>
+            <path id="book-9" d="M344.701 238.005H328.634V243.847H344.701V238.005Z" fill="#EBE3F9"/>
+            <path id="book-9" d="M344.701 200.03H328.634V205.873H344.701V200.03Z" fill="#EBE3F9"/>
+            <path id="book-10" d="M360.318 188.338L343.24 192.281L345.557 202.316L357.14 252.489L374.218 248.546L360.318 188.338Z" fill="#F7686E"/>
+            <path id="book-10" d="M362.509 197.967L345.431 201.91L346.745 207.603L363.823 203.66L362.509 197.967Z" fill="#EBE3F9"/>
+            <path id="book-10" d="M370.542 232.163L353.464 236.105L354.779 241.798L371.857 237.855L370.542 232.163Z" fill="#EBE3F9"/>
+            <path id="bus-table" d="M383.058 248.229H60.9634C58.7542 248.229 56.9634 250.019 56.9634 252.229V263.216C56.9634 265.425 58.7542 267.216 60.9634 267.216H383.058C385.267 267.216 387.058 265.425 387.058 263.216V252.229C387.058 250.019 385.267 248.229 383.058 248.229Z" fill="#592481"/>
+            <path id="bus-rooftop" d="M589.761 72.8073H48.0259V12C48.0259 5.37258 53.3984 0 60.0259 0H577.761C584.389 0 589.761 5.37257 589.761 12V72.8073Z" fill="#4A3367"/>
         </svg>
-        </section>
     )
 }
 
+export function Bus() {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = svgRef.current;
+
+        const bodyParts = svg.querySelectorAll("path, rect, circle");
+        const road = svg.querySelector("#bus-shadow");
+        const awning = svg.querySelectorAll("[id^=bus-awning-]");
+        const wheels = svg.querySelectorAll(".wheel");
+
+        const anims: (() => void)[] = [];
+
+        // Body
+        if (bodyParts) {
+            const runBody = () => {
+                animate(bodyParts, {
+                    translateY: [
+                        { to: -3, duration: 400, ease: "inOutSine" },
+                        { to: 0, duration: 400, ease: "inOutSine" },
+                        { to: -2, duration: 300, ease: "inOutSine" },
+                        { to: 0, duration: 300, ease: "inOutSine" },
+                    ],
+                    loop: true,
+                });
+            };
+            runBody();
+        }
+
+        // Road shadow
+        if (road) {
+            const runRoad = () => {
+                animate(road, {
+                    opacity: [
+                        { to: 0.6, duration: 400, ease: "inOutSine" },
+                        { to: 1, duration: 400, ease: "inOutSine" },
+                        { to: 0.8, duration: 300, ease: "inOutSine" },
+                        { to: 1, duration: 300, ease: "inOutSine" },
+                    ],
+                    loop: true,
+                });
+            };
+            runRoad();
+        }
+
+        // Wheels
+        if (wheels) {
+            const runWheels = () => {
+                animate(wheels, {
+                    rotate: '360deg',
+                    ease: "linear",
+                    duration: 1500,
+                    loop: true,
+                });
+            };
+            runWheels();
+        }
+
+        // Awning vibration
+        if (awning) {
+            const runAwning = () => {
+                animate(awning, {
+                    translateX: [
+                        { to: -2, duration: 400, ease: "inOutSine" },
+                        { to: 0, duration: 400, ease: "inOutSine" },
+                        { to: -1, duration: 300, ease: "inOutSine" },
+                        { to: 0, duration: 300, ease: "inOutSine" },
+                    ],
+                    loop: true,
+                });
+            };
+            runAwning();
+        }
+
+        // Books
+        for (let i = 1; i <= 10; i++) {
+            const book = svg.querySelectorAll(`#book-${i}`);
+            if (!book.length) continue;
+
+            const delay = i * 25;
+            const intensity  = 0.8 + (i % 3) * 0.8;
+
+            const runBook = () => {
+                animate(book, {
+                    translateY: [
+                        { to: -1 * intensity, duration: 400, ease: "inOutSine" },
+                        { to: 0 * intensity, duration: 400, ease: "inOutSine" },
+                        { to: -0.5 * intensity, duration: 300, ease: "inOutSine" },
+                        { to: 0, duration: 300, ease: "inOutSine" },
+                    ],
+                    transformOrigin: "50% 100%",
+                    delay,
+                    loop: true,
+                });
+            };
+            runBook();
+        }
+
+        return () => {
+            anims.forEach((anim) => anim());
+        };
+    }, []);
+
+    return (
+        <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 704 443" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+            <ellipse id="bus-shadow" cx="355.398" cy="420.112" rx="347.994" ry="22.8294" fill="#E3D5F5"/>
+            <path id="bus-body" d="M14.0002 96H606.395L648.05 221.588C648.598 223.24 649.67 224.668 651.104 225.656L692.638 254.281C694.805 255.774 696.099 258.237 696.099 260.868V365.513C696.099 369.932 692.517 373.513 688.099 373.513H600.34H22.0002C17.582 373.513 14.0002 369.932 14.0002 365.513V96Z" fill="#A068D3"/>
+            <rect id="bus-side" x="64.2661" y="157.672" width="314.028" height="90.557" fill="#393744"/>
+            <path id="bus-signal" d="M645.948 283.284H632.803C629.778 283.284 627.326 280.831 627.326 277.806C627.326 274.781 629.778 272.329 632.803 272.329H645.948C648.973 272.329 651.426 274.781 651.426 277.806C651.426 280.831 648.973 283.284 645.948 283.284Z" fill="#EC8E48" stroke="#EC8E48" strokeWidth="2"/>
+            <path id="bus-wheel-well-back" d="M188.417 373.84H54.0422C54.0422 333.507 84.1231 300.811 121.23 300.811C158.336 300.811 188.417 333.507 188.417 373.84Z" fill="#C299E7"/>
+            <path id="bus-wheel-well-front" d="M645.583 373.84H511.208C511.208 333.507 541.289 300.811 578.396 300.811C615.502 300.811 645.583 333.507 645.583 373.84Z" fill="#C299E7"/>
+            <path id="bus-wheel-well-front-inside" d="M632.438 373.841H524.354C524.354 341.574 548.549 315.417 578.396 315.417C608.242 315.417 632.438 341.574 632.438 373.841Z" fill="#4E3867"/>
+            <path id="bus-wheel-well-back-inside" d="M175.271 373.841H67.1873C67.1873 341.574 91.3827 315.417 121.229 315.417C151.076 315.417 175.271 341.574 175.271 373.841Z" fill="#4E3867"/>
+            <circle id="bus-wheel-front" cx="578.396" cy="367.998" r="46.7391" fill="#141413"/>
+            <circle id="bus-wheel-back" cx="121.229" cy="367.998" r="46.7391" fill="#141413"/>
+            <path id="bus-wheel-back-shine" className="wheel" d="M92.9123 404.32C90.2655 402.278 88.942 401.257 88.6309 399.834C88.5813 399.608 88.5516 399.377 88.542 399.146C88.4816 397.69 89.5024 396.367 91.544 393.72L138.342 333.048C140.384 330.401 141.405 329.078 142.828 328.767C143.054 328.717 143.285 328.687 143.516 328.678C144.972 328.617 146.295 329.638 148.942 331.68C151.589 333.721 152.912 334.742 153.224 336.165C153.273 336.392 153.303 336.622 153.313 336.854C153.373 338.309 152.352 339.633 150.311 342.28L103.512 402.952C101.471 405.598 100.45 406.922 99.0267 407.233C98.8001 407.283 98.5697 407.312 98.338 407.322C96.8826 407.382 95.5592 406.361 92.9123 404.32Z" fill="white" fillOpacity="0.1"/>
+            <path id="bus-wheel-front-shine" className="wheel" d="M534.441 353.559C535.489 350.385 536.012 348.798 537.252 348.032C537.449 347.91 537.656 347.806 537.872 347.72C539.225 347.18 540.812 347.704 543.986 348.751L616.749 372.766C619.924 373.814 621.511 374.338 622.276 375.577C622.398 375.774 622.503 375.981 622.589 376.197C623.129 377.55 622.605 379.137 621.557 382.311C620.51 385.486 619.986 387.073 618.747 387.839C618.549 387.96 618.342 388.065 618.127 388.151C616.774 388.691 615.186 388.167 612.012 387.119L539.249 363.105C536.075 362.057 534.488 361.533 533.722 360.294C533.6 360.097 533.495 359.889 533.409 359.674C532.87 358.321 533.393 356.734 534.441 353.559Z" fill="white" fillOpacity="0.1"/>
+            <circle id="bus-wheel-back-rim" cx="121.23" cy="367.998" r="23.3695" fill="#CBB3DD"/>
+            <circle id="bus-wheel-front-rim" cx="578.396" cy="367.998" r="23.3695" fill="#CBB3DD"/>
+            <rect id="bus-bumper-back" y="338.786" width="54.0421" height="37.9755" rx="4" fill="#D9D9D9"/>
+            <rect id="bus-bumper-front" x="645.584" y="338.786" width="54.0421" height="37.9755" rx="4" fill="#D9D9D9"/>
+            <rect id="bus-brake-light" x="7.30298" y="292.047" width="17.5272" height="37.9755" rx="8" fill="#EE4B49"/>
+            <rect id="bus-roof" x="7.30298" y="72.8076" width="618.245" height="23.4464" rx="8" fill="#A068D3"/>
+            <path id="bus-door" d="M542.612 288.575V119.663C542.612 115.245 539.03 111.663 534.612 111.663H436.685C432.267 111.663 428.685 115.245 428.685 119.663V346.852C428.685 351.271 432.267 354.852 436.685 354.852H490.464C494.085 354.852 497.218 352.405 498.424 348.991C507.103 324.424 527.209 304.495 539.228 295.251C541.313 293.647 542.612 291.206 542.612 288.575Z" stroke="#7A41B2" strokeWidth="4"/>
+            <path id="bus-door-window" d="M522.545 126.999H447.291C445.082 126.999 443.291 128.79 443.291 130.999V219.398C443.291 221.608 445.082 223.398 447.291 223.398H522.545C524.754 223.398 526.545 221.608 526.545 219.398V130.999C526.545 128.79 524.754 126.999 522.545 126.999Z" fill="#393744"/>
+            <path id="bus-door-handle" d="M467.756 240.927H448.038C445.416 240.927 443.291 243.052 443.291 245.674C443.291 248.295 445.416 250.421 448.038 250.421H467.756C470.378 250.421 472.503 248.295 472.503 245.674C472.503 243.052 470.378 240.927 467.756 240.927Z" fill="#7A41B2"/>
+            <path id="bus-windshield" d="M557.948 219.399V132.46C557.948 130.251 559.739 128.46 561.948 128.46H602.385C604.108 128.46 605.638 129.563 606.181 131.199L633.323 212.876C635.044 218.055 631.189 223.399 625.731 223.399H597.384H561.948C559.739 223.399 557.948 221.608 557.948 219.399Z" fill="#393744"/>
+            <path id="bus-headlight" d="M674.796 315.417V288.396C674.796 284.362 678.066 281.093 682.099 281.093C686.132 281.093 689.402 284.362 689.402 288.396V315.417C689.402 319.45 686.132 322.72 682.099 322.72C678.066 322.72 674.796 319.45 674.796 315.417Z" fill="#F3C068" stroke="#F3C068" strokeWidth="2"/>
+            <path id="bus-awning-1" d="M36.7713 144.202L66.0021 112.932C66.7585 112.122 67.8166 111.663 68.9243 111.663H111.006L90.4433 144.279C90.0406 144.918 89.827 145.657 89.827 146.412V155.175C89.827 155.379 89.8134 155.578 89.7775 155.778C88.6278 162.184 81.3234 174.004 60.6152 172.278C40.7384 170.621 35.8197 155.355 35.75 146.696C35.7425 145.763 36.1339 144.884 36.7713 144.202Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="bus-awning-2" d="M91.1077 144.319L109.116 113.638C109.834 112.415 111.147 111.663 112.566 111.663H156.284L142.01 144.494C141.791 144.997 141.678 145.54 141.678 146.089V156.514C141.678 157.271 141.473 158.016 141.027 158.627C137.502 163.458 128.299 171.548 114.591 171.548C100.655 171.548 93.2156 163.188 90.8801 158.389C90.6516 157.919 90.5574 157.403 90.5574 156.881V146.344C90.5574 145.632 90.7474 144.933 91.1077 144.319Z" fill="#EBE3F9" stroke="#EBE3F9" strokeWidth="2"/>
+            <path id="bus-awning-3" d="M142.045 143.7L155.228 114.039C155.87 112.594 157.302 111.663 158.883 111.663H198.641L196.45 127.364L194.259 143.066V154.751C194.016 160.593 188.417 172.278 167.968 172.278C148.165 172.278 142.289 154.927 141.717 145.429C141.681 144.835 141.803 144.244 142.045 143.7Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="bus-awning-4" d="M240.462 111.663H202.098C200.113 111.663 198.428 113.119 198.14 115.084L194.301 141.317C194.273 141.509 194.259 141.71 194.26 141.904C194.436 169.657 219.089 170.817 219.089 170.817C219.089 170.817 248.123 174.446 248.3 141.906C248.301 141.712 248.287 141.509 248.259 141.317L244.42 115.084C244.132 113.119 242.447 111.663 240.462 111.663Z" fill="#EBE3F9" stroke="#EBE3F9" strokeWidth="2"/>
+            <path id="bus-awning-5" d="M300.515 143.7L287.332 114.039C286.69 112.594 285.258 111.663 283.677 111.663H243.919L246.11 127.364L248.301 143.066V154.751C248.545 160.593 254.143 172.278 274.592 172.278C294.395 172.278 300.271 154.927 300.843 145.429C300.879 144.835 300.757 144.244 300.515 143.7Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="bus-awning-6" d="M351.454 144.319L333.445 113.638C332.727 112.415 331.415 111.663 329.996 111.663H286.277L300.552 144.494C300.77 144.997 300.883 145.54 300.883 146.089V156.514C300.883 157.271 301.089 158.016 301.535 158.627C305.06 163.458 314.263 171.548 327.971 171.548C341.906 171.548 349.346 163.188 351.681 158.389C351.91 157.919 352.004 157.403 352.004 156.881V146.344C352.004 145.632 351.814 144.933 351.454 144.319Z" fill="#EBE3F9" stroke="#EBE3F9" strokeWidth="2"/>
+            <path id="bus-awning-7" d="M405.79 144.202L376.559 112.932C375.803 112.122 374.745 111.663 373.637 111.663H331.556L352.118 144.279C352.521 144.918 352.734 145.657 352.734 146.412V155.175C352.734 155.379 352.748 155.578 352.784 155.778C353.934 162.184 361.238 174.004 381.946 172.278C401.823 170.621 406.742 155.355 406.811 146.696C406.819 145.763 406.427 144.884 405.79 144.202Z" fill="#C4A4E7" stroke="#C4A4E7" strokeWidth="2"/>
+            <path id="book-1" d="M92.0171 189.806H74.49V199.543V248.23H92.0171V189.806Z" fill="#9870D9"/>
+            <path id="book-1" d="M92.0171 200.03H74.49V205.873H92.0171V200.03Z" fill="#EBE3F9"/>
+            <path id="book-1" d="M92.0171 235.085H74.49V240.927H92.0171V235.085Z" fill="#EBE3F9"/>
+            <path id="book-2" d="M108.084 189.806H92.0173V199.543V248.229H108.084V189.806Z" fill="#E88C3F"/>
+            <path id="book-2" d="M108.084 200.03H92.0173V205.873H108.084V200.03Z" fill="#EBE3F9"/>
+            <path id="book-2" d="M108.084 235.085H92.0173V240.927H108.084V235.085Z" fill="#EBE3F9"/>
+            <path id="book-3" d="M124.151 189.806H108.084V199.543V248.23H124.151V189.806Z" fill="#479CF5"/>
+            <path id="book-3" d="M124.151 235.085H108.084V240.927H124.151V235.085Z" fill="#EBE3F9"/>
+            <path id="book-3" d="M124.151 200.03H108.084V205.873H124.151V200.03Z" fill="#EBE3F9"/>
+            <path id="book-4" d="M138.978 188.668L123.323 192.282L125.64 202.317L137.223 252.49L152.878 248.876L138.978 188.668Z" fill="#F5B56B"/>
+            <path id="book-4" d="M141.266 198.297L125.611 201.911L126.926 207.604L142.58 203.99L141.266 198.297Z" fill="#EBE3F9"/>
+            <path id="book-4" d="M149.299 233.623L133.645 237.237L134.959 242.93L150.614 239.316L149.299 233.623Z" fill="#EBE3F9"/>
+            <path id="book-5" d="M222.011 213.174H166.126C163.917 213.174 162.126 214.965 162.126 217.174V226.701C162.126 228.91 163.917 230.701 166.126 230.701H222.011V213.174Z" fill="#90A07B"/>
+            <path id="book-5" d="M169.429 223.78V223.017C169.429 220.807 171.22 219.017 173.429 219.017H219.089V227.78H173.429C171.22 227.78 169.429 225.989 169.429 223.78Z" fill="#EBE3F9"/>
+            <path id="book-6" d="M222.011 230.702H166.126C163.917 230.702 162.126 232.493 162.126 234.702V244.229C162.126 246.438 163.917 248.229 166.126 248.229H222.011V230.702Z" fill="#AB6269"/>
+            <path id="book-6" d="M169.429 241.308V240.544C169.429 238.335 171.22 236.544 173.429 236.544H219.089V245.308H173.429C171.22 245.308 169.429 243.517 169.429 241.308Z" fill="#EBE3F9"/>
+            <path id="book-7" d="M299.283 192.646L316.616 195.242L315.091 205.427L307.463 256.352L290.129 253.756L299.283 192.646Z" fill="#9870D9"/>
+            <path id="book-7" d="M296.501 211.647L313.835 214.244L314.701 208.466L297.367 205.87L296.501 211.647Z" fill="#EBE3F9"/>
+            <path id="book-7" d="M292.15 241.035L309.484 243.632L310.349 237.854L293.016 235.257L292.15 241.035Z" fill="#EBE3F9"/>
+            <path id="book-8" d="M328.634 189.806H312.567V199.543V248.229H328.634V189.806Z" fill="#F5B56B"/>
+            <path id="book-8" d="M328.634 200.03H312.567V205.873H328.634V200.03Z" fill="#EBE3F9"/>
+            <path id="book-8" d="M328.634 238.005H312.567V243.847H328.634V238.005Z" fill="#EBE3F9"/>
+            <path id="book-9" d="M344.701 189.806H328.635V199.543V248.229H344.701V189.806Z" fill="#479CF5"/>
+            <path id="book-9" d="M344.701 238.005H328.635V243.847H344.701V238.005Z" fill="#EBE3F9"/>
+            <path id="book-9" d="M344.701 200.03H328.635V205.873H344.701V200.03Z" fill="#EBE3F9"/>
+            <path id="book-10" d="M360.318 188.339L343.24 192.282L345.557 202.317L357.14 252.49L374.218 248.547L360.318 188.339Z" fill="#F7686E"/>
+            <path id="book-10" d="M362.509 197.968L345.431 201.911L346.745 207.604L363.823 203.661L362.509 197.968Z" fill="#EBE3F9"/>
+            <path id="book-10" d="M370.542 232.163L353.464 236.105L354.778 241.798L371.856 237.855L370.542 232.163Z" fill="#EBE3F9"/>
+            <path id="bus-table" d="M383.058 248.229H60.9634C58.7542 248.229 56.9634 250.019 56.9634 252.229V263.216C56.9634 265.425 58.7542 267.216 60.9634 267.216H383.058C385.267 267.216 387.058 265.425 387.058 263.216V252.229C387.058 250.019 385.267 248.229 383.058 248.229Z" fill="#EBE3F9"/>
+            <path id="bus-rooftop" d="M589.761 72.8073H48.0256V12C48.0256 5.37258 53.3982 0 60.0256 0H577.761C584.388 0 589.761 5.37257 589.761 12V72.8073Z" fill="#EBE3F9"/>
+        </svg>
+    )
+}
