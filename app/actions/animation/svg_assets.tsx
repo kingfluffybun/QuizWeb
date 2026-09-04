@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate, spring } from "animejs";
+import { animate, spring, createTimeline } from "animejs";
 
 export function BusDark() {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -417,18 +417,28 @@ export function CloudsTopLeft() {
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+            const tl = createTimeline();
             if (!clouds) continue;
 
             const delay = i * 100;
 
             const runCloudsTopLeft = () => {
-                animate(clouds, {
+                tl.add(clouds, {
                     x: [-500, 0],
                     ease: spring({
                         bounce: 0.3,
                         duration: 500,
                     }),
                     delay,
+                })
+                .add(clouds, {
+                    translateX: [
+                        { to: -10, duration: 1800, ease: "linear" },
+                        { to: 0, duration: 1800, ease: "linear" },
+                        { to: -8, duration: 1500, ease: "linear" },
+                        { to: 0, duration: 1500, ease: "linear" },
+                    ],
+                    loop: true,
                 })
             };
             runCloudsTopLeft();
@@ -460,12 +470,13 @@ export function CloudsTopLeftDark() {
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+            const tl = createTimeline();
             if (!clouds) continue;
 
             const delay = i * 100;
 
             const runCloudsTopLeft = () => {
-                animate(clouds, {
+                tl.add(clouds, {
                     x: [-500, 0],
                     ease: spring({
                         bounce: 0.3,
@@ -473,8 +484,19 @@ export function CloudsTopLeftDark() {
                     }),
                     delay,
                 })
+                .add(clouds, {
+                    translateX: [
+                        { to: -10, duration: 1800, ease: "linear" },
+                        { to: 0, duration: 1800, ease: "linear" },
+                        { to: -8, duration: 1500, ease: "linear" },
+                        { to: 0, duration: 1500, ease: "linear" },
+                    ],
+                    loop: true,
+                })
             };
             runCloudsTopLeft();
+
+            
         }
 
         return () => {
@@ -503,12 +525,13 @@ export function CloudsTopRight() {
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+            const tl = createTimeline();
             if (!clouds) continue;
 
             const delay = i * 100;
 
-            const runCloudsTopLeft = () => {
-                animate(clouds, {
+            const runCloudsTopRight = () => {
+                tl.add(clouds, {
                     x: [500, 0],
                     ease: spring({
                         bounce: 0.3,
@@ -516,8 +539,17 @@ export function CloudsTopRight() {
                     }),
                     delay,
                 })
+                .add(clouds, {
+                    translateX: [
+                        { to: 10, duration: 1800, ease: "linear" },
+                        { to: 0, duration: 1800, ease: "linear" },
+                        { to: 8, duration: 1500, ease: "linear" },
+                        { to: 0, duration: 1500, ease: "linear" },
+                    ],
+                    loop: true,
+                })
             };
-            runCloudsTopLeft();
+            runCloudsTopRight();
         }
 
         return () => {
@@ -545,12 +577,13 @@ export function CloudsTopRightDark() {
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+            const tl = createTimeline();
             if (!clouds) continue;
 
             const delay = i * 100;
 
-            const runCloudsTopLeft = () => {
-                animate(clouds, {
+            const runCloudsTopRight = () => {
+                tl.add(clouds, {
                     x: [500, 0],
                     ease: spring({
                         bounce: 0.3,
@@ -558,8 +591,17 @@ export function CloudsTopRightDark() {
                     }),
                     delay,
                 })
+                .add(clouds, {
+                    translateX: [
+                        { to: 10, duration: 1800, ease: "linear" },
+                        { to: 0, duration: 1800, ease: "linear" },
+                        { to: 8, duration: 1500, ease: "linear" },
+                        { to: 0, duration: 1500, ease: "linear" },
+                    ],
+                    loop: true,
+                })
             };
-            runCloudsTopLeft();
+            runCloudsTopRight();
         }
 
         return () => {
