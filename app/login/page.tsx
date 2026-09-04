@@ -5,12 +5,12 @@ import { signUp, reqPassReset, verifyOTP, resetPass } from "@/app/actions/auth";
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import * as Assets from "@/app/actions/animation/svg_assets";
 import LoginQuiz from "@/app/components/loginQuiz";
 import Image from "next/image";
 import Link from "next/link";
 import "#css/login.css";
 import "#css/nav.css";
-import { set } from "animejs";
 
 const passwordRules = [
     { key: "length", label: "8+ characters", test: (pw: string) => pw.length >= 8 },
@@ -360,16 +360,24 @@ function AuthPage() {
 
                     <div className="login-cloudscape" aria-hidden="true">
                         {/* Light */}
-                        <Image src="/assets/landing-page/Clouds-topleft.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left dark:hidden" priority data-hide-on-theme="dark"/>
-                        <Image src="/assets/landing-page/Clouds-topright.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right dark:hidden" priority data-hide-on-theme="dark"/>
-                        <Image src="/assets/landing-page/Clouds-left.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left dark:hidden" data-hide-on-theme="dark"/>
-                        <Image src="/assets/landing-page/Clouds-right.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right dark:hidden" data-hide-on-theme="dark"/>
+                        <div className="login-cloud login-cloud-top-left" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsTopLeft /></div>
+                        <div className="login-cloud login-cloud-top-right" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsTopRight /></div>
+                        <div className="login-cloud login-cloud-bottom-left" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsLeft /></div>
+                        <div className="login-cloud login-cloud-bottom-right" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsRight /></div>
+                        {/* <Image src="/assets/landing-page/Clouds-topleft.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left dark:hidden" priority data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-topright.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right dark:hidden" priority data-hide-on-theme="dark"/> */}
+                        {/* <Image src="/assets/landing-page/Clouds-left.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left dark:hidden" data-hide-on-theme="dark"/>
+                        <Image src="/assets/landing-page/Clouds-right.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right dark:hidden" data-hide-on-theme="dark"/> */}
 
                         {/* Dark */}
-                        <Image src="/assets/landing-page/Clouds-topleft-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left hidden dark:block" priority data-hide-on-theme="light"/>
-                        <Image src="/assets/landing-page/Clouds-topright-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right hidden dark:block" priority data-hide-on-theme="light"/>
-                        <Image src="/assets/landing-page/Clouds-left-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left hidden dark:block" data-hide-on-theme="light"/>
-                        <Image src="/assets/landing-page/Clouds-right-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right hidden dark:block" data-hide-on-theme="light"/>
+                        <div className="login-cloud login-cloud-top-left" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsTopLeftDark /></div>
+                        <div className="login-cloud login-cloud-top-right" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsTopRightDark /></div>
+                        <div className="login-cloud login-cloud-bottom-left" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsLeftDark /></div>
+                        <div className="login-cloud login-cloud-bottom-right" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsRightDark /></div>
+                        {/* <Image src="/assets/landing-page/Clouds-topleft-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-left hidden dark:block" priority data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-topright-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-top-right hidden dark:block" priority data-hide-on-theme="light"/> */}
+                        {/* <Image src="/assets/landing-page/Clouds-left-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-left hidden dark:block" data-hide-on-theme="light"/>
+                        <Image src="/assets/landing-page/Clouds-right-dark.svg" alt="" width={100} height={100} className="login-cloud login-cloud-bottom-right hidden dark:block" data-hide-on-theme="light"/> */}
                     </div>
 
                     <LoginQuiz />

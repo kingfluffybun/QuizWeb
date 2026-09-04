@@ -44,17 +44,21 @@ export default function Home() {
             <div id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsTopLeft /></div>
             <div id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsTopRight /></div>
             <div id="bus" className="designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.Bus /></div>
+            <div id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsLeft /></div>
+            <div id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsRight /></div>
 
-            <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/>
-            <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/>
+            {/* <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/> */}
+            {/* <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/> */}
 
             {/* dark mode */}
             <div id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsTopLeftDark /></div>
             <div id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsTopRightDark /></div>
             <div id="bus" className="designs" aria-hidden="true" data-hide-on-theme="light"><Assets.BusDark /></div>
+            <div id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsLeftDark /></div>
+            <div id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsRightDark /></div>
 
-            <Image src="/assets/landing-page/Clouds-left-dark.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/>
-            <Image src="/assets/landing-page/Clouds-right-dark.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/>
+            {/* <Image src="/assets/landing-page/Clouds-left-dark.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/> */}
+            {/* <Image src="/assets/landing-page/Clouds-right-dark.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/> */}
 
             <div id="ground"></div>
 

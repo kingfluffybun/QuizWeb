@@ -81,22 +81,22 @@ h1, h2, .eyebrow { font-family: 'Poppins', sans-serif; }
 
 .login-cloud-top-left {
   top: 8%;
-  left: -10%;
+  left: -53%;
 }
 
 .login-cloud-top-right {
   top: 10%;
-  right: -10%;
+  right: -52%;
 }
 
 .login-cloud-bottom-left {
-  bottom: 0;
+  bottom: -0.8%;
   left: -2%;
 }
 
 .login-cloud-bottom-right {
   right: -2%;
-  bottom: 0;
+  bottom: -0.8%;
 }
 
 .code-mark {
