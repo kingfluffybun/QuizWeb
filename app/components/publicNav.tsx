@@ -26,8 +26,12 @@ export default function PublicNav() {
         <div><Link href="/quiz"><p>Learn</p></Link></div>
         <div><Link href="https://test.com"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
-        <div><Link href="/settings"><p>Settings</p></Link></div>
+        {/* <div><Link href="/settings"><p>Settings</p></Link></div> */}
         <div><Link href="/login"><p>Get Started </p></Link></div>
+      </div>
+
+      <div className="accessibility">
+        <div><Link href="/settings"><div><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg></div></Link></div>
       </div>
     </nav>
   );
