@@ -308,7 +308,7 @@ export default function QuizInputForm({
           </div>
 
           {selectedTypeName !== "CP" && (
-            <div className="form-group">
+            <div className="form-group form-group-flex">
               <label htmlFor="question_text">Question Text / Prompt</label>
               <textarea
                 id="question_text"
@@ -322,7 +322,7 @@ export default function QuizInputForm({
           )}
 
           {selectedTypeName === "CP" && (
-            <div className="form-group">
+            <div className="form-group form-group-flex">
               <label
                 style={{
                   marginBottom: "12px",
