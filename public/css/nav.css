@@ -42,6 +42,30 @@ nav {
         margin-left: auto;
         gap: 8px;
     }
+
+    .accessibility {
+
+        position: fixed;
+        right: 2rem;
+        bottom: 2rem;
+
+        > div > a > div {
+            color: white;
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: .5rem;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+
+            svg {
+                display: block;
+                stroke: white;
+            }
+        }
+    }
 }
 
 .nav-options {
