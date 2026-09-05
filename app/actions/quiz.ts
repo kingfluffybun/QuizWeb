@@ -111,18 +111,35 @@ function getQuizPayload(typeName: string, formData: FormData) {
     }
 
     if (typeName === "CP") {
+        const promptCountRaw = formData.get("cp_prompt_count");
+        const promptCount = Number(promptCountRaw ?? "1");
+        const safePromptCount = Number.isFinite(promptCount) && promptCount > 0 ? promptCount : 1;
+        const prompts: string[] = [];
+
+        for (let index = 0; index < safePromptCount; index++) {
+            const prompt = (formData.get(`cp_prompt_${index}`) as string | null)?.trim() ?? "";
+            if (prompt) {
+                prompts.push(prompt);
+            }
+        }
+
         const template = formData.get("cp_template") as string;
         const expected = formData.get("cp_expected") as string;
-        return !template || !expected
-            ? {
-                  error: "Both initial template code and expected output/test code are required for CP.",
-              }
-            : {
-                  payload: {
-                      template: template.trim(),
-                      expected: expected.trim(),
-                  },
-              };
+
+        if (prompts.length === 0 || !template || !expected) {
+            return {
+                error: "Each coding problem requires at least one prompt, plus the template and expected output.",
+            };
+        }
+
+        return {
+            payload: {
+                prompts,
+                prompt: prompts[0],
+                template: template.trim(),
+                expected: expected.trim(),
+            },
+        };
     }
 
     return { error: "Unsupported quiz type." };
@@ -280,7 +297,9 @@ export async function createQuiz(state: any, formData: FormData) {
     const secId = formData.get("sec_id");
     const difficultyId = formData.get("difficulty_id");
     const quizTypeId = formData.get("quiz_type_id");
-    const questionText = formData.get("question_text");
+    const questionText =
+        (formData.get("question_text") as string | null) ??
+        ((formData.get("cp_prompt_0") as string | null) ?? "");
 
     if (!catId || !difficultyId || !quizTypeId || !questionText) {
         return {
@@ -359,7 +378,9 @@ export async function updateQuiz(quizId: number, formData: FormData) {
     const secId = formData.get("sec_id");
     const difficultyId = formData.get("difficulty_id");
     const quizTypeId = formData.get("quiz_type_id");
-    const questionText = formData.get("question_text");
+    const questionText =
+        (formData.get("question_text") as string | null) ??
+        ((formData.get("cp_prompt_0") as string | null) ?? "");
 
     if (!quizId || !catId || !difficultyId || !quizTypeId || !questionText) {
         return {

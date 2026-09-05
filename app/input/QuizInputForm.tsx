@@ -41,6 +41,7 @@ export default function QuizInputForm({
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [optionCount, setOptionCount] = useState(4);
+  const [cpPromptCount, setCpPromptCount] = useState(1);
 
   const hasActiveFilters =
     categoryFilter !== "" ||
@@ -87,11 +88,21 @@ export default function QuizInputForm({
     setOptionCount((count) => count + 1);
   };
 
+  const handleAddCPPrompt = () => {
+    setCpPromptCount((count) => count + 1);
+  };
+
   useEffect(() => {
     if (types.length > 0) {
       setSelectedTypeId(types[0].quiz_type_id.toString());
     }
   }, [types]);
+
+  useEffect(() => {
+    if (selectedTypeName === "CP") {
+      setCpPromptCount(1);
+    }
+  }, [selectedTypeName]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -289,17 +300,70 @@ export default function QuizInputForm({
             </select>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="question_text">Question Text / Prompt</label>
-            <textarea
-              id="question_text"
-              name="question_text"
-              className="form-textarea"
-              placeholder="Enter the question text here..."
-              defaultValue={editingQuiz?.question_text ?? ""}
-              required
-            />
-          </div>
+          {selectedTypeName !== "CP" && (
+            <div className="form-group">
+              <label htmlFor="question_text">Question Text / Prompt</label>
+              <textarea
+                id="question_text"
+                name="question_text"
+                className="form-textarea"
+                placeholder="Enter the question text here..."
+                defaultValue={editingQuiz?.question_text ?? ""}
+                required
+              />
+            </div>
+          )}
+
+          {selectedTypeName === "CP" && (
+            <div className="form-group">
+              <label
+                style={{
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                Question Text
+                <button
+                  type="button"
+                  className="btn-add-option"
+                  onClick={handleAddCPPrompt}
+                  title="Add prompt"
+                  aria-label="Add prompt"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                </button>
+              </label>
+              <input type="hidden" name="cp_prompt_count" value={cpPromptCount} />
+              <div className="options-grid options-grid-scrollable">
+                {Array.from({ length: cpPromptCount }, (_, idx) => idx).map((idx) => (
+                  <div
+                    key={idx}
+                    className="option-row"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      alignItems: "stretch",
+                    }}
+                  >
+                    <span style={{ fontWeight: "bold" }}>Step {idx + 1}</span>
+                    <textarea
+                      name={`cp_prompt_${idx}`}
+                      className="form-textarea"
+                      placeholder="Enter the question text here..."
+                      defaultValue={
+                        editingQuiz?.quiz_payload?.prompts?.[idx] ??
+                        (idx === 0 ? editingQuiz?.question_text ?? "" : "")
+                      }
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* MCQ Options */}
           {selectedTypeName === "MCQ" && (
