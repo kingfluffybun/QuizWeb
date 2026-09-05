@@ -33,13 +33,40 @@ function getInitialQuizState(quiz: QuizData | undefined) {
             left: payload.pairs.map((p) => p.left).sort(() => Math.random() - 0.5),
             right: payload.pairs.map((p) => p.right).sort(() => Math.random() - 0.5)
         };
-    } else if (quiz.type_name === "CP" && payload?.template) {
-        answer = payload.template;
+    } else if (quiz.type_name === "CP") {
+        const steps = getCPSteps(quiz);
+        answer = steps[0]?.template || payload?.template || "";
     } else if (quiz.type_name === "FITB") {
         answer = "";
     }
 
     return { answer, state };
+}
+
+function getCPSteps(quiz: QuizData | undefined) {
+    if (!quiz || quiz.type_name !== "CP") return [];
+    const payload = quiz.quiz_payload;
+    if (payload?.steps && payload.steps.length > 0) {
+        return payload.steps.map((s) => ({
+            prompt: s.prompt || quiz.question_text || "",
+            template: s.template || payload.template || "",
+            expected: s.expected || "",
+        }));
+    }
+    if (payload?.prompts && payload.prompts.length > 0) {
+        return payload.prompts.map((p) => ({
+            prompt: p || quiz.question_text || "",
+            template: payload.template || "",
+            expected: payload.expected || "",
+        }));
+    }
+    return [
+        {
+            prompt: quiz.question_text || payload?.prompt || "",
+            template: payload?.template || "",
+            expected: payload?.expected || "",
+        },
+    ];
 }
 
 export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
@@ -48,6 +75,9 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
+
+    const [cpStepIndex, setCpStepIndex] = useState(0);
+    const [stepMessage, setStepMessage] = useState<string | null>(null);
 
     const activeQuiz = quizzes[currentIndex];
     const payload = activeQuiz?.quiz_payload;
@@ -64,7 +94,12 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         const initial = getInitialQuizState(activeQuiz);
         setCurrentAnswer(initial.answer);
         setQuizState(initial.state);
+        setCpStepIndex(0);
+        setStepMessage(null);
     }, [currentIndex, activeQuiz]);
+
+    const cpSteps = getCPSteps(activeQuiz);
+    const currentStep = cpSteps[cpStepIndex] || cpSteps[0];
 
     const handleCheckAnswer = () => {
         if (status !== "idle" || !activeQuiz || !payload) return;
@@ -85,9 +120,22 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                     payload.pairs?.some((p) => p.left === leftVal && p.right === currentAnswer.right[i])
                 );
                 break;
-            case "CP":
-                isCorrect = currentAnswer?.replace(/\s+/g, "") === payload.expected?.replace(/\s+/g, "");
+            case "CP": {
+                const targetExpected = currentStep?.expected || payload.expected || "";
+                isCorrect = currentAnswer?.replace(/\s+/g, "") === targetExpected.replace(/\s+/g, "");
+
+                if (isCorrect) {
+                    if (cpStepIndex < cpSteps.length - 1) {
+                        setCpStepIndex((prev) => prev + 1);
+                        setStepMessage(`✓ Step ${cpStepIndex + 1} completed! Proceed to Step ${cpStepIndex + 2}.`);
+                        setStatus("idle");
+                        return;
+                    } else {
+                        setStepMessage(null);
+                    }
+                }
                 break;
+            }
         }
 
         if (isCorrect) {
@@ -143,11 +191,27 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                                 <QuizPair payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
                             {activeQuiz.type_name === "CP" && (
-                                <QuizCP payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
+                                <QuizCP
+                                    payload={payload}
+                                    currentStepIndex={cpStepIndex}
+                                    totalSteps={cpSteps.length}
+                                    stepPrompt={currentStep?.prompt || activeQuiz.question_text}
+                                    stepExpected={currentStep?.expected || payload.expected || ""}
+                                    currentAnswer={currentAnswer}
+                                    onChange={setCurrentAnswer}
+                                    status={status}
+                                    stepMessage={stepMessage}
+                                />
                             )}
 
                             {status === "correct" && <div className="feedback-msg feedback-correct anim-enter">Correct! Excellent work.</div>}
-                            {status === "incorrect" && <div className="feedback-msg feedback-incorrect anim-enter"><span>Incorrect! Review the highlighted correct answer above.</span></div>}
+                            {status === "incorrect" && (
+                                <div className="feedback-msg feedback-incorrect anim-enter">
+                                    <span>
+                                        Incorrect! Review expected answer for Step {cpStepIndex + 1} highlighted above.
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
