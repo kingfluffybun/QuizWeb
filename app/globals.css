@@ -32,44 +32,45 @@
     
 }
 
-[data-contrast="high"] {
-    --text-main: #000000;
-    --text-muted: #222222;
-    --bg-main: #ffffff;
-    --bg-card: #ffffff;
-    --border-main: #000000;
-}
-[data-theme="dark"][data-contrast="high"] {
-    --text-main: #ffffff;
-    --text-muted: #dddddd;
-    --bg-main: #000000;
-    --bg-card: #000000;
-    --border-main: #ffffff;
-}
-
 [data-theme="dark"] [data-hide-on-theme="dark"] { display: none; }
 [data-theme="light"] [data-hide-on-theme="light"] { display: none; }
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] [data-hide-on-theme="dark"] { display: none; }
+}
+@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+    [data-theme="system"] [data-hide-on-theme="light"] { display: none; }
+}
 
 html { font-size: var(--base-scale); }
 [data-scale="90"] { --base-scale: 90%; }
 [data-scale="110"] { --base-scale: 110%; }
 [data-scale="125"] { --base-scale: 125%; }
 
+html[data-motion="reduce"],
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
+    html:not([data-motion="normal"]),
+    html:not([data-motion="normal"]) *,
+    html:not([data-motion="normal"]) *::before,
+    html:not([data-motion="normal"]) *::after {
+        animation-duration: 0.001ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        transition-duration: 0.001ms !important;
+        animation-delay: 0s !important;
+        transition-delay: 0s !important;
         scroll-behavior: auto !important;
     }
-}
-[data-motion="reduce"] *, 
-[data-motion="reduce"] *::before, 
-[data-motion="reduce"] *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
 }
 
 * {
@@ -117,8 +118,7 @@ small {
 body {background-color: var(--bg-main);}
 
 @media (prefers-color-scheme: dark) {
-    [data-theme="system"],
-    :root:not([data-theme]) {
+    [data-theme="system"] {
         --primary-color: #a377ff;
         --bg-brand: #1f1433;
         --bg-main: #0f0f13;
@@ -127,14 +127,5 @@ body {background-color: var(--bg-main);}
         --text-muted: #a0a0b0;
         --text-inverse: #fafafa;
         --border-main: #2d2d3d;
-    }
-
-    [data-theme="system"][data-contrast="high"],
-    :root:not([data-theme])[data-contrast="high"] {
-        --text-main: #ffffff;
-        --text-muted: #dddddd;
-        --bg-main: #000000;
-        --bg-card: #000000;
-        --border-main: #ffffff;
     }
 }

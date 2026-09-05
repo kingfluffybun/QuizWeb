@@ -72,10 +72,10 @@ export default function QuizPage() {
       <footer>
         <div style={{ width: "100%", maxWidth: "1200px", display: "flex", justifyContent: "space-between" }}>
           <div className="options" id="skip">
-            <p>Skip</p>
+            Skip
           </div>
           <div className="options" id="submit">
-            <p>Submit</p>
+            Submit
           </div>
         </div>
       </footer>

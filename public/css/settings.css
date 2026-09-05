@@ -17,38 +17,18 @@
   --settings-text-main: #fcfbff;
   --settings-text-muted: #a0a0b0;
   --settings-border: #2d2d3d;
-  
-  &[data-contrast="high"] {
-    --settings-text-main: #ffffff;
-    --settings-bg: #000000;
-    --settings-border: #ffffff;
-  }
 }
 
 /* 2. System Default Mode (Checks OS Preference) */
 @media (prefers-color-scheme: dark) {
-  [data-theme="system"], 
-  :root:not([data-theme]) {
+  [data-theme="system"] {
     --settings-primary: #a377ff; 
     --settings-bg: #0f0f13;
     --settings-card-bg: #1c1c24;
     --settings-text-main: #fcfbff;
     --settings-text-muted: #a0a0b0;
     --settings-border: #2d2d3d;
-    
-    &[data-contrast="high"] {
-      --settings-text-main: #ffffff;
-      --settings-bg: #000000;
-      --settings-border: #ffffff;
-    }
   }
-}
-
-/* High Contrast Overrides (Light Mode) */
-[data-contrast="high"] {
-  --settings-text-main: #000000;
-  --settings-bg: #ffffff;
-  --settings-border: #000000;
 }
 
 /* Core HTML Scaling hook */
@@ -57,13 +37,15 @@ html {
 }
 
 /* Reduced Motion Override */
-[data-motion="reduce"] {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+html[data-motion="reduce"] .settings-main *,
+html[data-motion="reduce"] .settings-main *::before,
+html[data-motion="reduce"] .settings-main *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
 }
 
 /* =========================================
@@ -273,7 +255,7 @@ html {
       }
     }
 
-    /* --- Toggles (Motion & Contrast) --- */
+    /* --- Toggles (Motion) --- */
     .toggle-row {
       display: flex;
       align-items: center;
