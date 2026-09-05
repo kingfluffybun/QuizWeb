@@ -93,6 +93,84 @@ nav {
     }
 }
 
+.accessibility > div > button {
+    display: block;
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+}
+
+.accessibility > div > button > div {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+}
+
+.accessibility-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    color: var(--settings-text-main, #333333);
+}
+
+.accessibility-dialog.settings-main {
+    min-height: 100dvh;
+    padding: 1.5rem;
+    background: transparent;
+}
+
+.accessibility-dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(20, 10, 40, 0.45);
+    cursor: pointer;
+}
+
+.accessibility-dialog-card {
+    position: relative;
+    z-index: 1;
+    max-height: calc(100dvh - 3rem);
+    overflow-y: auto;
+}
+
+.accessibility-dialog-close {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--settings-text-muted, #888888);
+    cursor: pointer;
+}
+
+.accessibility-dialog-close:hover {
+    background: var(--settings-border, #e7e2f2);
+}
+
+@media (max-width: 600px) {
+    .accessibility-dialog { padding: .75rem; }
+    .accessibility-dialog.settings-main { padding: .75rem; }
+    .accessibility-dialog-card { max-height: calc(100dvh - 1.5rem); }
+}
+
 @media (max-width:768px) {
     nav button {display: flex;}
     

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import '@/public/css/settings.css'; 
 import PublicNav from '../components/publicNav';
 import '@/public/css/nav.css';
 
