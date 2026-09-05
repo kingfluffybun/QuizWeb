@@ -751,7 +751,7 @@ export default function QuizInputForm({
           ) : (
             <div
               style={{
-                maxHeight: "844px",
+                maxHeight: "1144px",
                 overflowY: "auto",
                 paddingRight: "10px",
               }}
