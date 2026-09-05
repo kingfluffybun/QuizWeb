@@ -118,15 +118,19 @@ nav {
     inset: 0;
     z-index: 2000;
     display: grid;
-    place-items: center;
+    align-items: center;
+    justify-items: end;
     padding: 1.5rem;
     color: var(--settings-text-main, #333333);
 }
 
 .accessibility-dialog.settings-main {
     min-height: 100dvh;
+    display: grid !important;
     padding: 1.5rem;
     background: transparent;
+    align-items: center !important;
+    justify-items: end !important;
 }
 
 .accessibility-dialog-backdrop {
@@ -140,10 +144,13 @@ nav {
 }
 
 .accessibility-dialog-card {
-    position: relative;
+    position: fixed;
+    top: 50%;
+    right: 1.5rem;
     z-index: 1;
     max-height: calc(100dvh - 3rem);
     overflow-y: auto;
+    transform: translateY(-50%);
 }
 
 .accessibility-dialog-close {
@@ -166,9 +173,19 @@ nav {
 }
 
 @media (max-width: 600px) {
-    .accessibility-dialog { padding: .75rem; }
+    .accessibility-dialog {
+        justify-items: center;
+        padding: .75rem;
+    }
     .accessibility-dialog.settings-main { padding: .75rem; }
+    .accessibility-dialog.settings-main { justify-items: center !important; }
     .accessibility-dialog-card { max-height: calc(100dvh - 1.5rem); }
+    .accessibility-dialog-card {
+        position: relative;
+        top: auto;
+        right: auto;
+        transform: none;
+    }
 }
 
 @media (max-width:768px) {
