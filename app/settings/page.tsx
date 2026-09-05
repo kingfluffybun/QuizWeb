@@ -8,21 +8,21 @@ import '@/public/css/nav.css';
 export default function AccessibilitySettingsPage() {
   const [isMounted, setIsMounted] = useState(false);
   
-  const [theme, setTheme] = useState('system');
+  const [theme, setTheme] = useState('light');
   const [uiScale, setUiScale] = useState('100');
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
 
   // 1. Fetch saved settings so the UI toggles match the user's preferences
   useEffect(() => {
     setIsMounted(true);
     const saved = localStorage.getItem('app-accessibility-settings');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.theme) setTheme(parsed.theme);
-      if (parsed.uiScale) setUiScale(parsed.uiScale);
-      if (parsed.reduceMotion !== undefined) setReduceMotion(parsed.reduceMotion);
-      if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.theme) setTheme(parsed.theme);
+        if (parsed.uiScale) setUiScale(parsed.uiScale);
+        if (parsed.reduceMotion !== undefined) setReduceMotion(parsed.reduceMotion);
+      } catch {}
     }
   }, []);
 
@@ -31,8 +31,8 @@ export default function AccessibilitySettingsPage() {
     if (!isMounted) return; 
     
     document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.setAttribute('data-contrast', highContrast ? 'high' : 'normal');
     document.documentElement.setAttribute('data-motion', reduceMotion ? 'reduce' : 'normal');
+    document.documentElement.removeAttribute('data-contrast');
     
     // Dynamically inject the exact percentage for fluid scaling
     document.documentElement.style.setProperty('--base-scale', `${uiScale}%`);
@@ -41,10 +41,9 @@ export default function AccessibilitySettingsPage() {
     localStorage.setItem('app-accessibility-settings', JSON.stringify({ 
       theme, 
       uiScale, 
-      reduceMotion, 
-      highContrast 
+      reduceMotion 
     }));
-  }, [theme, uiScale, highContrast, reduceMotion, isMounted]);
+  }, [theme, uiScale, reduceMotion, isMounted]);
 
   // Prevent hydration mismatch flashes
   if (!isMounted) return null;
@@ -126,8 +125,8 @@ export default function AccessibilitySettingsPage() {
           <span className="range-icon large">A</span>
         </div>
 
-        {/* --- Motion & Contrast Toggles --- */}
-        <h3 className="settings-section-title">Motion & Contrast</h3>
+        {/* --- Motion Toggle --- */}
+        <h3 className="settings-section-title">Motion</h3>
         
         <div className="toggle-row">
           <div className="toggle-info">
@@ -139,21 +138,6 @@ export default function AccessibilitySettingsPage() {
               type="checkbox" 
               checked={reduceMotion}
               onChange={(e) => setReduceMotion(e.target.checked)}
-            />
-            <span className="slider"></span>
-          </label>
-        </div>
-
-        <div className="toggle-row">
-          <div className="toggle-info">
-            <strong>High Contrast Borders</strong>
-            <span>Increase the visibility of inputs, buttons, and borders.</span>
-          </div>
-          <label className="switch">
-            <input 
-              type="checkbox" 
-              checked={highContrast}
-              onChange={(e) => setHighContrast(e.target.checked)}
             />
             <span className="slider"></span>
           </label>

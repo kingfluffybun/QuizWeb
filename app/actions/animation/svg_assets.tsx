@@ -1,10 +1,52 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { animate, spring, createTimeline } from "animejs";
+
+function useIsReducedMotion() {
+    const [reduced, setReduced] = useState(() => {
+        if (typeof document === "undefined") return false;
+        const attr = document.documentElement.getAttribute("data-motion");
+        if (attr === "reduce") return true;
+        if (attr === "normal") return false;
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    });
+
+    useEffect(() => {
+        const check = () => {
+            if (typeof document === "undefined") return false;
+            const attr = document.documentElement.getAttribute("data-motion");
+            if (attr === "reduce") return true;
+            if (attr === "normal") return false;
+            return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        };
+
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === "attributes" && m.attributeName === "data-motion") {
+                    setReduced(check());
+                }
+            }
+        });
+
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-motion"] });
+
+        const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const onMediaChange = () => setReduced(check());
+        media.addEventListener?.("change", onMediaChange);
+
+        return () => {
+            observer.disconnect();
+            media.removeEventListener?.("change", onMediaChange);
+        };
+    }, []);
+
+    return reduced;
+}
 
 export function Bus() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
@@ -15,67 +57,63 @@ export function Bus() {
         const awning = svg.querySelectorAll("[id^=bus-awning-]");
         const wheels = svg.querySelectorAll(".wheel");
 
-        const anims: (() => void)[] = [];
+        if (reducedMotion) {
+            svg.querySelectorAll("path, rect, circle, .wheel, [id^=bus-awning-]").forEach((el) => {
+                (el as HTMLElement).style.transform = "";
+            });
+            if (road) (road as HTMLElement).style.opacity = "1";
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // Body
-        if (bodyParts) {
-            const runBody = () => {
-                animate(bodyParts, {
-                    translateY: [
-                        { to: -3, duration: 400, ease: "inOutSine" },
-                        { to: 0, duration: 400, ease: "inOutSine" },
-                        { to: -2, duration: 300, ease: "inOutSine" },
-                        { to: 0, duration: 300, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runBody();
+        if (bodyParts.length) {
+            anims.push(animate(bodyParts, {
+                translateY: [
+                    { to: -3, duration: 400, ease: "inOutSine" },
+                    { to: 0, duration: 400, ease: "inOutSine" },
+                    { to: -2, duration: 300, ease: "inOutSine" },
+                    { to: 0, duration: 300, ease: "inOutSine" },
+                ],
+                loop: true,
+            }));
         }
 
         // Road shadow
         if (road) {
-            const runRoad = () => {
-                animate(road, {
-                    opacity: [
-                        { to: 0.6, duration: 400, ease: "inOutSine" },
-                        { to: 1, duration: 400, ease: "inOutSine" },
-                        { to: 0.8, duration: 300, ease: "inOutSine" },
-                        { to: 1, duration: 300, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runRoad();
+            anims.push(animate(road, {
+                opacity: [
+                    { to: 0.6, duration: 400, ease: "inOutSine" },
+                    { to: 1, duration: 400, ease: "inOutSine" },
+                    { to: 0.8, duration: 300, ease: "inOutSine" },
+                    { to: 1, duration: 300, ease: "inOutSine" },
+                ],
+                loop: true,
+            }));
         }
 
         // Wheels
-        if (wheels) {
-            const runWheels = () => {
-                animate(wheels, {
-                    rotate: '360deg',
-                    ease: "linear",
-                    duration: 1500,
-                    loop: true,
-                });
-            };
-            runWheels();
+        if (wheels.length) {
+            anims.push(animate(wheels, {
+                rotate: '360deg',
+                ease: "linear",
+                duration: 1500,
+                loop: true,
+            }));
         }
 
         // Awning vibration
-        if (awning) {
-            const runAwning = () => {
-                animate(awning, {
-                    translateX: [
-                        { to: -2, duration: 400, ease: "inOutSine" },
-                        { to: 0, duration: 400, ease: "inOutSine" },
-                        { to: -1, duration: 300, ease: "inOutSine" },
-                        { to: 0, duration: 300, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runAwning();
+        if (awning.length) {
+            anims.push(animate(awning, {
+                translateX: [
+                    { to: -2, duration: 400, ease: "inOutSine" },
+                    { to: 0, duration: 400, ease: "inOutSine" },
+                    { to: -1, duration: 300, ease: "inOutSine" },
+                    { to: 0, duration: 300, ease: "inOutSine" },
+                ],
+                loop: true,
+            }));
         }
 
         // Books
@@ -84,28 +122,29 @@ export function Bus() {
             if (!book.length) continue;
 
             const delay = i * 25;
-            const intensity  = 0.8 + (i % 3) * 0.8;
+            const intensity = 0.8 + (i % 3) * 0.8;
 
-            const runBook = () => {
-                animate(book, {
-                    translateY: [
-                        { to: -1 * intensity, duration: 400, ease: "inOutSine" },
-                        { to: 0 * intensity, duration: 400, ease: "inOutSine" },
-                        { to: -0.5 * intensity, duration: 300, ease: "inOutSine" },
-                        { to: 0, duration: 300, ease: "inOutSine" },
-                    ],
-                    transformOrigin: "50% 100%",
-                    delay,
-                    loop: true,
-                });
-            };
-            runBook();
+            anims.push(animate(book, {
+                translateY: [
+                    { to: -1 * intensity, duration: 400, ease: "inOutSine" },
+                    { to: 0 * intensity, duration: 400, ease: "inOutSine" },
+                    { to: -0.5 * intensity, duration: 300, ease: "inOutSine" },
+                    { to: 0, duration: 300, ease: "inOutSine" },
+                ],
+                transformOrigin: "50% 100%",
+                delay,
+                loop: true,
+            }));
         }
 
         return () => {
-            anims.forEach((anim) => anim());
+            anims.forEach((anim) => anim.pause());
+            svg.querySelectorAll("path, rect, circle, .wheel, [id^=bus-awning-]").forEach((el) => {
+                (el as HTMLElement).style.transform = "";
+            });
+            if (road) (road as HTMLElement).style.opacity = "1";
         };
-    }, []);
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 704 443" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -175,6 +214,7 @@ export function Bus() {
 
 export function BusDark() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
@@ -187,67 +227,65 @@ export function BusDark() {
         const awning = svg.querySelectorAll("[id^=bus-awning-]");
         const wheels = svg.querySelectorAll(".wheel");
 
-        const anims: (() => void)[] = [];
+        if (reducedMotion) {
+            svg.querySelectorAll("path, rect, circle, .wheel, [id^=bus-awning-]").forEach((el) => {
+                (el as HTMLElement).style.transform = "";
+            });
+            if (road) (road as HTMLElement).style.opacity = "1";
+            if (windows) windows.forEach((w) => ((w as HTMLElement).style.opacity = "1"));
+            if (lights) lights.forEach((l) => ((l as HTMLElement).style.opacity = "1"));
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // Body
-        if (bodyParts) {
-            const runBody = () => {
-                animate(bodyParts, {
-                    translateY: [
-                        { to: -3, duration: 400, ease: "inOutSine" },
-                        { to: 0, duration: 400, ease: "inOutSine" },
-                        { to: -2, duration: 300, ease: "inOutSine" },
-                        { to: 0, duration: 300, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runBody();
+        if (bodyParts.length) {
+            anims.push(animate(bodyParts, {
+                translateY: [
+                    { to: -3, duration: 400, ease: "inOutSine" },
+                    { to: 0, duration: 400, ease: "inOutSine" },
+                    { to: -2, duration: 300, ease: "inOutSine" },
+                    { to: 0, duration: 300, ease: "inOutSine" },
+                ],
+                loop: true,
+            }));
         }
 
         // Road shadow
         if (road) {
-            const runRoad = () => {
-                animate(road, {
-                    opacity: [
-                        { to: 0.6, duration: 400, ease: "inOutSine" },
-                        { to: 1, duration: 400, ease: "inOutSine" },
-                        { to: 0.8, duration: 300, ease: "inOutSine" },
-                        { to: 1, duration: 300, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runRoad();
+            anims.push(animate(road, {
+                opacity: [
+                    { to: 0.6, duration: 400, ease: "inOutSine" },
+                    { to: 1, duration: 400, ease: "inOutSine" },
+                    { to: 0.8, duration: 300, ease: "inOutSine" },
+                    { to: 1, duration: 300, ease: "inOutSine" },
+                ],
+                loop: true,
+            }));
         }
 
         // Wheels
-        if (wheels) {
-            const runWheels = () => {
-                animate(wheels, {
-                    rotate: '360deg',
-                    ease: "linear",
-                    duration: 1500,
-                    loop: true,
-                });
-            };
-            runWheels();
+        if (wheels.length) {
+            anims.push(animate(wheels, {
+                rotate: '360deg',
+                ease: "linear",
+                duration: 1500,
+                loop: true,
+            }));
         }
 
         // Awning vibration
-        if (awning) {
-            const runAwning = () => {
-                animate(awning, {
-                    translateX: [
-                        { to: -2, duration: 400, ease: "inOutSine" },
-                        { to: 0, duration: 400, ease: "inOutSine" },
-                        { to: -1, duration: 300, ease: "inOutSine" },
-                        { to: 0, duration: 300, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runAwning();
+        if (awning.length) {
+            anims.push(animate(awning, {
+                translateX: [
+                    { to: -2, duration: 400, ease: "inOutSine" },
+                    { to: 0, duration: 400, ease: "inOutSine" },
+                    { to: -1, duration: 300, ease: "inOutSine" },
+                    { to: 0, duration: 300, ease: "inOutSine" },
+                ],
+                loop: true,
+            }));
         }
 
         // Books
@@ -256,62 +294,59 @@ export function BusDark() {
             if (!book.length) continue;
 
             const delay = i * 25;
-            const intensity  = 0.8 + (i % 3) * 0.8;
+            const intensity = 0.8 + (i % 3) * 0.8;
 
-            const runBook = () => {
-                animate(book, {
-                    translateY: [
-                        { to: -1 * intensity, duration: 400, ease: "inOutSine" },
-                        { to: 0 * intensity, duration: 400, ease: "inOutSine" },
-                        { to: -0.5 * intensity, duration: 300, ease: "inOutSine" },
-                        { to: 0, duration: 300, ease: "inOutSine" },
-                    ],
-                    transformOrigin: "50% 100%",
-                    delay,
-                    loop: true,
-                });
-            };
-            runBook();
+            anims.push(animate(book, {
+                translateY: [
+                    { to: -1 * intensity, duration: 400, ease: "inOutSine" },
+                    { to: 0 * intensity, duration: 400, ease: "inOutSine" },
+                    { to: -0.5 * intensity, duration: 300, ease: "inOutSine" },
+                    { to: 0, duration: 300, ease: "inOutSine" },
+                ],
+                transformOrigin: "50% 100%",
+                delay,
+                loop: true,
+            }));
         }
 
         // Windows flicker
-        if (windows) {
-            const runWindows = () => {
-                animate(windows, {
-                    opacity: [
-                        { to: 0.8, duration: 400 },
-                        { to: 1, duration: 400 },
-                        { to: 0.9, duration: 300 },
-                        { to: 1, duration: 300 },
-                    ],
-                    ease: "inOutQuad",
-                    loop: true,
-                });
-            };
-            runWindows();
-        };
+        if (windows.length) {
+            anims.push(animate(windows, {
+                opacity: [
+                    { to: 0.8, duration: 400 },
+                    { to: 1, duration: 400 },
+                    { to: 0.9, duration: 300 },
+                    { to: 1, duration: 300 },
+                ],
+                ease: "inOutQuad",
+                loop: true,
+            }));
+        }
 
         // Headlights pulse
-        if (lights) {
-            const runLights = () => {
-                animate(lights, {
-                    opacity: [
-                        { to: 0.9, duration: 400 },
-                        { to: 1, duration: 400 },
-                        { to: 0.95, duration: 300 },
-                        { to: 1, duration: 300 },
-                    ],
-                    ease: "inOutQuad",
-                    loop: true,
-                });
-            };
-            runLights();
+        if (lights.length) {
+            anims.push(animate(lights, {
+                opacity: [
+                    { to: 0.9, duration: 400 },
+                    { to: 1, duration: 400 },
+                    { to: 0.95, duration: 300 },
+                    { to: 1, duration: 300 },
+                ],
+                ease: "inOutQuad",
+                loop: true,
+            }));
         }
 
         return () => {
-            anims.forEach((anim) => anim());
+            anims.forEach((anim) => anim.pause());
+            svg.querySelectorAll("path, rect, circle, .wheel, [id^=bus-awning-]").forEach((el) => {
+                (el as HTMLElement).style.transform = "";
+            });
+            if (road) (road as HTMLElement).style.opacity = "1";
+            if (windows) windows.forEach((w) => ((w as HTMLElement).style.opacity = "1"));
+            if (lights) lights.forEach((l) => ((l as HTMLElement).style.opacity = "1"));
         };
-    }, []);
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 704 443" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -407,47 +442,62 @@ export function BusDark() {
 
 export function CloudsTopLeft() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
 
-        const anims: (() => void)[] = [];
+        if (reducedMotion) {
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(500px)";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
-            const tl = createTimeline();
             if (!clouds.length) continue;
-
+            const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsTopLeft = () => {
-                tl.add(clouds, {
-                    x: [0, 500],
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    translateX: [
-                        { to: 510, duration: 1800, ease: "linear" },
-                        { to: 500, duration: 1800, ease: "linear" },
-                        { to: 508, duration: 1500, ease: "linear" },
-                        { to: 500, duration: 1500, ease: "linear" },
-                    ],
-                    loop: true,
-                })
-            };
-            runCloudsTopLeft();
+            tl.add(clouds, {
+                x: [0, 500],
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                translateX: [
+                    { to: 510, duration: 1800, ease: "linear" },
+                    { to: 500, duration: 1800, ease: "linear" },
+                    { to: 508, duration: 1500, ease: "linear" },
+                    { to: 500, duration: 1500, ease: "linear" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
 
         return () => {
-            anims.forEach((anim) => anim());
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(500px)";
+                });
+            }
         };
-    }, []);
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 510 169" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -460,49 +510,62 @@ export function CloudsTopLeft() {
 
 export function CloudsTopLeftDark() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
 
-        const anims: (() => void)[] = [];
+        if (reducedMotion) {
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(500px)";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
-            const tl = createTimeline();
             if (!clouds.length) continue;
-
+            const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsTopLeft = () => {
-                tl.add(clouds, {
-                    x: [0, 500],
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    translateX: [
-                        { to: 510, duration: 1800, ease: "linear" },
-                        { to: 500, duration: 1800, ease: "linear" },
-                        { to: 508, duration: 1500, ease: "linear" },
-                        { to: 500, duration: 1500, ease: "linear" },
-                    ],
-                    loop: true,
-                })
-            };
-            runCloudsTopLeft();
+            tl.add(clouds, {
+                x: [0, 500],
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                translateX: [
+                    { to: 510, duration: 1800, ease: "linear" },
+                    { to: 500, duration: 1800, ease: "linear" },
+                    { to: 508, duration: 1500, ease: "linear" },
+                    { to: 500, duration: 1500, ease: "linear" },
+                ],
+                loop: true,
+            });
 
-            
+            anims.push(tl);
         }
 
         return () => {
-            anims.forEach((anim) => anim());
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topleft-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(500px)";
+                });
+            }
         };
-    }, []);
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 510 169" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -515,47 +578,62 @@ export function CloudsTopLeftDark() {
 
 export function CloudsTopRight() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
 
-        const anims: (() => void)[] = [];
+        if (reducedMotion) {
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(-450px)";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
-            const tl = createTimeline();
             if (!clouds.length) continue;
-
+            const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsTopRight = () => {
-                tl.add(clouds, {
-                    x: [0, -450],
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    translateX: [
-                        { to: -460, duration: 1800, ease: "linear" },
-                        { to: -450, duration: 1800, ease: "linear" },
-                        { to: -458, duration: 1500, ease: "linear" },
-                        { to: -450, duration: 1500, ease: "linear" },
-                    ],
-                    loop: true,
-                })
-            };
-            runCloudsTopRight();
+            tl.add(clouds, {
+                x: [0, -450],
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                translateX: [
+                    { to: -460, duration: 1800, ease: "linear" },
+                    { to: -450, duration: 1800, ease: "linear" },
+                    { to: -458, duration: 1500, ease: "linear" },
+                    { to: -450, duration: 1500, ease: "linear" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
 
         return () => {
-            anims.forEach((anim) => anim());
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(-450px)";
+                });
+            }
         };
-    }, []);
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 471 168" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -567,47 +645,62 @@ export function CloudsTopRight() {
 
 export function CloudsTopRightDark() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
 
-        const anims: (() => void)[] = [];
+        if (reducedMotion) {
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(-450px)";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // slide in clouds
         for (let i = 1; i <= 3; i++) {
             const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
-            const tl = createTimeline();
             if (!clouds.length) continue;
-
+            const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsTopRight = () => {
-                tl.add(clouds, {
-                    x: [0, -450],
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    translateX: [
-                        { to: -460, duration: 1800, ease: "linear" },
-                        { to: -450, duration: 1800, ease: "linear" },
-                        { to: -458, duration: 1500, ease: "linear" },
-                        { to: -450, duration: 1500, ease: "linear" },
-                    ],
-                    loop: true,
-                })
-            };
-            runCloudsTopRight();
+            tl.add(clouds, {
+                x: [0, -450],
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                translateX: [
+                    { to: -460, duration: 1800, ease: "linear" },
+                    { to: -450, duration: 1800, ease: "linear" },
+                    { to: -458, duration: 1500, ease: "linear" },
+                    { to: -450, duration: 1500, ease: "linear" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
 
         return () => {
-            anims.forEach((anim) => anim());
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 3; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-topright-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "translateX(-450px)";
+                });
+            }
         };
-    }, []);
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 471 168" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -619,10 +712,24 @@ export function CloudsTopRightDark() {
 
 export function CloudsLeft() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
+
+        if (reducedMotion) {
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-left-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "0px 537px";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // pop in clouds from bottom-left
         for (let i = 1; i <= 4; i++) {
@@ -632,29 +739,39 @@ export function CloudsLeft() {
             const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsLeft = () => {
-                tl.add(clouds, {
-                    scale: [0, 1],
-                    transformOrigin: "0px 537px",
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    scale: [
-                        { to: 1.025, duration: 2000, ease: "inOutSine" },
-                        { to: 1, duration: 2000, ease: "inOutSine" },
-                        { to: 1.015, duration: 1600, ease: "inOutSine" },
-                        { to: 1, duration: 1600, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runCloudsLeft();
+            tl.add(clouds, {
+                scale: [0, 1],
+                transformOrigin: "0px 537px",
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                scale: [
+                    { to: 1.025, duration: 2000, ease: "inOutSine" },
+                    { to: 1, duration: 2000, ease: "inOutSine" },
+                    { to: 1.015, duration: 1600, ease: "inOutSine" },
+                    { to: 1, duration: 1600, ease: "inOutSine" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
-    }, []);
+
+        return () => {
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-left-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "0px 537px";
+                });
+            }
+        };
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 1077 537" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -668,10 +785,24 @@ export function CloudsLeft() {
 
 export function CloudsLeftDark() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
+
+        if (reducedMotion) {
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-left-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "0px 537px";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // popup clouds from bottom-left
         for (let i = 1; i <= 4; i++) {
@@ -681,29 +812,39 @@ export function CloudsLeftDark() {
             const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsLeft = () => {
-                tl.add(clouds, {
-                    scale: [0, 1],
-                    transformOrigin: "0px 537px",
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    scale: [
-                        { to: 1.025, duration: 2000, ease: "inOutSine" },
-                        { to: 1, duration: 2000, ease: "inOutSine" },
-                        { to: 1.015, duration: 1600, ease: "inOutSine" },
-                        { to: 1, duration: 1600, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runCloudsLeft();
+            tl.add(clouds, {
+                scale: [0, 1],
+                transformOrigin: "0px 537px",
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                scale: [
+                    { to: 1.025, duration: 2000, ease: "inOutSine" },
+                    { to: 1, duration: 2000, ease: "inOutSine" },
+                    { to: 1.015, duration: 1600, ease: "inOutSine" },
+                    { to: 1, duration: 1600, ease: "inOutSine" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
-    }, []);
+
+        return () => {
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-left-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "0px 537px";
+                });
+            }
+        };
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 729 418" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -717,10 +858,24 @@ export function CloudsLeftDark() {
 
 export function CloudsRight() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
+
+        if (reducedMotion) {
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-right-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "788px 452px";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // popup clouds from bottom-right
         for (let i = 1; i <= 4; i++) {
@@ -730,29 +885,39 @@ export function CloudsRight() {
             const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsRight = () => {
-                tl.add(clouds, {
-                    scale: [0, 1],
-                    transformOrigin: "788px 452px",
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    scale: [
-                        { to: 1.025, duration: 1800, ease: "inOutSine" },
-                        { to: 1, duration: 1800, ease: "inOutSine" },
-                        { to: 1.015, duration: 1600, ease: "inOutSine" },
-                        { to: 1, duration: 1600, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runCloudsRight();
+            tl.add(clouds, {
+                scale: [0, 1],
+                transformOrigin: "788px 452px",
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                scale: [
+                    { to: 1.025, duration: 1800, ease: "inOutSine" },
+                    { to: 1, duration: 1800, ease: "inOutSine" },
+                    { to: 1.015, duration: 1600, ease: "inOutSine" },
+                    { to: 1, duration: 1600, ease: "inOutSine" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
-    }, []);
+
+        return () => {
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-right-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "788px 452px";
+                });
+            }
+        };
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 788 452" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
@@ -766,10 +931,24 @@ export function CloudsRight() {
 
 export function CloudsRightDark() {
     const svgRef = useRef<SVGSVGElement>(null);
+    const reducedMotion = useIsReducedMotion();
 
     useEffect(() => {
         if (!svgRef.current) return;
         const svg = svgRef.current;
+
+        if (reducedMotion) {
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-right-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "788px 452px";
+                });
+            }
+            return;
+        }
+
+        const anims: { pause: () => void }[] = [];
 
         // popup clouds from bottom-right
         for (let i = 1; i <= 4; i++) {
@@ -779,29 +958,39 @@ export function CloudsRightDark() {
             const tl = createTimeline();
             const delay = i * 100;
 
-            const runCloudsRight = () => {
-                tl.add(clouds, {
-                    scale: [0, 1],
-                    transformOrigin: "788px 452px",
-                    ease: spring({
-                        bounce: 0.3,
-                        duration: 500,
-                    }),
-                    delay,
-                })
-                .add(clouds, {
-                    scale: [
-                        { to: 1.025, duration: 1800, ease: "inOutSine" },
-                        { to: 1, duration: 1800, ease: "inOutSine" },
-                        { to: 1.015, duration: 1600, ease: "inOutSine" },
-                        { to: 1, duration: 1600, ease: "inOutSine" },
-                    ],
-                    loop: true,
-                });
-            };
-            runCloudsRight();
+            tl.add(clouds, {
+                scale: [0, 1],
+                transformOrigin: "788px 452px",
+                ease: spring({
+                    bounce: 0.3,
+                    duration: 500,
+                }),
+                delay,
+            })
+            .add(clouds, {
+                scale: [
+                    { to: 1.025, duration: 1800, ease: "inOutSine" },
+                    { to: 1, duration: 1800, ease: "inOutSine" },
+                    { to: 1.015, duration: 1600, ease: "inOutSine" },
+                    { to: 1, duration: 1600, ease: "inOutSine" },
+                ],
+                loop: true,
+            });
+
+            anims.push(tl);
         }
-    }, []);
+
+        return () => {
+            anims.forEach((anim) => anim.pause());
+            for (let i = 1; i <= 4; i++) {
+                const clouds = svg.querySelectorAll(`#clouds-right-${i}`);
+                clouds.forEach((el) => {
+                    (el as HTMLElement).style.transform = "scale(1)";
+                    (el as HTMLElement).style.transformOrigin = "788px 452px";
+                });
+            }
+        };
+    }, [reducedMotion]);
 
     return (
         <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 788 452" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
