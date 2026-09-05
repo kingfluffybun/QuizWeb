@@ -151,6 +151,18 @@ nav {
     max-height: calc(100dvh - 3rem);
     overflow-y: auto;
     transform: translateY(-50%);
+    animation: accessibility-panel-rise 260ms ease-out both;
+}
+
+@keyframes accessibility-panel-rise {
+    from {
+        opacity: 0;
+        transform: translateY(calc(100% + 2rem));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%);
+    }
 }
 
 .accessibility-dialog-close {
@@ -185,6 +197,24 @@ nav {
         top: auto;
         right: auto;
         transform: none;
+        animation-name: accessibility-panel-rise-mobile;
+    }
+}
+
+@keyframes accessibility-panel-rise-mobile {
+    from {
+        opacity: 0;
+        transform: translateY(2rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .accessibility-dialog-card {
+        animation: none;
     }
 }
 
