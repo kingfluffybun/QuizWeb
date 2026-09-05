@@ -114,30 +114,44 @@ function getQuizPayload(typeName: string, formData: FormData) {
         const promptCountRaw = formData.get("cp_prompt_count");
         const promptCount = Number(promptCountRaw ?? "1");
         const safePromptCount = Number.isFinite(promptCount) && promptCount > 0 ? promptCount : 1;
-        const prompts: string[] = [];
+        const steps: { prompt: string; template: string; expected: string }[] = [];
 
         for (let index = 0; index < safePromptCount; index++) {
             const prompt = (formData.get(`cp_prompt_${index}`) as string | null)?.trim() ?? "";
-            if (prompt) {
-                prompts.push(prompt);
+            const stepTemplate = (formData.get(`cp_template_${index}`) as string | null)?.trim() ?? "";
+            const fallbackTemplate = (formData.get("cp_template") as string | null)?.trim() ?? "";
+            const finalTemplate = stepTemplate || (index === 0 ? fallbackTemplate : "");
+
+            const expected = (formData.get(`cp_expected_${index}`) as string | null)?.trim() ?? "";
+            const fallbackExpected = (formData.get("cp_expected") as string | null)?.trim() ?? "";
+            const finalExpected = expected || (index === 0 ? fallbackExpected : "");
+
+            if (prompt || finalTemplate || finalExpected) {
+                if (!prompt || !finalTemplate || !finalExpected) {
+                    return {
+                        error: `Instruction, Initial Code Template, and Expected Output are all required for Step ${index + 1}.`,
+                    };
+                }
+                steps.push({ prompt, template: finalTemplate, expected: finalExpected });
             }
         }
 
-        const template = formData.get("cp_template") as string;
-        const expected = formData.get("cp_expected") as string;
-
-        if (prompts.length === 0 || !template || !expected) {
+        if (steps.length === 0) {
             return {
-                error: "Each coding problem requires at least one prompt, plus the template and expected output.",
+                error: "Each coding problem requires at least one step with Instruction, Initial Code Template, and Expected Output.",
             };
         }
 
+        const prompts = steps.map((s) => s.prompt);
+        const mainTemplate = steps[0].template;
+
         return {
             payload: {
+                steps,
                 prompts,
                 prompt: prompts[0],
-                template: template.trim(),
-                expected: expected.trim(),
+                template: mainTemplate,
+                expected: steps[0].expected,
             },
         };
     }

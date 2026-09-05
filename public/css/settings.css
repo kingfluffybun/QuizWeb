@@ -105,10 +105,12 @@ html[data-motion="reduce"] .settings-main *::after {
     /* --- Theme Grid --- */
     .theme-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
 
       .theme-btn {
+        width: 100%;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -327,5 +329,11 @@ html[data-motion="reduce"] .settings-main *::after {
         }
       }
     }
+  }
+}
+
+@media (max-width: 600px) {
+  .settings-main .theme-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -92,17 +92,15 @@ export default function QuizInputForm({
     setCpPromptCount((count) => count + 1);
   };
 
-  useEffect(() => {
-    if (types.length > 0) {
-      setSelectedTypeId(types[0].quiz_type_id.toString());
-    }
-  }, [types]);
+  const handleRemoveCPStep = () => {
+    setCpPromptCount((count) => Math.max(1, count - 1));
+  };
 
   useEffect(() => {
-    if (selectedTypeName === "CP") {
-      setCpPromptCount(1);
+    if (types.length > 0 && !selectedTypeId) {
+      setSelectedTypeId(types[0].quiz_type_id.toString());
     }
-  }, [selectedTypeName]);
+  }, [types, selectedTypeId]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -125,9 +123,10 @@ export default function QuizInputForm({
             : "Quiz successfully added to database!",
         });
 
-        // Reset only question and type-specific text inputs/textareas to allow fast batch entries
+        // Reset inputs
         setEditingQuiz(null);
         setOptionCount(4);
+        setCpPromptCount(1);
 
         // Refresh list
         const updatedQuizzes = await getRecentQuizzes();
@@ -154,6 +153,13 @@ export default function QuizInputForm({
           ? Math.max(4, quiz.quiz_payload?.pairs?.length ?? 0)
           : 4,
     );
+    if (quiz.type_name === "CP") {
+      const stepCount =
+        quiz.quiz_payload?.steps?.length ||
+        quiz.quiz_payload?.prompts?.length ||
+        1;
+      setCpPromptCount(Math.max(1, stepCount));
+    }
     setMessage(null);
   };
 
@@ -161,6 +167,7 @@ export default function QuizInputForm({
     setEditingQuiz(null);
     setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
     setOptionCount(4);
+    setCpPromptCount(1);
     setMessage(null);
   };
 
@@ -301,7 +308,7 @@ export default function QuizInputForm({
           </div>
 
           {selectedTypeName !== "CP" && (
-            <div className="form-group">
+            <div className="form-group form-group-flex">
               <label htmlFor="question_text">Question Text / Prompt</label>
               <textarea
                 id="question_text"
@@ -315,7 +322,7 @@ export default function QuizInputForm({
           )}
 
           {selectedTypeName === "CP" && (
-            <div className="form-group">
+            <div className="form-group form-group-flex">
               <label
                 style={{
                   marginBottom: "12px",
@@ -324,19 +331,19 @@ export default function QuizInputForm({
                   alignItems: "center",
                 }}
               >
-                Question Text
+                Problem Steps (Instruction, Initial Code Template & Expected Output)
                 <button
                   type="button"
                   className="btn-add-option"
                   onClick={handleAddCPPrompt}
-                  title="Add prompt"
-                  aria-label="Add prompt"
+                  title="Add step"
+                  aria-label="Add step"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
                 </button>
               </label>
               <input type="hidden" name="cp_prompt_count" value={cpPromptCount} />
-              <div className="options-grid options-grid-scrollable">
+              <div className="options-grid options-grid-scrollable" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {Array.from({ length: cpPromptCount }, (_, idx) => idx).map((idx) => (
                   <div
                     key={idx}
@@ -344,21 +351,76 @@ export default function QuizInputForm({
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: "10px",
+                      gap: "12px",
                       alignItems: "stretch",
+                      padding: "16px",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "10px",
+                      backgroundColor: "#f8fafc",
                     }}
                   >
-                    <span style={{ fontWeight: "bold" }}>Step {idx + 1}</span>
-                    <textarea
-                      name={`cp_prompt_${idx}`}
-                      className="form-textarea"
-                      placeholder="Enter the question text here..."
-                      defaultValue={
-                        editingQuiz?.quiz_payload?.prompts?.[idx] ??
-                        (idx === 0 ? editingQuiz?.question_text ?? "" : "")
-                      }
-                      required
-                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: "700", fontSize: "1rem", color: "#1e293b" }}>Step {idx + 1}</span>
+                      {cpPromptCount > 1 && (
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                          onClick={handleRemoveCPStep}
+                          title="Remove last step"
+                        >
+                          Remove Step
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155", marginBottom: "4px", display: "block" }}>
+                        Instruction
+                      </label>
+                      <textarea
+                        name={`cp_prompt_${idx}`}
+                        className="form-textarea"
+                        placeholder="Enter instruction..."
+                        defaultValue={
+                          editingQuiz?.quiz_payload?.steps?.[idx]?.prompt ??
+                          editingQuiz?.quiz_payload?.prompts?.[idx] ??
+                          (idx === 0 ? editingQuiz?.question_text ?? "" : "")
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155", marginBottom: "4px", display: "block" }}>
+                        Initial Code Template
+                      </label>
+                      <textarea
+                        name={`cp_template_${idx}`}
+                        className="form-textarea"
+                        style={{ fontFamily: "monospace" }}
+                        placeholder="e.g. function test() {\n  // your code here\n}"
+                        defaultValue={
+                          editingQuiz?.quiz_payload?.steps?.[idx]?.template ??
+                          (idx === 0 ? editingQuiz?.quiz_payload?.template ?? "" : "")
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155", marginBottom: "4px", display: "block" }}>
+                        Expected Output
+                      </label>
+                      <textarea
+                        name={`cp_expected_${idx}`}
+                        className="form-textarea"
+                        style={{ fontFamily: "monospace" }}
+                        placeholder="e.g. return true;"
+                        defaultValue={
+                          editingQuiz?.quiz_payload?.steps?.[idx]?.expected ??
+                          (idx === 0 ? editingQuiz?.quiz_payload?.expected ?? "" : "")
+                        }
+                        required
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -521,37 +583,7 @@ export default function QuizInputForm({
             </div>
           )}
 
-          {/* CP Options */}
-          {selectedTypeName === "CP" && (
-            <div className="form-group">
-              <div style={{ marginBottom: "15px" }}>
-                <label htmlFor="cp_template">Initial Code Template</label>
-                <textarea
-                  id="cp_template"
-                  name="cp_template"
-                  className="form-textarea"
-                  style={{ fontFamily: "monospace" }}
-                  placeholder="e.g. function test() {\n  // your code here\n}"
-                  defaultValue={editingQuiz?.quiz_payload?.template ?? ""}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="cp_expected">
-                  Expected Output / Answer Key Code
-                </label>
-                <textarea
-                  id="cp_expected"
-                  name="cp_expected"
-                  className="form-textarea"
-                  style={{ fontFamily: "monospace" }}
-                  placeholder="e.g. return true;"
-                  defaultValue={editingQuiz?.quiz_payload?.expected ?? ""}
-                  required
-                />
-              </div>
-            </div>
-          )}
+
 
           <button
             type="submit"
@@ -944,36 +976,79 @@ export default function QuizInputForm({
                               gap: "8px",
                             }}
                           >
-                            <div>
-                              <strong>Template:</strong>
-                              <pre
-                                style={{
-                                  margin: "4px 0",
-                                  backgroundColor: "#eee",
-                                  padding: "6px",
-                                  borderRadius: "4px",
-                                  fontSize: "0.8rem",
-                                  overflowX: "auto",
-                                }}
-                              >
-                                {payload.template}
-                              </pre>
-                            </div>
-                            <div>
-                              <strong>Expected Output:</strong>
-                              <pre
-                                style={{
-                                  margin: "4px 0",
-                                  backgroundColor: "#e2f0d9",
-                                  padding: "6px",
-                                  borderRadius: "4px",
-                                  fontSize: "0.8rem",
-                                  overflowX: "auto",
-                                }}
-                              >
-                                {payload.expected}
-                              </pre>
-                            </div>
+                            {payload.steps && payload.steps.length > 0 ? (
+                              payload.steps.map((step: any, sIdx: number) => (
+                                <div key={sIdx} style={{ backgroundColor: "#f8fafc", border: "1px solid #cbd5e1", padding: "10px 12px", borderRadius: "8px", margin: "2px 0" }}>
+                                  <div style={{ fontWeight: "700", marginBottom: "4px", color: "#1e293b" }}>Step {sIdx + 1}</div>
+                                  <div><strong>Instruction:</strong> {step.prompt}</div>
+                                  {step.template && (
+                                    <div style={{ marginTop: "6px" }}>
+                                      <strong>Initial Code Template:</strong>
+                                      <pre
+                                        style={{
+                                          margin: "2px 0 0 0",
+                                          backgroundColor: "#f1f5f9",
+                                          padding: "6px",
+                                          borderRadius: "4px",
+                                          fontSize: "0.8rem",
+                                          overflowX: "auto",
+                                        }}
+                                      >
+                                        {step.template}
+                                      </pre>
+                                    </div>
+                                  )}
+                                  <div style={{ marginTop: "6px" }}>
+                                    <strong>Expected Output:</strong>
+                                    <pre
+                                      style={{
+                                        margin: "2px 0 0 0",
+                                        backgroundColor: "#e2f0d9",
+                                        padding: "6px",
+                                        borderRadius: "4px",
+                                        fontSize: "0.8rem",
+                                        overflowX: "auto",
+                                      }}
+                                    >
+                                      {step.expected}
+                                    </pre>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div>
+                                <div>
+                                  <strong>Template:</strong>
+                                  <pre
+                                    style={{
+                                      margin: "4px 0",
+                                      backgroundColor: "#eee",
+                                      padding: "6px",
+                                      borderRadius: "4px",
+                                      fontSize: "0.8rem",
+                                      overflowX: "auto",
+                                    }}
+                                  >
+                                    {payload.template}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <strong>Expected Output:</strong>
+                                  <pre
+                                    style={{
+                                      margin: "4px 0",
+                                      backgroundColor: "#e2f0d9",
+                                      padding: "6px",
+                                      borderRadius: "4px",
+                                      fontSize: "0.8rem",
+                                      overflowX: "auto",
+                                    }}
+                                  >
+                                    {payload.expected}
+                                  </pre>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
