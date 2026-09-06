@@ -63,6 +63,8 @@
         justify-content: center;
         gap: 20px;
         z-index: 10;
+
+        > #logo-hero {display: none;}
         
         > h1, p, div h1 {
             text-align: center; 
