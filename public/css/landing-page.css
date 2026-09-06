@@ -99,8 +99,8 @@
 
 .clouds {width: 56vh;}
 .designs {user-select: none; pointer-events: none; z-index: 5;}
-#clouds-topleft {left: -66vh; top: 0;}
-#clouds-topright {right: -66vh; top: 0;}
+#clouds-topleft {left: -68vh; top: 0;}
+#clouds-topright {right: -68vh; top: 0;}
 #clouds-left {left: 0; bottom: 11.5vh;}
 #clouds-right {right: 0; bottom: 11.5vh;}
 #bus {width: 56vh; bottom: 5vh; left: 50%; transform: translate(-50%, 0); z-index: 999;}
@@ -177,10 +177,9 @@
 
 
 @media (max-width: 1024px) {
-    #clouds-topleft {left: -48vh; top: 12vh;}
-    #clouds-topright {right: -36vh; top: 12vh;}  
-    #clouds-left {left: -24vh; bottom: 12vh;}
-    #clouds-right {right: -24vh; bottom: 12vh;}
+    #clouds-topleft, #clouds-topright {display: none;}
+    #clouds-left {left: -24vh; bottom: 11vh;}
+    #clouds-right {right: -24vh; bottom: 11vh;}
 }
 
 @media (max-width: 768px) {
@@ -193,9 +192,10 @@
     .section-content {
         width: auto;
         align-items: center; text-align: center;
-        > p {font-size: 18px}
+        > p {font-size: 16px}
     }
     .section {padding: 10vh 36px; height: 80vh;}
+    .section.row.first-section {padding-top: 0;}
     #laptop, #calendar, #books {width: 100%; height:auto; transform:scale(0.75);}
     #laptop {width:110%; transform: translateY(20px) scale(0.85);}
     .pos-1 {order: 1;}
@@ -204,8 +204,8 @@
     .hero .hero-text {top: 10%; max-width: 400px;}
     #clouds-topleft, #clouds-topright {display: none;}
     #bus {width: 36vh; bottom: 10vh;}
-    #clouds-left {left: -34vh; bottom: 15vh;}
-    #clouds-right {right: -34vh; bottom: 15vh;}
+    #clouds-left {left: -34vh; bottom: 14vh;}
+    #clouds-right {right: -34vh; bottom: 14vh;}
     #ground {height: calc(15vh + 1px);}
     
     .heroDescription {

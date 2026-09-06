@@ -64,7 +64,7 @@ export default function Home() {
 
         </section>
         
-        <section className="section row">
+        <section className="section row first-section">
             <div className="section-container row">
                 <div className="section-content col ">
                     <h1>Learn By Doing</h1>
