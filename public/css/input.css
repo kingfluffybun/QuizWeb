@@ -59,6 +59,15 @@ body {
     border-radius: 20px;
     padding: 30px;
     box-shadow: 0 8px 24px rgba(153, 102, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.admin-card form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
 }
 
 .admin-card h2 {
@@ -68,8 +77,39 @@ body {
     color: var(--selected-color);
 }
 
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 20px;
+}
+
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .form-group {
     margin-bottom: 22px;
+}
+
+.form-group-flex {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.form-group-flex .form-textarea {
+    flex: 1;
+    min-height: 120px;
+}
+
+.form-group-flex .options-grid-scrollable,
+.form-group-flex .options-grid {
+    flex: 1;
+    min-height: 200px;
+    max-height: none;
+    overflow-y: auto;
 }
 
 .form-group label {
@@ -131,6 +171,10 @@ body {
     gap: 12px;
 }
 
+.option-row .form-input {
+    flex: 1;
+}
+
 .radio-check {
     width: 24px;
     height: 24px;
@@ -150,6 +194,7 @@ body {
     border-bottom: 4px solid #6b36da;
     cursor: pointer;
     width: 100%;
+    margin-top: auto;
     transition:
         transform 0.1s,
         border-bottom-width 0.1s;

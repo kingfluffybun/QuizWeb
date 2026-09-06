@@ -1,7 +1,7 @@
 "use client";
 
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
-import { signUp, reqPassReset, verifyOTP, resetPass } from "@/app/actions/auth";
+import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin, clearLoginRateLimit } from "@/app/actions/auth";
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -73,6 +73,13 @@ function AuthPage() {
             return;
         }
 
+        const rateCheck = await checkLoginRateLimit(email);
+        if (!rateCheck.allowed) {
+            setError(rateCheck.message || "Too many login attempts. Please try again later.");
+            setIsLoading(false);
+            return;
+        }
+
         const res = await signIn("credentials", {
             email,
             password,
@@ -80,12 +87,15 @@ function AuthPage() {
         });
 
         if (res?.error) {
-            setError("Invalid email or password.");
+            await recordFailedLogin(email);
+            // setError(`Invalid email or password. ${Math.max(0, rateCheck.remaining - 1)} attempts remaining.`);
+            setError(`Invalid email or password. ${rateCheck.remaining} attempts remaining.`);
             setIsLoading(false);
             return;
-        } else {
-            router.push("/");
         }
+
+        await clearLoginRateLimit(email);
+        router.push("/");
     }
 
     // === Signup ===

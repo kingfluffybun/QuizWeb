@@ -2,6 +2,7 @@
 
 import argon2 from "argon2";
 import { db } from "@/lib/db";
+import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
@@ -282,4 +283,22 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
         console.error("Reset pass error: ", error);
         return { error: "Failed to reset password. Please try again." };
     }
+}
+
+// Check Rate Limit
+export async function checkLoginRateLimit(email: string) {
+    return await checkRateLimit(`login:${email.toLowerCase().trim()}`);
+}
+
+// Failed
+export async function recordFailedLogin(email: string) {
+    await checkRateLimit(`login:${email.toLowerCase().trim()}`, true);
+    return { success: true };
+}
+
+// Clear for success
+export async function clearLoginRateLimit(email: string) {
+    const key = `login:${email.toLowerCase().trim()}`;
+    clearRateLimit(key);
+    return { success: true };
 }

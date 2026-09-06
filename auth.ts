@@ -4,6 +4,7 @@ import Github from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import argon2 from "argon2";
 import { db } from "@/lib/db";
+import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -25,6 +26,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const password = credentials?.password as string;
                 if (!email || !password) return null;
 
+                const rateCheck = await checkRateLimit(`login:${email.toLowerCase().trim()}`);
+                if (!rateCheck.allowed) {
+                    throw new Error(rateCheck.message || "Too many login attempts. Please try again later.");
+                }
+
                 // Query user_auth_tbl and join player_tbl for the username
                 const [rows] = await db.query<RowDataPacket[]>(
                     `SELECT a.user_id, a.email, a.password_hash, p.username 
@@ -38,8 +44,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 if (!user || !user.password_hash) return null;
 
                 const valid = await argon2.verify(user.password_hash, password);
-                if (!valid) return null;
+                if (!valid) {
+                    checkRateLimit(`login:${email.toLowerCase().trim()}`);
+                    return null;
+                }
 
+                clearRateLimit(`login:${email.toLowerCase().trim()}`);
                 return {
                     id: String(user.user_id),
                     email: user.email,

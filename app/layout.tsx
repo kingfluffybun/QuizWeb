@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
+import "@/public/css/settings.css";
 import AccessibilityInit from "@/app/components/AccessibilityInit";
 
 const poppins = Poppins({

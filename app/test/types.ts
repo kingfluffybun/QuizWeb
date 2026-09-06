@@ -6,9 +6,17 @@ export interface PairItem {
     right: string;
 }
 
-export interface CPQuestion {
-    template: string;
+export interface CPStep {
+    prompt: string;
+    template?: string;
     expected: string;
+}
+
+export interface CPQuestion {
+    template?: string;
+    prompt?: string;
+    expected?: string;
+    steps?: CPStep[];
 }
 
 export interface QuizPayload {
@@ -18,9 +26,11 @@ export interface QuizPayload {
     items?: string[];
     pairs?: PairItem[];
     questions?: CPQuestion[];
-    steps?: CPQuestion[];
+    steps?: CPStep[];
     template?: string;
     expected?: string;
+    prompts?: string[];
+    prompt?: string;
 }
 
 export interface QuizData {
