@@ -133,7 +133,7 @@
     cursor: pointer;
     user-select: none;
     transition:
-        all 250ms ease,
+        all 200ms ease,
         border 50ms linear;
     color: var(--text-muted);
     
@@ -156,7 +156,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        height: clamp(32px, 4vh, 60px);
+        height: clamp(44px, 4vh, 60px);
         width: clamp(44px, 5vh, 60px);
         border-radius: 8px;
         border: 3px solid var(--border-main);
@@ -200,6 +200,42 @@
 }
 
 /* =========================== End of Reorder =========================== */
+
+/* =========================== Pair =========================== */
+
+.options-container#pair {
+    align-items: flex-start;
+    flex: 1;
+    gap: 36px;
+}
+
+.pair-left-column, .pair-right-column {
+    height: 100%;
+    flex: 1;
+    > label {
+        max-height: 96px;
+        height: 100%;
+        width: 100%;
+    }
+
+    > label > .options {
+        p {width: 100%; text-align: center;}
+    }
+}
+
+.pair-left-column input[type="radio"], .pair-right-column input[type="radio"] {display: none;}
+.pair-left-column input[type="radio"]:checked + .options,
+.pair-right-column input[type="radio"]:checked + .options {
+    background-color: rgba(153, 102, 255, 0.08);
+    border-color: var(--selected-color);
+    color: var(--selected-color);
+}
+
+.pair-option-disabled {pointer-events: none; cursor: default;}
+.pair-option-disabled .options {cursor: default;}
+.pair-option-disabled .options p {color: inherit;}
+
+/* =========================== End of Pair =========================== */
 
 .quiz-page footer {
     grid-area: footer;
