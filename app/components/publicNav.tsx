@@ -14,7 +14,7 @@ export default function PublicNav() {
       <div className="col">
         <Link href="/">
           <div className="logo col">
-            <Image src="/assets/QuizWeb-logo.svg" width={64} height={64} alt=""/>
+            <Image src="/assets/QuizWeb-Logo.svg" width={64} height={64} alt=""/>
             <h2>QuizWeb</h2>
           </div>
         </Link>
