@@ -33,10 +33,10 @@ export default function QuizPage() {
               <div></div>
             </div>
         </div>
-        <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
           <div className="quiz-container">
             <h1>Which HTML element is used to define the most important heading?</h1>
-            <div className="options-container">
+            <div className="options-container" id="multiple-choice">
               <label>
                 <input type="radio" name="option" />
                 <div className="options">

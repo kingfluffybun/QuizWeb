@@ -30,11 +30,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 24px clamp(24px, 10vw, 200px);
+    padding: 48px clamp(24px, 10vw, 200px);
     gap: 20px;
 }
-
-.quiz-header {margin-top: 36px;}
 
 .quiz-page .quiz-header {
     display: flex;
@@ -85,18 +83,23 @@
     gap: 24px;
     width: 100%;
     min-width: 1080px;
+    flex: 1;
     h1 {padding: 8px 0;}
 }
 
-.quiz-page .options-container {
+/* =========================== Multiple Choice =========================== */ 
+
+.options-container#multiple-choice {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    flex: 1;
 }
 
-/* =========================== Multiple Choice =========================== */
-
 .quiz-page label {
+    max-height: 96px;
+    height: 100%;
+    width: 100%;
     input[type="radio"] {display: none;}
     input[type="radio"]:checked + .options {
         background-color: rgba(153, 102, 255, 0.08);
@@ -118,7 +121,9 @@
     padding: 0 24px;
     gap: 20px;
     width: 100%;
-    min-height: clamp(72px, 10vh, 120px);
+    height: 100%;
+    min-height: 40px;
+    max-height: 96px;
     background-color: var(--bg-card);
     border: 3px solid var(--border-main);
     border-radius: 32px;
@@ -131,11 +136,27 @@
         all 250ms ease,
         border 50ms linear;
     color: var(--text-muted);
+    
+    /* For draggables */
+    &:hover {border-color: var(--selected-color);}
+    &:active {border-bottom-width: 3px;}
+
+    &.dragging {
+        background-color: rgba(153, 102, 255, 0.08);
+        border-color: var(--selected-color);
+        color: var(--selected-color);
+        > div {
+            background-color: var(--selected-color);
+            border: none;
+            color: var(--text-inverse);
+        }
+    }
+
     > div {
         display: flex;
         align-items: center;
         justify-content: center;
-        height: clamp(44px, 5vh, 60px);
+        height: clamp(32px, 4vh, 60px);
         width: clamp(44px, 5vh, 60px);
         border-radius: 8px;
         border: 3px solid var(--border-main);
@@ -147,6 +168,38 @@
 }
 
 /* =========================== End of Multiple Choice =========================== */
+
+/* =========================== Order =========================== */
+
+.options-container#order {
+    align-items: flex-start;
+    flex: 1;
+}
+
+.order-number, .order-options {justify-content: flex-start;}
+
+.order-number {
+    height: 100%;
+    > div {
+        max-height: 96px;
+        flex: 1;
+        min-height: 0;
+        > h2 {padding: 0 20px;}
+    }
+}
+
+.order-options {
+    height: 100%;
+    flex: 1;
+    > .options {border-radius: 16px;}
+}
+
+.draggable-item {
+    cursor: grab !important;
+    will-change: transform, opacity;
+}
+
+/* =========================== End of Reorder =========================== */
 
 .quiz-page footer {
     grid-area: footer;
