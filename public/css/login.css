@@ -51,7 +51,6 @@ h1, h2, .eyebrow { font-family: 'Poppins', sans-serif; }
   padding: clamp(36px, 5vw, 72px);
   color: var(--text-inverse);
   background: var(--background-color);
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--dots) 16%, transparent) 1.4px, transparent 1.4px);
   background-size: 24px 24px;
   background-position: -4px -4px;
   z-index: 2;
@@ -120,27 +119,14 @@ h1, h2, .eyebrow { font-family: 'Poppins', sans-serif; }
   gap: 10px;
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
-  font-size: 1.08rem;
+  font-size: 1.35rem;
   letter-spacing: -0.02em;
   position: relative;
   z-index: 1;
 }
 
-.brand-mark {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: var(--primary-color);
-  border: 1px solid var(--text-inverse);
-  box-shadow: none;
-}
-
-.brand-mark svg {
-  width: 22px;
-  height: 22px;
-  color: var(--text-inverse);
+.brand img {
+  display: flex;
 }
 
 .panel {
