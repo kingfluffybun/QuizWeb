@@ -205,7 +205,12 @@
     }
 
     .hero {min-height: 108vh;}
-    .hero .hero-text {top: 16%; max-width: 400px;}
+    .hero .hero-text {
+        top: 16%; 
+        max-width: 400px;
+        > #logo-hero {display: flex;}
+    }
+    
     .heroDescription {
         flex-direction: column;
         > div { padding: 12px 24px; }
