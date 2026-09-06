@@ -78,6 +78,12 @@ export async function reqPassReset(email: string) {
             [email]
         );
 
+        // Get username from player_tbl
+        const [player] = await db.query<RowDataPacket[]>(
+            "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
+            [users[0].user_id]
+        );
+
         const genericMessage = "OTP sent successfully. Please check your email.";
 
         if (users.length === 0) {
@@ -85,7 +91,7 @@ export async function reqPassReset(email: string) {
         }
 
         const userId = users[0].user_id;
-        const username = users[0].username || "User";
+        const username = player[0].username || "User";
 
         // Generate la code
         const otpCode = String(randomInt(100000, 999999));
@@ -115,19 +121,87 @@ export async function reqPassReset(email: string) {
                 <head>
                     <meta charset="utf-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Password Reset</title>
+                    <title>Reset Your Password — QuizWeb</title>
                     <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-                        .container { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-                        .logo { text-align: center; margin-bottom: 24px; font-size: 24px; font-weight: 700; color: #1a1a1a; }
-                        .greeting { font-size: 18px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; }
-                        .message { font-size: 15px; color: #555; line-height: 1.6; margin-bottom: 24px; }
-                        .otp-box { background: #f8f9fa; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px; }
-                        .otp-code { font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1a1a1a; font-family: 'SF Mono', monospace; }
-                        .otp-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
-                        .expiry { font-size: 13px; color: #e5484d; text-align: center; margin-bottom: 24px; }
-                        .footer { font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 24px; }
-                        .footer a { color: #666; }
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            background: #fcfbff;
+                            margin: 0;
+                            padding: 40px 20px;
+                        }
+                        .container {
+                            max-width: 480px;
+                            margin: 0 auto;
+                            background: #ffffff;
+                            border-radius: 16px;
+                            padding: 48px;
+                            border: 1px solid #e0e0e0;
+                        }
+                        .logo {
+                            text-align: center;
+                            margin-bottom: 32px;
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: #9966FF;
+                            letter-spacing: -0.5px;
+                        }
+                        .greeting {
+                            font-size: 20px;
+                            font-weight: 600;
+                            color: #333333;
+                            margin-bottom: 12px;
+                        }
+                        .message {
+                            font-size: 15px;
+                            color: #666666;
+                            line-height: 1.6;
+                            margin-bottom: 28px;
+                        }
+                        .otp-box {
+                            background: #fcfbff;
+                            border: 2px solid #9966FF;
+                            border-radius: 12px;
+                            padding: 32px;
+                            text-align: center;
+                            margin-bottom: 24px;
+                        }
+                        .otp-label {
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: #9966FF;
+                            text-transform: uppercase;
+                            letter-spacing: 0.12em;
+                            margin-bottom: 12px;
+                        }
+                        .otp-code {
+                            font-size: 40px;
+                            font-weight: 700;
+                            letter-spacing: 10px;
+                            color: #333333;
+                            font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+                        }
+                        .expiry {
+                            font-size: 14px;
+                            color: #9966FF;
+                            text-align: center;
+                            margin-bottom: 28px;
+                            font-weight: 500;
+                        }
+                        .footer {
+                            font-size: 13px;
+                            color: #666666;
+                            text-align: center;
+                            border-top: 1px solid #e0e0e0;
+                            padding-top: 28px;
+                        }
+                        .footer a {
+                            color: #7D3FFF;
+                            text-decoration: none;
+                            font-weight: 500;
+                        }
+                        .footer a:hover {
+                            text-decoration: underline;
+                        }
                     </style>
                 </head>
                 <body>
@@ -141,13 +215,13 @@ export async function reqPassReset(email: string) {
                             <div class="otp-code">${otpCode}</div>
                         </div>
                         
-                        <p class="expiry">⏱️ This code expires in 10 minutes</p>
+                        <p class="expiry">This code expires in 10 minutes</p>
                         
                         <p class="message">If you didn't request a password reset, you can safely ignore this email.</p>
                         
                         <div class="footer">
-                            <p>QuizWeb — Learn Web Development</p>
-                            <p>Need help? <a href="mailto:support@yourdomain.com">Contact support</a></p>
+                            <p style="margin: 0 0 8px; font-weight: 600; color: #333333;">QuizWeb — Learn Web Development</p>
+                            <p style="margin: 0;">Need help? <a href="mailto:support@quizweb.dev">Contact support</a></p>
                         </div>
                     </div>
                 </body>
@@ -270,11 +344,97 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
             to: email,
             subject: "QuizWeb - Password Reset Confirmation",
             html: `
-                <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 40px;">
-                    <h2 style="color: #1a1a1a;">Password Updated</h2>
-                    <p style="color: #555; line-height: 1.6;">Your QuizWeb password has been successfully changed.</p>
-                    <p style="color: #999; font-size: 13px;">If you didn't make this change, please contact support immediately.</p>
-                </div>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Password Updated — QuizWeb</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            background: #fcfbff;
+                            margin: 0;
+                            padding: 40px 20px;
+                        }
+                        .container {
+                            max-width: 480px;
+                            margin: 0 auto;
+                            background: #ffffff;
+                            border-radius: 16px;
+                            padding: 48px;
+                            border: 1px solid #e0e0e0;
+                        }
+                        .logo {
+                            text-align: center;
+                            margin-bottom: 32px;
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: #9966FF;
+                            letter-spacing: -0.5px;
+                        }
+                        .heading {
+                            font-size: 24px;
+                            font-weight: 700;
+                            color: #333333;
+                            margin: 0 0 16px;
+                            text-align: center;
+                        }
+                        .message {
+                            font-size: 15px;
+                            color: #666666;
+                            line-height: 1.6;
+                            margin: 0 0 24px;
+                            text-align: center;
+                        }
+                        .alert {
+                            background: #fcfbff;
+                            border-left: 4px solid #9966FF;
+                            border-radius: 8px;
+                            padding: 16px 20px;
+                            font-size: 14px;
+                            color: #666666;
+                            line-height: 1.5;
+                        }
+                        .alert strong {
+                            color: #333333;
+                        }
+                        .footer {
+                            font-size: 13px;
+                            color: #666666;
+                            text-align: center;
+                            border-top: 1px solid #e0e0e0;
+                            padding-top: 28px;
+                            margin-top: 32px;
+                        }
+                        .footer a {
+                            color: #7D3FFF;
+                            text-decoration: none;
+                            font-weight: 500;
+                        }
+                        .footer a:hover {
+                            text-decoration: underline;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="logo">QuizWeb</div>
+                        <h2 class="heading">Password Updated</h2>
+                        <p class="message">Your QuizWeb password has been successfully changed. You can now sign in with your new password.</p>
+                        
+                        <div class="alert">
+                            <strong>Didn't make this change?</strong><br>
+                            If you didn't update your password, please <a href="mailto:support@quizweb.dev">contact support</a> immediately to secure your account.
+                        </div>
+                        
+                        <div class="footer">
+                            <p style="margin: 0 0 8px; font-weight: 600; color: #333333;">QuizWeb — Learn Web Development</p>
+                            <p style="margin: 0;">Need help? <a href="mailto:support@quizweb.dev">Contact support</a></p>
+                        </div>
+                    </div>
+                </body>
+                </html>
             `
         });
 

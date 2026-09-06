@@ -347,7 +347,9 @@ function AuthPage() {
                 {/* Info */}
                 <section className="info" aria-label="Authentication info">
                     <div className="brand">
-                        <div className="brand-mark" aria-hidden="true"></div>
+                        <div className="brand-mark">
+                            <Image src="/assets/QuizWeb-Logo.svg" alt="" width={45} height={45} />
+                        </div>
                         <span>QuizWeb</span>
                     </div>
 
