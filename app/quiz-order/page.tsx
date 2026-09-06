@@ -1,8 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import "#css/quiz.css";
 
 export default function QuizPage() {
+  const [items, setItems] = useState([
+    "<h2>Topic A Content Description</h2>",
+    "<p>Paragraph text details about topic A...</p>",
+    "<hr>",
+    "<h2>Topic B Brand New Topic Heading</h2>",
+    "<h2>Topic B Brand New Topic Heading</h2>",
+  ]);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIdx(index);
+  };
+
+  const handleDrop = (targetIndex: number) => {
+    if (draggedIdx === null || draggedIdx === targetIndex) {
+      setDraggedIdx(null);
+      return;
+    }
+
+    const updatedItems = [...items];
+    const [movedItem] = updatedItems.splice(draggedIdx, 1);
+    updatedItems.splice(targetIndex, 0, movedItem);
+    setItems(updatedItems);
+    setDraggedIdx(null);
+  };
+
   return (
     <div className="quiz-page">
       <nav></nav>
@@ -45,26 +72,20 @@ export default function QuizPage() {
                         <div className="col"><h2>5.</h2></div>            
                     </div>
                     <div className="order-options col">
-                        <div className="options draggable-item" draggable="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            <p>&lt;h2&gt;Topic A Content Description&lt;/h2&gt;</p>
+                      {items.map((item, index) => (
+                        <div
+                        key={`order-${item}-${index}`}
+                        className={`options draggable-item ${draggedIdx === index ? "dragging" : ""}`}
+                        draggable="true"
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => handleDrop(index)}
+                        onDragEnd={() => setDraggedIdx(null)}
+                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                        <p>{item}</p>
                         </div>
-                        <div className="options draggable-item" draggable="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            <p>&lt;p&gt;Paragraph text details about topic A...&lt;/p&gt;</p>
-                        </div>
-                        <div className="options draggable-item" draggable="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            <p>&lt;hr&gt;</p>
-                        </div>
-                        <div className="options draggable-item" draggable="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            <p>&lt;h2&gt;Topic B Brand New Topic Heading&lt;/h2&gt;</p>
-                        </div>
-                        <div className="options draggable-item" draggable="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            <p>&lt;h2&gt;Topic B Brand New Topic Heading&lt;/h2&gt;</p>
-                        </div>
+                      ))}
                     </div>
                 </div>
             </div>
