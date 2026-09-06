@@ -11,7 +11,7 @@ export default function PublicNav() {
 
   return (
     <nav className={menuOpen ? "menu-open" : ""}>
-      <div className="col">
+      <div className="col" id="logo-nav">
         <Link href="/">
           <div className="logo col">
             <Image src="/assets/QuizWeb-Logo.svg" width={64} height={64} alt=""/>

@@ -32,6 +32,10 @@ export default function Home() {
         <section className="hero">
             <div className="overlay"></div>
             <div className="hero-text">
+                <div className="logo col" id="logo-hero">
+                    <Image src="/assets/QuizWeb-Logo.svg" width={96} height={96} alt=""/>
+                    <h1>QuizWeb</h1>
+                </div>
                 <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
                 <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                 <div className="call-to-action row">
