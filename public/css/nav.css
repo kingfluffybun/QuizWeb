@@ -155,7 +155,7 @@ nav {
     max-height: calc(100dvh - 3rem);
     overflow-y: auto;
     transform: translateY(-50%);
-    animation: accessibility-panel-rise 260ms ease-out both;
+    animation: accessibility-panel-rise 260ms ease-in-out both;
     pointer-events: auto;
 }
 
@@ -171,7 +171,7 @@ nav {
 }
 
 .accessibility-dialog.is-closing .accessibility-dialog-card {
-    animation: accessibility-panel-fall 260ms ease-in both;
+    animation: accessibility-panel-fall 260ms ease-in-out both;
 }
 
 @keyframes accessibility-panel-fall {
