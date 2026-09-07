@@ -107,6 +107,22 @@ nav {
     background-color: var(--primary-color);
     color: var(--text-inverse);
     cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.accessibility > div > button:hover {
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 6px 14px rgba(20, 10, 40, 0.2);
+}
+
+.accessibility > div > button:active {
+    transform: translateY(0) scale(0.94);
+    box-shadow: 0 2px 5px rgba(20, 10, 40, 0.16);
+}
+
+.accessibility > div > button:focus-visible {
+    outline: 2px solid var(--text-inverse);
+    outline-offset: 4px;
 }
 
 .accessibility > div > button > div {
