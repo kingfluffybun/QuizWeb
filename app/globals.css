@@ -3,8 +3,9 @@
     /* Brand Colors */
     --primary-color: #9966FF;
     --selected-color: #7D3FFF;
+    --selected-background-color: rgba(153, 102, 255, 0.08);
     --background-color: #A883EA;
-
+    
     --bg-main: #fcfbff;
     --bg-card: #ffffff;
     --text-main: #333333;
