@@ -1,4 +1,7 @@
-import { getQuizMetadata, getRecentQuizzes } from "@/app/actions/quiz";
+import {
+    getQuizMetadata,
+    getPaginatedRecentQuizzes,
+} from "@/app/actions/quiz";
 import QuizInputForm from "./QuizInputForm";
 import "#css/input.css";
 import Link from "next/link";
@@ -7,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InputPage() {
     const metadata = await getQuizMetadata();
-    const recentQuizzes = await getRecentQuizzes();
+    const recentQuizPage = await getPaginatedRecentQuizzes();
 
     return (
         <div>
@@ -24,7 +27,10 @@ export default async function InputPage() {
                     difficulties={metadata.difficulties} 
                     types={metadata.types}
                     sections={metadata.sections ?? []}
-                    initialRecentQuizzes={recentQuizzes}
+                    initialRecentQuizzes={recentQuizPage.quizzes}
+                    initialPage={recentQuizPage.currentPage}
+                    initialTotalPages={recentQuizPage.totalPages}
+                    initialTotalCount={recentQuizPage.totalCount}
                 />
             </main>
         </div>
