@@ -85,8 +85,8 @@ h1, h2 {
     color: var(--text-main);
     font-weight: 600;
 }
-h1 { font-size: clamp(1.5rem, 3.5vw, 2.25rem); }
-h2 { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
+h1 { font-size: clamp(1.25rem, 3.25vw, 2rem); }
+h2 { font-size: clamp(1rem, 2.25vw, 1.5rem); }
 
 p {
     font-family: 'Montserrat', sans-serif;

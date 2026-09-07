@@ -32,11 +32,18 @@ export default function Home() {
         <section className="hero">
             <div className="overlay"></div>
             <div className="hero-text">
+                <div className="logo col" id="logo-hero">
+                    <Image src="/assets/QuizWeb-Logo.svg" width={96} height={96} alt=""/>
+                    <h1>QuizWeb</h1>
+                </div>
                 <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
                 <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                 <div className="call-to-action row">
-                    <h1>Start Learning</h1>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+                    <h2>Start Learning</h2>
+                    <div className="call-to-action-icon col">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+                    </div>
+                    
                 </div>
             </div>
             
@@ -64,7 +71,7 @@ export default function Home() {
 
         </section>
         
-        <section className="section row">
+        <section className="section row first-section">
             <div className="section-container row">
                 <div className="section-content col ">
                     <h1>Learn By Doing</h1>

@@ -39,7 +39,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 90vh;
+    min-height: 100vh;
     overflow-x: hidden;
 
     > img, #ground, .hero-text, .designs  {
@@ -56,13 +56,15 @@
         width: 100%;
         max-width: 1000px;
         padding: 0 20px;
-        top: 10%; left: 50%; transform: translate(-50%, -15%);
+        top: 18%; left: 50%; transform: translate(-50%, -15%);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 20px;
         z-index: 10;
+
+        > #logo-hero {display: none;}
         
         > h1, p, div h1 {
             text-align: center; 
@@ -86,21 +88,29 @@
 
 .call-to-action {
     margin-top: 20px;
-    border-radius: 24px;
-    gap: 0;
-    padding: 4px 0;
-    padding-left: 24px;
-    padding-right: 4px;
+    border-radius: 999px;
+    gap: 8px;
+    padding: 14px 28px;
     background-color: var(--bg-main);
     cursor: pointer;
     text-wrap: nowrap;
-    > h1, svg {color: var(--primary-color) !important; user-select: none;}
+    transition: 200ms all ease;
+    > h2, svg {color: var(--primary-color) !important; user-select: none;}
+    > .call-to-action-icon {
+        background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+        border-radius: 50%;
+        height: 40px; width: 40px;
+    }
+}
+
+.call-to-action:hover {
+    transform: translateY(-2px);
 }
 
 .clouds {width: 56vh;}
 .designs {user-select: none; pointer-events: none; z-index: 5;}
-#clouds-topleft {left: -66vh; top: 0;}
-#clouds-topright {right: -66vh; top: 0;}
+#clouds-topleft {left: -68vh; top: 12vh;}
+#clouds-topright {right: -68vh; top: 12vh;}
 #clouds-left {left: 0; bottom: 11.5vh;}
 #clouds-right {right: 0; bottom: 11.5vh;}
 #bus {width: 56vh; bottom: 5vh; left: 50%; transform: translate(-50%, 0); z-index: 999;}
@@ -177,15 +187,52 @@
 
 
 @media (max-width: 1024px) {
-    #clouds-topleft {left: -48vh; top: 12vh;}
-    #clouds-topright {right: -36vh; top: 12vh;}  
-    #clouds-left {left: -24vh; bottom: 12vh;}
-    #clouds-right {right: -24vh; bottom: 12vh;}
+    /* #clouds-topleft, #clouds-topright {display: none;} */
+    #clouds-left {left: -24vh; bottom: 11vh;}
+    #clouds-right {right: -24vh; bottom: 11vh;}
 }
 
 @media (max-width: 768px) {
-    nav {position: relative !important;}
-    .call-to-action {padding-top: 0; padding-bottom: 0;}
+    /* hidden for now */
+    .accessibility {display: none;} 
+    
+    nav {
+        position: fixed !important;
+        display: flex;
+        padding: 0 2rem;
+        > div:first-child {margin-right: auto; margin-left: auto;}
+        > #logo-nav {display: none;}
+    }
+
+    .hero {min-height: 108vh;}
+    .hero .hero-text {
+        top: 16%; 
+        max-width: 400px;
+        > #logo-hero {display: flex;}
+    }
+    
+    .heroDescription {
+        flex-direction: column;
+        > div { padding: 12px 24px; }
+    } 
+
+    #logo-hero {
+        display: flex;
+        width: fit-content; 
+        height: fit-content; 
+        gap: 4px;
+        svg {width: 128px;}
+        h2 {
+            color: var(--text-inverse); 
+            font-size: clamp(0.75rem, 2vw, 1.25rem);
+        }
+    }
+    
+    .call-to-action {padding-top: 8px; padding-bottom: 8px; margin-top: 0;}
+    .call-to-action > .call-to-action-icon {
+        height: 28px; width: 28px;
+        svg {width: 28px; height: 28px;}
+    }
     .section-container .row {flex-direction: column;}
     .section-container {height: auto;}
     .section .row {flex-direction: column;}
@@ -193,23 +240,20 @@
     .section-content {
         width: auto;
         align-items: center; text-align: center;
-        > p {font-size: 18px}
+        > p {font-size: 16px}
     }
     .section {padding: 10vh 36px; height: 80vh;}
+    .section.row.first-section {padding-top: 0;}
     #laptop, #calendar, #books {width: 100%; height:auto; transform:scale(0.75);}
     #laptop {width:110%; transform: translateY(20px) scale(0.85);}
     .pos-1 {order: 1;}
     .pos-2 {order: 2;}
 
-    .hero .hero-text {top: 10%; max-width: 400px;}
-    #clouds-topleft, #clouds-topright {display: none;}
+
+    #clouds-topleft {left: -88vh; top: 12vh;}
+    #clouds-topright {right: -88vh; top: 12vh;}
     #bus {width: 36vh; bottom: 10vh;}
-    #clouds-left {left: -34vh; bottom: 15vh;}
-    #clouds-right {right: -34vh; bottom: 15vh;}
+    #clouds-left {left: -34vh; bottom: 14vh;}
+    #clouds-right {right: -34vh; bottom: 14vh;}
     #ground {height: calc(15vh + 1px);}
-    
-    .heroDescription {
-        flex-direction: column;
-        > div { padding: 12px 24px; }
-    } 
 }

@@ -1,28 +1,20 @@
 nav {
     top: 0;
-    position: sticky;
+    position: fixed;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     height: 10vh;
     min-height: 10vh;
     max-height: 10vh;
-    flex: 0 0 10vh;
     width: 100%;
-    padding: 0 2rem;
+    padding: 2rem;
     z-index: 1000;
-    background-color: var(--background-color);
+    background-color: transparent;
+    p {color: var(--text-inverse);}
 
-    p {color: white;}
-
-    > div:first-child {margin-right: auto;}
-    
-    > div {
-        margin: 0 0.75rem;
-    } 
-    
-    div a {
-        text-decoration: none;
-    }
+    > div:first-child {margin-right: auto; }
+    > div {margin: 0 0.75rem;} 
+    > div a {text-decoration: none;}
     
     > div a p {
         font-size: 1.125rem;
@@ -51,7 +43,7 @@ nav {
         z-index: 2101;
 
         > div > a > div {
-            color: white;
+            color: var(--text-inverse);
             width: 3rem;
             height: 3rem;
             display: flex;
@@ -63,9 +55,19 @@ nav {
 
             svg {
                 display: block;
-                stroke: white;
+                stroke: var(--text-inverse);
             }
         }
+    }
+}
+
+.logo {
+    width: fit-content; 
+    height: fit-content; 
+    gap: 4px;
+    h2 {
+        color: var(--text-inverse); 
+        font-size: clamp(0.75rem, 2vw, 1.25rem);
     }
 }
 
@@ -103,7 +105,7 @@ nav {
     border: 0;
     border-radius: 50%;
     background-color: var(--primary-color);
-    color: white;
+    color: var(--text-inverse);
     cursor: pointer;
 }
 

@@ -29,9 +29,9 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    padding: 24px clamp(24px, 10vw, 200px);
+    padding: 48px clamp(24px, 10vw, 200px);
+    gap: 20px;
 }
 
 .quiz-page .quiz-header {
@@ -40,6 +40,7 @@
     height: auto;
     gap: 20px;
     width: 100%;
+    max-width: 1080px;
 
     > .quiz-navigation {
         display: flex;
@@ -81,38 +82,37 @@
     flex-direction: column;
     gap: 24px;
     width: 100%;
+    min-width: 1080px;
+    flex: 1;
+    h1 {padding: 8px 0;}
 }
 
-.quiz-page .options-container {
+/* =========================== Multiple Choice =========================== */ 
+
+.options-container#multiple-choice {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    flex: 1;
 }
 
 .quiz-page label {
-    input[type="radio"] {
-        display: none;
-    }
-
+    max-height: 96px;
+    height: 100%;
+    width: 100%;
+    input[type="radio"] {display: none;}
     input[type="radio"]:checked + .options {
         background-color: rgba(153, 102, 255, 0.08);
         border-color: var(--selected-color);
         color: var(--selected-color);
-
         > div {
             background-color: var(--selected-color);
             border: none;
             color: var(--text-inverse);
         }
     }
-
-    input[type="radio"]:hover + .options {
-        border-color: var(--selected-color);
-    }
-
-    input[type="radio"]:active + .options {
-        border-bottom-width: 4px;
-    }
+    input[type="radio"]:hover + .options {border-color: var(--selected-color);}
+    input[type="radio"]:active + .options {border-bottom-width: 3px;}
 }
 
 .quiz-page .options {
@@ -121,33 +121,121 @@
     padding: 0 24px;
     gap: 20px;
     width: 100%;
-    min-height: clamp(72px, 10vh, 120px);
+    height: 100%;
+    min-height: 40px;
+    max-height: 96px;
     background-color: var(--bg-card);
-    border: 4px solid var(--border-main);
+    border: 3px solid var(--border-main);
     border-radius: 32px;
-    border-bottom: 6px solid var(--border-main);
+    border-bottom: 5px solid var(--border-main);
     font-family: "Poppins", sans-serif;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     user-select: none;
     transition:
-        all 250ms ease,
-        border 100ms linear;
+        all 200ms ease,
+        border 50ms linear;
     color: var(--text-muted);
+    
+    /* For draggables */
+    &:hover {border-color: var(--selected-color);}
+    &:active {border-bottom-width: 3px;}
+
+    &.dragging {
+        background-color: rgba(153, 102, 255, 0.08);
+        border-color: var(--selected-color);
+        color: var(--selected-color);
+        > div {
+            background-color: var(--selected-color);
+            border: none;
+            color: var(--text-inverse);
+        }
+    }
+
     > div {
         display: flex;
         align-items: center;
         justify-content: center;
-        height: clamp(44px, 5vh, 60px);
+        height: clamp(44px, 4vh, 60px);
         width: clamp(44px, 5vh, 60px);
         border-radius: 8px;
-        border: 4px solid var(--border-main);
+        border: 3px solid var(--border-main);
         color: var(--text-muted);
         font-weight: 600;
         font-size: clamp(1.1rem, 1.5vw, 1.5rem);
         transition: all 200ms ease;
     }
 }
+
+/* =========================== End of Multiple Choice =========================== */
+
+/* =========================== Order =========================== */
+
+.options-container#order {
+    align-items: flex-start;
+    flex: 1;
+}
+
+.order-number, .order-options {justify-content: flex-start;}
+
+.order-number {
+    height: 100%;
+    > div {
+        max-height: 96px;
+        flex: 1;
+        min-height: 0;
+        > h2 {padding: 0 20px;}
+    }
+}
+
+.order-options {
+    height: 100%;
+    flex: 1;
+    > .options {border-radius: 16px;}
+}
+
+.draggable-item {
+    cursor: grab !important;
+    will-change: transform, opacity;
+}
+
+/* =========================== End of Reorder =========================== */
+
+/* =========================== Pair =========================== */
+
+.options-container#pair {
+    align-items: flex-start;
+    flex: 1;
+    gap: 36px;
+}
+
+.pair-left-column, .pair-right-column {
+    height: 100%;
+    flex: 1;
+    > label {
+        max-height: 96px;
+        height: 100%;
+        width: 100%;
+    }
+
+    > label > .options {
+        p {width: 100%; text-align: center;}
+    }
+}
+
+.pair-left-column input[type="radio"], .pair-right-column input[type="radio"] {display: none;}
+.pair-left-column input[type="radio"]:checked + .options,
+.pair-right-column input[type="radio"]:checked + .options {
+    background-color: rgba(153, 102, 255, 0.08);
+    border-color: var(--selected-color);
+    color: var(--selected-color);
+}
+
+.pair-option-disabled {pointer-events: none; cursor: default;}
+.pair-option-disabled .options {cursor: default;}
+.pair-option-disabled .options p {color: inherit;}
+
+/* =========================== End of Pair =========================== */
 
 .quiz-page footer {
     grid-area: footer;
@@ -158,23 +246,35 @@
     padding: 36px clamp(24px, 10vw, 200px);
 
     > div {
-        > .options {
+        > button.options {
             justify-content: center;
             min-height: clamp(56px, 6vh, 80px);
             width: 320px;
             font-size: clamp(1rem, 1.2vw, 2rem);
-            font-weight: 700;
         }
 
-        > .options#submit {
+        > button.options#submit {
+            position: relative;
             background-color: var(--selected-color);
             border: none;
             border-bottom: 6px solid #6b36da;
             color: var(--text-inverse);
         }
 
-        .options#skip {
-            color: var(--text-muted);
+        > button.options#submit::after {
+            content: "";
+            position: absolute;
+            transition: all ease 200ms;
+            top: 0; bottom: 0;
+            background-color: rgba(255, 255, 255, 0);
+            height: 100%; width: 100%;
         }
+
+        > button.options#submit:hover::after {background-color: rgba(255, 255, 255, 0.1);}
+        > button.options#skip {color: #AFAFAF;}
+        > button.options#skip:active {border-bottom-width: 3px;}
+        > button.options#submit:active {border-bottom-width: 0;}
     }
 }
+
+

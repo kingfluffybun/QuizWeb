@@ -402,7 +402,6 @@ export default function QuizInputForm({
                           editingQuiz?.quiz_payload?.steps?.[idx]?.template ??
                           (idx === 0 ? editingQuiz?.quiz_payload?.template ?? "" : "")
                         }
-                        required
                       />
                     </div>
                     <div>

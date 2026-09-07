@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import AccessibilityPanel from "../settings/AccessibilityPanel";
@@ -23,9 +24,12 @@ export default function PublicNav() {
 
   return (
     <nav className={menuOpen ? "menu-open" : ""}>
-      <div>
+      <div className="col" id="logo-nav">
         <Link href="/">
-          <p>Logo</p>
+          <div className="logo col">
+            <Image src="/assets/QuizWeb-Logo.svg" width={64} height={64} alt=""/>
+            <h2>QuizWeb</h2>
+          </div>
         </Link>
       </div>
       

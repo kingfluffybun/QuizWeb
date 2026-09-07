@@ -127,9 +127,9 @@ function getQuizPayload(typeName: string, formData: FormData) {
             const finalExpected = expected || (index === 0 ? fallbackExpected : "");
 
             if (prompt || finalTemplate || finalExpected) {
-                if (!prompt || !finalTemplate || !finalExpected) {
+                if (!prompt || !finalExpected) {
                     return {
-                        error: `Instruction, Initial Code Template, and Expected Output are all required for Step ${index + 1}.`,
+                        error: `Instruction and Expected Output are required for Step ${index + 1}.`,
                     };
                 }
                 steps.push({ prompt, template: finalTemplate, expected: finalExpected });
@@ -138,7 +138,7 @@ function getQuizPayload(typeName: string, formData: FormData) {
 
         if (steps.length === 0) {
             return {
-                error: "Each coding problem requires at least one step with Instruction, Initial Code Template, and Expected Output.",
+                error: "Each coding problem requires at least one step with Instruction and Expected Output.",
             };
         }
 
