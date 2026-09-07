@@ -170,6 +170,21 @@ nav {
     }
 }
 
+.accessibility-dialog.is-closing .accessibility-dialog-card {
+    animation: accessibility-panel-fall 260ms ease-in both;
+}
+
+@keyframes accessibility-panel-fall {
+    from {
+        opacity: 1;
+        transform: translateY(-50%);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(calc(100% + 2rem));
+    }
+}
+
 .accessibility-dialog-close {
     position: absolute;
     top: 1.25rem;
@@ -217,6 +232,23 @@ nav {
     }
 }
 
+@media (max-width: 600px) {
+    .accessibility-dialog.is-closing .accessibility-dialog-card {
+        animation-name: accessibility-panel-fall-mobile;
+    }
+}
+
+@keyframes accessibility-panel-fall-mobile {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(2rem);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .accessibility-dialog-card {
         animation: none;
@@ -245,7 +277,7 @@ nav {
         pointer-events: none;
         transition: none;
     }
-    
+
     nav div:first-child {margin-left: 0;}
 
     nav::before {
