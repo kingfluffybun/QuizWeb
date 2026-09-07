@@ -102,17 +102,17 @@
     width: 100%;
     input[type="radio"] {display: none;}
     input[type="radio"]:checked + .options {
-        background-color: rgba(153, 102, 255, 0.08);
+        background-color: var(--selected-background-color);
         border-color: var(--selected-color);
-        color: var(--selected-color);
+        > p {color: var(--selected-color);}
         > div {
             background-color: var(--selected-color);
             border: none;
             color: var(--text-inverse);
         }
     }
-    input[type="radio"]:hover + .options {border-color: var(--selected-color);}
-    input[type="radio"]:active + .options {border-bottom-width: 3px;}
+    input[type="radio"]:hover + .options {transform: translateY(-2px);}
+    input[type="radio"]:active + .options {border-bottom-width: 3px; transform: translateY(2px);}
 }
 
 .quiz-page .options {
@@ -133,16 +133,31 @@
     cursor: pointer;
     user-select: none;
     transition:
-        all 200ms ease,
-        border 50ms linear;
+        transform 0.15s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
     color: var(--text-muted);
+    > svg, p {pointer-events: none;}
     
     /* For draggables */
-    &:hover {border-color: var(--selected-color);}
-    &:active {border-bottom-width: 3px;}
-
+    &:hover {
+        transform: translateY(-2px); 
+        /* border-color: var(--selected-color);  */
+        /* background-color: var(--selected-background-color); 
+        > p, svg {color: var(--selected-color);} */
+    }
+    &:active {
+        border-color: var(--selected-color); 
+        background-color: var(--selected-background-color);
+        border-bottom-width: 3px;
+        padding-bottom: 2px;
+        transform: translateY(2px);
+        p, svg {color: var(--selected-color);}
+    }
+    
     &.dragging {
-        background-color: rgba(153, 102, 255, 0.08);
+        background-color: var(--selected-background-color);
         border-color: var(--selected-color);
         color: var(--selected-color);
         > div {
@@ -199,6 +214,35 @@
     will-change: transform, opacity;
 }
 
+.draggable-item:active{
+    cursor: grabbing !important;
+}
+
+.draggable-item.is-dragging {
+    /* opacity: 0.35; */
+    border-style: dashed;
+    border-color: var(--selected-color);
+    transform: scale(0.98);
+}
+
+.draggable-item.is-over {
+    border-color: var(--selected-color);
+    background-color: var(--selected-background-color);
+    /* transform: translateY(-4px); */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    > svg, p {color: var(--selected-color);}
+}
+
+.draggable-item.swap-animation-start { transition: none; }
+.draggable-item.swap-animation-settle {
+    transform: translateY(0);
+    transition: transform 220ms ease-in-out;
+}
+.draggable-item.swap-animation-start.swap-moved-down { transform: translateY(calc((100% + 12px) * var(--swap-distance) * -1)); }
+.draggable-item.swap-animation-start.swap-moved-up { transform: translateY(calc((100% + 12px) * var(--swap-distance))); }
+.draggable-item.swap-animation-start.swap-shifted-down { transform: translateY(calc(100% + 12px)); }
+.draggable-item.swap-animation-start.swap-shifted-up { transform: translateY(calc(-100% - 12px)); }
+
 /* =========================== End of Reorder =========================== */
 
 /* =========================== Pair =========================== */
@@ -226,7 +270,7 @@
 .pair-left-column input[type="radio"], .pair-right-column input[type="radio"] {display: none;}
 .pair-left-column input[type="radio"]:checked + .options,
 .pair-right-column input[type="radio"]:checked + .options {
-    background-color: rgba(153, 102, 255, 0.08);
+    background-color: var(--selected-background-color);
     border-color: var(--selected-color);
     color: var(--selected-color);
 }
@@ -251,6 +295,7 @@
             min-height: clamp(56px, 6vh, 80px);
             width: 320px;
             font-size: clamp(1rem, 1.2vw, 2rem);
+            transition: all 200ms ease;
         }
 
         > button.options#submit {
@@ -272,6 +317,7 @@
 
         > button.options#submit:hover::after {background-color: rgba(255, 255, 255, 0.1);}
         > button.options#skip {color: #AFAFAF;}
+        > button.options#skip:hover {filter:brightness(0.9); border-color: var(--border-main);}
         > button.options#skip:active {border-bottom-width: 3px;}
         > button.options#submit:active {border-bottom-width: 0;}
     }
