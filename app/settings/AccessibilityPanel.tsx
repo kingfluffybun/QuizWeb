@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type AccessibilityPanelProps = {
+  isClosing?: boolean;
   onClose?: () => void;
+  onClosed?: () => void;
 };
 
-export default function AccessibilityPanel({ onClose }: AccessibilityPanelProps) {
+export default function AccessibilityPanel({ isClosing = false, onClose, onClosed }: AccessibilityPanelProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [theme, setTheme] = useState("light");
   const [uiScale, setUiScale] = useState("100");
   const [reduceMotion, setReduceMotion] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -47,6 +50,25 @@ export default function AccessibilityPanel({ onClose }: AccessibilityPanelProps)
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const handleAnimationEnd = () => {
+    if (isClosing) onClosed?.();
+  };
+
+  useEffect(() => {
+    if (!onClose) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-accessibility-trigger]")) return;
+      if (target instanceof Node && !panelRef.current?.contains(target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [onClose]);
+
   if (!isMounted) return null;
 
   const scaleMin = 90;
@@ -54,9 +76,9 @@ export default function AccessibilityPanel({ onClose }: AccessibilityPanelProps)
   const scalePercentage = ((Number(uiScale) - scaleMin) / (scaleMax - scaleMin)) * 100;
 
   return (
-    <div className="accessibility-dialog settings-main" role="dialog" aria-modal="true" aria-labelledby="accessibility-title">
+    <div className={`accessibility-dialog settings-main${isClosing ? " is-closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="accessibility-title">
       <button className="accessibility-dialog-backdrop" type="button" aria-label="Close accessibility options" onClick={onClose} />
-      <section className="settings-card accessibility-dialog-card">
+      <section ref={panelRef} className="settings-card accessibility-dialog-card" onAnimationEnd={handleAnimationEnd}>
         <button className="accessibility-dialog-close" type="button" aria-label="Close accessibility options" onClick={onClose}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M6 6l12 12" />
