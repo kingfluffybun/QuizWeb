@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   createQuiz,
-  getRecentQuizzes,
+  getPaginatedRecentQuizzes,
   updateQuiz,
   deleteQuiz,
 } from "../actions/quiz";
@@ -16,6 +16,9 @@ interface QuizInputFormProps {
   types: QuizType[];
   sections?: { sec_id: number; sec_num: string }[];
   initialRecentQuizzes: any[];
+  initialPage: number;
+  initialTotalPages: number;
+  initialTotalCount: number;
 }
 
 export default function QuizInputForm({
@@ -24,11 +27,17 @@ export default function QuizInputForm({
   types,
   sections = [],
   initialRecentQuizzes,
+  initialPage,
+  initialTotalPages,
+  initialTotalCount,
 }: QuizInputFormProps) {
   const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
   const [recentQuizzes, setRecentQuizzes] =
     useState<any[]>(initialRecentQuizzes);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [isPending, setIsPending] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
   const [message, setMessage] = useState<{
@@ -96,6 +105,19 @@ export default function QuizInputForm({
     setCpPromptCount((count) => Math.max(1, count - 1));
   };
 
+  const loadQuizPage = async (page: number) => {
+    setIsPending(true);
+    try {
+      const result = await getPaginatedRecentQuizzes(page);
+      setRecentQuizzes(result.quizzes);
+      setCurrentPage(result.currentPage);
+      setTotalPages(result.totalPages);
+      setTotalCount(result.totalCount);
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   useEffect(() => {
     if (types.length > 0 && !selectedTypeId) {
       setSelectedTypeId(types[0].quiz_type_id.toString());
@@ -129,8 +151,7 @@ export default function QuizInputForm({
         setCpPromptCount(1);
 
         // Refresh list
-        const updatedQuizzes = await getRecentQuizzes();
-        setRecentQuizzes(updatedQuizzes);
+        await loadQuizPage(currentPage);
       }
     } catch (err) {
       console.error("Submission error:", err);
@@ -187,8 +208,7 @@ export default function QuizInputForm({
         });
 
         // Refresh list
-        const updatedQuizzes = await getRecentQuizzes();
-        setRecentQuizzes(updatedQuizzes);
+        await loadQuizPage(currentPage);
       }
     } catch (err) {
       console.error("Delete error:", err);
@@ -1058,6 +1078,30 @@ export default function QuizInputForm({
             </div>
           )
         }
+
+        {totalCount > 0 && (
+          <div className="pagination-controls" aria-label="Quiz pagination">
+            <button
+              type="button"
+              className="pagination-button"
+              onClick={() => loadQuizPage(currentPage - 1)}
+              disabled={isPending || currentPage === 1}
+            >
+              Previous
+            </button>
+            <span className="pagination-status">
+              Page {currentPage} of {totalPages} ({totalCount} questions)
+            </span>
+            <button
+              type="button"
+              className="pagination-button"
+              onClick={() => loadQuizPage(currentPage + 1)}
+              disabled={isPending || currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div >
     </>
   );
