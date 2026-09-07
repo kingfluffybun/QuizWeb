@@ -212,6 +212,56 @@ body {
     transform: none;
 }
 
+.pagination-button {
+    padding: 8px 14px;
+    border: none;
+    border-bottom: 4px solid #6b36da;
+    border-radius: 10px;
+    background-color: var(--selected-color);
+    color: #ffffff;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    transition:
+        transform 0.1s,
+        border-bottom-width 0.1s;
+}
+
+.pagination-button:hover:not(:disabled) {
+    background-color: var(--selected-color);
+    color: #ffffff;
+}
+
+.pagination-button:active:not(:disabled) {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+}
+
+.pagination-button:disabled {
+    background-color: #ccc;
+    border-bottom-color: #aaa;
+    cursor: not-allowed;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.pagination-status {
+    flex: 1;
+    color: #444;
+    font-family: "Montserrat", sans-serif;
+    font-size: 0.95rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
 .quiz-list-item {
     border-bottom: 1.5px solid #e0e0e0;
     padding: 20px 0;
@@ -503,6 +553,15 @@ body {
 }
 
 @media (max-width: 480px) {
+    .pagination-controls {
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .pagination-status {
+        font-size: 0.8rem;
+    }
+
     .filter-grid {
         grid-template-columns: 1fr;
     }
