@@ -36,7 +36,9 @@ export default function QuizPage() {
         <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
           <div className="quiz-container">
             <h1>The &lt;a&gt; tag is an inline element, which means it requires text or an image inside it to serve as the clickable ______ on the screen.</h1>
-            <textarea placeholder="Type the missing word"></textarea>
+            <div className="options-container row" id="ftb">
+              <textarea placeholder="Type the missing word"></textarea>
+            </div>
           </div>
         </div>
       </main>

@@ -281,11 +281,18 @@
 
 /* =========================== End of Pair =========================== */
 
+.options-container#ftb {
+    align-items: flex-start;
+    flex: 1;
+}
+
 textarea {
     border: 2px solid var(--border-main);
     border-radius: 12px;
     padding: 24px 16px;
-    height: 320px;
+    height: 100%;
+    max-height: 320px;
+    flex: 1;
     resize: none;
     
     font-family: 'Montserrat', sans-serif;
@@ -310,7 +317,7 @@ textarea {
             justify-content: center;
             min-height: clamp(56px, 6vh, 80px);
             width: 320px;
-            font-size: clamp(1rem, 1.2vw, 2rem);
+            font-size: clamp(1rem, 1vw, 2rem);
             transition: all 200ms ease;
         }
 
