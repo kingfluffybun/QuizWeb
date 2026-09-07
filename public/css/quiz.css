@@ -281,6 +281,22 @@
 
 /* =========================== End of Pair =========================== */
 
+textarea {
+    border: 2px solid var(--border-main);
+    border-radius: 12px;
+    padding: 24px 16px;
+    height: 320px;
+    resize: none;
+    
+    font-family: 'Montserrat', sans-serif;
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    font-weight: 500;
+    color: var(--text-main);
+
+    &:focus{outline: none;}
+}
+
+
 .quiz-page footer {
     grid-area: footer;
     background-color: var(--bg-card);
