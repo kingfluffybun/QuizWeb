@@ -277,9 +277,22 @@ export async function getQuizMetadata() {
     }
 }
 
-export async function getRecentQuizzes() {
+export async function getPaginatedRecentQuizzes(page = 1, pageSize = 20) {
     try {
         await seedIfNeeded();
+        const safePageSize = Math.max(1, Math.floor(pageSize));
+        const [countRows] = await db.query<RowDataPacket[]>(`
+            SELECT COUNT(*) AS total
+            FROM quiz_tbl q
+            JOIN cat_tbl c ON q.cat_id = c.cat_id
+            JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+            JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+            JOIN sec_tbl s ON q.sec_id = s.sec_id
+        `);
+        const totalCount = Number(countRows[0]?.total ?? 0);
+        const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+        const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
+        const offset = (currentPage - 1) * safePageSize;
         const [quizzes] = await db.query<QuizRow[]>(`
             SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
                    q.question_text, q.quiz_payload,
@@ -289,21 +302,32 @@ export async function getRecentQuizzes() {
             JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
             JOIN sec_tbl s ON q.sec_id = s.sec_id
-            ORDER BY q.quiz_id DESC LIMIT 20
-        `);
+            ORDER BY q.quiz_id DESC
+            LIMIT ? OFFSET ?
+        `, [safePageSize, offset]);
 
-        return quizzes.map((q) => ({
-            ...q,
-            sec_num: q.sec_num ?? undefined,
-            quiz_payload:
-                typeof q.quiz_payload === "string"
-                    ? JSON.parse(q.quiz_payload)
-                    : q.quiz_payload,
-        }));
+        return {
+            quizzes: quizzes.map((q) => ({
+                ...q,
+                sec_num: q.sec_num ?? undefined,
+                quiz_payload:
+                    typeof q.quiz_payload === "string"
+                        ? JSON.parse(q.quiz_payload)
+                        : q.quiz_payload,
+            })),
+            currentPage,
+            totalPages,
+            totalCount,
+        };
     } catch (error) {
         console.error("Failed to fetch recent quizzes:", error);
-        return [];
+        return { quizzes: [], currentPage: 1, totalPages: 1, totalCount: 0 };
     }
+}
+
+export async function getRecentQuizzes() {
+    const result = await getPaginatedRecentQuizzes(1, 20);
+    return result.quizzes;
 }
 
 export async function createQuiz(state: any, formData: FormData) {
