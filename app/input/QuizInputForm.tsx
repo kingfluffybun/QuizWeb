@@ -216,7 +216,14 @@ export default function QuizInputForm({
   const loadQuizPage = async (page: number) => {
     setIsPending(true);
     try {
-      const result = await getPaginatedRecentQuizzes(page);
+      const result = await getPaginatedRecentQuizzes(page, 20, {
+        id: idFilter,
+        search: searchFilter,
+        category: categoryFilter,
+        section: sectionFilter,
+        difficulty: difficultyFilter,
+        type: typeFilter,
+      });
       setRecentQuizzes(result.quizzes);
       setCurrentPage(result.currentPage);
       setTotalPages(result.totalPages);
@@ -225,6 +232,14 @@ export default function QuizInputForm({
       setIsPending(false);
     }
   };
+
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(() => {
+      void loadQuizPage(1);
+    }, 150);
+
+    return () => window.clearTimeout(refreshTimer);
+  }, [idFilter, searchFilter, categoryFilter, sectionFilter, difficultyFilter, typeFilter]);
 
   useEffect(() => {
     if (types.length > 0 && !selectedTypeId) {
@@ -986,6 +1001,21 @@ export default function QuizInputForm({
               ))}
             </select>
           </div>
+
+          {selectedTypeName === "CP" && (
+            <div className="form-group">
+              <label htmlFor="cp_title">Coding Problem Title</label>
+              <input
+                id="cp_title"
+                name="cp_title"
+                type="text"
+                className="form-input"
+                placeholder="Enter coding problem title..."
+                defaultValue={editingQuiz?.quiz_payload?.title ?? ""}
+                required
+              />
+            </div>
+          )}
 
           {selectedTypeName !== "CP" && (
             <div className="form-group form-group-flex">
@@ -1835,7 +1865,9 @@ export default function QuizInputForm({
                         className="quiz-list-question"
                         style={{ marginBottom: 0 }}
                       >
-                        {quiz.question_text}
+                        {quiz.type_name === "CP" && quiz.quiz_payload?.title
+                          ? quiz.quiz_payload.title
+                          : quiz.question_text}
                       </div>
                       <div
                         style={{
