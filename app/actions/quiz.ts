@@ -330,6 +330,36 @@ export async function getRecentQuizzes() {
     return result.quizzes;
 }
 
+export async function getQuizzesByType(typeName: "MCQ" | "FITB" | "Order" | "Pair") {
+    try {
+        await seedIfNeeded();
+        const [quizzes] = await db.query<QuizRow[]>(`
+            SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
+                   q.question_text, q.quiz_payload,
+                   c.cat_name, d.difficulty_name, t.type_name
+            FROM quiz_tbl q
+            JOIN cat_tbl c ON q.cat_id = c.cat_id
+            JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+            JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+            LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
+            WHERE t.type_name = ?
+            ORDER BY q.quiz_id DESC
+        `, [typeName]);
+
+        return quizzes.map((quiz) => ({
+            ...quiz,
+            sec_num: quiz.sec_num ?? undefined,
+            quiz_payload:
+                typeof quiz.quiz_payload === "string"
+                    ? JSON.parse(quiz.quiz_payload)
+                    : quiz.quiz_payload,
+        }));
+    } catch (error) {
+        console.error(`Failed to fetch ${typeName} quiz:`, error);
+        return [];
+    }
+}
+
 export async function createQuiz(state: any, formData: FormData) {
     const catId = formData.get("cat_id");
     const secId = formData.get("sec_id");
