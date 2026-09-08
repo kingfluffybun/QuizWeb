@@ -1206,6 +1206,34 @@ body {
     color: #ffffff;
 }
 
+.metric-chip.dimmed {
+    opacity: 0.6;
+}
+
+.metric-chip.dimmed .metric-chip-count {
+    color: #94a3b8;
+    background: #f8fafc;
+}
+
+.metric-reset-link {
+    background: none;
+    border: none;
+    color: var(--selected-color);
+    cursor: pointer;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 6px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+}
+
+.metric-reset-link:hover {
+    color: var(--primary-color);
+}
+
 /* Health status note inside card */
 .metric-health-note {
     font-size: 0.76rem;

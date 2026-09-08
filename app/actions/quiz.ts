@@ -23,6 +23,13 @@ export interface QuizType {
     type_name: string;
 }
 
+export interface QuizFacetedCount {
+    cat_name: string;
+    difficulty_name: string;
+    type_name: string;
+    count: number;
+}
+
 export interface QuizMetricsData {
     totalQuizzes: number;
     byCategory: { cat_id: number; cat_name: string; count: number; percentage: number }[];
@@ -35,6 +42,7 @@ export interface QuizMetricsData {
         difficulties: { [diffName: string]: number };
         total: number;
     }[];
+    facetedBreakdown: QuizFacetedCount[];
 }
 
 export interface QuizRow extends RowDataPacket {
@@ -174,65 +182,79 @@ function getQuizPayload(typeName: string, formData: FormData) {
 }
 
 async function seedIfNeeded() {
-    // Check if we need to reset the tables (if the categories, difficulties, or types are out of sync)
-    const [currentTypes] = await db.query<RowDataPacket[]>(
-        "SELECT type_name FROM quiz_type_tbl",
-    );
-    const typeNames = currentTypes.map((t) => t.type_name);
-    const targetTypes = ["MCQ", "FITB", "Order", "Pair", "CP"];
-
-    // Also check categories and difficulties
-    const [currentCats] = await db.query<RowDataPacket[]>(
-        "SELECT cat_name FROM cat_tbl",
-    );
-    const catNames = currentCats.map((c) => c.cat_name);
-    const targetCats = ["HTML", "CSS", "JavaScript"];
-
-    const [currentDiffs] = await db.query<RowDataPacket[]>(
-        "SELECT difficulty_name FROM difficulty_tbl",
-    );
-    const diffNames = currentDiffs.map((d) => d.difficulty_name);
-    const targetDiffs = ["Beginner", "Intermediate", "Advanced"];
-
-    const needsReset =
-        typeNames.length !== targetTypes.length ||
-        !targetTypes.every((t) => typeNames.includes(t)) ||
-        catNames.length !== targetCats.length ||
-        !targetCats.every((c) => catNames.includes(c)) ||
-        diffNames.length !== targetDiffs.length ||
-        !targetDiffs.every((d) => diffNames.includes(d));
-
-    if (needsReset) {
-        console.log(
-            "Database schema/lookup out of sync. Resetting lookup tables...",
+    try {
+        // Check if we need to reset the tables (if the categories, difficulties, or types are out of sync)
+        const result = await db.query<RowDataPacket[]>(
+            "SELECT type_name FROM quiz_type_tbl",
         );
-        await db.query("SET FOREIGN_KEY_CHECKS = 0");
-        await db.query("TRUNCATE TABLE quiz_tbl");
-        await db.query("TRUNCATE TABLE cat_tbl");
-        await db.query("TRUNCATE TABLE difficulty_tbl");
-        await db.query("TRUNCATE TABLE quiz_type_tbl");
-        await db.query("SET FOREIGN_KEY_CHECKS = 1");
-
-        // 1. Seed categories
-        for (const cat of targetCats) {
-            await db.query("INSERT INTO cat_tbl (cat_name) VALUES (?)", [cat]);
+        if (!result || !Array.isArray(result[0])) {
+            return;
         }
+        const currentTypes = result[0];
+        const typeNames = currentTypes.map((t) => t.type_name);
+        const targetTypes = ["MCQ", "FITB", "Order", "Pair", "CP"];
 
-        // 2. Seed difficulties
-        for (const diff of targetDiffs) {
-            await db.query(
-                "INSERT INTO difficulty_tbl (difficulty_name) VALUES (?)",
-                [diff],
+        // Also check categories and difficulties
+        const [currentCats] = await db.query<RowDataPacket[]>(
+            "SELECT cat_name FROM cat_tbl",
+        );
+        if (!currentCats || !Array.isArray(currentCats)) {
+            return;
+        }
+        const catNames = currentCats.map((c) => c.cat_name);
+        const targetCats = ["HTML", "CSS", "JavaScript"];
+
+        const [currentDiffs] = await db.query<RowDataPacket[]>(
+            "SELECT difficulty_name FROM difficulty_tbl",
+        );
+        if (!currentDiffs || !Array.isArray(currentDiffs)) {
+            return;
+        }
+        const diffNames = currentDiffs.map((d) => d.difficulty_name);
+        const targetDiffs = ["Beginner", "Intermediate", "Advanced"];
+
+        const needsReset =
+            typeNames.length !== targetTypes.length ||
+            !targetTypes.every((t) => typeNames.includes(t)) ||
+            catNames.length !== targetCats.length ||
+            !targetCats.every((c) => catNames.includes(c)) ||
+            diffNames.length !== targetDiffs.length ||
+            !targetDiffs.every((d) => diffNames.includes(d));
+
+        if (needsReset) {
+            console.log(
+                "Database schema/lookup out of sync. Resetting lookup tables...",
             );
-        }
+            await db.query("SET FOREIGN_KEY_CHECKS = 0");
+            await db.query("TRUNCATE TABLE quiz_tbl");
+            await db.query("TRUNCATE TABLE cat_tbl");
+            await db.query("TRUNCATE TABLE difficulty_tbl");
+            await db.query("TRUNCATE TABLE quiz_type_tbl");
+            await db.query("SET FOREIGN_KEY_CHECKS = 1");
 
-        // 3. Seed quiz types
-        for (const type of targetTypes) {
-            await db.query("INSERT INTO quiz_type_tbl (type_name) VALUES (?)", [
-                type,
-            ]);
+            // 1. Seed categories
+            for (const cat of targetCats) {
+                await db.query("INSERT INTO cat_tbl (cat_name) VALUES (?)", [cat]);
+            }
+
+            // 2. Seed difficulties
+            for (const diff of targetDiffs) {
+                await db.query(
+                    "INSERT INTO difficulty_tbl (difficulty_name) VALUES (?)",
+                    [diff],
+                );
+            }
+
+            // 3. Seed quiz types
+            for (const type of targetTypes) {
+                await db.query("INSERT INTO quiz_type_tbl (type_name) VALUES (?)", [
+                    type,
+                ]);
+            }
+            console.log("Database reset and seeded successfully.");
         }
-        console.log("Database reset and seeded successfully.");
+    } catch (error) {
+        console.warn("Database connection issue during seed check, skipping seed:", error instanceof Error ? error.message : String(error));
     }
 }
 
@@ -393,6 +415,27 @@ export async function getQuizMetrics(): Promise<QuizMetricsData> {
             console.warn("Failed to compute coverage matrix:", mErr);
         }
 
+        // 7. Full Faceted Breakdown across (Category, Difficulty, Type)
+        let facetedBreakdown: QuizFacetedCount[] = [];
+        try {
+            const [facetedRows] = await db.query<RowDataPacket[]>(`
+                SELECT c.cat_name, d.difficulty_name, t.type_name, COUNT(q.quiz_id) AS count
+                FROM quiz_tbl q
+                JOIN cat_tbl c ON q.cat_id = c.cat_id
+                JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+                JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+                GROUP BY c.cat_name, d.difficulty_name, t.type_name
+            `);
+            facetedBreakdown = facetedRows.map((r) => ({
+                cat_name: String(r.cat_name),
+                difficulty_name: String(r.difficulty_name),
+                type_name: String(r.type_name),
+                count: Number(r.count),
+            }));
+        } catch (fErr) {
+            console.warn("Failed to compute faceted breakdown:", fErr);
+        }
+
         return {
             totalQuizzes,
             byCategory,
@@ -401,6 +444,7 @@ export async function getQuizMetrics(): Promise<QuizMetricsData> {
             bySection,
             lowCoverageSections,
             matrix,
+            facetedBreakdown,
         };
     } catch (error) {
         console.error("Failed to fetch quiz metrics:", error);
@@ -412,6 +456,7 @@ export async function getQuizMetrics(): Promise<QuizMetricsData> {
             bySection: [],
             lowCoverageSections: [],
             matrix: [],
+            facetedBreakdown: [],
         };
     }
 }

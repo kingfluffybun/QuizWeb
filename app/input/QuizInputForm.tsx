@@ -69,6 +69,7 @@ export default function QuizInputForm({
       bySection: [],
       lowCoverageSections: [],
       matrix: [],
+      facetedBreakdown: [],
     }
   );
   const [isMetricsExpanded, setIsMetricsExpanded] = useState<boolean>(true);
@@ -149,17 +150,17 @@ export default function QuizInputForm({
           return false;
         }
       }
-      if (categoryFilter !== "" && quiz.cat_name !== categoryFilter) {
+      if (categoryFilter !== "" && quiz.cat_name?.toLowerCase() !== categoryFilter.toLowerCase()) {
         return false;
       }
       const quizSecNum = quiz.sec_num?.toString() ?? "";
       if (sectionFilter !== "" && quizSecNum !== sectionFilter) {
         return false;
       }
-      if (difficultyFilter !== "" && quiz.difficulty_name !== difficultyFilter) {
+      if (difficultyFilter !== "" && quiz.difficulty_name?.toLowerCase() !== difficultyFilter.toLowerCase()) {
         return false;
       }
-      if (typeFilter !== "" && quiz.type_name !== typeFilter) {
+      if (typeFilter !== "" && quiz.type_name?.toLowerCase() !== typeFilter.toLowerCase()) {
         return false;
       }
       return true;
@@ -270,16 +271,99 @@ export default function QuizInputForm({
   };
 
   const handleQuickFilterCategory = (catName: string) => {
-    setCategoryFilter((prev) => (prev === catName ? "" : catName));
+    setCategoryFilter((prev) => (prev.toLowerCase() === catName.toLowerCase() ? "" : catName));
   };
 
   const handleQuickFilterType = (typeName: string) => {
-    setTypeFilter((prev) => (prev === typeName ? "" : typeName));
+    setTypeFilter((prev) => (prev.toLowerCase() === typeName.toLowerCase() ? "" : typeName));
   };
 
   const handleQuickFilterDifficulty = (diffName: string) => {
-    setDifficultyFilter((prev) => (prev === diffName ? "" : diffName));
+    setDifficultyFilter((prev) => (prev.toLowerCase() === diffName.toLowerCase() ? "" : diffName));
   };
+
+  // Dynamic faceted metrics based on active banner clicks (CSS, MCQ, Beginner, etc.)
+  const facetedMetrics = React.useMemo(() => {
+    const breakdown = metrics.facetedBreakdown || [];
+
+    // Fallback: if database returned empty breakdown, build from recentQuizzes
+    const activeBreakdown: { cat_name: string; difficulty_name: string; type_name: string; count: number }[] =
+      breakdown.length > 0
+        ? breakdown
+        : recentQuizzes.map((q) => ({
+            cat_name: q.cat_name,
+            difficulty_name: q.difficulty_name,
+            type_name: q.type_name,
+            count: 1,
+          }));
+
+    const catCounts: Record<string, number> = {};
+    for (const cat of categories) {
+      catCounts[cat.cat_name] = 0;
+    }
+
+    const typeCounts: Record<string, number> = {};
+    for (const t of types) {
+      typeCounts[t.type_name] = 0;
+    }
+
+    const diffCounts: Record<string, number> = {};
+    for (const d of difficulties) {
+      diffCounts[d.difficulty_name] = 0;
+    }
+
+    let filteredTotal = 0;
+
+    for (const row of activeBreakdown) {
+      const matchesCat = !categoryFilter || row.cat_name.toLowerCase() === categoryFilter.toLowerCase();
+      const matchesType = !typeFilter || row.type_name.toLowerCase() === typeFilter.toLowerCase();
+      const matchesDiff = !difficultyFilter || row.difficulty_name.toLowerCase() === difficultyFilter.toLowerCase();
+
+      // Category Card: counts matching active Type and Difficulty
+      // e.g. clicking MCQ adjusts HTML, CSS, JS to show MCQ counts
+      if (matchesType && matchesDiff) {
+        catCounts[row.cat_name] = (catCounts[row.cat_name] || 0) + row.count;
+      }
+
+      // Type Card: counts matching active Category and Difficulty
+      // e.g. clicking CSS adjusts MCQ, FITB, Order, Pair, CP to show CSS counts
+      if (matchesCat && matchesDiff) {
+        typeCounts[row.type_name] = (typeCounts[row.type_name] || 0) + row.count;
+      }
+
+      // Difficulty Card: counts matching active Category and Type
+      // e.g. clicking CSS adjusts Beginner, Intermediate, Advanced to show CSS counts
+      // e.g. clicking CSS + MCQ adjusts to show CSS MCQ difficulty counts
+      if (matchesCat && matchesType) {
+        diffCounts[row.difficulty_name] = (diffCounts[row.difficulty_name] || 0) + row.count;
+      }
+
+      // Overall count matching all selected filters
+      if (matchesCat && matchesType && matchesDiff) {
+        filteredTotal += row.count;
+      }
+    }
+
+    const hasFacetFilter = Boolean(categoryFilter || typeFilter || difficultyFilter);
+
+    return {
+      catCounts,
+      typeCounts,
+      diffCounts,
+      filteredTotal: hasFacetFilter ? filteredTotal : metrics.totalQuizzes,
+      hasFacetFilter,
+    };
+  }, [
+    metrics.facetedBreakdown,
+    metrics.totalQuizzes,
+    recentQuizzes,
+    categories,
+    types,
+    difficulties,
+    categoryFilter,
+    typeFilter,
+    difficultyFilter,
+  ]);
 
   // Live telemetry calculations
   const wordCount = questionText.trim()
@@ -497,50 +581,92 @@ export default function QuizInputForm({
             {/* Card 1: Question Bank Volume */}
             <div className="metric-card">
               <div className="metric-card-header">
-                <span className="metric-card-label">Total Questions</span>
+                <span className="metric-card-label">
+                  {facetedMetrics.hasFacetFilter ? "Filtered Questions" : "Total Questions"}
+                </span>
                 <span style={{ fontSize: "1.1rem" }}>📚</span>
               </div>
-              <div className="metric-hero-num">{metrics.totalQuizzes}</div>
+              <div className="metric-hero-num">{facetedMetrics.filteredTotal}</div>
               <div className="metric-hero-sub">
-                <span>Active in database</span>
-                <span className="telemetry-separator">•</span>
-                <span>{categories.length} tracks</span>
+                {facetedMetrics.hasFacetFilter ? (
+                  <>
+                    <span>
+                      Filtered: <strong>{[categoryFilter, typeFilter, difficultyFilter].filter(Boolean).join(" • ")}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryFilter("");
+                        setTypeFilter("");
+                        setDifficultyFilter("");
+                      }}
+                      className="metric-reset-link"
+                      title="Reset all banner filters"
+                    >
+                      Reset
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>Active in database</span>
+                    <span className="telemetry-separator">•</span>
+                    <span>{categories.length} tracks</span>
+                  </>
+                )}
               </div>
               <div className="metric-health-note good">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                <span>Live authoring database ready</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+                <span>
+                  {facetedMetrics.hasFacetFilter
+                    ? `Showing ${facetedMetrics.filteredTotal} of ${metrics.totalQuizzes} (${Math.round((facetedMetrics.filteredTotal / (metrics.totalQuizzes || 1)) * 100)}% of bank)`
+                    : "Live authoring database ready"}
+                </span>
               </div>
             </div>
 
             {/* Card 2: Curriculum Tracks (Categories) */}
             <div className="metric-card">
               <div className="metric-card-header">
-                <span className="metric-card-label">Curriculum Tracks</span>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Click to filter</span>
+                <span className="metric-card-label">
+                  {typeFilter || difficultyFilter
+                    ? `Tracks in ${[typeFilter, difficultyFilter].filter(Boolean).join(" • ")}`
+                    : "Curriculum Tracks"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {categoryFilter ? "Click to clear" : "Click to filter"}
+                </span>
               </div>
               <div className="metric-pill-list">
-                {metrics.byCategory.map((cat) => {
-                  const isFiltered = categoryFilter === cat.cat_name;
+                {categories.map((cat) => {
+                  const isFiltered = categoryFilter.toLowerCase() === cat.cat_name.toLowerCase();
                   const dotClass = cat.cat_name.toLowerCase().includes("html")
                     ? "html"
                     : cat.cat_name.toLowerCase().includes("css")
                       ? "css"
                       : "js";
+                  const count = facetedMetrics.catCounts[cat.cat_name] ?? 0;
+                  const totalForCategoryPct = facetedMetrics.hasFacetFilter
+                    ? Object.values(facetedMetrics.catCounts).reduce((a, b) => a + b, 0) || 1
+                    : metrics.totalQuizzes || 1;
+                  const percentage = Math.round((count / totalForCategoryPct) * 100);
+
                   return (
                     <button
                       key={cat.cat_id}
                       type="button"
                       className={`metric-pill-item ${isFiltered ? "active" : ""}`}
                       onClick={() => handleQuickFilterCategory(cat.cat_name)}
-                      title={`Filter list by ${cat.cat_name}`}
+                      title={isFiltered ? `Clear ${cat.cat_name} filter` : `Filter by ${cat.cat_name}`}
                     >
                       <span className="metric-pill-name">
                         <span className={`metric-track-dot ${dotClass}`} />
                         {cat.cat_name}
                       </span>
                       <span className="metric-pill-stat">
-                        <span>{cat.count}</span>
-                        <span className="metric-pill-pct">({cat.percentage}%)</span>
+                        <span>{count}</span>
+                        <span className="metric-pill-pct">({percentage}%)</span>
                       </span>
                     </button>
                   );
@@ -551,22 +677,29 @@ export default function QuizInputForm({
             {/* Card 3: Question Formats (Types) */}
             <div className="metric-card">
               <div className="metric-card-header">
-                <span className="metric-card-label">Question Formats</span>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Click to filter</span>
+                <span className="metric-card-label">
+                  {categoryFilter || difficultyFilter
+                    ? `Formats in ${[categoryFilter, difficultyFilter].filter(Boolean).join(" • ")}`
+                    : "Question Formats"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {typeFilter ? "Click to clear" : "Click to filter"}
+                </span>
               </div>
               <div className="metric-chip-wrap">
-                {metrics.byType.map((t) => {
-                  const isFiltered = typeFilter === t.type_name;
+                {types.map((t) => {
+                  const isFiltered = typeFilter.toLowerCase() === t.type_name.toLowerCase();
+                  const count = facetedMetrics.typeCounts[t.type_name] ?? 0;
                   return (
                     <button
                       key={t.quiz_type_id}
                       type="button"
-                      className={`metric-chip ${isFiltered ? "active" : ""}`}
+                      className={`metric-chip ${isFiltered ? "active" : ""} ${count === 0 ? "dimmed" : ""}`}
                       onClick={() => handleQuickFilterType(t.type_name)}
-                      title={`Filter list by ${t.type_name}`}
+                      title={isFiltered ? `Clear ${t.type_name} filter` : `Filter by ${t.type_name}`}
                     >
                       <span>{t.type_name}</span>
-                      <span className="metric-chip-count">{t.count}</span>
+                      <span className="metric-chip-count">{count}</span>
                     </button>
                   );
                 })}
@@ -576,22 +709,29 @@ export default function QuizInputForm({
             {/* Card 4: Difficulty Progression & Section Health */}
             <div className="metric-card">
               <div className="metric-card-header">
-                <span className="metric-card-label">Difficulty Balance</span>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Click to filter</span>
+                <span className="metric-card-label">
+                  {categoryFilter || typeFilter
+                    ? `Difficulty in ${[categoryFilter, typeFilter].filter(Boolean).join(" • ")}`
+                    : "Difficulty Balance"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {difficultyFilter ? "Click to clear" : "Click to filter"}
+                </span>
               </div>
               <div className="metric-chip-wrap">
-                {metrics.byDifficulty.map((diff) => {
-                  const isFiltered = difficultyFilter === diff.difficulty_name;
+                {difficulties.map((diff) => {
+                  const isFiltered = difficultyFilter.toLowerCase() === diff.difficulty_name.toLowerCase();
+                  const count = facetedMetrics.diffCounts[diff.difficulty_name] ?? 0;
                   return (
                     <button
                       key={diff.difficulty_id}
                       type="button"
-                      className={`metric-chip ${isFiltered ? "active" : ""}`}
+                      className={`metric-chip ${isFiltered ? "active" : ""} ${count === 0 ? "dimmed" : ""}`}
                       onClick={() => handleQuickFilterDifficulty(diff.difficulty_name)}
-                      title={`Filter list by ${diff.difficulty_name}`}
+                      title={isFiltered ? `Clear ${diff.difficulty_name} filter` : `Filter by ${diff.difficulty_name}`}
                     >
                       <span>{diff.difficulty_name}</span>
-                      <span className="metric-chip-count">{diff.count}</span>
+                      <span className="metric-chip-count">{count}</span>
                     </button>
                   );
                 })}
