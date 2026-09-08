@@ -19,6 +19,7 @@ export default function QuizPage() {
     const [settledLeft, setSettledLeft] = useState<string[]>([]);
     const [settledRight, setSettledRight] = useState<string[]>([]);
     const [incorrectPair, setIncorrectPair] = useState<{ left: string; right: string } | null>(null);
+    const [message, setMessage] = useState<string | null>(null);
 
     const nextQuiz = () => {
         setCurrentIndex((index) => Math.min(index + 1, quizzes.length - 1));
@@ -29,6 +30,13 @@ export default function QuizPage() {
         setSettledLeft([]);
         setSettledRight([]);
         setIncorrectPair(null);
+        setMessage(null);
+    };
+
+    const submitAnswer = () => {
+        if (!quiz) return;
+        const isCorrect = matchedLeft.length === pairs.length && matchedRight.length === pairs.length;
+        setMessage(isCorrect ? "Correct!" : "Match all pairs before submitting.");
     };
 
     const completePair = (left: string, right: string) => {
@@ -171,13 +179,14 @@ export default function QuizPage() {
                         ))}
                     </div>
                 </div>
+                {message && <p>{message}</p>}
             </div>
         </div>
       </main>
         <footer>
             <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
                 <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}> Skip </button>
-                <button className="options" id="submit"> Submit </button>
+                <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}> Submit </button>
             </div>
         </footer>
     </div>
