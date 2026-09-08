@@ -1,8 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import "#css/quiz.css";
+import { useQuizData } from "@/app/quiz/useQuizData";
 
 export default function QuizPage() {
+  const quizzes = useQuizData("MCQ");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const quiz = quizzes[currentIndex];
+  const options = quiz?.quiz_payload.options ?? [];
+
+  const nextQuiz = () => {
+    setCurrentIndex((index) => Math.min(index + 1, quizzes.length - 1));
+    setSelected(null);
+    setMessage(null);
+  };
+
+  const submitAnswer = () => {
+    if (!quiz || selected === null) return;
+    setMessage(selected === quiz.quiz_payload.correct_index ? "Correct!" : "Incorrect.");
+  };
+
   return (
     <div className="quiz-page">
       <nav></nav>
@@ -21,60 +41,33 @@ export default function QuizPage() {
               </div>
             </div>
             <div className="progress-container">
-              <div className="active"></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
+              {quizzes.map((_, index) => <div key={index} className={index <= currentIndex ? "active" : ""}></div>)}
             </div>
         </div>
         <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
           <div className="quiz-container">
-            <h1>Which HTML element is used to define the most important heading?</h1>
+            <h1>{quiz?.question_text ?? "Loading question..."}</h1>
             <div className="options-container" id="multiple-choice">
-              <label>
-                <input type="radio" name="option" />
-                <div className="options">
-                  <div>1</div>
-                  <p>&lt;h1&gt;</p>
-                </div>
-              </label>
-              <label>
-                <input type="radio" name="option" />
-                <div className="options">
-                  <div>2</div>
-                  <p>&lt;heading&gt;</p>
-                </div>
-              </label>
-              <label>
-                <input type="radio" name="option" />
-                <div className="options">
-                  <div>3</div>
-                  <p>&lt;h6&gt;</p>
-                </div>
-              </label>
-              <label>
-                <input type="radio" name="option" />
-                <div className="options">
-                  <div>4</div>
-                  <p>&lt;head&gt;</p>
-                </div>
-              </label>
+              {options.map((option, index) => (
+                <label key={option}>
+                  <input type="radio" name="option" checked={selected === index} onChange={() => setSelected(index)} />
+                  <div className="options">
+                    <div>{index + 1}</div>
+                    <p>{option}</p>
+                  </div>
+                </label>
+              ))}
+              {message && <p>{message}</p>}
             </div>
           </div>
         </div>
       </main>
       <footer>
         <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
-          <button className="options" id="skip">
+          <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}>
             Skip
           </button>
-          <button className="options" id="submit">
+          <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}>
             Submit
           </button>
         </div>
