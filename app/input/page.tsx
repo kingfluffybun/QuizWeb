@@ -1,6 +1,7 @@
 import {
     getQuizMetadata,
     getPaginatedRecentQuizzes,
+    getQuizMetrics,
 } from "@/app/actions/quiz";
 import QuizInputForm from "./QuizInputForm";
 import "#css/input.css";
@@ -9,8 +10,11 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function InputPage() {
-    const metadata = await getQuizMetadata();
-    const recentQuizPage = await getPaginatedRecentQuizzes();
+    const [metadata, recentQuizPage, metrics] = await Promise.all([
+        getQuizMetadata(),
+        getPaginatedRecentQuizzes(),
+        getQuizMetrics(),
+    ]);
 
     return (
         <div>
@@ -31,6 +35,7 @@ export default async function InputPage() {
                     initialPage={recentQuizPage.currentPage}
                     initialTotalPages={recentQuizPage.totalPages}
                     initialTotalCount={recentQuizPage.totalCount}
+                    initialMetrics={metrics}
                 />
             </main>
         </div>

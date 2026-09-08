@@ -23,6 +23,28 @@ export interface QuizType {
     type_name: string;
 }
 
+export interface QuizFacetedCount {
+    cat_name: string;
+    difficulty_name: string;
+    type_name: string;
+    count: number;
+}
+
+export interface QuizMetricsData {
+    totalQuizzes: number;
+    byCategory: { cat_id: number; cat_name: string; count: number; percentage: number }[];
+    byType: { quiz_type_id: number; type_name: string; count: number; percentage: number }[];
+    byDifficulty: { difficulty_id: number; difficulty_name: string; count: number; percentage: number }[];
+    bySection: { sec_id: number; sec_num: string; count: number }[];
+    lowCoverageSections: { sec_id: number; sec_num: string; count: number }[];
+    matrix: {
+        cat_name: string;
+        difficulties: { [diffName: string]: number };
+        total: number;
+    }[];
+    facetedBreakdown: QuizFacetedCount[];
+}
+
 export interface QuizRow extends RowDataPacket {
     quiz_id: number;
     cat_id: number;
@@ -111,6 +133,11 @@ function getQuizPayload(typeName: string, formData: FormData) {
     }
 
     if (typeName === "CP") {
+        const title = (formData.get("cp_title") as string | null)?.trim() ?? "";
+        if (!title) {
+            return { error: "A title is required for coding problems." };
+        }
+
         const promptCountRaw = formData.get("cp_prompt_count");
         const promptCount = Number(promptCountRaw ?? "1");
         const safePromptCount = Number.isFinite(promptCount) && promptCount > 0 ? promptCount : 1;
@@ -147,6 +174,7 @@ function getQuizPayload(typeName: string, formData: FormData) {
 
         return {
             payload: {
+                title,
                 steps,
                 prompts,
                 prompt: prompts[0],
@@ -160,65 +188,79 @@ function getQuizPayload(typeName: string, formData: FormData) {
 }
 
 async function seedIfNeeded() {
-    // Check if we need to reset the tables (if the categories, difficulties, or types are out of sync)
-    const [currentTypes] = await db.query<RowDataPacket[]>(
-        "SELECT type_name FROM quiz_type_tbl",
-    );
-    const typeNames = currentTypes.map((t) => t.type_name);
-    const targetTypes = ["MCQ", "FITB", "Order", "Pair", "CP"];
-
-    // Also check categories and difficulties
-    const [currentCats] = await db.query<RowDataPacket[]>(
-        "SELECT cat_name FROM cat_tbl",
-    );
-    const catNames = currentCats.map((c) => c.cat_name);
-    const targetCats = ["HTML", "CSS", "JavaScript"];
-
-    const [currentDiffs] = await db.query<RowDataPacket[]>(
-        "SELECT difficulty_name FROM difficulty_tbl",
-    );
-    const diffNames = currentDiffs.map((d) => d.difficulty_name);
-    const targetDiffs = ["Beginner", "Intermediate", "Advanced"];
-
-    const needsReset =
-        typeNames.length !== targetTypes.length ||
-        !targetTypes.every((t) => typeNames.includes(t)) ||
-        catNames.length !== targetCats.length ||
-        !targetCats.every((c) => catNames.includes(c)) ||
-        diffNames.length !== targetDiffs.length ||
-        !targetDiffs.every((d) => diffNames.includes(d));
-
-    if (needsReset) {
-        console.log(
-            "Database schema/lookup out of sync. Resetting lookup tables...",
+    try {
+        // Check if we need to reset the tables (if the categories, difficulties, or types are out of sync)
+        const result = await db.query<RowDataPacket[]>(
+            "SELECT type_name FROM quiz_type_tbl",
         );
-        await db.query("SET FOREIGN_KEY_CHECKS = 0");
-        await db.query("TRUNCATE TABLE quiz_tbl");
-        await db.query("TRUNCATE TABLE cat_tbl");
-        await db.query("TRUNCATE TABLE difficulty_tbl");
-        await db.query("TRUNCATE TABLE quiz_type_tbl");
-        await db.query("SET FOREIGN_KEY_CHECKS = 1");
-
-        // 1. Seed categories
-        for (const cat of targetCats) {
-            await db.query("INSERT INTO cat_tbl (cat_name) VALUES (?)", [cat]);
+        if (!result || !Array.isArray(result[0])) {
+            return;
         }
+        const currentTypes = result[0];
+        const typeNames = currentTypes.map((t) => t.type_name);
+        const targetTypes = ["MCQ", "FITB", "Order", "Pair", "CP"];
 
-        // 2. Seed difficulties
-        for (const diff of targetDiffs) {
-            await db.query(
-                "INSERT INTO difficulty_tbl (difficulty_name) VALUES (?)",
-                [diff],
+        // Also check categories and difficulties
+        const [currentCats] = await db.query<RowDataPacket[]>(
+            "SELECT cat_name FROM cat_tbl",
+        );
+        if (!currentCats || !Array.isArray(currentCats)) {
+            return;
+        }
+        const catNames = currentCats.map((c) => c.cat_name);
+        const targetCats = ["HTML", "CSS", "JavaScript"];
+
+        const [currentDiffs] = await db.query<RowDataPacket[]>(
+            "SELECT difficulty_name FROM difficulty_tbl",
+        );
+        if (!currentDiffs || !Array.isArray(currentDiffs)) {
+            return;
+        }
+        const diffNames = currentDiffs.map((d) => d.difficulty_name);
+        const targetDiffs = ["Beginner", "Intermediate", "Advanced"];
+
+        const needsReset =
+            typeNames.length !== targetTypes.length ||
+            !targetTypes.every((t) => typeNames.includes(t)) ||
+            catNames.length !== targetCats.length ||
+            !targetCats.every((c) => catNames.includes(c)) ||
+            diffNames.length !== targetDiffs.length ||
+            !targetDiffs.every((d) => diffNames.includes(d));
+
+        if (needsReset) {
+            console.log(
+                "Database schema/lookup out of sync. Resetting lookup tables...",
             );
-        }
+            await db.query("SET FOREIGN_KEY_CHECKS = 0");
+            await db.query("TRUNCATE TABLE quiz_tbl");
+            await db.query("TRUNCATE TABLE cat_tbl");
+            await db.query("TRUNCATE TABLE difficulty_tbl");
+            await db.query("TRUNCATE TABLE quiz_type_tbl");
+            await db.query("SET FOREIGN_KEY_CHECKS = 1");
 
-        // 3. Seed quiz types
-        for (const type of targetTypes) {
-            await db.query("INSERT INTO quiz_type_tbl (type_name) VALUES (?)", [
-                type,
-            ]);
+            // 1. Seed categories
+            for (const cat of targetCats) {
+                await db.query("INSERT INTO cat_tbl (cat_name) VALUES (?)", [cat]);
+            }
+
+            // 2. Seed difficulties
+            for (const diff of targetDiffs) {
+                await db.query(
+                    "INSERT INTO difficulty_tbl (difficulty_name) VALUES (?)",
+                    [diff],
+                );
+            }
+
+            // 3. Seed quiz types
+            for (const type of targetTypes) {
+                await db.query("INSERT INTO quiz_type_tbl (type_name) VALUES (?)", [
+                    type,
+                ]);
+            }
+            console.log("Database reset and seeded successfully.");
         }
-        console.log("Database reset and seeded successfully.");
+    } catch (error) {
+        console.warn("Database connection issue during seed check, skipping seed:", error instanceof Error ? error.message : String(error));
     }
 }
 
@@ -277,18 +319,211 @@ export async function getQuizMetadata() {
     }
 }
 
-export async function getPaginatedRecentQuizzes(page = 1, pageSize = 20) {
+export async function getQuizMetrics(): Promise<QuizMetricsData> {
+    try {
+        await seedIfNeeded();
+
+        // 1. Total count
+        const [totalRows] = await db.query<RowDataPacket[]>(
+            "SELECT COUNT(*) AS total FROM quiz_tbl"
+        );
+        const totalQuizzes = Number(totalRows[0]?.total ?? 0);
+
+        // 2. Breakdown by Category
+        const [catRows] = await db.query<RowDataPacket[]>(`
+            SELECT c.cat_id, c.cat_name, COUNT(q.quiz_id) AS count
+            FROM cat_tbl c
+            LEFT JOIN quiz_tbl q ON c.cat_id = q.cat_id
+            GROUP BY c.cat_id, c.cat_name
+            ORDER BY c.cat_name
+        `);
+        const byCategory = catRows.map((r) => ({
+            cat_id: Number(r.cat_id),
+            cat_name: String(r.cat_name),
+            count: Number(r.count),
+            percentage: totalQuizzes > 0 ? Math.round((Number(r.count) / totalQuizzes) * 100) : 0,
+        }));
+
+        // 3. Breakdown by Quiz Type
+        const [typeRows] = await db.query<RowDataPacket[]>(`
+            SELECT t.quiz_type_id, t.type_name, COUNT(q.quiz_id) AS count
+            FROM quiz_type_tbl t
+            LEFT JOIN quiz_tbl q ON t.quiz_type_id = q.quiz_type_id
+            GROUP BY t.quiz_type_id, t.type_name
+            ORDER BY t.quiz_type_id
+        `);
+        const byType = typeRows.map((r) => ({
+            quiz_type_id: Number(r.quiz_type_id),
+            type_name: String(r.type_name),
+            count: Number(r.count),
+            percentage: totalQuizzes > 0 ? Math.round((Number(r.count) / totalQuizzes) * 100) : 0,
+        }));
+
+        // 4. Breakdown by Difficulty
+        const [diffRows] = await db.query<RowDataPacket[]>(`
+            SELECT d.difficulty_id, d.difficulty_name, COUNT(q.quiz_id) AS count
+            FROM difficulty_tbl d
+            LEFT JOIN quiz_tbl q ON d.difficulty_id = q.difficulty_id
+            GROUP BY d.difficulty_id, d.difficulty_name
+            ORDER BY d.difficulty_id
+        `);
+        const byDifficulty = diffRows.map((r) => ({
+            difficulty_id: Number(r.difficulty_id),
+            difficulty_name: String(r.difficulty_name),
+            count: Number(r.count),
+            percentage: totalQuizzes > 0 ? Math.round((Number(r.count) / totalQuizzes) * 100) : 0,
+        }));
+
+        // 5. Breakdown by Section
+        let bySection: { sec_id: number; sec_num: string; count: number }[] = [];
+        try {
+            const [secRows] = await db.query<RowDataPacket[]>(`
+                SELECT s.sec_id, s.sec_num, COUNT(q.quiz_id) AS count
+                FROM sec_tbl s
+                LEFT JOIN quiz_tbl q ON s.sec_id = q.sec_id
+                GROUP BY s.sec_id, s.sec_num
+                ORDER BY s.sec_id
+            `);
+            bySection = secRows.map((r) => ({
+                sec_id: Number(r.sec_id),
+                sec_num: String(r.sec_num),
+                count: Number(r.count),
+            }));
+        } catch {
+            bySection = [];
+        }
+        const lowCoverageSections = bySection.filter((s) => s.count < 3);
+
+        // 6. Cross-tabulation Category x Difficulty Matrix
+        let matrix: { cat_name: string; difficulties: { [diffName: string]: number }; total: number }[] = [];
+        try {
+            const [matrixRows] = await db.query<RowDataPacket[]>(`
+                SELECT c.cat_name, d.difficulty_name, COUNT(q.quiz_id) AS count
+                FROM cat_tbl c
+                CROSS JOIN difficulty_tbl d
+                LEFT JOIN quiz_tbl q ON c.cat_id = q.cat_id AND d.difficulty_id = q.difficulty_id
+                GROUP BY c.cat_id, c.cat_name, d.difficulty_id, d.difficulty_name
+                ORDER BY c.cat_name, d.difficulty_id
+            `);
+            const matrixMap: Record<string, Record<string, number>> = {};
+            for (const row of matrixRows) {
+                const catName = String(row.cat_name);
+                const diffName = String(row.difficulty_name);
+                if (!matrixMap[catName]) matrixMap[catName] = {};
+                matrixMap[catName][diffName] = Number(row.count);
+            }
+            matrix = Object.keys(matrixMap).map((catName) => {
+                const diffs = matrixMap[catName];
+                const total = Object.values(diffs).reduce((a, b) => a + b, 0);
+                return { cat_name: catName, difficulties: diffs, total };
+            });
+        } catch (mErr) {
+            console.warn("Failed to compute coverage matrix:", mErr);
+        }
+
+        // 7. Full Faceted Breakdown across (Category, Difficulty, Type)
+        let facetedBreakdown: QuizFacetedCount[] = [];
+        try {
+            const [facetedRows] = await db.query<RowDataPacket[]>(`
+                SELECT c.cat_name, d.difficulty_name, t.type_name, COUNT(q.quiz_id) AS count
+                FROM quiz_tbl q
+                JOIN cat_tbl c ON q.cat_id = c.cat_id
+                JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+                JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+                GROUP BY c.cat_name, d.difficulty_name, t.type_name
+            `);
+            facetedBreakdown = facetedRows.map((r) => ({
+                cat_name: String(r.cat_name),
+                difficulty_name: String(r.difficulty_name),
+                type_name: String(r.type_name),
+                count: Number(r.count),
+            }));
+        } catch (fErr) {
+            console.warn("Failed to compute faceted breakdown:", fErr);
+        }
+
+        return {
+            totalQuizzes,
+            byCategory,
+            byType,
+            byDifficulty,
+            bySection,
+            lowCoverageSections,
+            matrix,
+            facetedBreakdown,
+        };
+    } catch (error) {
+        console.error("Failed to fetch quiz metrics:", error);
+        return {
+            totalQuizzes: 0,
+            byCategory: [],
+            byType: [],
+            byDifficulty: [],
+            bySection: [],
+            lowCoverageSections: [],
+            matrix: [],
+            facetedBreakdown: [],
+        };
+    }
+}
+
+export async function getPaginatedRecentQuizzes(
+    page = 1,
+    pageSize = 20,
+    filters: {
+        id?: string;
+        search?: string;
+        category?: string;
+        section?: string;
+        difficulty?: string;
+        type?: string;
+    } = {},
+) {
     try {
         await seedIfNeeded();
         const safePageSize = Math.max(1, Math.floor(pageSize));
-        const [countRows] = await db.query<RowDataPacket[]>(`
-            SELECT COUNT(*) AS total
+        const where: string[] = [];
+        const params: (string | number)[] = [];
+
+        if (filters.id?.trim()) {
+            where.push("CAST(q.quiz_id AS CHAR) LIKE ?");
+            params.push(`%${filters.id.replace(/^[#\\s]+/, "").trim()}%`);
+        }
+        if (filters.search?.trim()) {
+            const search = `%${filters.search.trim()}%`;
+            where.push("(q.question_text LIKE ? OR c.cat_name LIKE ? OR t.type_name LIKE ? OR d.difficulty_name LIKE ?)");
+            params.push(search, search, search, search);
+        }
+        if (filters.category) {
+            where.push("c.cat_name = ?");
+            params.push(filters.category);
+        }
+        if (filters.section) {
+            where.push("s.sec_num = ?");
+            params.push(filters.section);
+        }
+        if (filters.difficulty) {
+            where.push("d.difficulty_name = ?");
+            params.push(filters.difficulty);
+        }
+        if (filters.type) {
+            where.push("t.type_name = ?");
+            params.push(filters.type);
+        }
+
+        const whereClause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+        const joins = `
             FROM quiz_tbl q
             JOIN cat_tbl c ON q.cat_id = c.cat_id
             JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
             JOIN sec_tbl s ON q.sec_id = s.sec_id
-        `);
+        `;
+        const [countRows] = await db.query<RowDataPacket[]>(`
+            SELECT COUNT(*) AS total
+            ${joins}
+            ${whereClause}
+        `, params);
         const totalCount = Number(countRows[0]?.total ?? 0);
         const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
         const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
@@ -297,14 +532,11 @@ export async function getPaginatedRecentQuizzes(page = 1, pageSize = 20) {
             SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
                    q.question_text, q.quiz_payload,
                    c.cat_name, d.difficulty_name, t.type_name
-            FROM quiz_tbl q
-            JOIN cat_tbl c ON q.cat_id = c.cat_id
-            JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
-            JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
-            JOIN sec_tbl s ON q.sec_id = s.sec_id
+            ${joins}
+            ${whereClause}
             ORDER BY q.quiz_id DESC
             LIMIT ? OFFSET ?
-        `, [safePageSize, offset]);
+        `, [...params, safePageSize, offset]);
 
         return {
             quizzes: quizzes.map((q) => ({

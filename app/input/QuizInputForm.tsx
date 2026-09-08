@@ -7,8 +7,9 @@ import {
   getPaginatedRecentQuizzes,
   updateQuiz,
   deleteQuiz,
+  getQuizMetrics,
 } from "../actions/quiz";
-import type { Category, Difficulty, QuizType } from "../actions/quiz";
+import type { Category, Difficulty, QuizType, QuizMetricsData } from "../actions/quiz";
 
 interface QuizInputFormProps {
   categories: Category[];
@@ -19,6 +20,7 @@ interface QuizInputFormProps {
   initialPage: number;
   initialTotalPages: number;
   initialTotalCount: number;
+  initialMetrics?: QuizMetricsData;
 }
 
 export default function QuizInputForm({
@@ -30,6 +32,7 @@ export default function QuizInputForm({
   initialPage,
   initialTotalPages,
   initialTotalCount,
+  initialMetrics,
 }: QuizInputFormProps) {
   const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
@@ -55,6 +58,30 @@ export default function QuizInputForm({
   const [optionCount, setOptionCount] = useState(4);
   const [cpPromptCount, setCpPromptCount] = useState(1);
   const [copiedQuizId, setCopiedQuizId] = useState<number | null>(null);
+
+  // Metrics Suite States
+  const [metrics, setMetrics] = useState<QuizMetricsData>(
+    initialMetrics ?? {
+      totalQuizzes: initialTotalCount,
+      byCategory: [],
+      byType: [],
+      byDifficulty: [],
+      bySection: [],
+      lowCoverageSections: [],
+      matrix: [],
+      facetedBreakdown: [],
+    }
+  );
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState<boolean>(true);
+  const [isMatrixOpen, setIsMatrixOpen] = useState<boolean>(false);
+
+  // Live Authoring Input Telemetry States
+  const [questionText, setQuestionText] = useState<string>("");
+  const [selectedCatId, setSelectedCatId] = useState<string>("");
+  const [selectedDiffId, setSelectedDiffId] = useState<string>("");
+  const [selectedSecId, setSelectedSecId] = useState<string>("");
+  const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
+  const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
 
   const handleCopyId = (quizId: number) => {
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -123,17 +150,17 @@ export default function QuizInputForm({
           return false;
         }
       }
-      if (categoryFilter !== "" && quiz.cat_name !== categoryFilter) {
+      if (categoryFilter !== "" && quiz.cat_name?.toLowerCase() !== categoryFilter.toLowerCase()) {
         return false;
       }
       const quizSecNum = quiz.sec_num?.toString() ?? "";
       if (sectionFilter !== "" && quizSecNum !== sectionFilter) {
         return false;
       }
-      if (difficultyFilter !== "" && quiz.difficulty_name !== difficultyFilter) {
+      if (difficultyFilter !== "" && quiz.difficulty_name?.toLowerCase() !== difficultyFilter.toLowerCase()) {
         return false;
       }
-      if (typeFilter !== "" && quiz.type_name !== typeFilter) {
+      if (typeFilter !== "" && quiz.type_name?.toLowerCase() !== typeFilter.toLowerCase()) {
         return false;
       }
       return true;
@@ -189,7 +216,14 @@ export default function QuizInputForm({
   const loadQuizPage = async (page: number) => {
     setIsPending(true);
     try {
-      const result = await getPaginatedRecentQuizzes(page);
+      const result = await getPaginatedRecentQuizzes(page, 20, {
+        id: idFilter,
+        search: searchFilter,
+        category: categoryFilter,
+        section: sectionFilter,
+        difficulty: difficultyFilter,
+        type: typeFilter,
+      });
       setRecentQuizzes(result.quizzes);
       setCurrentPage(result.currentPage);
       setTotalPages(result.totalPages);
@@ -200,10 +234,177 @@ export default function QuizInputForm({
   };
 
   useEffect(() => {
+    const refreshTimer = window.setTimeout(() => {
+      void loadQuizPage(1);
+    }, 150);
+
+    return () => window.clearTimeout(refreshTimer);
+  }, [idFilter, searchFilter, categoryFilter, sectionFilter, difficultyFilter, typeFilter]);
+
+  useEffect(() => {
     if (types.length > 0 && !selectedTypeId) {
       setSelectedTypeId(types[0].quiz_type_id.toString());
     }
   }, [types, selectedTypeId]);
+
+  // Synchronize live authoring telemetry states with editing state
+  useEffect(() => {
+    if (editingQuiz) {
+      setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
+      setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
+      setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
+      setQuestionText(editingQuiz.question_text ?? "");
+      if (editingQuiz.type_name === "MCQ") {
+        setMcqOptions(
+          Array.isArray(editingQuiz.quiz_payload?.options)
+            ? editingQuiz.quiz_payload.options
+            : ["", "", "", ""]
+        );
+        setMcqCorrectIndex(editingQuiz.quiz_payload?.correct_index ?? 0);
+      }
+    } else {
+      if (categories.length > 0 && !selectedCatId) {
+        setSelectedCatId(categories[0].cat_id.toString());
+      }
+      if (difficulties.length > 0 && !selectedDiffId) {
+        setSelectedDiffId(difficulties[0].difficulty_id.toString());
+      }
+      setSelectedSecId("");
+      setQuestionText("");
+      setMcqOptions(["", "", "", ""]);
+      setMcqCorrectIndex(0);
+    }
+  }, [editingQuiz, categories, difficulties]);
+
+  const refreshMetrics = async () => {
+    try {
+      const freshMetrics = await getQuizMetrics();
+      setMetrics(freshMetrics);
+    } catch (err) {
+      console.error("Failed to refresh metrics:", err);
+    }
+  };
+
+  const handleQuickFilterCategory = (catName: string) => {
+    setCategoryFilter((prev) => (prev.toLowerCase() === catName.toLowerCase() ? "" : catName));
+  };
+
+  const handleQuickFilterType = (typeName: string) => {
+    setTypeFilter((prev) => (prev.toLowerCase() === typeName.toLowerCase() ? "" : typeName));
+  };
+
+  const handleQuickFilterDifficulty = (diffName: string) => {
+    setDifficultyFilter((prev) => (prev.toLowerCase() === diffName.toLowerCase() ? "" : diffName));
+  };
+
+  // Dynamic faceted metrics based on active banner clicks (CSS, MCQ, Beginner, etc.)
+  const facetedMetrics = React.useMemo(() => {
+    const breakdown = metrics.facetedBreakdown || [];
+
+    // Fallback: if database returned empty breakdown, build from recentQuizzes
+    const activeBreakdown: { cat_name: string; difficulty_name: string; type_name: string; count: number }[] =
+      breakdown.length > 0
+        ? breakdown
+        : recentQuizzes.map((q) => ({
+            cat_name: q.cat_name,
+            difficulty_name: q.difficulty_name,
+            type_name: q.type_name,
+            count: 1,
+          }));
+
+    const catCounts: Record<string, number> = {};
+    for (const cat of categories) {
+      catCounts[cat.cat_name] = 0;
+    }
+
+    const typeCounts: Record<string, number> = {};
+    for (const t of types) {
+      typeCounts[t.type_name] = 0;
+    }
+
+    const diffCounts: Record<string, number> = {};
+    for (const d of difficulties) {
+      diffCounts[d.difficulty_name] = 0;
+    }
+
+    let filteredTotal = 0;
+
+    for (const row of activeBreakdown) {
+      const matchesCat = !categoryFilter || row.cat_name.toLowerCase() === categoryFilter.toLowerCase();
+      const matchesType = !typeFilter || row.type_name.toLowerCase() === typeFilter.toLowerCase();
+      const matchesDiff = !difficultyFilter || row.difficulty_name.toLowerCase() === difficultyFilter.toLowerCase();
+
+      // Category Card: counts matching active Type and Difficulty
+      // e.g. clicking MCQ adjusts HTML, CSS, JS to show MCQ counts
+      if (matchesType && matchesDiff) {
+        catCounts[row.cat_name] = (catCounts[row.cat_name] || 0) + row.count;
+      }
+
+      // Type Card: counts matching active Category and Difficulty
+      // e.g. clicking CSS adjusts MCQ, FITB, Order, Pair, CP to show CSS counts
+      if (matchesCat && matchesDiff) {
+        typeCounts[row.type_name] = (typeCounts[row.type_name] || 0) + row.count;
+      }
+
+      // Difficulty Card: counts matching active Category and Type
+      // e.g. clicking CSS adjusts Beginner, Intermediate, Advanced to show CSS counts
+      // e.g. clicking CSS + MCQ adjusts to show CSS MCQ difficulty counts
+      if (matchesCat && matchesType) {
+        diffCounts[row.difficulty_name] = (diffCounts[row.difficulty_name] || 0) + row.count;
+      }
+
+      // Overall count matching all selected filters
+      if (matchesCat && matchesType && matchesDiff) {
+        filteredTotal += row.count;
+      }
+    }
+
+    const hasFacetFilter = Boolean(categoryFilter || typeFilter || difficultyFilter);
+
+    return {
+      catCounts,
+      typeCounts,
+      diffCounts,
+      filteredTotal: hasFacetFilter ? filteredTotal : metrics.totalQuizzes,
+      hasFacetFilter,
+    };
+  }, [
+    metrics.facetedBreakdown,
+    metrics.totalQuizzes,
+    recentQuizzes,
+    categories,
+    types,
+    difficulties,
+    categoryFilter,
+    typeFilter,
+    difficultyFilter,
+  ]);
+
+  // Live telemetry calculations
+  const wordCount = questionText.trim()
+    ? questionText.trim().split(/\s+/).filter(Boolean).length
+    : 0;
+  const charCount = questionText.length;
+  const estimatedReadTimeSec = Math.max(1, Math.round(wordCount / 3.5));
+
+  const trimmedOptions = mcqOptions.map((opt) => opt.trim());
+  const filledOptions = trimmedOptions.filter(Boolean);
+  const hasDuplicateOptions =
+    filledOptions.length > 1 &&
+    new Set(filledOptions.map((o) => o.toLowerCase())).size !== filledOptions.length;
+
+  const correctOptionLength = trimmedOptions[mcqCorrectIndex]?.length ?? 0;
+  const distractorLengths = trimmedOptions
+    .filter((_, idx) => idx !== mcqCorrectIndex)
+    .map((o) => o.length);
+  const avgDistractorLength =
+    distractorLengths.length > 0
+      ? distractorLengths.reduce((a, b) => a + b, 0) / distractorLengths.length
+      : 0;
+  const isCorrectAnswerNotablyLonger =
+    avgDistractorLength > 0 &&
+    correctOptionLength > 15 &&
+    correctOptionLength > avgDistractorLength * 2.2;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -228,11 +429,14 @@ export default function QuizInputForm({
 
         // Reset inputs
         setEditingQuiz(null);
+        setQuestionText("");
+        setMcqOptions(["", "", "", ""]);
+        setMcqCorrectIndex(0);
         setOptionCount(4);
         setCpPromptCount(1);
 
-        // Refresh list
-        await loadQuizPage(currentPage);
+        // Refresh list and metrics
+        await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
       }
     } catch (err) {
       console.error("Submission error:", err);
@@ -248,6 +452,18 @@ export default function QuizInputForm({
   const handleEdit = (quiz: any) => {
     setEditingQuiz(quiz);
     setSelectedTypeId(quiz.quiz_type_id.toString());
+    setSelectedCatId(quiz.cat_id?.toString() ?? "");
+    setSelectedDiffId(quiz.difficulty_id?.toString() ?? "");
+    setSelectedSecId(quiz.sec_id?.toString() ?? "");
+    setQuestionText(quiz.question_text || "");
+    if (quiz.type_name === "MCQ") {
+      setMcqOptions(
+        Array.isArray(quiz.quiz_payload?.options)
+          ? quiz.quiz_payload.options
+          : ["", "", "", ""]
+      );
+      setMcqCorrectIndex(quiz.quiz_payload?.correct_index ?? 0);
+    }
     setOptionCount(
       quiz.type_name === "Order"
         ? Math.max(4, quiz.quiz_payload?.items?.length ?? 0)
@@ -268,6 +484,12 @@ export default function QuizInputForm({
   const handleCancelEdit = () => {
     setEditingQuiz(null);
     setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
+    setSelectedCatId(categories[0]?.cat_id?.toString() ?? "");
+    setSelectedDiffId(difficulties[0]?.difficulty_id?.toString() ?? "");
+    setSelectedSecId("");
+    setQuestionText("");
+    setMcqOptions(["", "", "", ""]);
+    setMcqCorrectIndex(0);
     setOptionCount(4);
     setCpPromptCount(1);
     setMessage(null);
@@ -288,8 +510,8 @@ export default function QuizInputForm({
           text: "Quiz successfully deleted!",
         });
 
-        // Refresh list
-        await loadQuizPage(currentPage);
+        // Refresh list and metrics
+        await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
       }
     } catch (err) {
       console.error("Delete error:", err);
@@ -302,6 +524,348 @@ export default function QuizInputForm({
 
   return (
     <>
+      {/* Top Full-Width Metrics Banner */}
+      <section className="admin-metrics-banner" aria-label="Quiz Bank Analytics">
+        <div className="metrics-banner-header">
+          <div className="metrics-banner-title-wrap">
+            <div className="metrics-banner-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" x2="18" y1="20" y2="10" />
+                <line x1="12" x2="12" y1="20" y2="4" />
+                <line x1="6" x2="6" y1="20" y2="14" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="metrics-banner-title">
+                Quiz Bank Analytics
+                <span className="metrics-banner-badge">{metrics.totalQuizzes} Questions</span>
+              </h2>
+              <p className="metrics-banner-subtitle">
+                Real-time curriculum coverage, format breakdown, and difficulty distribution
+              </p>
+            </div>
+          </div>
+
+          <div className="metrics-banner-actions">
+            <button
+              type="button"
+              className={`btn-metrics-action ${isMatrixOpen ? "active" : ""}`}
+              onClick={() => setIsMatrixOpen(!isMatrixOpen)}
+              title="Toggle Curriculum Coverage Heatmap"
+              aria-expanded={isMatrixOpen}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M3 15h18" />
+                <path d="M9 3v18" />
+                <path d="M15 3v18" />
+              </svg>
+              <span>{isMatrixOpen ? "Hide Heatmap" : "Coverage Matrix"}</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-metrics-action"
+              onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
+              title={isMetricsExpanded ? "Minimize Analytics Banner" : "Expand Analytics Banner"}
+              aria-expanded={isMetricsExpanded}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ transform: isMetricsExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+              <span>{isMetricsExpanded ? "Minimize" : "Expand"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Expandable Overview KPI Cards */}
+        {isMetricsExpanded && (
+          <div className="metrics-grid">
+            {/* Card 1: Question Bank Volume */}
+            <div className="metric-card">
+              <div className="metric-card-header">
+                <span className="metric-card-label">
+                  {facetedMetrics.hasFacetFilter ? "Filtered Questions" : "Total Questions"}
+                </span>
+                <span style={{ fontSize: "1.1rem" }}>📚</span>
+              </div>
+              <div className="metric-hero-num">{facetedMetrics.filteredTotal}</div>
+              <div className="metric-hero-sub">
+                {facetedMetrics.hasFacetFilter ? (
+                  <>
+                    <span>
+                      Filtered: <strong>{[categoryFilter, typeFilter, difficultyFilter].filter(Boolean).join(" • ")}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryFilter("");
+                        setTypeFilter("");
+                        setDifficultyFilter("");
+                      }}
+                      className="metric-reset-link"
+                      title="Reset all banner filters"
+                    >
+                      Reset
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>Active in database</span>
+                    <span className="telemetry-separator">•</span>
+                    <span>{categories.length} tracks</span>
+                  </>
+                )}
+              </div>
+              <div className="metric-health-note good">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+                <span>
+                  {facetedMetrics.hasFacetFilter
+                    ? `Showing ${facetedMetrics.filteredTotal} of ${metrics.totalQuizzes} (${Math.round((facetedMetrics.filteredTotal / (metrics.totalQuizzes || 1)) * 100)}% of bank)`
+                    : "Live authoring database ready"}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 2: Curriculum Tracks (Categories) */}
+            <div className="metric-card">
+              <div className="metric-card-header">
+                <span className="metric-card-label">
+                  {typeFilter || difficultyFilter
+                    ? `Tracks in ${[typeFilter, difficultyFilter].filter(Boolean).join(" • ")}`
+                    : "Curriculum Tracks"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {categoryFilter ? "Click to clear" : "Click to filter"}
+                </span>
+              </div>
+              <div className="metric-pill-list">
+                {categories.map((cat) => {
+                  const isFiltered = categoryFilter.toLowerCase() === cat.cat_name.toLowerCase();
+                  const dotClass = cat.cat_name.toLowerCase().includes("html")
+                    ? "html"
+                    : cat.cat_name.toLowerCase().includes("css")
+                      ? "css"
+                      : "js";
+                  const count = facetedMetrics.catCounts[cat.cat_name] ?? 0;
+                  const totalForCategoryPct = facetedMetrics.hasFacetFilter
+                    ? Object.values(facetedMetrics.catCounts).reduce((a, b) => a + b, 0) || 1
+                    : metrics.totalQuizzes || 1;
+                  const percentage = Math.round((count / totalForCategoryPct) * 100);
+
+                  return (
+                    <button
+                      key={cat.cat_id}
+                      type="button"
+                      className={`metric-pill-item ${isFiltered ? "active" : ""}`}
+                      onClick={() => handleQuickFilterCategory(cat.cat_name)}
+                      title={isFiltered ? `Clear ${cat.cat_name} filter` : `Filter by ${cat.cat_name}`}
+                    >
+                      <span className="metric-pill-name">
+                        <span className={`metric-track-dot ${dotClass}`} />
+                        {cat.cat_name}
+                      </span>
+                      <span className="metric-pill-stat">
+                        <span>{count}</span>
+                        <span className="metric-pill-pct">({percentage}%)</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Card 3: Question Formats (Types) */}
+            <div className="metric-card">
+              <div className="metric-card-header">
+                <span className="metric-card-label">
+                  {categoryFilter || difficultyFilter
+                    ? `Formats in ${[categoryFilter, difficultyFilter].filter(Boolean).join(" • ")}`
+                    : "Question Formats"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {typeFilter ? "Click to clear" : "Click to filter"}
+                </span>
+              </div>
+              <div className="metric-chip-wrap">
+                {types.map((t) => {
+                  const isFiltered = typeFilter.toLowerCase() === t.type_name.toLowerCase();
+                  const count = facetedMetrics.typeCounts[t.type_name] ?? 0;
+                  return (
+                    <button
+                      key={t.quiz_type_id}
+                      type="button"
+                      className={`metric-chip ${isFiltered ? "active" : ""} ${count === 0 ? "dimmed" : ""}`}
+                      onClick={() => handleQuickFilterType(t.type_name)}
+                      title={isFiltered ? `Clear ${t.type_name} filter` : `Filter by ${t.type_name}`}
+                    >
+                      <span>{t.type_name}</span>
+                      <span className="metric-chip-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Card 4: Difficulty Progression & Section Health */}
+            <div className="metric-card">
+              <div className="metric-card-header">
+                <span className="metric-card-label">
+                  {categoryFilter || typeFilter
+                    ? `Difficulty in ${[categoryFilter, typeFilter].filter(Boolean).join(" • ")}`
+                    : "Difficulty Balance"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {difficultyFilter ? "Click to clear" : "Click to filter"}
+                </span>
+              </div>
+              <div className="metric-chip-wrap">
+                {difficulties.map((diff) => {
+                  const isFiltered = difficultyFilter.toLowerCase() === diff.difficulty_name.toLowerCase();
+                  const count = facetedMetrics.diffCounts[diff.difficulty_name] ?? 0;
+                  return (
+                    <button
+                      key={diff.difficulty_id}
+                      type="button"
+                      className={`metric-chip ${isFiltered ? "active" : ""} ${count === 0 ? "dimmed" : ""}`}
+                      onClick={() => handleQuickFilterDifficulty(diff.difficulty_name)}
+                      title={isFiltered ? `Clear ${diff.difficulty_name} filter` : `Filter by ${diff.difficulty_name}`}
+                    >
+                      <span>{diff.difficulty_name}</span>
+                      <span className="metric-chip-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {metrics.lowCoverageSections?.length > 0 ? (
+                <div className="metric-health-note warn">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                  <span>{metrics.lowCoverageSections.length} sections have &lt; 3 questions</span>
+                </div>
+              ) : (
+                <div className="metric-health-note good">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  <span>All active sections well covered</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* In-Depth Curriculum Coverage Matrix & Section Audit */}
+        {isMatrixOpen && (
+          <div className="coverage-matrix-panel">
+            <div className="coverage-matrix-header">
+              <h3 className="coverage-matrix-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Track × Difficulty Heatmap Matrix
+              </h3>
+              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                Identifies curriculum gaps across skill levels
+              </span>
+            </div>
+
+            <div className="coverage-table-wrapper">
+              <table className="coverage-table">
+                <thead>
+                  <tr>
+                    <th>Curriculum Track</th>
+                    {difficulties.map((d) => (
+                      <th key={d.difficulty_id}>{d.difficulty_name}</th>
+                    ))}
+                    <th>Total Track Questions</th>
+                    <th>Coverage Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.matrix && metrics.matrix.length > 0 ? (
+                    metrics.matrix.map((row) => {
+                      const hasEmpty = difficulties.some(
+                        (d) => (row.difficulties?.[d.difficulty_name] ?? 0) === 0
+                      );
+                      return (
+                        <tr key={row.cat_name}>
+                          <td><strong>{row.cat_name}</strong></td>
+                          {difficulties.map((d) => {
+                            const count = row.difficulties?.[d.difficulty_name] ?? 0;
+                            return (
+                              <td key={d.difficulty_id}>
+                                <span
+                                  className={`coverage-cell-count ${
+                                    count === 0 ? "empty" : count < 4 ? "low" : "good"
+                                  }`}
+                                >
+                                  {count} {count === 0 ? "⚠️ Empty" : ""}
+                                </span>
+                              </td>
+                            );
+                          })}
+                          <td><strong>{row.total}</strong></td>
+                          <td>
+                            {hasEmpty ? (
+                              <span style={{ color: "#ef4444", fontSize: "0.8rem", fontWeight: "600" }}>
+                                Needs Questions
+                              </span>
+                            ) : (
+                              <span style={{ color: "#059669", fontSize: "0.8rem", fontWeight: "600" }}>
+                                ✓ Balanced
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={difficulties.length + 3} style={{ textAlign: "center", padding: "16px" }}>
+                        No coverage data available yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Section Breakdown Audit */}
+            {metrics.bySection && metrics.bySection.length > 0 && (
+              <div className="sections-audit-wrap">
+                <div className="sections-audit-title">Section Distribution Audit</div>
+                <div className="sections-audit-chips">
+                  {metrics.bySection.map((sec) => {
+                    const isLow = sec.count < 3;
+                    return (
+                      <div
+                        key={sec.sec_id}
+                        className={`section-audit-chip ${isLow ? "alert-low" : ""}`}
+                        title={isLow ? "Under-populated section (< 3 questions)" : `Section ${sec.sec_num}`}
+                      >
+                        <span>Section {sec.sec_num}:</span>
+                        <strong>{sec.count} qs</strong>
+                        {isLow && <span>⚠️</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Form Section */}
       <div className="admin-card">
         <h2>
@@ -324,13 +888,14 @@ export default function QuizInputForm({
               name="cat_id"
               className="form-select"
               required
-              defaultValue={editingQuiz?.cat_id?.toString() ?? ""}
+              value={selectedCatId}
+              onChange={(e) => setSelectedCatId(e.target.value)}
             >
               <option value="" disabled>
                 Select Category
               </option>
               {categories.map((cat) => (
-                <option key={cat.cat_id} value={cat.cat_id}>
+                <option key={cat.cat_id} value={cat.cat_id.toString()}>
                   {cat.cat_name}
                 </option>
               ))}
@@ -344,18 +909,44 @@ export default function QuizInputForm({
               name="difficulty_id"
               className="form-select"
               required
-              defaultValue={editingQuiz?.difficulty_id?.toString() ?? ""}
+              value={selectedDiffId}
+              onChange={(e) => setSelectedDiffId(e.target.value)}
             >
               <option value="" disabled>
                 Select Difficulty
               </option>
               {difficulties.map((diff) => (
-                <option key={diff.difficulty_id} value={diff.difficulty_id}>
+                <option key={diff.difficulty_id} value={diff.difficulty_id.toString()}>
                   {diff.difficulty_name}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Contextual Curriculum Gap Nudge */}
+          {(() => {
+            if (!selectedCatId || !selectedDiffId) return null;
+            const cat = categories.find((c) => c.cat_id.toString() === selectedCatId);
+            const diff = difficulties.find((d) => d.difficulty_id.toString() === selectedDiffId);
+            if (!cat || !diff) return null;
+            const catMatrix = metrics.matrix?.find(
+              (m) => m.cat_name.toLowerCase() === cat.cat_name.toLowerCase()
+            );
+            const count = catMatrix?.difficulties?.[diff.difficulty_name] ?? 0;
+            return (
+              <div className="curriculum-nudge-pill" role="status">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+                <span>
+                  <strong>Curriculum Insight:</strong> {count === 0 ? "🚀 High priority! " : count < 4 ? "💡 Low coverage: " : "✓ "}
+                  Currently <strong>{count}</strong> {diff.difficulty_name} question{count === 1 ? "" : "s"} in <em>{cat.cat_name}</em>.
+                </span>
+              </div>
+            );
+          })()}
 
           <div className="form-group">
             <label htmlFor="sec_id">Section</label>
@@ -364,13 +955,14 @@ export default function QuizInputForm({
               name="sec_id"
               className="form-select"
               required
-              defaultValue={editingQuiz?.sec_id?.toString() ?? ""}
+              value={selectedSecId}
+              onChange={(e) => setSelectedSecId(e.target.value)}
             >
               <option value="" disabled>
                 Select Section
               </option>
               {sections.map((section) => (
-                <option key={section.sec_id} value={section.sec_id}>
+                <option key={section.sec_id} value={section.sec_id.toString()}>
                   {section.sec_num}
                 </option>
               ))}
@@ -410,15 +1002,72 @@ export default function QuizInputForm({
             </select>
           </div>
 
+          {selectedTypeName === "CP" && (
+            <div className="form-group">
+              <label htmlFor="cp_title">Coding Problem Title</label>
+              <input
+                id="cp_title"
+                name="cp_title"
+                type="text"
+                className="form-input"
+                placeholder="Enter coding problem title..."
+                defaultValue={editingQuiz?.quiz_payload?.title ?? ""}
+                required
+              />
+            </div>
+          )}
+
           {selectedTypeName !== "CP" && (
             <div className="form-group form-group-flex">
-              <label htmlFor="question_text">Question Text / Prompt</label>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                  flexWrap: "wrap",
+                  gap: "6px",
+                }}
+              >
+                <label htmlFor="question_text" style={{ margin: 0 }}>
+                  Question Text / Prompt
+                </label>
+                <div className="input-telemetry-row" style={{ margin: 0 }}>
+                  <span className="telemetry-item">
+                    <strong>{wordCount}</strong> words
+                  </span>
+                  <span className="telemetry-separator">•</span>
+                  <span className="telemetry-item">
+                    <strong>{charCount}</strong> chars
+                  </span>
+                  <span className="telemetry-separator">•</span>
+                  <span className="telemetry-item">~{estimatedReadTimeSec}s read</span>
+                  {wordCount > 0 && (
+                    <span
+                      className={`telemetry-badge ${
+                        wordCount < 5
+                          ? "badge-warn"
+                          : wordCount > 45
+                            ? "badge-info"
+                            : "badge-success"
+                      }`}
+                    >
+                      {wordCount < 5
+                        ? "Brief"
+                        : wordCount > 45
+                          ? "Extended"
+                          : "Optimal"}
+                    </span>
+                  )}
+                </div>
+              </div>
               <textarea
                 id="question_text"
                 name="question_text"
                 className="form-textarea"
                 placeholder="Enter the question text here..."
-                defaultValue={editingQuiz?.question_text ?? ""}
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
                 required
               />
             </div>
@@ -545,25 +1194,39 @@ export default function QuizInputForm({
                       id={`correct_${idx}`}
                       className="radio-check"
                       required
-                      defaultChecked={
-                        editingQuiz
-                          ? editingQuiz.quiz_payload?.correct_index === idx
-                          : idx === 0
-                      }
+                      checked={mcqCorrectIndex === idx}
+                      onChange={() => setMcqCorrectIndex(idx)}
                     />
                     <input
                       type="text"
                       name={`option_${idx}`}
                       placeholder={`Option ${idx + 1}`}
                       className="form-input"
-                      defaultValue={
-                        editingQuiz?.quiz_payload?.options?.[idx] ?? ""
-                      }
+                      value={mcqOptions[idx] ?? ""}
+                      onChange={(e) => {
+                        const updated = [...mcqOptions];
+                        updated[idx] = e.target.value;
+                        setMcqOptions(updated);
+                      }}
                       required
                     />
                   </div>
                 ))}
               </div>
+              {/* Duplicate choices warning */}
+              {hasDuplicateOptions && (
+                <div className="form-warning-alert" role="alert">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                  <span>Warning: Duplicate choices detected! All 4 options should be distinct.</span>
+                </div>
+              )}
+              {/* Distractor balance tip */}
+              {isCorrectAnswerNotablyLonger && (
+                <div className="form-tip-alert" role="status">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 18v4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M18 12h4"/><path d="m19.07 4.93-2.83 2.83"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>Distractor Tip: The correct answer is significantly longer than distractors. Test-takers often guess the longest option.</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -594,16 +1257,21 @@ export default function QuizInputForm({
                   alignItems: "center",
                 }}
               >
-                Items to Order (Enter in the CORRECT sequence)
-                <button
-                  type="button"
-                  className="btn-add-option"
-                  onClick={handleAddOption}
-                  title="Add item"
-                  aria-label="Add item"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                </button>
+                <span>Items to Order (Enter in the CORRECT sequence)</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span className={`completeness-badge ${optionCount >= 4 ? "ready" : "pending"}`}>
+                    {optionCount >= 4 ? `✓ ${optionCount} items (Ready)` : `${optionCount}/4 items (Min 4)`}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-add-option"
+                    onClick={handleAddOption}
+                    title="Add item"
+                    aria-label="Add item"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                  </button>
+                </div>
               </label>
               <div className="options-grid options-grid-scrollable">
                 {Array.from({ length: optionCount }, (_, idx) => idx).map((idx) => (
@@ -643,16 +1311,21 @@ export default function QuizInputForm({
                   alignItems: "center",
                 }}
               >
-                Matching Pairs (Enter Left and matching Right values)
-                <button
-                  type="button"
-                  className="btn-add-option"
-                  onClick={handleAddOption}
-                  title="Add pair"
-                  aria-label="Add pair"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                </button>
+                <span>Matching Pairs (Enter Left and matching Right values)</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span className={`completeness-badge ${optionCount >= 4 ? "ready" : "pending"}`}>
+                    {optionCount >= 4 ? `✓ ${optionCount} pairs (Ready)` : `${optionCount}/4 pairs (Min 4)`}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-add-option"
+                    onClick={handleAddOption}
+                    title="Add pair"
+                    aria-label="Add pair"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                  </button>
+                </div>
               </label>
               <div className="options-grid options-grid-scrollable">
                 {Array.from({ length: optionCount }, (_, idx) => idx).map((idx) => (
@@ -729,9 +1402,19 @@ export default function QuizInputForm({
             gap: "12px",
           }}
         >
-          <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
-            Recently Added Quizzes
-          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+            <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
+              Recently Added Quizzes
+            </h2>
+            <div className="list-visibility-counter">
+              Showing <strong>{filteredQuizzes.length}</strong> of <strong>{metrics.totalQuizzes || totalCount}</strong> questions
+              {metrics.totalQuizzes > 0 && (
+                <span className="visibility-ratio">
+                  ({Math.round((filteredQuizzes.length / metrics.totalQuizzes) * 100)}% of bank)
+                </span>
+              )}
+            </div>
+          </div>
           <div className="list-header-actions">
             <div className="sort-wrapper">
               <label
@@ -1182,7 +1865,9 @@ export default function QuizInputForm({
                         className="quiz-list-question"
                         style={{ marginBottom: 0 }}
                       >
-                        {quiz.question_text}
+                        {quiz.type_name === "CP" && quiz.quiz_payload?.title
+                          ? quiz.quiz_payload.title
+                          : quiz.question_text}
                       </div>
                       <div
                         style={{
@@ -1382,6 +2067,26 @@ export default function QuizInputForm({
                         {quiz.difficulty_name}
                       </span>
                       <span className="badge badge-type">{quiz.type_name}</span>
+                      {quiz.type_name === "MCQ" && payload?.options && (
+                        <span className="badge badge-metric-tag" title="Number of options">
+                          {payload.options.length} options
+                        </span>
+                      )}
+                      {quiz.type_name === "Order" && payload?.items && (
+                        <span className="badge badge-metric-tag" title="Sequence items">
+                          {payload.items.length} items
+                        </span>
+                      )}
+                      {quiz.type_name === "Pair" && payload?.pairs && (
+                        <span className="badge badge-metric-tag" title="Matching pairs">
+                          {payload.pairs.length} pairs
+                        </span>
+                      )}
+                      {quiz.type_name === "CP" && (
+                        <span className="badge badge-metric-tag" title="Problem steps">
+                          {payload?.steps?.length || payload?.prompts?.length || 1} step{(payload?.steps?.length || 1) > 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
                     {payload && (
                       <div className="quiz-payload-preview">
