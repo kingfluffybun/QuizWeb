@@ -23,6 +23,20 @@ export interface QuizType {
     type_name: string;
 }
 
+export interface QuizMetricsData {
+    totalQuizzes: number;
+    byCategory: { cat_id: number; cat_name: string; count: number; percentage: number }[];
+    byType: { quiz_type_id: number; type_name: string; count: number; percentage: number }[];
+    byDifficulty: { difficulty_id: number; difficulty_name: string; count: number; percentage: number }[];
+    bySection: { sec_id: number; sec_num: string; count: number }[];
+    lowCoverageSections: { sec_id: number; sec_num: string; count: number }[];
+    matrix: {
+        cat_name: string;
+        difficulties: { [diffName: string]: number };
+        total: number;
+    }[];
+}
+
 export interface QuizRow extends RowDataPacket {
     quiz_id: number;
     cat_id: number;
@@ -274,6 +288,131 @@ export async function getQuizMetadata() {
     } catch (error) {
         console.error("Failed to fetch quiz metadata:", error);
         return { categories: [], difficulties: [], types: [], sections: [] };
+    }
+}
+
+export async function getQuizMetrics(): Promise<QuizMetricsData> {
+    try {
+        await seedIfNeeded();
+
+        // 1. Total count
+        const [totalRows] = await db.query<RowDataPacket[]>(
+            "SELECT COUNT(*) AS total FROM quiz_tbl"
+        );
+        const totalQuizzes = Number(totalRows[0]?.total ?? 0);
+
+        // 2. Breakdown by Category
+        const [catRows] = await db.query<RowDataPacket[]>(`
+            SELECT c.cat_id, c.cat_name, COUNT(q.quiz_id) AS count
+            FROM cat_tbl c
+            LEFT JOIN quiz_tbl q ON c.cat_id = q.cat_id
+            GROUP BY c.cat_id, c.cat_name
+            ORDER BY c.cat_name
+        `);
+        const byCategory = catRows.map((r) => ({
+            cat_id: Number(r.cat_id),
+            cat_name: String(r.cat_name),
+            count: Number(r.count),
+            percentage: totalQuizzes > 0 ? Math.round((Number(r.count) / totalQuizzes) * 100) : 0,
+        }));
+
+        // 3. Breakdown by Quiz Type
+        const [typeRows] = await db.query<RowDataPacket[]>(`
+            SELECT t.quiz_type_id, t.type_name, COUNT(q.quiz_id) AS count
+            FROM quiz_type_tbl t
+            LEFT JOIN quiz_tbl q ON t.quiz_type_id = q.quiz_type_id
+            GROUP BY t.quiz_type_id, t.type_name
+            ORDER BY t.quiz_type_id
+        `);
+        const byType = typeRows.map((r) => ({
+            quiz_type_id: Number(r.quiz_type_id),
+            type_name: String(r.type_name),
+            count: Number(r.count),
+            percentage: totalQuizzes > 0 ? Math.round((Number(r.count) / totalQuizzes) * 100) : 0,
+        }));
+
+        // 4. Breakdown by Difficulty
+        const [diffRows] = await db.query<RowDataPacket[]>(`
+            SELECT d.difficulty_id, d.difficulty_name, COUNT(q.quiz_id) AS count
+            FROM difficulty_tbl d
+            LEFT JOIN quiz_tbl q ON d.difficulty_id = q.difficulty_id
+            GROUP BY d.difficulty_id, d.difficulty_name
+            ORDER BY d.difficulty_id
+        `);
+        const byDifficulty = diffRows.map((r) => ({
+            difficulty_id: Number(r.difficulty_id),
+            difficulty_name: String(r.difficulty_name),
+            count: Number(r.count),
+            percentage: totalQuizzes > 0 ? Math.round((Number(r.count) / totalQuizzes) * 100) : 0,
+        }));
+
+        // 5. Breakdown by Section
+        let bySection: { sec_id: number; sec_num: string; count: number }[] = [];
+        try {
+            const [secRows] = await db.query<RowDataPacket[]>(`
+                SELECT s.sec_id, s.sec_num, COUNT(q.quiz_id) AS count
+                FROM sec_tbl s
+                LEFT JOIN quiz_tbl q ON s.sec_id = q.sec_id
+                GROUP BY s.sec_id, s.sec_num
+                ORDER BY s.sec_id
+            `);
+            bySection = secRows.map((r) => ({
+                sec_id: Number(r.sec_id),
+                sec_num: String(r.sec_num),
+                count: Number(r.count),
+            }));
+        } catch {
+            bySection = [];
+        }
+        const lowCoverageSections = bySection.filter((s) => s.count < 3);
+
+        // 6. Cross-tabulation Category x Difficulty Matrix
+        let matrix: { cat_name: string; difficulties: { [diffName: string]: number }; total: number }[] = [];
+        try {
+            const [matrixRows] = await db.query<RowDataPacket[]>(`
+                SELECT c.cat_name, d.difficulty_name, COUNT(q.quiz_id) AS count
+                FROM cat_tbl c
+                CROSS JOIN difficulty_tbl d
+                LEFT JOIN quiz_tbl q ON c.cat_id = q.cat_id AND d.difficulty_id = q.difficulty_id
+                GROUP BY c.cat_id, c.cat_name, d.difficulty_id, d.difficulty_name
+                ORDER BY c.cat_name, d.difficulty_id
+            `);
+            const matrixMap: Record<string, Record<string, number>> = {};
+            for (const row of matrixRows) {
+                const catName = String(row.cat_name);
+                const diffName = String(row.difficulty_name);
+                if (!matrixMap[catName]) matrixMap[catName] = {};
+                matrixMap[catName][diffName] = Number(row.count);
+            }
+            matrix = Object.keys(matrixMap).map((catName) => {
+                const diffs = matrixMap[catName];
+                const total = Object.values(diffs).reduce((a, b) => a + b, 0);
+                return { cat_name: catName, difficulties: diffs, total };
+            });
+        } catch (mErr) {
+            console.warn("Failed to compute coverage matrix:", mErr);
+        }
+
+        return {
+            totalQuizzes,
+            byCategory,
+            byType,
+            byDifficulty,
+            bySection,
+            lowCoverageSections,
+            matrix,
+        };
+    } catch (error) {
+        console.error("Failed to fetch quiz metrics:", error);
+        return {
+            totalQuizzes: 0,
+            byCategory: [],
+            byType: [],
+            byDifficulty: [],
+            bySection: [],
+            lowCoverageSections: [],
+            matrix: [],
+        };
     }
 }
 
