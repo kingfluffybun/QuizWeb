@@ -5,7 +5,7 @@ import "#css/quiz.css";
 import { useQuizData } from "@/app/quiz/useQuizData";
 
 export default function QuizPage() {
-  const quizzes = useQuizData("FITB");
+  const {quizzes} = useQuizData("FITB");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState<string | null>(null);
