@@ -133,6 +133,11 @@ function getQuizPayload(typeName: string, formData: FormData) {
     }
 
     if (typeName === "CP") {
+        const title = (formData.get("cp_title") as string | null)?.trim() ?? "";
+        if (!title) {
+            return { error: "A title is required for coding problems." };
+        }
+
         const promptCountRaw = formData.get("cp_prompt_count");
         const promptCount = Number(promptCountRaw ?? "1");
         const safePromptCount = Number.isFinite(promptCount) && promptCount > 0 ? promptCount : 1;
@@ -169,6 +174,7 @@ function getQuizPayload(typeName: string, formData: FormData) {
 
         return {
             payload: {
+                title,
                 steps,
                 prompts,
                 prompt: prompts[0],
@@ -461,18 +467,63 @@ export async function getQuizMetrics(): Promise<QuizMetricsData> {
     }
 }
 
-export async function getPaginatedRecentQuizzes(page = 1, pageSize = 20) {
+export async function getPaginatedRecentQuizzes(
+    page = 1,
+    pageSize = 20,
+    filters: {
+        id?: string;
+        search?: string;
+        category?: string;
+        section?: string;
+        difficulty?: string;
+        type?: string;
+    } = {},
+) {
     try {
         await seedIfNeeded();
         const safePageSize = Math.max(1, Math.floor(pageSize));
-        const [countRows] = await db.query<RowDataPacket[]>(`
-            SELECT COUNT(*) AS total
+        const where: string[] = [];
+        const params: (string | number)[] = [];
+
+        if (filters.id?.trim()) {
+            where.push("CAST(q.quiz_id AS CHAR) LIKE ?");
+            params.push(`%${filters.id.replace(/^[#\\s]+/, "").trim()}%`);
+        }
+        if (filters.search?.trim()) {
+            const search = `%${filters.search.trim()}%`;
+            where.push("(q.question_text LIKE ? OR c.cat_name LIKE ? OR t.type_name LIKE ? OR d.difficulty_name LIKE ?)");
+            params.push(search, search, search, search);
+        }
+        if (filters.category) {
+            where.push("c.cat_name = ?");
+            params.push(filters.category);
+        }
+        if (filters.section) {
+            where.push("s.sec_num = ?");
+            params.push(filters.section);
+        }
+        if (filters.difficulty) {
+            where.push("d.difficulty_name = ?");
+            params.push(filters.difficulty);
+        }
+        if (filters.type) {
+            where.push("t.type_name = ?");
+            params.push(filters.type);
+        }
+
+        const whereClause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+        const joins = `
             FROM quiz_tbl q
             JOIN cat_tbl c ON q.cat_id = c.cat_id
             JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
             JOIN sec_tbl s ON q.sec_id = s.sec_id
-        `);
+        `;
+        const [countRows] = await db.query<RowDataPacket[]>(`
+            SELECT COUNT(*) AS total
+            ${joins}
+            ${whereClause}
+        `, params);
         const totalCount = Number(countRows[0]?.total ?? 0);
         const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
         const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
@@ -481,14 +532,11 @@ export async function getPaginatedRecentQuizzes(page = 1, pageSize = 20) {
             SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
                    q.question_text, q.quiz_payload,
                    c.cat_name, d.difficulty_name, t.type_name
-            FROM quiz_tbl q
-            JOIN cat_tbl c ON q.cat_id = c.cat_id
-            JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
-            JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
-            JOIN sec_tbl s ON q.sec_id = s.sec_id
+            ${joins}
+            ${whereClause}
             ORDER BY q.quiz_id DESC
             LIMIT ? OFFSET ?
-        `, [safePageSize, offset]);
+        `, [...params, safePageSize, offset]);
 
         return {
             quizzes: quizzes.map((q) => ({
