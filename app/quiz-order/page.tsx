@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import "#css/quiz.css";
+import { useQuizData } from "@/app/quiz/useQuizData";
 
 type SwapAnimation = {
   from: number;
@@ -12,6 +13,8 @@ type SwapAnimation = {
 } | null;
 
 export default function QuizPage() {
+  const quizzes = useQuizData("Order");
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [items, setItems] = useState([
     "<h2>Topic A Content Description</h2>",
     "<p>Paragraph text details about topic A...</p>",
@@ -22,6 +25,26 @@ export default function QuizPage() {
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [swapAnimation, setSwapAnimation] = useState<SwapAnimation>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const quiz = quizzes[currentIndex];
+
+  useEffect(() => {
+    if (quiz?.quiz_payload.items) setItems([...quiz.quiz_payload.items]);
+  }, [quiz]);
+
+  const nextQuiz = () => {
+    setCurrentIndex((index) => Math.min(index + 1, quizzes.length - 1));
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+    setSwapAnimation(null);
+    setMessage(null);
+  };
+
+  const submitAnswer = () => {
+    if (!quiz?.quiz_payload.items) return;
+    const isCorrect = JSON.stringify(items) === JSON.stringify(quiz.quiz_payload.items);
+    setMessage(isCorrect ? "Correct!" : "Incorrect order. Try again.");
+  };
 
   const handleDragStart = (index: number) => {
     setDraggedIdx(index);
@@ -80,21 +103,12 @@ export default function QuizPage() {
               </div>
             </div>
             <div className="progress-container">
-              <div className="active"></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
+              {quizzes.map((_, index) => <div key={index} className={index <= currentIndex ? "active" : ""}></div>)}
             </div>
         </div>
         <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
             <div className="quiz-container">
-                <h1>Arrange the blocks to show a clean thematic structural progression down a webpage layout.</h1>
+                <h1>{quiz?.question_text ?? "Loading question..."}</h1>
                 <div className="options-container row" id="order">
                     <div className="order-number col">
                         <div className="col"><h2>1.</h2></div>
@@ -137,13 +151,14 @@ export default function QuizPage() {
                       ))}
                     </div>
                 </div>
+                  {message && <p>{message}</p>}
             </div>
         </div>
       </main>
         <footer>
             <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
-                <button className="options" id="skip"> Skip </button>
-                <button className="options" id="submit"> Submit </button>
+                <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}> Skip </button>
+                <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}> Submit </button>
             </div>
         </footer>
     </div>

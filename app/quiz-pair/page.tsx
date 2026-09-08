@@ -2,21 +2,16 @@
 
 import { useState } from "react";
 import "#css/quiz.css";
+import { useQuizData } from "@/app/quiz/useQuizData";
 
 export default function QuizPage() {
-    const leftItems = ["p", "body", "h1", "button"];
-    const rightItems = [
-        "All paragraphs",
-        "All level one headings",
-        "The body elements",
-        "All buttons",
-    ];
-    const correctPairs: Record<string, string> = {
-        p: "All paragraphs",
-        body: "The body elements",
-        h1: "All level one headings",
-        button: "All buttons",
-    };
+    const quizzes = useQuizData("Pair");
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const quiz = quizzes[currentIndex];
+    const pairs = quiz?.quiz_payload.pairs ?? [];
+    const leftItems = pairs.map((pair) => pair.left);
+    const rightItems = pairs.map((pair) => pair.right);
+    const correctPairs: Record<string, string> = Object.fromEntries(pairs.map((pair) => [pair.left, pair.right]));
     const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
     const [selectedRight, setSelectedRight] = useState<string | null>(null);
     const [matchedLeft, setMatchedLeft] = useState<string[]>([]);
@@ -24,6 +19,25 @@ export default function QuizPage() {
     const [settledLeft, setSettledLeft] = useState<string[]>([]);
     const [settledRight, setSettledRight] = useState<string[]>([]);
     const [incorrectPair, setIncorrectPair] = useState<{ left: string; right: string } | null>(null);
+    const [message, setMessage] = useState<string | null>(null);
+
+    const nextQuiz = () => {
+        setCurrentIndex((index) => Math.min(index + 1, quizzes.length - 1));
+        setSelectedLeft(null);
+        setSelectedRight(null);
+        setMatchedLeft([]);
+        setMatchedRight([]);
+        setSettledLeft([]);
+        setSettledRight([]);
+        setIncorrectPair(null);
+        setMessage(null);
+    };
+
+    const submitAnswer = () => {
+        if (!quiz) return;
+        const isCorrect = matchedLeft.length === pairs.length && matchedRight.length === pairs.length;
+        setMessage(isCorrect ? "Correct!" : "Match all pairs before submitting.");
+    };
 
     const completePair = (left: string, right: string) => {
         if (correctPairs[left] === right) {
@@ -115,21 +129,12 @@ export default function QuizPage() {
               </div>
             </div>
             <div className="progress-container">
-              <div className="active"></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
+              {quizzes.map((_, index) => <div key={index} className={index <= currentIndex ? "active" : ""}></div>)}
             </div>
         </div>
         <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
             <div className="quiz-container">
-                <h1>Match each selector with what it targets.</h1>
+                <h1>{quiz?.question_text ?? "Loading question..."}</h1>
                 <div className="options-container row" id="pair">
                     <div className="pair-left-column col">
                         {leftItems.map((item) => (
@@ -174,13 +179,14 @@ export default function QuizPage() {
                         ))}
                     </div>
                 </div>
+                {message && <p>{message}</p>}
             </div>
         </div>
       </main>
         <footer>
             <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
-                <button className="options" id="skip"> Skip </button>
-                <button className="options" id="submit"> Submit </button>
+                <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}> Skip </button>
+                <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}> Submit </button>
             </div>
         </footer>
     </div>

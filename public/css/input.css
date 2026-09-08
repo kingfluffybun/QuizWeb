@@ -310,6 +310,133 @@ body {
     color: #0088ff;
 }
 
+.badge-id-container {
+    display: inline-flex;
+    align-items: stretch;
+    border-radius: 8px;
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.badge-id-container:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.badge-id-container.active-filter {
+    background-color: #ede9fe;
+    border-color: #8b5cf6;
+}
+
+.badge-id {
+    background-color: transparent;
+    color: #475569;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-family: "Montserrat", sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    transition: all 0.2s ease;
+    padding: 0 7px;
+    border-radius: 0;
+    outline: none;
+    height: 100%;
+}
+
+.badge-id:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #1e293b;
+}
+
+.badge-id:active {
+    transform: scale(0.96);
+}
+
+.badge-id.copied {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.badge-id-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    background: transparent;
+    border: none;
+    border-left: 1px solid #cbd5e1;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    height: 100%;
+}
+
+.badge-id-filter-btn:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--selected-color);
+}
+
+.badge-id-filter-btn.filtered {
+    background-color: var(--selected-color);
+    color: #ffffff;
+    border-left-color: var(--selected-color);
+}
+
+.badge-id-filter-btn.filtered:hover {
+    background-color: #6b36da;
+}
+
+[data-theme="dark"] .badge-id-container {
+    background-color: #262635;
+    border-color: #3f3f50;
+}
+
+[data-theme="dark"] .badge-id-container.active-filter {
+    background-color: #2d1e4e;
+    border-color: #a78bfa;
+}
+
+[data-theme="dark"] .badge-id {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .badge-id:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .badge-id.copied {
+    background-color: #064e3b;
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .badge-id-filter-btn {
+    border-left-color: #3f3f50;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .badge-id-filter-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .badge-id-filter-btn.filtered {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border-left-color: var(--primary-color);
+}
+
 .quiz-payload-preview {
     font-family: "Montserrat", sans-serif;
     font-size: 0.85rem;
@@ -617,4 +744,176 @@ body {
 
 .filter-clear-btn:hover {
     background-color: #ffe6e6;
+}
+
+.filter-input {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #333;
+    outline: none;
+    background-color: #fff;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.filter-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(153, 102, 255, 0.15);
+}
+
+.filter-input::placeholder {
+    color: #aaa;
+    font-weight: 400;
+}
+
+.list-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sort-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #ffffff;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0 10px 0 12px;
+    height: 38px;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.sort-wrapper:hover,
+.sort-wrapper:focus-within {
+    border-color: var(--selected-color);
+}
+
+.sort-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #666;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sort-icon {
+    color: var(--selected-color);
+    flex-shrink: 0;
+}
+
+.sort-select {
+    border: none;
+    background: transparent;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #333;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.active-filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background-color: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+}
+
+.active-filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #ede9fe;
+    color: #5b21b6;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.active-filter-tag-close {
+    background: none;
+    border: none;
+    color: #7c3aed;
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+}
+
+.active-filter-tag-close:hover {
+    color: #4c1d95;
+}
+
+[data-theme="dark"] .filter-panel {
+    background-color: #1c1c28;
+    border-color: #2e2e40;
+}
+
+[data-theme="dark"] .filter-panel-header {
+    border-bottom-color: #2e2e40;
+}
+
+[data-theme="dark"] .filter-select,
+[data-theme="dark"] .filter-input {
+    background-color: #262635;
+    border-color: #3f3f52;
+    color: #eaeaea;
+}
+
+[data-theme="dark"] .filter-input::placeholder {
+    color: #6c6c80;
+}
+
+[data-theme="dark"] .sort-wrapper {
+    background-color: #262635;
+    border-color: #3f3f52;
+}
+
+[data-theme="dark"] .sort-label {
+    color: #a0a0b2;
+}
+
+[data-theme="dark"] .sort-select {
+    color: #fafafa;
+    background-color: #262635;
+}
+
+[data-theme="dark"] .active-filters-bar {
+    background-color: #1e1e2c;
+    border-color: #3f3f52;
+}
+
+[data-theme="dark"] .active-filter-tag {
+    background-color: #2d1e4e;
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .active-filter-tag-close {
+    color: #a78bfa;
 }

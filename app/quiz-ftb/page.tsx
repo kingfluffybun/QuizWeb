@@ -1,8 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import "#css/quiz.css";
+import { useQuizData } from "@/app/quiz/useQuizData";
 
 export default function QuizPage() {
+  const quizzes = useQuizData("FITB");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answer, setAnswer] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const quiz = quizzes[currentIndex];
+
+  const nextQuiz = () => {
+    setCurrentIndex((index) => Math.min(index + 1, quizzes.length - 1));
+    setAnswer("");
+    setMessage(null);
+  };
+
+  const submitAnswer = () => {
+    if (!quiz) return;
+    const expected = quiz.quiz_payload.answer?.trim().toLowerCase();
+    setMessage(answer.trim().toLowerCase() === expected ? "Correct!" : "Incorrect.");
+  };
+
   return (
     <div className="quiz-page">
       <nav></nav>
@@ -21,33 +41,25 @@ export default function QuizPage() {
               </div>
             </div>
             <div className="progress-container">
-              <div className="active"></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
-              <div></div>
+              {quizzes.map((_, index) => <div key={index} className={index <= currentIndex ? "active" : ""}></div>)}
             </div>
         </div>
         <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
           <div className="quiz-container">
-            <h1>The &lt;a&gt; tag is an inline element, which means it requires text or an image inside it to serve as the clickable ______ on the screen.</h1>
+            <h1>{quiz?.question_text ?? "Loading question..."}</h1>
             <div className="options-container row" id="ftb">
-              <textarea placeholder="Type the missing word"></textarea>
+              <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Type the missing word" disabled={!quiz}></textarea>
+              {message && <p>{message}</p>}
             </div>
           </div>
         </div>
       </main>
       <footer>
         <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
-          <button className="options" id="skip">
+          <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}>
             Skip
           </button>
-          <button className="options" id="submit">
+          <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}>
             Submit
           </button>
         </div>
