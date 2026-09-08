@@ -1,5 +1,7 @@
 /* globals.css */
 :root {
+    --font-mono: var(--font-jetbrains-mono), monospace;
+
     /* Brand Colors */
     --primary-color: #9966FF;
     --selected-color: #7D3FFF;

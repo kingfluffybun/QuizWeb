@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Montserrat, Poppins } from "next/font/google";
+import { JetBrains_Mono, Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
 import "@/public/css/settings.css";
 import AccessibilityInit from "@/app/components/AccessibilityInit";
@@ -14,6 +14,12 @@ const montserrat = Montserrat({
     variable: "--font-montserrat",
     subsets: ["latin"],
     weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+});
+
+const jetBrainsMono = JetBrains_Mono({
+    variable: "--font-jetbrains-mono",
+    subsets: ["latin"],
+    weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -56,7 +62,7 @@ export default function RootLayout({
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
             </head>
-            <body>
+            <body className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`}>
                 <AccessibilityInit />
                 {children}
             </body>
