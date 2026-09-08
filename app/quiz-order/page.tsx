@@ -25,6 +25,7 @@ export default function QuizPage() {
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [swapAnimation, setSwapAnimation] = useState<SwapAnimation>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const quiz = quizzes[currentIndex];
 
   useEffect(() => {
@@ -36,6 +37,13 @@ export default function QuizPage() {
     setDraggedIdx(null);
     setDragOverIdx(null);
     setSwapAnimation(null);
+    setMessage(null);
+  };
+
+  const submitAnswer = () => {
+    if (!quiz?.quiz_payload.items) return;
+    const isCorrect = JSON.stringify(items) === JSON.stringify(quiz.quiz_payload.items);
+    setMessage(isCorrect ? "Correct!" : "Incorrect order. Try again.");
   };
 
   const handleDragStart = (index: number) => {
@@ -143,13 +151,14 @@ export default function QuizPage() {
                       ))}
                     </div>
                 </div>
+                  {message && <p>{message}</p>}
             </div>
         </div>
       </main>
         <footer>
             <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
                 <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}> Skip </button>
-                <button className="options" id="submit"> Submit </button>
+                <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}> Submit </button>
             </div>
         </footer>
     </div>
