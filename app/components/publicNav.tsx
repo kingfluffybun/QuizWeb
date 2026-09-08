@@ -43,7 +43,7 @@ export default function PublicNav() {
 
       <div className={`nav-options${menuOpen ? " is-open" : ""}`}>
         <div><Link href="/quiz"><p>Learn</p></Link></div>
-        <div><Link href="https://test.com"><p>Leaderboard</p></Link></div>
+        <div><Link href="/leaderboard"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
         {/* <div><Link href="/settings"><p>Settings</p></Link></div> */}
         <div><Link href="/login"><p>Get Started </p></Link></div>
