@@ -122,11 +122,14 @@ body {background-color: var(--bg-main);}
     [data-theme="system"] {
         --primary-color: #a377ff;
         --bg-brand: #1f1433;
-        --bg-main: #0f0f13;
+        --bg-main: #15151e;
         --bg-card: #1c1c24;
         --text-main: #fafafa;
         --text-muted: #a0a0b0;
         --text-inverse: #fafafa;
         --border-main: #2d2d3d;
+
+        --background-color: #2a1952;
+        --dots: #626262;
     }
 }
