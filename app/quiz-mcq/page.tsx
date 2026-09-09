@@ -5,7 +5,7 @@ import "#css/quiz.css";
 import { useQuizData } from "@/app/quiz/useQuizData";
 
 export default function QuizPage() {
-  const quizzes = useQuizData("MCQ");
+  const {quizzes} = useQuizData("MCQ");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);

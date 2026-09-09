@@ -13,7 +13,7 @@ type SwapAnimation = {
 } | null;
 
 export default function QuizPage() {
-  const quizzes = useQuizData("Order");
+  const {quizzes} = useQuizData("Order");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [items, setItems] = useState([
     "<h2>Topic A Content Description</h2>",

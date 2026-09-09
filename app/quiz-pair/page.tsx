@@ -5,7 +5,7 @@ import "#css/quiz.css";
 import { useQuizData } from "@/app/quiz/useQuizData";
 
 export default function QuizPage() {
-    const quizzes = useQuizData("Pair");
+    const { quizzes } = useQuizData("Pair");
     const [currentIndex, setCurrentIndex] = useState(0);
     const quiz = quizzes[currentIndex];
     const pairs = quiz?.quiz_payload.pairs ?? [];
