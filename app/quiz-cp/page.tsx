@@ -115,7 +115,7 @@ export default function QuizPage() {
                             <p>26</p>
                             <p>27</p>
                         </div>
-                        <textarea className="code-editor" spellCheck="false">{`<h1>Baking Recipes</h1>  
+                        <textarea className="code-editor" spellCheck="false" defaultValue={`<h1>Baking Recipes</h1>  
 <h2>Ingredients List</h2>
 <ul>
     <li>Flour</li>
@@ -127,7 +127,7 @@ export default function QuizPage() {
     <li>Mix ingredients together.</li>
     <li>Bake in the oven.</li>
 </ol>
-<p>Enjoy your meal!</p>`}
+<p>Enjoy your meal!</p>`}>
                        </textarea>
                     </div>
                 </div>
