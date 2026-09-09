@@ -6,7 +6,7 @@
         "sidebar footer";
     grid-template-rows: 8vh 1fr clamp(140px, 2vh, 220px);
     grid-template-columns: 100px 1fr;
-    min-height: 100vh;
+    max-height: 100vh;
     background-color: var(--bg-main);
 }
 
@@ -44,6 +44,7 @@
 
     > .quiz-navigation {
         display: flex;
+        align-items: center;
         gap: 16px;
         width: 100%;
         color: var(--text-main);
@@ -51,6 +52,7 @@
         > .heart-container {
             display: flex;
             margin-left: auto;
+            padding-left: 12px;
 
             > svg {
                 margin-left: -12px;
@@ -58,22 +60,22 @@
             }
         }
     }
+}
 
-    > .progress-container {
-        display: flex;
+.progress-container {
+    display: flex;
+    width: 100%;
+    gap: 12px;
+
+    > div {
+        background-color: var(--border-main);
         width: 100%;
-        gap: 12px;
+        height: 12px;
+        border-radius: 4px;
+    }
 
-        > div {
-            background-color: var(--border-main);
-            width: 100%;
-            height: 12px;
-            border-radius: 4px;
-        }
-
-        > .active {
-            background-color: var(--primary-color);
-        }
+    > .active {
+        background-color: var(--primary-color);
     }
 }
 
@@ -281,12 +283,14 @@
 
 /* =========================== End of Pair =========================== */
 
+/* =========================== Fill in the Blanks =========================== */
+
 .options-container#ftb {
     align-items: flex-start;
     flex: 1;
 }
 
-textarea {
+.answer-box {
     border: 2px solid var(--border-main);
     border-radius: 12px;
     padding: 24px 16px;
@@ -302,6 +306,196 @@ textarea {
 
     &:focus{outline: none;}
 }
+
+/* =========================== End of Fill in the Blanks =========================== */
+
+/* =========================== Code Problem =========================== */
+
+.code-problem-layout {
+    display: grid;
+    height: 100%; width: 100%;
+    grid-template-columns: 1fr 2fr 1.5fr;
+    > div {
+        display: flex;
+        flex-direction: column;
+        border: 2px solid var(--border-main);
+    }
+    > div + div {border-left: none;}
+}
+
+.header {
+    display: flex;
+    > div {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        padding: 12px;
+        border-bottom: 2px solid var(--border-main);
+        > svg {width: 24px; height: auto; color: var(--text-main);}
+        > h2 {user-select: none; font-size: clamp(0.75rem, 2vw, 1.25rem);}
+    }
+    > div.active::before {
+        position: absolute;
+        content: "";
+        bottom: 0; left: 0;
+        background-color: var(--selected-color);
+        width: 100%; height: 4px;
+    }
+}
+
+#tab {
+    .header > div 
+    {& + div {border-left: 2px solid var(--border-main);}}
+}
+
+.instruction-container {
+    padding: 12px;
+}
+
+.instruction {
+    border: 1px solid var(--border-main);
+    border-radius: 20px;
+    padding: 12px;
+    display: flex;
+    gap: 8px;
+    > .check-circle {
+        min-width: 28px; height: 28px; 
+        border: 1px solid var(--border-main);
+        border-radius: 50%;
+        svg {color: white;}
+    }
+    > p {font-size: 14px;}
+}
+
+.instruction.correct {
+    border-color: #D1FAE5;
+    background-color: #ECFDF550;
+    > .check-circle {
+        border: none;
+        background-color: #10B981;
+    }
+}
+
+.instruction.disabled {
+    border-color: var(--border-main);
+    background-color: #f0f0f0;
+    user-select: none;
+    > .check-circle {
+        border: none;
+        background-color: #999;
+    }
+}
+
+.code-editor-container {
+    > .line-number {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        text-align: right;
+        background-color: #F0F0F0;
+        padding: 16px 12px;
+        > p {user-select: none; font-family: var(--font-jetbrains-mono); color: #999; font-size: clamp(0.5rem, 1.5vw, 1rem); line-height: 1.5;}
+    }
+    > .code-editor {
+        line-height: 1.5;
+        background-color: transparent;
+        padding: 16px 12px;
+        font-family: var(--font-jetbrains-mono);
+        font-size: clamp(0.5rem, 1.5vw, 1rem);
+        font-weight: 500;
+        width: 100%; height: 100%;
+        outline: none;
+        border: none;
+        resize: none;
+    }
+}
+
+.canvas-container, .code-editor-container {
+    gap: 0;
+    justify-content: flex-start;
+    flex: 1;
+    height: 100%;
+}
+
+.toggle-device-container {
+    justify-content: flex-end; 
+    gap: 12px !important;
+    svg {width: 20px; height: 20px; color: #a1a1aa !important; transition: all 350ms;}
+}
+
+.toggle-device {
+    user-select: none;
+    background-color: var(--border-main);
+    border-radius: 999px;
+    position: relative;
+    width: 54px !important;
+
+    > input[type="checkbox"] {
+        display: none;
+        &:checked + .toggle-slider::before {transform: translateX(22px);}
+    }
+    > .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; bottom: 0; left: 0; right: 0;
+        &::before {
+            position: absolute;
+            left: 4px;
+            bottom: 3px;
+            content: "";
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            transition: 350ms ease;
+        }
+        
+    }
+}
+
+.toggle-device-container:has(.toggle-device input[type="checkbox"]:not(:checked)) #desktop-toggle {
+    color: var(--selected-color) !important;
+}
+
+.toggle-device-container:has(.toggle-device input[type="checkbox"]:checked) #mobile-toggle {
+    color: var(--selected-color) !important;
+}
+
+.canvas-container {
+    > .canvas {
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-start;
+        width: 100%;
+        flex: 1;
+        padding: 12px;
+        gap: 0;
+        background-color: #fff;
+        > p, h1, h2, h3, ul, ol, li {all: revert;}
+    }
+    > .console {
+        width: 100%;
+        padding: 4px 0;
+        border-top: 2px solid var(--border-main);
+        > .header {
+            > div {border: none;}
+            > .console-maximize {justify-content: flex-end; svg{width: 32px; height: auto;}}
+        }
+    }
+}
+
+
+#code-problem {
+    grid-template-areas:
+        "navbar navbar"
+        "sidebar main"
+        "sidebar main";
+    > main {padding: 48px;}
+}
+
+/* =========================== End of Code Problem =========================== */
 
 
 .quiz-page footer {
