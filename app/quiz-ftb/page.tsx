@@ -48,7 +48,7 @@ export default function QuizPage() {
           <div className="quiz-container">
             <h1>{quiz?.question_text ?? "Loading question..."}</h1>
             <div className="options-container row" id="ftb">
-              <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Type the missing word" disabled={!quiz}></textarea>
+              <textarea className="answer-box" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Type the missing word" disabled={!quiz}></textarea>
               {message && <p>{message}</p>}
             </div>
           </div>
