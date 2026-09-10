@@ -1,0 +1,69 @@
+* {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #fcfbff;
+    margin: 0;
+    padding: 40px 20px;
+}
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 48px;
+    border: 1px solid #e0e0e0;
+}
+.logo {
+    text-align: center;
+    margin-bottom: 32px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #9966FF;
+    letter-spacing: -0.5px;
+}
+.greeting {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 12px;
+}
+.message {
+    font-size: 15px;
+    color: #666666;
+    line-height: 1.6;
+    margin-bottom: 28px;
+}
+    .button {
+    text-align: center;
+    margin-bottom: 28px;
+}
+.button a {
+    display: inline-block;
+    background: #9966FF;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.expiry {
+    font-size: 14px;
+    color: #9966FF;
+    text-align: center;
+    margin-bottom: 28px;
+    font-weight: 500;
+}
+.footer {
+    font-size: 13px;
+    color: #666666;
+    text-align: center;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 28px;
+}
+.footer a {
+    color: #7D3FFF;
+    text-decoration: none;
+    font-weight: 500;
+}
+.footer a:hover {
+    text-decoration: underline;
+}

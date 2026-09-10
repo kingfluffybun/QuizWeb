@@ -1,4 +1,5 @@
 import { verifyEmail } from "@/app/actions/auth";
+import "@/public/css/verify.css";
 
 export default async function VerifyEmailPage({
     params,
@@ -10,17 +11,17 @@ export default async function VerifyEmailPage({
 
     if (result.success) {
         return (
-            <main className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-3xl font-bold">
+            <main>
+                <div>
+                    <h1>
                         Email Verified!
                     </h1>
 
-                    <p className="mt-3 text-gray-500">
+                    <p>
                         {result.message}
                     </p>
 
-                    <p className="mt-2 text-gray-500">
+                    <p>
                         You may now close this tab.
                     </p>
                 </div>

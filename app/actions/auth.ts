@@ -113,7 +113,6 @@ export async function signUp(formData: FormData) {
                             text-align: center;
                             margin-bottom: 28px;
                         }
-
                         .button a {
                             display: inline-block;
                             background: #9966FF;
