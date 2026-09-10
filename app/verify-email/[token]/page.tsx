@@ -17,7 +17,7 @@ export default async function VerifyEmailPage({
                     </h1>
 
                     <p className="mt-3 text-gray-500">
-                        Your email has been successfully verified.
+                        {result.message}
                     </p>
 
                     <p className="mt-2 text-gray-500">

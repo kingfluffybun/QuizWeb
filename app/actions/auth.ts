@@ -236,7 +236,7 @@ export async function verifyEmail(token: string) {
 
         return {
             success: true,
-            message: "Email verified successfully.",
+            message: "Email verified successfully. aaaaa",
         };
 
     } catch (error) {
