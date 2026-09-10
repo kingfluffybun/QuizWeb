@@ -76,33 +76,18 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
         completePair(selectedLeft, item);
     };
 
-    const getButtonStyle = (side: "left" | "right", item: string) => {
+    const getButtonClassName = (side: "left" | "right", item: string) => {
         const isMatched = side === "left" ? matchedLeft.includes(item) : matchedRight.includes(item);
         const isSettled = side === "left" ? settledLeft.includes(item) : settledRight.includes(item);
         const isIncorrect = incorrectPair?.[side] === item;
 
         if (isMatched) {
-            if (isSettled) {
-                return {
-                    color: "#e0e0e0",
-                    cursor: "default",
-                };
-            }
-            return {
-                backgroundColor: "rgba(34, 197, 94, 0.15)",
-                borderColor: "#22c55e",
-                color: "#16a34a",
-                cursor: "default",
-            };
+            return isSettled ? "pair-option-settled" : "pair-option-matched";
         }
         if (isIncorrect) {
-            return {
-                backgroundColor: "rgba(239, 68, 68, 0.15)",
-                borderColor: "#ef4444",
-                color: "#dc2626",
-            };
+            return "pair-option-incorrect";
         }
-        return undefined;
+        return "";
     };
 
     return (
@@ -122,7 +107,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
                             disabled={matchedLeft.includes(item)}
                             onChange={() => handleLeftClick(item)}
                         />
-                        <div className="options" style={getButtonStyle("left", item)}>
+                        <div className={`options ${getButtonClassName("left", item)}`}>
                             <p>{item}</p>
                         </div>
                     </label>
@@ -143,7 +128,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
                             disabled={matchedRight.includes(item)}
                             onChange={() => handleRightClick(item)}
                         />
-                        <div className="options" style={getButtonStyle("right", item)}>
+                        <div className={`options ${getButtonClassName("right", item)}`}>
                             <p>{item}</p>
                         </div>
                     </label>
