@@ -216,59 +216,6 @@ function getQuizPayload(typeName: string, formData: FormData) {
   return { error: "Unsupported quiz type." };
 }
 
-async function seedIfNeeded() {
-  try {
-    // Check if we need to reset the tables (if the categories, difficulties, or types are out of sync)
-    const result = await db.query<RowDataPacket[]>(
-      "SELECT type_name FROM quiz_type_tbl",
-    );
-    if (!result || !Array.isArray(result[0])) {
-      return;
-    }
-    const currentTypes = result[0];
-    const typeNames = currentTypes.map((t) => t.type_name);
-    const targetTypes = ["MCQ", "FITB", "Order", "Pair", "CP"];
-
-    // Also check categories and difficulties
-    const [currentCats] = await db.query<RowDataPacket[]>(
-      "SELECT cat_name FROM cat_tbl",
-    );
-    if (!currentCats || !Array.isArray(currentCats)) {
-      return;
-    }
-    const catNames = currentCats.map((c) => c.cat_name);
-    const targetCats = ["HTML", "CSS", "JavaScript"];
-
-    const [currentDiffs] = await db.query<RowDataPacket[]>(
-      "SELECT difficulty_name FROM difficulty_tbl",
-    );
-    if (!currentDiffs || !Array.isArray(currentDiffs)) {
-      return;
-    }
-    const diffNames = currentDiffs.map((d) => d.difficulty_name);
-    const targetDiffs = ["Beginner", "Intermediate", "Advanced"];
-
-    const needsReset =
-      typeNames.length !== targetTypes.length ||
-      !targetTypes.every((t) => typeNames.includes(t)) ||
-      catNames.length !== targetCats.length ||
-      !targetCats.every((c) => catNames.includes(c)) ||
-      diffNames.length !== targetDiffs.length ||
-      !targetDiffs.every((d) => diffNames.includes(d));
-
-    if (needsReset) {
-      console.warn(
-        "Database lookup values are out of sync; skipping destructive seed reset to preserve records.",
-      );
-    }
-  } catch (error) {
-    console.warn(
-      "Database connection issue during seed check, skipping seed:",
-      error instanceof Error ? error.message : String(error),
-    );
-  }
-}
-
 async function getSectionTableName() {
   const candidates = ["sec_tbl", "section_tbl", "sections_tbl"];
 
@@ -298,7 +245,6 @@ async function quizHasColumn(columnName: string) {
 
 export async function getQuizMetadata() {
   try {
-    await seedIfNeeded();
     const [categories] = await db.query<RowDataPacket[]>(
       "SELECT * FROM cat_tbl ORDER BY cat_name",
     );
@@ -326,8 +272,6 @@ export async function getQuizMetadata() {
 
 export async function getQuizMetrics(): Promise<QuizMetricsData> {
   try {
-    await seedIfNeeded();
-
     // 1. Total count
     const [totalRows] = await db.query<RowDataPacket[]>(
       "SELECT COUNT(*) AS total FROM quiz_tbl",
@@ -498,7 +442,6 @@ export async function getPaginatedRecentQuizzes(
   } = {},
 ) {
   try {
-    await seedIfNeeded();
     const safePageSize = Math.max(1, Math.floor(pageSize));
     const where: string[] = [];
     const params: (string | number)[] = [];
@@ -758,7 +701,6 @@ export async function updateQuiz(quizId: number, formData: FormData) {
 // For /quiz
 // export async function getQuizzesByType(typeName: "MCQ" | "FITB" | "Order" | "Pair") {
 //     try {
-//         await seedIfNeeded();
 //         const [quizzes] = await db.query<QuizRow[]>(`
 //             SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
 //                     q.question_text, q.quiz_payload,
@@ -792,8 +734,6 @@ export async function getQuizzes(filters?: {
   difficulty_id?: number;
 }) {
   try {
-    await seedIfNeeded();
-
     const conditions: string[] = [];
     const params: number[] = [];
     if (filters?.cat_id) {
