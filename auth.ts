@@ -75,7 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     FROM user_auth_tbl a 
                     LEFT JOIN player_tbl p ON a.user_id = p.user_id 
                     WHERE a.email = ? LIMIT 1`,
-                    [email]
+                    [normalizedEmail]
                 );
                 const user = rows[0];
 

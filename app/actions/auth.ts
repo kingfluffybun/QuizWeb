@@ -7,15 +7,15 @@ import { createHash, randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
-async function verifyRecaptchaToken(token?: string | null): Promise<boolean> {
+async function verifyRecaptchaToken(token?: string | null): Promise<{ valid: boolean; error?: string }> {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     if (!secretKey) {
         console.warn("[reCAPTCHA] RECAPTCHA_SECRET_KEY is not set; skipping verification.");
-        return true;
+        return { valid: true };
     }
     if (!token) {
         console.warn("[reCAPTCHA] No token provided for verification.");
-        return false;
+        return { valid: false, error: "Please verify that you are not a robot before proceeding." };
     }
     try {
         const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
@@ -26,42 +26,80 @@ async function verifyRecaptchaToken(token?: string | null): Promise<boolean> {
                 secret: secretKey,
                 response: token,
             }),
+            signal: AbortSignal.timeout(6000),
         });
         const data = await response.json();
         console.log("[reCAPTCHA] Siteverify response:", data);
 
         if (!data.success) {
             const errors: string[] = data["error-codes"] || [];
-            // In local development, tolerate hostname-mismatch if localhost wasn't registered in Google Console
-            if (process.env.NODE_ENV !== "production" && errors.length === 1 && errors.includes("hostname-mismatch")) {
-                console.warn("[reCAPTCHA] Development hostname mismatch detected. Allowing verification for local testing.");
-                return true;
+            if (errors.includes("hostname-mismatch")) {
+                if (process.env.NODE_ENV !== "production") {
+                    console.warn("[reCAPTCHA] Development hostname mismatch detected. Allowing verification for local testing.");
+                    return { valid: true };
+                }
+                console.error("[reCAPTCHA] Hostname mismatch in production. Domain must be added to Google reCAPTCHA Console:", errors);
+                return {
+                    valid: false,
+                    error: "reCAPTCHA domain verification failed (hostname-mismatch). Please ensure this domain is added in the Google reCAPTCHA Admin Console."
+                };
+            }
+            if (errors.includes("timeout-or-duplicate")) {
+                return {
+                    valid: false,
+                    error: "reCAPTCHA token expired or already used. Please click 'I\\'m not a robot' again."
+                };
+            }
+            if (errors.includes("invalid-input-secret")) {
+                console.error("[reCAPTCHA] RECAPTCHA_SECRET_KEY is invalid in server environment.");
+                return {
+                    valid: false,
+                    error: "reCAPTCHA configuration error. Please contact the administrator."
+                };
             }
             console.warn("[reCAPTCHA] Verification failed with error codes:", errors);
-            return false;
+            return {
+                valid: false,
+                error: `reCAPTCHA verification failed (${errors.join(", ")}). Please try again.`
+            };
         }
 
         if (typeof data.score === "number" && data.score < 0.5) {
             console.warn(`[reCAPTCHA] Confidence score too low: ${data.score}`);
-            return false;
+            return {
+                valid: false,
+                error: "Suspicious activity detected. Please try again later."
+            };
         }
 
-        return true;
+        return { valid: true };
     } catch (err) {
         console.error("[reCAPTCHA] Verification network error:", err);
-        return false;
+        return {
+            valid: false,
+            error: "Unable to reach Google reCAPTCHA servers. Please check your internet connection."
+        };
     }
 }
 
 export async function signUp(formData: FormData) {
-    const username = formData.get("username") as string;
-    const email = formData.get("email") as string;
+    const rawUsername = formData.get("username") as string;
+    const rawEmail = formData.get("email") as string;
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
     const recaptchaToken = formData.get("recaptchaToken") as string | null;
 
+    const username = rawUsername?.trim();
+    const email = rawEmail?.trim().toLowerCase();
+
     if (!username || !email || !password || !confirmPassword) {
         return { error: "All fields are required." };
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+        return { error: "Please enter a valid email address." };
+    }
+    if (username.length < 2) {
+        return { error: "Username must be at least 2 characters." };
     }
     if (password !== confirmPassword) {
         return { error: "Passwords do not match." };
@@ -71,9 +109,9 @@ export async function signUp(formData: FormData) {
     }
 
     // Finding 7: Server-side reCAPTCHA verification
-    const isHuman = await verifyRecaptchaToken(recaptchaToken);
-    if (!isHuman) {
-        return { error: "Bot activity detected or verification failed. Please try again." };
+    const recaptchaResult = await verifyRecaptchaToken(recaptchaToken);
+    if (!recaptchaResult.valid) {
+        return { error: recaptchaResult.error || "Bot activity detected or verification failed. Please try again." };
     }
 
     const connection = await db.getConnection();
@@ -130,7 +168,8 @@ export async function signUp(formData: FormData) {
 
 // Req OTP
 export async function reqPassReset(email: string) {
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    const normalizedEmail = email?.trim().toLowerCase();
+    if (!normalizedEmail || !/\S+@\S+\.\S+/.test(normalizedEmail)) {
         return { error: "Please enter a valid email address." };
     }
 
@@ -140,7 +179,7 @@ export async function reqPassReset(email: string) {
         // Finding 5: Prevent user enumeration and TypeError
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email]
+            [normalizedEmail]
         );
 
         if (!users || users.length === 0) {

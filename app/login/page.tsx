@@ -35,6 +35,9 @@ function AuthPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // Login state
+    const [loginEmail, setLoginEmail] = useState("");
+
     // Signup password validation
     const [signupUsername, setSignupUsername] = useState("");
     const [signupEmail, setSignupEmail] = useState("");
@@ -45,6 +48,7 @@ function AuthPage() {
     // ReCaptcha
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
     const [recaptchaLoading, setRecaptchaLoading] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState("");
 
     // Forgot pass states
     const [forgotEmail, setForgotEmail] = useState("");
@@ -61,31 +65,40 @@ function AuthPage() {
         e.preventDefault();
         if (isLoading) return;
         setError("");
-        setIsLoading(true);
 
         const formData = new FormData(e.currentTarget);
-        const email = formData.get("email") as string;
+        const email = ((formData.get("email") as string) || loginEmail)?.trim().toLowerCase();
         const password = formData.get("password") as string;
 
         if (!email || !password) {
             setError("Please enter your email and password.");
-            setIsLoading(false);
             return;
         }
 
-        const res = await signIn("credentials", {
-            email,
-            password,
-            redirect: false,
-        });
+        setIsLoading(true);
 
-        if (res?.error) {
-            setError("Invalid email or password, or too many failed attempts.");
-            setIsLoading(false);
+        try {
+            const res = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+            });
+
+            if (res?.error) {
+                setError("Invalid email or password, or too many failed attempts.");
+                return;
+            }
+
+            router.push("/");
+            router.refresh();
             return;
+        } catch (err: unknown) {
+            console.error("Login error:", err);
+            const msg = err instanceof Error ? err.message : "Failed to sign in. Please try again.";
+            setError(msg);
+        } finally {
+            setIsLoading(false);
         }
-
-        router.push("/");
     }
 
     // === Signup ===
@@ -96,6 +109,8 @@ function AuthPage() {
         setAttemptedSubmit(true);
 
         const formData = new FormData(e.currentTarget);
+        const username = (formData.get("username") as string)?.trim();
+        const email = (formData.get("email") as string)?.trim().toLowerCase();
         const password = formData.get("password") as string;
         const confirmPass = formData.get("confirmPassword") as string;
 
@@ -117,45 +132,71 @@ function AuthPage() {
 
         setIsLoading(true);
 
-        // Generate a fresh, unconsumed reCAPTCHA token at submission time
-        let token = "";
-        if (executeRecaptcha) {
-            try {
-                token = await executeRecaptcha("signup");
-            } catch (err) {
-                console.warn("reCAPTCHA execution error on signup:", err);
+        try {
+            // Re-use verified token or attempt rapid fallback with timeout
+            let token = recaptchaToken;
+            if (!token && executeRecaptcha) {
+                try {
+                    const timeoutPromise = new Promise<string>((_, reject) =>
+                        setTimeout(() => reject(new Error("reCAPTCHA timeout")), 4000)
+                    );
+                    token = await Promise.race([executeRecaptcha("signup"), timeoutPromise]);
+                } catch (err) {
+                    console.warn("reCAPTCHA execution fallback error:", err);
+                }
             }
-        }
 
-        if (token) {
-            formData.append("recaptchaToken", token);
-        }
+            formData.set("username", username);
+            formData.set("email", email);
+            if (token) {
+                formData.set("recaptchaToken", token);
+            }
 
-        // Create account
-        const result = await signUp(formData);
+            // 1. Create account
+            const result = await signUp(formData);
 
-        if (result?.error) {
-            setError(result.error);
+            if (result?.error) {
+                setError(result.error);
+                if (result.error.toLowerCase().includes("recaptcha") || result.error.toLowerCase().includes("bot")) {
+                    setRecaptchaVerified(false);
+                    setRecaptchaToken("");
+                }
+                return;
+            }
+
+            // 2. Account successfully created! Pre-fill login email for convenience
+            setLoginEmail(email);
+
+            // 3. Attempt automatic login
+            try {
+                const res = await signIn("credentials", {
+                    email,
+                    password,
+                    redirect: false,
+                });
+
+                if (res?.error) {
+                    setError("Account created successfully! Please sign in with your password.");
+                    switchMode('login');
+                    return;
+                }
+
+                router.push("/");
+                router.refresh();
+                return;
+            } catch (authErr) {
+                console.warn("Auto-login error after signup:", authErr);
+                setError("Account created successfully! Please sign in with your password.");
+                switchMode('login');
+                return;
+            }
+        } catch (err: unknown) {
+            console.error("Signup error:", err);
+            const msg = err instanceof Error ? err.message : "Failed to create account. Please try again.";
+            setError(msg);
+        } finally {
             setIsLoading(false);
-            return;
         }
-
-        // Automatically login user
-        const res = await signIn("credentials", {
-            email: formData.get("email") as string,
-            password,
-            redirect: false,
-        });
-
-        // Catch autologin failures
-        if (res?.error) {
-            setError("Account created successfully, but auto-login failed. Please sign in manually.");
-            setIsLoading(false);
-            switchMode('login');
-            return;
-        }
-
-        router.push("/");
     }
 
     // === ReCaptcha ===
@@ -168,18 +209,23 @@ function AuthPage() {
         setError("");
 
         try {
-            // Confirm client script is responsive and ready
-            const token = await executeRecaptcha("signup");
+            const timeoutPromise = new Promise<string>((_, reject) =>
+                setTimeout(() => reject(new Error("reCAPTCHA verification timed out")), 6000)
+            );
+            const token = await Promise.race([executeRecaptcha("signup"), timeoutPromise]);
             if (token) {
+                setRecaptchaToken(token);
                 setRecaptchaVerified(true);
             } else {
                 setError("ReCaptcha failed to verify. Please try again.");
                 setRecaptchaVerified(false);
+                setRecaptchaToken("");
             }
         } catch (err) {
             console.error("reCAPTCHA client verification error:", err);
-            setError("ReCaptcha failed to verify. Please try again.");
+            setError("ReCaptcha verification timed out or failed. Please try again.");
             setRecaptchaVerified(false);
+            setRecaptchaToken("");
         } finally {
             setRecaptchaLoading(false);
         }
@@ -277,6 +323,7 @@ function AuthPage() {
         setError("");
         setAttemptedSubmit(false);
         setRecaptchaVerified(false);
+        setRecaptchaToken("");
 
         fadeToken.current += 1;
         const myToken = fadeToken.current;
@@ -399,7 +446,14 @@ function AuthPage() {
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                                     </span>
-                                    <input type="email" placeholder=" " name="email" autoComplete="email" />
+                                    <input 
+                                        type="email" 
+                                        placeholder=" " 
+                                        name="email" 
+                                        autoComplete="email" 
+                                        value={loginEmail}
+                                        onChange={(e) => setLoginEmail(e.target.value)}
+                                    />
                                     <span className="floating-label">Email address</span>
                                 </label>
 
@@ -762,7 +816,7 @@ function AuthPage() {
 export default function AuthLoad() {
     return (
         <GoogleReCaptchaProvider 
-            reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+            reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
             scriptProps={{
                 async: false,
                 defer: false,
