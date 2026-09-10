@@ -44,7 +44,6 @@ function AuthPage() {
 
     // ReCaptcha
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
-    const [recaptchaToken, setRecaptchaToken] = useState("");
     const [recaptchaLoading, setRecaptchaLoading] = useState(false);
 
     // Forgot pass states
@@ -118,8 +117,18 @@ function AuthPage() {
 
         setIsLoading(true);
 
-        if (recaptchaToken) {
-            formData.append("recaptchaToken", recaptchaToken);
+        // Generate a fresh, unconsumed reCAPTCHA token at submission time
+        let token = "";
+        if (executeRecaptcha) {
+            try {
+                token = await executeRecaptcha("signup");
+            } catch (err) {
+                console.warn("reCAPTCHA execution error on signup:", err);
+            }
+        }
+
+        if (token) {
+            formData.append("recaptchaToken", token);
         }
 
         // Create account
@@ -152,39 +161,29 @@ function AuthPage() {
     // === ReCaptcha ===
     const handleReCaptchaVerify = async () => {
         if (!executeRecaptcha) {
-            setError("ReCaptcha failed to load. Please refresh the page");
+            setError("ReCaptcha failed to load. Please refresh the page.");
             return;
         }
         setRecaptchaLoading(true);
         setError("");
 
         try {
+            // Confirm client script is responsive and ready
             const token = await executeRecaptcha("signup");
-            setRecaptchaToken(token);
-
-            // Verify token
-            const res = await fetch("/api/recaptcha", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token }),
-            });
-
-            const data = await res.json();
-
-            if (data.success && data.score >= 0.5) {
+            if (token) {
                 setRecaptchaVerified(true);
             } else {
                 setError("ReCaptcha failed to verify. Please try again.");
                 setRecaptchaVerified(false);
             }
         } catch (err) {
-            console.error(err);
+            console.error("reCAPTCHA client verification error:", err);
             setError("ReCaptcha failed to verify. Please try again.");
             setRecaptchaVerified(false);
         } finally {
             setRecaptchaLoading(false);
         }
-    }
+    };
 
     // === Forgot Pass ===
     const openForgot = () => {

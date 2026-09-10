@@ -10,9 +10,11 @@ import type { RowDataPacket, ResultSetHeader } from "mysql2";
 async function verifyRecaptchaToken(token?: string | null): Promise<boolean> {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     if (!secretKey) {
+        console.warn("[reCAPTCHA] RECAPTCHA_SECRET_KEY is not set; skipping verification.");
         return true;
     }
     if (!token) {
+        console.warn("[reCAPTCHA] No token provided for verification.");
         return false;
     }
     try {
@@ -26,9 +28,27 @@ async function verifyRecaptchaToken(token?: string | null): Promise<boolean> {
             }),
         });
         const data = await response.json();
-        return !!(data.success && (data.score === undefined || data.score >= 0.5));
+        console.log("[reCAPTCHA] Siteverify response:", data);
+
+        if (!data.success) {
+            const errors: string[] = data["error-codes"] || [];
+            // In local development, tolerate hostname-mismatch if localhost wasn't registered in Google Console
+            if (process.env.NODE_ENV !== "production" && errors.length === 1 && errors.includes("hostname-mismatch")) {
+                console.warn("[reCAPTCHA] Development hostname mismatch detected. Allowing verification for local testing.");
+                return true;
+            }
+            console.warn("[reCAPTCHA] Verification failed with error codes:", errors);
+            return false;
+        }
+
+        if (typeof data.score === "number" && data.score < 0.5) {
+            console.warn(`[reCAPTCHA] Confidence score too low: ${data.score}`);
+            return false;
+        }
+
+        return true;
     } catch (err) {
-        console.error("reCAPTCHA verification error:", err);
+        console.error("[reCAPTCHA] Verification network error:", err);
         return false;
     }
 }
