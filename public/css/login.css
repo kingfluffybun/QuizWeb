@@ -1953,8 +1953,8 @@ button:focus-visible, a:focus-visible {
 
   .login-cloud-top-left  { top: 3%;  left: -28%; }
   .login-cloud-top-right { top: 3%;  right: -28%; }
-  .login-cloud-bottom-left  { left: -2%; bottom: -2%; }
-  .login-cloud-bottom-right { right: -2%; bottom: -2%; }
+  .login-cloud-bottom-left  { left: -2%; bottom: -3%; }
+  .login-cloud-bottom-right { right: -2%; bottom: -3%; }
 
   .preview-stack {
     display: none;
