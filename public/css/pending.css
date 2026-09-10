@@ -1,0 +1,280 @@
+:root {
+  --pending-background: #f6f6f6;
+  --pending-surface: #ffffff;
+  --pending-border: #e0e0e0;
+  --pending-text: #333333;
+  --pending-muted: #666666;
+  --pending-accent: var(--primary-color, #9966ff);
+  --pending-accent-dark: var(--selected-color, #7d3fff);
+  --pending-success: #047857;
+  --pending-success-background: #ecfdf5;
+  --pending-danger: #b91c1c;
+  --pending-danger-background: #fef2f2;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background-color: var(--pending-background);
+  color: var(--pending-text);
+  font-family: "Poppins", "Montserrat", sans-serif;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px clamp(20px, 5vw, 56px);
+  background-color: var(--pending-accent);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+
+.header-link {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.header-link:hover,
+.header-link:focus-visible {
+  opacity: 0.8;
+}
+
+.pending-container {
+  width: min(100% - 40px, 1120px);
+  margin: 40px auto;
+}
+
+.pending-card {
+  padding: clamp(24px, 4vw, 44px);
+  border: 1px solid var(--pending-border);
+  border-radius: 20px;
+  background-color: var(--pending-surface);
+  box-shadow: 0 8px 24px rgba(32, 20, 60, 0.06);
+}
+
+.pending-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--pending-border);
+}
+
+.pending-eyebrow {
+  margin: 0 0 8px;
+  color: var(--pending-accent-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pending-heading h2 {
+  margin: 0 0 8px;
+  color: var(--pending-text);
+}
+
+.pending-heading p:not(.pending-eyebrow) {
+  max-width: 620px;
+  margin: 0;
+  color: var(--pending-muted);
+  line-height: 1.6;
+}
+
+.pending-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pending-filter {
+  padding: 9px 14px;
+  border: 1px solid var(--pending-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pending-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.pending-filter:hover:not(:disabled),
+.pending-filter:focus-visible {
+  border-color: var(--pending-accent);
+  color: var(--pending-accent-dark);
+}
+
+.pending-filter.active {
+  border-color: var(--pending-accent-dark);
+  background-color: var(--pending-accent-dark);
+  color: #ffffff;
+}
+
+.pending-filter:disabled,
+.pending-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.status-message {
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  background-color: var(--pending-success-background);
+  color: var(--pending-success);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.pending-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.pending-item {
+  padding: 22px;
+  border: 1px solid var(--pending-border);
+  border-radius: 14px;
+  background-color: var(--pending-surface);
+}
+
+.pending-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.pending-id,
+.pending-meta {
+  color: var(--pending-muted);
+  font-size: 0.82rem;
+}
+
+.pending-id {
+  font-weight: 700;
+}
+
+.pending-status {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  color: var(--pending-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.pending-status.pending {
+  background-color: #fff7ed;
+  color: #c2410c;
+}
+
+.pending-status.approved {
+  background-color: var(--pending-success-background);
+  color: var(--pending-success);
+}
+
+.pending-status.rejected {
+  background-color: var(--pending-danger-background);
+  color: var(--pending-danger);
+}
+
+.pending-item h3 {
+  margin: 0 0 8px;
+  color: var(--pending-text);
+  font-size: 1.08rem;
+  line-height: 1.45;
+}
+
+.pending-meta,
+.pending-payload {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.pending-payload {
+  margin-top: 14px;
+  padding: 14px;
+  border-left: 3px solid var(--pending-accent);
+  background-color: var(--pending-background);
+  color: var(--pending-text);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pending-actions button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pending-approve {
+  background-color: var(--pending-success);
+}
+
+.pending-reject {
+  background-color: var(--pending-danger);
+}
+
+.pending-actions button:hover:not(:disabled),
+.pending-actions button:focus-visible {
+  filter: brightness(0.9);
+}
+
+.pending-empty {
+  margin-top: 24px;
+  padding: 32px 20px;
+  border: 1px dashed var(--pending-border);
+  border-radius: 12px;
+  color: var(--pending-muted);
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .admin-header,
+  .pending-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pending-container {
+    width: min(100% - 24px, 1120px);
+    margin: 24px auto;
+  }
+
+  .pending-filters {
+    justify-content: flex-start;
+  }
+}
+

@@ -7,7 +7,7 @@ export default function FITB ({ value, onChange }: QuestionProps) {
 
     return (
         <div className="options-container row" id="ftb">
-        <textarea
+        <textarea className="answer-box"
             value={answer}
             onChange={(event) => onChange(event.target.value)}
             placeholder="Type the missing word"

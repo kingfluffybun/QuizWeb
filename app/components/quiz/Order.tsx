@@ -11,9 +11,21 @@ type SwapAnimation = {
     phase: "start" | "settle";
 } | null;
 
+function shuffleItems(items: string[]) {
+    const shuffled = [...items];
+
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+
+    return shuffled;
+}
+
 export default function Order ({ quiz, value, onChange }: QuestionProps) {
     const correct = quiz.quiz_payload.items ?? [];
-    const items: string[] = Array.isArray(value) ? value : correct;
+    const [initialItems] = useState(() => shuffleItems(correct));
+    const items: string[] = Array.isArray(value) ? value : initialItems;
 
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -88,6 +100,7 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
                             onDrop={() => handleDrop(index)}
                             onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
                             <p>{item}</p>
                         </div>
                     );
