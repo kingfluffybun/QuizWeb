@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import {
@@ -99,6 +99,16 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
   const [isPending, setIsPending] = useState(false);
   const pageSize = 20;
 
+  useEffect(() => {
+    const refreshIncomingQuizzes = () => {
+      void getPendingQuizzes("all").then(setQuizzes);
+    };
+
+    window.addEventListener("quizweb-pending-updated", refreshIncomingQuizzes);
+    return () =>
+      window.removeEventListener("quizweb-pending-updated", refreshIncomingQuizzes);
+  }, []);
+
   const filteredQuizzes = useMemo(() => quizzes.filter((quiz) => {
     const query = search.toLowerCase().trim();
     const cleanId = idFilter.replace(/^#/, "").trim();
@@ -152,7 +162,7 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
     }}>
       <div className="incoming-card-header recent-card-header">
         <div>
-          <h2>Incoming quizzes</h2>
+          <h2>Pending Quizzes</h2>
           <div className="list-visibility-counter">Showing <strong>{visibleQuizzes.length}</strong> of <strong>{quizzes.length}</strong> questions ({quizzes.length ? Math.round((visibleQuizzes.length / quizzes.length) * 100) : 0}% of bank)</div>
         </div>
         <div className="list-header-actions">

@@ -524,6 +524,8 @@ export default function QuizInputForm({
         if (editingQuiz?.pending_id) {
           router.replace("/input");
         }
+        window.dispatchEvent(new Event("quizweb-pending-updated"));
+        router.refresh();
 
         // Reset inputs
         setEditingQuiz(null);
