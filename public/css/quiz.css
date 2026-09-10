@@ -280,6 +280,23 @@
 .pair-option-disabled {pointer-events: none; cursor: default;}
 .pair-option-disabled .options {cursor: default;}
 .pair-option-disabled .options p {color: inherit;}
+.pair-option-matched {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+    border-color: #22c55e !important;
+    color: #16a34a !important;
+    cursor: default !important;
+}
+.pair-option-matched > p {color: #16a34a !important;}
+.pair-option-incorrect {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    border-color: #ef4444 !important;
+    color: #dc2626 !important;
+}
+.pair-option-incorrect > p {color: #dc2626 !important;}
+.pair-option-settled {
+    color: #e0e0e0 !important;
+    cursor: default !important;
+}
 
 /* =========================== End of Pair =========================== */
 
