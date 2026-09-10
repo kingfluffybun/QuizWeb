@@ -2,11 +2,11 @@
 :root {
     --font-mono: var(--font-jetbrains-mono), monospace;
 
-    /* Brand Colors (WCAG 2.1 AA Compliant >= 4.5:1) */
-    --primary-color: #7333E6;
-    --selected-color: #5E20D1;
-    --selected-background-color: rgba(115, 51, 230, 0.08);
-    --background-color: #6B38C9;
+    /* Brand Colors */
+    --primary-color: #9966FF;
+    --selected-color: #7D3FFF;
+    --selected-background-color: rgba(153, 102, 255, 0.08);
+    --background-color: #A883EA;
     
     --bg-main: #fcfbff;
     --bg-card: #ffffff;
@@ -18,11 +18,6 @@
     --base-scale: 100%;
 
     --dots: #fafafa;
-}
-
-:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
 }
 
 [data-theme="dark"] {

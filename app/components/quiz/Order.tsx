@@ -68,37 +68,14 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
         window.setTimeout(() => setSwapAnimation(null), 220);
     };
 
-    const moveItem = (index: number, direction: "up" | "down") => {
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= items.length) return;
-        const updatedItems = [...items];
-        const [movedItem] = updatedItems.splice(index, 1);
-        updatedItems.splice(targetIndex, 0, movedItem);
-        onChange(updatedItems);
-    };
-
-    const handleKeyDown = (event: React.KeyboardEvent, index: number) => {
-        if (event.key === "ArrowUp") {
-            event.preventDefault();
-            moveItem(index, "up");
-        } else if (event.key === "ArrowDown") {
-            event.preventDefault();
-            moveItem(index, "down");
-        }
-    };
-
     return (
         <div className="options-container row" id="order">
-            <div className="order-number col" aria-hidden="true">
+            <div className="order-number col">
                 {items.map((_, i) => (
                     <div className="col" key={i}><h2>{i + 1}.</h2></div>
                 ))}
             </div>
-            <div
-                className={`order-options col ${draggedIdx !== null ? "is-dragging" : ""}`}
-                role="list"
-                aria-label="Reorderable quiz items list"
-            >
+            <div className={`order-options col ${draggedIdx !== null ? "is-dragging" : ""}`}>
                 {items.map((item, index) => {
                     const isMoved = swapAnimation?.to === index;
                     const isShifted = swapAnimation && (
@@ -116,10 +93,6 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
                             style={swapStyle}
                             className={`options draggable-item ${draggedIdx === index ? "is-dragging" : ""} ${dragOverIdx === index ? "is-over" : ""} ${swapAnimation?.phase === "start" ? "swap-animation-start" : ""} ${swapAnimation?.phase === "settle" ? "swap-animation-settle" : ""} ${isMoved ? `swap-moved-${swapAnimation.direction}` : ""} ${isShifted ? `swap-shifted-${swapAnimation.direction}` : ""}`}
                             draggable="true"
-                            tabIndex={0}
-                            role="listitem"
-                            aria-label={`${item}, item ${index + 1} of ${items.length}. Press Arrow Up or Down to reorder.`}
-                            onKeyDown={(e) => handleKeyDown(e, index)}
                             onDragStart={() => handleDragStart(index)}
                             onDragOver={handleDragOver}
                             onDragEnter={() => setDragOverIdx(index)}
@@ -127,28 +100,8 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
                             onDrop={() => handleDrop(index)}
                             onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
                         >
-                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            <p style={{ flex: 1 }}>{item}</p>
-                            <div style={{ display: "flex", gap: "4px" }}>
-                                <button
-                                    type="button"
-                                    aria-label={`Move ${item} up`}
-                                    disabled={index === 0}
-                                    onClick={(e) => { e.stopPropagation(); moveItem(index, "up"); }}
-                                    style={{ background: "transparent", border: "none", cursor: index === 0 ? "default" : "pointer", opacity: index === 0 ? 0.3 : 0.8, padding: "4px" }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-label={`Move ${item} down`}
-                                    disabled={index === items.length - 1}
-                                    onClick={(e) => { e.stopPropagation(); moveItem(index, "down"); }}
-                                    style={{ background: "transparent", border: "none", cursor: index === items.length - 1 ? "default" : "pointer", opacity: index === items.length - 1 ? 0.3 : 0.8, padding: "4px" }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                                </button>
-                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                            <p>{item}</p>
                         </div>
                     );
                 })}
