@@ -11,9 +11,21 @@ type SwapAnimation = {
     phase: "start" | "settle";
 } | null;
 
+function shuffleItems(items: string[]) {
+    const shuffled = [...items];
+
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+
+    return shuffled;
+}
+
 export default function Order ({ quiz, value, onChange }: QuestionProps) {
     const correct = quiz.quiz_payload.items ?? [];
-    const items: string[] = Array.isArray(value) ? value : correct;
+    const [initialItems] = useState(() => shuffleItems(correct));
+    const items: string[] = Array.isArray(value) ? value : initialItems;
 
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);

@@ -3,10 +3,21 @@
 import { useState } from "react";
 import type { QuestionProps } from "@/app/quiz/types";
 
+function shuffleItems(items: string[]) {
+    const shuffled = [...items];
+
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+
+    return shuffled;
+}
+
 export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     const pairs = quiz.quiz_payload.pairs ?? [];
-    const leftItems = pairs.map((p) => p.left);
-    const rightItems = pairs.map((p) => p.right);
+    const [leftItems] = useState(() => shuffleItems(pairs.map((p) => p.left)));
+    const [rightItems] = useState(() => shuffleItems(pairs.map((p) => p.right)));
     const correctPairs: Record<string, string> = Object.fromEntries(
         pairs.map((p) => [p.left, p.right])
     );
