@@ -6,7 +6,7 @@
         "sidebar footer";
     grid-template-rows: 8vh 1fr clamp(140px, 2vh, 220px);
     grid-template-columns: 100px 1fr;
-    max-height: 100vh;
+    min-height: 100vh;
     background-color: var(--bg-main);
 }
 
