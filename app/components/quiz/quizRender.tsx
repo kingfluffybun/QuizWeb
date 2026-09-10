@@ -6,12 +6,14 @@ import MCQ from "./MCQ";
 import FITB from "./FITB";
 import Order from "./Order";
 import Pair from "./Pair";
+import CP from "./CP";
 
 const questionComponents: Record<string, ComponentType<QuestionProps>> = {
     MCQ: MCQ,
     FITB: FITB,
     Order: Order,
     Pair: Pair,
+    CP: CP,
 };
 
 export default function QuizRender(props: QuestionProps & { quiz: QuizData }) {

@@ -1,8 +1,8 @@
 "use client";
 
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
-import { signUp, reqPassReset, verifyOTP, resetPass } from "@/app/actions/auth";
-import { useState, useRef } from "react";
+import { signUp, reqPassReset, verifyOTP, resetPass, sendSignupOTP, verifySignupOTP, resendSignupOTP } from "@/app/actions/auth";
+import { useState, useRef, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import * as Assets from "@/app/components/illustrations/svg_assets";
@@ -38,12 +38,22 @@ function AuthPage() {
     // Login state
     const [loginEmail, setLoginEmail] = useState("");
 
-    // Signup password validation
+    // Signup state
     const [signupUsername, setSignupUsername] = useState("");
     const [signupEmail, setSignupEmail] = useState("");
     const [signupPassword, setSignupPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+    // Signup OTP state
+    const [signupStep, setSignupStep] = useState<1 | 2>(1);
+    const [signupOTP, setSignupOTP] = useState("");
+    const [signupOTPSent, setSignupOTPSent] = useState(false);
+    const [signupOtpSuccess, setSignupOtpSuccess] = useState("");
+    const [signupVerificationToken, setSignupVerificationToken] = useState("");
+    const [signupResendCooldown, setSignupResendCooldown] = useState(0);
+    const [isSendingSignupOTP, setIsSendingSignupOTP] = useState(false);
+    const [isVerifyingSignupOTP, setIsVerifyingSignupOTP] = useState(false);
 
     // ReCaptcha
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
@@ -59,6 +69,15 @@ function AuthPage() {
 
     const fadeToken = useRef(0);
     const FADE_MS = 260;
+
+    // Countdown effect for resending signup OTP
+    useEffect(() => {
+        if (signupResendCooldown <= 0) return;
+        const timer = setInterval(() => {
+            setSignupResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [signupResendCooldown]);
 
     // === Login ===
     async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -85,7 +104,7 @@ function AuthPage() {
             });
 
             if (res?.error) {
-                setError("Invalid email or password, or too many failed attempts.");
+                setError("Invalid email or password, or your email has not been verified.");
                 return;
             }
 
@@ -101,21 +120,129 @@ function AuthPage() {
         }
     }
 
-    // === Signup ===
+    // === Signup OTP: Step 1 Send Code ===
+    async function handleSendSignupOTP() {
+        if (isSendingSignupOTP) return;
+        setError("");
+        setSignupOtpSuccess("");
+
+        const cleanUser = signupUsername.trim();
+        const cleanEmail = signupEmail.trim().toLowerCase();
+
+        if (!cleanUser || cleanUser.length < 2) {
+            setError("Please enter a valid username (at least 2 characters).");
+            return;
+        }
+        if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+            setError("Please enter a valid email address.");
+            return;
+        }
+        if (!recaptchaVerified) {
+            setError("Please complete the 'I'm not a robot' verification first.");
+            return;
+        }
+
+        setIsSendingSignupOTP(true);
+
+        try {
+            const result = await sendSignupOTP(cleanEmail, cleanUser, recaptchaToken);
+            if (result?.error) {
+                setError(result.error);
+                if (result.error.toLowerCase().includes("recaptcha") || result.error.toLowerCase().includes("robot")) {
+                    setRecaptchaVerified(false);
+                    setRecaptchaToken("");
+                }
+                return;
+            }
+
+            setSignupOTPSent(true);
+            setSignupOtpSuccess(result.message || `Verification code sent to ${cleanEmail}`);
+            setSignupResendCooldown(60);
+        } catch (err: unknown) {
+            console.error("sendSignupOTP error:", err);
+            setError("Failed to send verification code. Please try again.");
+        } finally {
+            setIsSendingSignupOTP(false);
+        }
+    }
+
+    // === Signup OTP: Step 1 Verify Code ===
+    async function handleVerifySignupOTP() {
+        if (isVerifyingSignupOTP) return;
+        setError("");
+
+        const cleanOtp = signupOTP.trim();
+        if (!cleanOtp || cleanOtp.length !== 6) {
+            setError("Please enter the 6-digit verification code sent to your email.");
+            return;
+        }
+
+        setIsVerifyingSignupOTP(true);
+
+        try {
+            const result = await verifySignupOTP(signupEmail.trim().toLowerCase(), cleanOtp);
+            if (result?.error) {
+                setError(result.error);
+                return;
+            }
+
+            if (result.verificationToken) {
+                setSignupVerificationToken(result.verificationToken);
+                setSignupStep(2);
+                setError("");
+                setSignupOtpSuccess("");
+            } else {
+                setError("Verification failed. Please request a new code.");
+            }
+        } catch (err: unknown) {
+            console.error("verifySignupOTP error:", err);
+            setError("Failed to verify code. Please try again.");
+        } finally {
+            setIsVerifyingSignupOTP(false);
+        }
+    }
+
+    // === Signup OTP: Resend Code ===
+    async function handleResendSignupOTP() {
+        if (signupResendCooldown > 0 || isSendingSignupOTP) return;
+        setError("");
+        setSignupOtpSuccess("");
+        setIsSendingSignupOTP(true);
+
+        try {
+            const result = await resendSignupOTP(signupEmail.trim().toLowerCase(), signupUsername.trim());
+            if (result?.error) {
+                setError(result.error);
+                return;
+            }
+            setSignupResendCooldown(60);
+            setSignupOtpSuccess("A new verification code has been sent to your email.");
+        } catch (err: unknown) {
+            console.error("resendSignupOTP error:", err);
+            setError("Failed to resend code. Please try again.");
+        } finally {
+            setIsSendingSignupOTP(false);
+        }
+    }
+
+    // === Signup: Step 2 Finalize Account Creation ===
     async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (isLoading) return;
         setError("");
         setAttemptedSubmit(true);
 
-        const formData = new FormData(e.currentTarget);
-        const username = (formData.get("username") as string)?.trim();
-        const email = (formData.get("email") as string)?.trim().toLowerCase();
-        const password = formData.get("password") as string;
-        const confirmPass = formData.get("confirmPassword") as string;
+        if (signupStep !== 2 || !signupVerificationToken) {
+            setError("Please verify your email address before creating an account.");
+            setSignupStep(1);
+            return;
+        }
 
-        const failedRules = passwordRules.filter((rule) => !rule.test(password));
-        const mismatched = password !== confirmPass;
+        const cleanUser = signupUsername.trim();
+        const cleanEmail = signupEmail.trim().toLowerCase();
+
+        const failedRules = passwordRules.filter((rule) => !rule.test(signupPassword));
+        const mismatched = signupPassword !== confirmPassword;
 
         if (failedRules.length > 0 || mismatched) {
             if (mismatched) {
@@ -124,54 +251,37 @@ function AuthPage() {
             return;
         }
 
-        // Check ReCaptcha
-        if (!recaptchaVerified) {
-            setError("Please verify that you are not a robot.");
-            return;
-        }
-
         setIsLoading(true);
 
         try {
-            // Re-use verified token or attempt rapid fallback with timeout
-            let token = recaptchaToken;
-            if (!token && executeRecaptcha) {
-                try {
-                    const timeoutPromise = new Promise<string>((_, reject) =>
-                        setTimeout(() => reject(new Error("reCAPTCHA timeout")), 4000)
-                    );
-                    token = await Promise.race([executeRecaptcha("signup"), timeoutPromise]);
-                } catch (err) {
-                    console.warn("reCAPTCHA execution fallback error:", err);
-                }
-            }
+            const formData = new FormData();
+            formData.set("username", cleanUser);
+            formData.set("email", cleanEmail);
+            formData.set("password", signupPassword);
+            formData.set("confirmPassword", confirmPassword);
+            formData.set("verificationToken", signupVerificationToken);
 
-            formData.set("username", username);
-            formData.set("email", email);
-            if (token) {
-                formData.set("recaptchaToken", token);
-            }
-
-            // 1. Create account
+            // 1. Create account in database
             const result = await signUp(formData);
 
             if (result?.error) {
                 setError(result.error);
-                if (result.error.toLowerCase().includes("recaptcha") || result.error.toLowerCase().includes("bot")) {
-                    setRecaptchaVerified(false);
-                    setRecaptchaToken("");
+                if (result.error.toLowerCase().includes("verification") || result.error.toLowerCase().includes("expired")) {
+                    setSignupStep(1);
+                    setSignupOTPSent(false);
+                    setSignupVerificationToken("");
                 }
                 return;
             }
 
-            // 2. Account successfully created! Pre-fill login email for convenience
-            setLoginEmail(email);
+            // 2. Account successfully created! Pre-fill login email
+            setLoginEmail(cleanEmail);
 
             // 3. Attempt automatic login
             try {
                 const res = await signIn("credentials", {
-                    email,
-                    password,
+                    email: cleanEmail,
+                    password: signupPassword,
                     redirect: false,
                 });
 
@@ -324,6 +434,12 @@ function AuthPage() {
         setAttemptedSubmit(false);
         setRecaptchaVerified(false);
         setRecaptchaToken("");
+        setSignupStep(1);
+        setSignupOTP("");
+        setSignupOTPSent(false);
+        setSignupOtpSuccess("");
+        setSignupVerificationToken("");
+        setSignupResendCooldown(0);
 
         fadeToken.current += 1;
         const myToken = fadeToken.current;
@@ -349,12 +465,12 @@ function AuthPage() {
     const strengthColor = strengthLevels[passedRulesCount];
 
     const isSignupComplete = 
-        signupUsername.trim() !== "" &&
+        signupUsername.trim().length >= 2 &&
         /\S+@\S+\.\S+/.test(signupEmail) &&
         allRulesPassed &&
         signupPassword === confirmPassword &&
         confirmPassword !== "" &&
-        recaptchaVerified;
+        signupVerificationToken !== "";
     
     const forgotCopy: Record<number, [string, string, string]> = {
         1: ['Step 1', 'Enter your email', 'Use the registered email address for your account.'],
@@ -371,9 +487,17 @@ function AuthPage() {
     const panelText = isSignupContent ? 'Start learning with QuizWeb in minutes.' : 'Pick up your WebDev quizzes where you left off.';
     const toggleText = isSignupContent ? 'Already have an account? Sign in' : 'New here? Create account';
 
-    const formLabelText = isSignupContent ? 'Get started' : 'Access your account';
-    const formTitleText = isSignupContent ? 'Create account' : 'Sign in';
-    const formTextText = isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
+    const formLabelText = isSignupContent 
+        ? (signupStep === 2 ? 'Step 2 of 2' : 'Step 1 of 2') 
+        : 'Access your account';
+    const formTitleText = isSignupContent 
+        ? (signupStep === 2 ? 'Set password' : 'Create account') 
+        : 'Sign in';
+    const formTextText = isSignupContent 
+        ? (signupStep === 2 
+            ? 'Create a secure password to complete your registration.' 
+            : (signupOTPSent ? `Enter the 6-digit code sent to ${signupEmail.trim() || 'your email'}.` : "Verify your email to get started."))
+        : 'Use your email and password to continue.';
 
     // HTML
     return (
@@ -517,130 +641,267 @@ function AuthPage() {
 
                             {/* Signup Form */}
                             <form className={`formView ${isSignupContent ? 'active' : ''}`} onSubmit={handleSignup} noValidate>
-                                <label className="input-group">
-                                    <span className="field-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                    </span>
-                                    <input 
-                                        type="text"
-                                        placeholder=" "
-                                        name="username" 
-                                        autoComplete="name"
-                                        value={signupUsername}
-                                        onChange={(e) => setSignupUsername(e.target.value)}
-                                    />
-                                    <span className="floating-label">Username</span>
-                                </label>
+                                {signupStep === 1 ? (
+                                    <>
+                                        <label className="input-group">
+                                            <span className="field-icon" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                            </span>
+                                            <input 
+                                                type="text"
+                                                placeholder=" "
+                                                name="username" 
+                                                autoComplete="name"
+                                                value={signupUsername}
+                                                onChange={(e) => setSignupUsername(e.target.value)}
+                                                disabled={signupOTPSent || isSendingSignupOTP}
+                                            />
+                                            <span className="floating-label">Username</span>
+                                        </label>
 
-                                <label className="input-group">
-                                    <span className="field-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
-                                    </span>
-                                    <input
-                                        type="email"
-                                        placeholder=" " 
-                                        name="email"
-                                        autoComplete="email"
-                                        value={signupEmail}
-                                        onChange={(e) => setSignupEmail(e.target.value)}
-                                    />
-                                    <span className="floating-label">Email address</span>
-                                </label>
+                                        <label className="input-group">
+                                            <span className="field-icon" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+                                            </span>
+                                            <input
+                                                type="email"
+                                                placeholder=" " 
+                                                name="email"
+                                                autoComplete="email"
+                                                value={signupEmail}
+                                                onChange={(e) => setSignupEmail(e.target.value)}
+                                                disabled={signupOTPSent || isSendingSignupOTP}
+                                            />
+                                            <span className="floating-label">Email address</span>
+                                        </label>
 
-                                <label className="input-group">
-                                    <span className="field-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                    </span>
-                                    <input
-                                        type="password"
-                                        placeholder=" "
-                                        name="password"
-                                        autoComplete="new-password"
-                                        value={signupPassword}
-                                        onChange={(e) => setSignupPassword(e.target.value)}
-                                    />
-                                    <span className="floating-label">Create password</span>
-                                </label>
+                                        {!signupOTPSent ? (
+                                            <>
+                                                <div className="recaptcha-container">
+                                                    <button
+                                                        type="button"
+                                                        className={`recaptcha-btn ${recaptchaVerified ? "verified" : ""}`}
+                                                        onClick={handleReCaptchaVerify}
+                                                        disabled={recaptchaLoading || recaptchaVerified}
+                                                    >
+                                                        {recaptchaVerified ? (
+                                                            <>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                                <span>Verified</span>
+                                                            </>
+                                                        ) : recaptchaLoading ? (
+                                                            <>
+                                                                <span className="spinner" />
+                                                                <span>Verifying...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                                                <span>I&apos;m not a robot</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <p className="recaptcha-terms">
+                                                        Protected by reCAPTCHA and subject to the Google{" "}
+                                                        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                                                        {" "}and{" "}
+                                                        <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>.
+                                                    </p>
+                                                </div>
 
-                                <label className="input-group">
-                                    <span className="field-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                    </span>
-                                    <input 
-                                        type="password"
-                                        placeholder=" "
-                                        name="confirmPassword"
-                                        autoComplete="new-password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                    />
-                                    <span className="floating-label">Confirm password</span>
-                                </label>
+                                                {isSignupContent && error && (
+                                                    <p className="form-error" role="alert">{error}</p>
+                                                )}
 
-                                {signupPassword.length > 0 && (
-                                    <div className="password-strength">
-                                        <div className="strength-bar-track">
-                                            {passwordRules.map((_, i) => (
-                                                <span
-                                                    key={i}
-                                                    className="strength-bar-seg"
-                                                    style={{
-                                                        background: i < passedRulesCount ? strengthColor : undefined,
-                                                    }}
-                                                ></span>
-                                            ))}
+                                                <button 
+                                                    type="button" 
+                                                    className="submit-btn" 
+                                                    onClick={handleSendSignupOTP}
+                                                    disabled={isSendingSignupOTP || !recaptchaVerified || signupUsername.trim().length < 2 || !/\S+@\S+\.\S+/.test(signupEmail.trim())}
+                                                >
+                                                    {isSendingSignupOTP ? (
+                                                        <>
+                                                            <span className="spinner" />
+                                                            <span>Sending verification code...</span>
+                                                        </>
+                                                    ) : (
+                                                        "Send verification code"
+                                                    )}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="otp-sent-banner">
+                                                    <div className="otp-sent-info">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+                                                        <span>Code sent to <strong>{signupEmail.trim()}</strong></span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="otp-change-btn"
+                                                        onClick={() => {
+                                                            setSignupOTPSent(false);
+                                                            setSignupOTP("");
+                                                            setError("");
+                                                            setSignupOtpSuccess("");
+                                                        }}
+                                                    >
+                                                        Change
+                                                    </button>
+                                                </div>
+
+                                                <label className="input-group">
+                                                    <span className="field-icon" aria-hidden="true">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                                    </span>
+                                                    <input 
+                                                        type="text"
+                                                        placeholder=" "
+                                                        maxLength={6}
+                                                        inputMode="numeric"
+                                                        autoComplete="one-time-code"
+                                                        value={signupOTP}
+                                                        onChange={(e) => setSignupOTP(e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isVerifyingSignupOTP}
+                                                        autoFocus
+                                                    />
+                                                    <span className="floating-label">Enter 6-digit code</span>
+                                                </label>
+
+                                                {isSignupContent && error && (
+                                                    <p className="form-error" role="alert">{error}</p>
+                                                )}
+
+                                                {signupOtpSuccess && !error && (
+                                                    <p className="form-success" role="status">{signupOtpSuccess}</p>
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    className="submit-btn"
+                                                    onClick={handleVerifySignupOTP}
+                                                    disabled={isVerifyingSignupOTP || signupOTP.length !== 6}
+                                                >
+                                                    {isVerifyingSignupOTP ? (
+                                                        <>
+                                                            <span className="spinner" />
+                                                            <span>Verifying code...</span>
+                                                        </>
+                                                    ) : (
+                                                        "Verify & Continue"
+                                                    )}
+                                                </button>
+
+                                                <div className="otp-resend-row">
+                                                    <span className="otp-resend-text">Didn&apos;t receive the code?</span>
+                                                    {signupResendCooldown > 0 ? (
+                                                        <span className="otp-cooldown">Resend in {signupResendCooldown}s</span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="otp-resend-btn"
+                                                            onClick={handleResendSignupOTP}
+                                                            disabled={isSendingSignupOTP}
+                                                        >
+                                                            {isSendingSignupOTP ? "Sending..." : "Resend code"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="verified-email-card">
+                                            <div className="verified-email-pill">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                <span>Verified: <strong>{signupEmail.trim()}</strong></span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="otp-change-btn"
+                                                onClick={() => {
+                                                    setSignupStep(1);
+                                                    setSignupOTPSent(false);
+                                                    setSignupOTP("");
+                                                    setSignupVerificationToken("");
+                                                    setError("");
+                                                }}
+                                            >
+                                                Change
+                                            </button>
                                         </div>
-                                        <p className={`strength-hint ${allRulesPassed ? "is-good" : ""}`}>
-                                            {allRulesPassed ? "Strong password" : `Needs: ${missingLabels.join(", ")}`}
-                                        </p>
-                                    </div>
-                                )}
 
-                                {passwordsMismatch && (
-                                    <p className="form-error" role="alert">Passwords do not match.</p>
-                                )}
+                                        <label className="input-group">
+                                            <span className="field-icon" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                            </span>
+                                            <input
+                                                type="password"
+                                                placeholder=" "
+                                                name="password"
+                                                autoComplete="new-password"
+                                                value={signupPassword}
+                                                onChange={(e) => setSignupPassword(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <span className="floating-label">Create password</span>
+                                        </label>
 
-                                {isSignupContent && error && !passwordsMismatch && (
-                                    <p className="form-error" role="alert">{error}</p>
-                                )}
+                                        <label className="input-group">
+                                            <span className="field-icon" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                            </span>
+                                            <input 
+                                                type="password"
+                                                placeholder=" "
+                                                name="confirmPassword"
+                                                autoComplete="new-password"
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                            />
+                                            <span className="floating-label">Confirm password</span>
+                                        </label>
 
-                                {isSignupContent && (
-                                    <div className="recaptcha-container">
-                                        <button
-                                            type="button"
-                                            className={`recaptcha-btn ${recaptchaVerified ? "verified" : ""}`}
-                                            onClick={handleReCaptchaVerify}
-                                            disabled={recaptchaLoading || recaptchaVerified}
-                                        >
-                                            {recaptchaVerified ? (
-                                                <>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                                    <span>Verified</span>
-                                                </>
-                                            ) : recaptchaLoading ? (
+                                        {signupPassword.length > 0 && (
+                                            <div className="password-strength">
+                                                <div className="strength-bar-track">
+                                                    {passwordRules.map((_, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className="strength-bar-seg"
+                                                            style={{
+                                                                background: i < passedRulesCount ? strengthColor : undefined,
+                                                            }}
+                                                        ></span>
+                                                    ))}
+                                                </div>
+                                                <p className={`strength-hint ${allRulesPassed ? "is-good" : ""}`}>
+                                                    {allRulesPassed ? "Strong password" : `Needs: ${missingLabels.join(", ")}`}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {passwordsMismatch && (
+                                            <p className="form-error" role="alert">Passwords do not match.</p>
+                                        )}
+
+                                        {isSignupContent && error && !passwordsMismatch && (
+                                            <p className="form-error" role="alert">{error}</p>
+                                        )}
+
+                                        <button type="submit" className="submit-btn" disabled={isLoading || !isSignupComplete}>
+                                            {isLoading ? (
                                                 <>
                                                     <span className="spinner" />
-                                                    <span>Verifying...</span>
+                                                    <span>Creating account...</span>
                                                 </>
                                             ) : (
-                                                <>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                                    <span>I&apos;m not a robot</span>
-                                                </>
+                                                "Create account"
                                             )}
                                         </button>
-                                        <p className="recaptcha-terms">
-                                            Protected by reCAPTCHA and subject to the Google{" "}
-                                            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-                                            {" "}and{" "}
-                                            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>.
-                                        </p>
-                                    </div>
+                                    </>
                                 )}
-
-                                <button type="submit" className="submit-btn" disabled={isLoading || !isSignupComplete}>
-                                    {isLoading ? "Creating account..." : "Create account"}
-                                </button>
                             </form>
                         </div>
                     </div>

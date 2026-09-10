@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
+import { recordQuizAnswer } from "@/app/actions/player";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
 export interface Category {
@@ -758,10 +759,14 @@ export async function getQuizzes(filters?: {
   cat_id?: number;
   sec_id?: number;
   difficulty_id?: number;
+  type_name?: string;
+  cat_name?: string;
+  sec_num?: number | string;
+  difficulty_name?: string;
 }) {
   try {
     const conditions: string[] = [];
-    const params: number[] = [];
+    const params: (number | string)[] = [];
     if (filters?.cat_id) {
       conditions.push("q.cat_id = ?");
       params.push(filters.cat_id);
@@ -773,6 +778,22 @@ export async function getQuizzes(filters?: {
     if (filters?.difficulty_id) {
       conditions.push("q.difficulty_id = ?");
       params.push(filters.difficulty_id);
+    }
+    if (filters?.type_name) {
+      conditions.push("t.type_name = ?");
+      params.push(filters.type_name);
+    }
+    if (filters?.cat_name) {
+      conditions.push("c.cat_name = ?");
+      params.push(filters.cat_name);
+    }
+    if (filters?.sec_num) {
+      conditions.push("s.sec_num = ?");
+      params.push(String(filters.sec_num));
+    }
+    if (filters?.difficulty_name) {
+      conditions.push("d.difficulty_name = ?");
+      params.push(filters.difficulty_name);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -788,7 +809,8 @@ export async function getQuizzes(filters?: {
             JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
             LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
             ${where}
-            ORDER BY q.quiz_id DESC
+            ORDER BY q.quiz_id ASC
+            LIMIT 50
             `,
       params,
     );
@@ -877,13 +899,44 @@ export async function submitAnswer(quizId: number, submittedValue: unknown) {
         message = isCorrect ? "Correct!" : "Match all pairs before submitting.";
         break;
       }
+      case "CP": {
+        if (typeof submittedValue === "string") {
+          const expected = (payload.expected ?? payload.steps?.[0]?.expected ?? "").trim();
+          const cleanSubmitted = submittedValue.trim().replace(/\r\n/g, "\n");
+          const cleanExpected = expected.replace(/\r\n/g, "\n");
+          isCorrect = cleanSubmitted === cleanExpected ||
+                      cleanSubmitted.replace(/\s+/g, " ") === cleanExpected.replace(/\s+/g, " ");
+        } else if (typeof submittedValue === "object" && submittedValue !== null) {
+          const val = submittedValue as { stepIndex?: number; code?: string; allStepsCompleted?: boolean };
+          if (val.allStepsCompleted) {
+            isCorrect = true;
+          } else if (typeof val.code === "string") {
+            const stepIdx = val.stepIndex ?? 0;
+            const expected = (payload.steps?.[stepIdx]?.expected ?? payload.expected ?? "").trim();
+            const cleanSubmitted = val.code.trim().replace(/\r\n/g, "\n");
+            const cleanExpected = expected.replace(/\r\n/g, "\n");
+            isCorrect = cleanSubmitted === cleanExpected ||
+                        cleanSubmitted.replace(/\s+/g, " ") === cleanExpected.replace(/\s+/g, " ");
+          }
+        }
+        message = isCorrect ? "Code verified successfully!" : "Code does not match expected output.";
+        break;
+      }
       default:
         return { error: `Unsupported quiz type: ${quiz.type_name}` };
+    }
+
+    let progressResult = null;
+    try {
+      progressResult = await recordQuizAnswer(quizId, isCorrect);
+    } catch (progErr) {
+      console.error("Failed to record player progress:", progErr);
     }
 
     return {
       correct: isCorrect,
       message,
+      progress: progressResult,
     };
   } catch (error) {
     console.error("Failed to evaluate answer:", error);

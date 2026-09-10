@@ -1344,6 +1344,154 @@ button:focus-visible, a:focus-visible {
   margin-top: 12px;
 }
 
+.form-success {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #34c759 12%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, #34c759 35%, transparent);
+  color: #2f8a4e;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  animation: strengthFadeIn 0.22s ease;
+}
+
+[data-theme="dark"] .form-success {
+  color: #34c759;
+}
+
+.otp-sent-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  animation: strengthFadeIn 0.22s ease;
+}
+
+.otp-sent-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.otp-sent-info svg {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.otp-sent-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.otp-change-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+.otp-change-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.otp-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: -4px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.otp-resend-text {
+  font-weight: 500;
+}
+
+.otp-cooldown {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.otp-resend-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.otp-resend-btn:hover:not(:disabled) {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.otp-resend-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.verified-email-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #34c759 12%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, #34c759 35%, transparent);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  animation: strengthFadeIn 0.22s ease;
+}
+
+.verified-email-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2f8a4e;
+  font-weight: 500;
+  min-width: 0;
+}
+
+[data-theme="dark"] .verified-email-pill {
+  color: #34c759;
+}
+
+.verified-email-pill svg {
+  flex-shrink: 0;
+}
+
+.verified-email-pill strong {
+  color: var(--text-main);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
 .recaptcha-container {
     margin: 16px 0;
     display: flex;

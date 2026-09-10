@@ -26,14 +26,39 @@ function shuffleQuizOptions(quiz: QuizData): QuizData {
     };
 }
 
-export function useQuizData() {
-    const [quizzes, setQuizzes] = useState<QuizData[]>([]);
+export interface QuizFilters {
+    cat_id?: number;
+    sec_id?: number;
+    difficulty_id?: number;
+    type_name?: string;
+    cat_name?: string;
+    sec_num?: number | string;
+    difficulty_name?: string;
+}
+
+export function useQuizData(filters?: QuizFilters) {
+    const [state, setState] = useState<{ quizzes: QuizData[]; loading: boolean }>({
+        quizzes: [],
+        loading: true,
+    });
+
+    const filterKey = JSON.stringify(filters || {});
 
     useEffect(() => {
-        getQuizzes().then((rows) => {
-            setQuizzes((rows as QuizData[]).map(shuffleQuizOptions));
+        let isMounted = true;
+        getQuizzes(filters).then((rows) => {
+            if (isMounted) {
+                setState({
+                    quizzes: (rows as QuizData[]).map(shuffleQuizOptions),
+                    loading: false,
+                });
+            }
         });
-    }, []);
+        return () => {
+            isMounted = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterKey]);
 
-    return { quizzes, };
+    return state;
 }

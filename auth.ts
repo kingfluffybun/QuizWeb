@@ -6,6 +6,7 @@ import argon2 from "argon2";
 import { db } from "@/lib/db";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import { authConfig } from "./auth.config";
 
 declare module "next-auth" {
     interface Session {
@@ -45,7 +46,7 @@ function checkIsAdmin(email?: string | null, role?: string | null): boolean {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-    session: { strategy: "jwt" },
+    ...authConfig,
     providers: [
         Google,
         Github({
@@ -71,7 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 // Query user_auth_tbl and join player_tbl for the username
                 const [rows] = await db.query<UserAuthRow[]>(
-                    `SELECT a.user_id, a.email, a.password_hash, p.username 
+                    `SELECT a.user_id, a.email, a.password_hash, a.is_email_verified, p.username 
                     FROM user_auth_tbl a 
                     LEFT JOIN player_tbl p ON a.user_id = p.user_id 
                     WHERE a.email = ? LIMIT 1`,
@@ -92,6 +93,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     // Finding 2: Server-side increment on invalid password
                     await checkRateLimit(`login:${normalizedEmail}`, true);
                     return null;
+                }
+
+                if (!user.is_email_verified) {
+                    throw new Error("Your email address is not verified. Please verify your email before logging in.");
                 }
 
                 // Finding 2: Clear failure count on success
