@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getPendingQuizzes } from "@/app/actions/quiz";
 import PendingReview from "./PendingReview";
-import "#css/input.css";
+import "#css/pending.css";
 
 export const dynamic = "force-dynamic";
 
