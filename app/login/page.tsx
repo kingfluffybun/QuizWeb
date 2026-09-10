@@ -537,6 +537,9 @@ function AuthPage() {
 
                                 {signupPassword.length > 0 && (
                                     <div className="password-strength">
+                                        <p className={`strength-hint ${allRulesPassed ? "is-good" : ""}`}>
+                                            {allRulesPassed ? "Strong password" : `Needs: ${missingLabels.join(", ")}`}
+                                        </p>
                                         <div className="strength-bar-track">
                                             {passwordRules.map((_, i) => (
                                                 <span
@@ -548,9 +551,6 @@ function AuthPage() {
                                                 ></span>
                                             ))}
                                         </div>
-                                        <p className={`strength-hint ${allRulesPassed ? "is-good" : ""}`}>
-                                            {allRulesPassed ? "Strong password" : `Needs: ${missingLabels.join(", ")}`}
-                                        </p>
                                     </div>
                                 )}
 

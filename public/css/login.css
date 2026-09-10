@@ -1345,7 +1345,7 @@ button:focus-visible, a:focus-visible {
 }
 
 .recaptcha-container {
-    margin: 16px 0;
+    margin: 4px 0; 
     display: flex;
     flex-direction: column;
     gap: 8px;
