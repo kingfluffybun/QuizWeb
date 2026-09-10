@@ -24,7 +24,7 @@ export default async function InputPage() {
           <Link href="/pending" className="header-link">
             Review Pending
           </Link>
-          <Link href="/quiz" className="header-link">
+          <Link href="/pending" className="header-link">
             Go to Quiz Page &rarr;
           </Link>
         </div>
