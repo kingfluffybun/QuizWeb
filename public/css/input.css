@@ -70,7 +70,9 @@ textarea {
 }
   .incoming-admin-card {
     min-width: 0;
-    min-height: 720px;
+     min-height: 0;
+     height: auto;
+     align-self: start;
     overflow: hidden;
   }
   .incoming-admin-card .recent-quizzes-scroll {
@@ -132,6 +134,7 @@ textarea {
     align-items: flex-start;
     justify-content: space-between;
     gap: 20px;
+    margin-bottom: 8px;
   }
   .incoming-quiz-title-row h3 {
     margin: 0;
@@ -150,9 +153,38 @@ textarea {
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
+  .incoming-quiz-list {
+    max-height: 500px;
+    overflow-y: auto;
+  }
   .pending-list-status.pending { background: #fff7ed; color: #c2410c; }
   .pending-list-status.approved { background: var(--input-success-background); color: var(--input-success); }
-  .pending-list-status.rejected { background: var(--input-danger-background); color: var(--input-danger); }
+  .pending-list-status.rejected { background: #ffe4e6; color: #be123c; }
+  .quiz-badge-row .pending-list-status { display: none; }
+  .incoming-quiz-item:has(.pending-list-status.pending) .recent-quiz-actions::before,
+  .incoming-quiz-item:has(.pending-list-status.approved) .recent-quiz-actions::before,
+  .incoming-quiz-item:has(.pending-list-status.rejected) .recent-quiz-actions::before {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+  .incoming-quiz-item:has(.pending-list-status.pending) .recent-quiz-actions::before {
+    content: "Pending";
+    background: #fff7ed;
+    color: #c2410c;
+  }
+  .incoming-quiz-item:has(.pending-list-status.approved) .recent-quiz-actions::before {
+    content: "Approved";
+    background: var(--input-success-background);
+    color: var(--input-success);
+  }
+  .incoming-quiz-item:has(.pending-list-status.rejected) .recent-quiz-actions::before {
+    content: "Rejected";
+    background: #ffe4e6;
+    color: #be123c;
+  }
 .admin-card form {
     display: flex;
     flex-direction: column;
@@ -942,7 +974,7 @@ textarea {
 .metrics-banner-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-main);
+  color: var(--selected-color);
   margin: 0;
   display: flex;
   align-items: center;

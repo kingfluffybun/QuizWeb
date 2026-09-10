@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   deletePendingQuiz,
   getPendingQuizzes,
-  updatePendingQuiz,
 } from "@/app/actions/quiz";
 
 type PendingQuiz = {
@@ -86,6 +86,7 @@ function PayloadPreview({ quiz }: { quiz: PendingQuiz }) {
 }
 
 export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: PendingQuiz[] }) {
+  const router = useRouter();
   const [quizzes, setQuizzes] = useState(initialQuizzes);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("id_desc");
@@ -123,14 +124,13 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
     window.setTimeout(() => setCopiedId((current) => current === pendingId ? null : current), 1500);
   };
 
-  const editQuiz = async (quiz: PendingQuiz) => {
-    const nextQuestion = window.prompt("Edit quiz title or question:", quiz.question_text);
-    if (nextQuestion === null || nextQuestion.trim() === quiz.question_text) return;
-    setIsPending(true);
-    const result = await updatePendingQuiz(quiz.pending_id, nextQuestion);
-    if (result.error) window.alert(result.error);
-    else await refresh();
-    setIsPending(false);
+  const editQuiz = (quiz: PendingQuiz) => {
+    const pendingId = quiz.pending_id.toString();
+    window.sessionStorage.setItem("quizweb-edit-pending-id", pendingId);
+    window.dispatchEvent(
+      new CustomEvent("quizweb-edit-pending", { detail: pendingId }),
+    );
+    router.push("/input");
   };
 
   const removeQuiz = async (quiz: PendingQuiz) => {
@@ -142,8 +142,14 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
     setIsPending(false);
   };
 
+  const viewQuiz = () => {
+    window.location.href = "http://localhost:3000/test";
+  };
+
   return (
-    <section className="admin-card incoming-admin-card recent-quizzes-card">
+    <section className="admin-card incoming-admin-card recent-quizzes-card" onClick={(event) => {
+      if ((event.target as Element).closest(".btn-preview")) viewQuiz();
+    }}>
       <div className="incoming-card-header recent-card-header">
         <div>
           <h2>Incoming quizzes</h2>

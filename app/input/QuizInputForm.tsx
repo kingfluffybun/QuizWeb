@@ -6,6 +6,8 @@ import {
   createQuiz,
   getPaginatedRecentQuizzes,
   updateQuiz,
+  updatePendingQuizFromForm,
+  getPendingQuizById,
   deleteQuiz,
   getQuizMetrics,
 } from "../actions/quiz";
@@ -27,6 +29,7 @@ interface QuizInputFormProps {
   initialTotalCount: number;
   initialMetrics?: QuizMetricsData;
   showRecentQuizzes?: boolean;
+  initialEditingQuiz?: any;
 }
 
 export default function QuizInputForm({
@@ -40,6 +43,7 @@ export default function QuizInputForm({
   initialTotalCount,
   initialMetrics,
   showRecentQuizzes = true,
+  initialEditingQuiz,
 }: QuizInputFormProps) {
   const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
@@ -49,7 +53,29 @@ export default function QuizInputForm({
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [isPending, setIsPending] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
+  const [editingQuiz, setEditingQuiz] = useState<any | null>(initialEditingQuiz ?? null);
+
+  useEffect(() => {
+    if (initialEditingQuiz || typeof window === "undefined") return;
+
+    const loadPendingQuiz = (pendingId: string | null) => {
+      if (!pendingId) return;
+      window.sessionStorage.removeItem("quizweb-edit-pending-id");
+      void getPendingQuizById(Number(pendingId)).then((quiz) => {
+        if (quiz) setEditingQuiz(quiz);
+      });
+    };
+    const handleEditRequest = (event: Event) => {
+      loadPendingQuiz((event as CustomEvent<string>).detail);
+    };
+
+    window.addEventListener("quizweb-edit-pending", handleEditRequest);
+    loadPendingQuiz(window.sessionStorage.getItem("quizweb-edit-pending-id"));
+
+    return () => {
+      window.removeEventListener("quizweb-edit-pending", handleEditRequest);
+    };
+  }, [initialEditingQuiz]);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -254,6 +280,8 @@ export default function QuizInputForm({
   };
 
   useEffect(() => {
+    if (!showRecentQuizzes) return;
+
     const refreshTimer = window.setTimeout(() => {
       void loadQuizPage(1);
     }, 150);
@@ -266,6 +294,7 @@ export default function QuizInputForm({
     sectionFilter,
     difficultyFilter,
     typeFilter,
+    showRecentQuizzes,
   ]);
 
   useEffect(() => {
@@ -277,6 +306,7 @@ export default function QuizInputForm({
   // Synchronize live authoring telemetry states with editing state
   useEffect(() => {
     if (editingQuiz) {
+      setSelectedTypeId(editingQuiz.quiz_type_id?.toString() ?? "");
       setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
       setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
       setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
@@ -288,6 +318,20 @@ export default function QuizInputForm({
             : ["", "", "", ""],
         );
         setMcqCorrectIndex(editingQuiz.quiz_payload?.correct_index ?? 0);
+      }
+      setOptionCount(
+        editingQuiz.type_name === "Order"
+          ? Math.max(4, editingQuiz.quiz_payload?.items?.length ?? 0)
+          : editingQuiz.type_name === "Pair"
+            ? Math.max(4, editingQuiz.quiz_payload?.pairs?.length ?? 0)
+            : 4,
+      );
+      if (editingQuiz.type_name === "CP") {
+        const stepCount =
+          editingQuiz.quiz_payload?.steps?.length ??
+          editingQuiz.quiz_payload?.prompts?.length ??
+          1;
+        setCpPromptCount(Math.max(1, stepCount));
       }
     } else {
       if (categories.length > 0 && !selectedCatId) {
@@ -463,7 +507,9 @@ export default function QuizInputForm({
 
     try {
       const result = editingQuiz
-        ? await updateQuiz(editingQuiz.quiz_id, formData)
+        ? editingQuiz.pending_id
+          ? await updatePendingQuizFromForm(editingQuiz.pending_id, formData)
+          : await updateQuiz(editingQuiz.quiz_id, formData)
         : await createQuiz(null, formData);
       if (result.error) {
         setMessage({ type: "error", text: result.error });
@@ -474,6 +520,10 @@ export default function QuizInputForm({
             ? "Quiz successfully updated!"
             : "Quiz submitted for review!",
         });
+
+        if (editingQuiz?.pending_id) {
+          router.replace("/input");
+        }
 
         // Reset inputs
         setEditingQuiz(null);
@@ -1070,7 +1120,7 @@ export default function QuizInputForm({
       <div className="admin-card">
         <h2>
           {editingQuiz
-            ? `Edit Quiz Question (ID: #${editingQuiz.quiz_id})`
+            ? `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
             : "Create New Quiz Question"}
         </h2>
 
