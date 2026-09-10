@@ -6,42 +6,79 @@ import { useQuizData } from "@/app/quiz/useQuizData";
 import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import QuizRender from "@/app/components/quiz/quizRender";
 
-function evaluate(quiz: QuizData, value: AnswerValue) {
+type AnswerResult = {
+    correct: boolean;
+    message: string;
+    correctAnswer: string;
+};
+
+const correctMessages = ["That's correct!", "Excellent job!", "Well done!"];
+const incorrectMessages = ["Hard luck!", "That’s incorrect.", "Not quite right."];
+
+function getAnswer(quiz: QuizData) {
     const payload = quiz.quiz_payload;
 
     switch (quiz.type_name) {
         case "MCQ":
-            if (typeof value !== "number") return "Please select an answer.";
-            return value === payload.correct_index ? "Correct" : "Incorrect";
+            return typeof payload.correct_index === "number"
+                ? payload.options?.[payload.correct_index] ?? "No answer available"
+                : "No answer available";
+        case "FITB":
+            return payload.answer?.trim() || "No answer available";
+        case "Order":
+            return payload.items?.reduce((answer, item, index, items) => {
+                if (index === 0) return item;
+                const touchesSymbol = item === ">" || item === "<"
+                    || items[index - 1] === ">" || items[index - 1] === "<";
+                return `${answer}${touchesSymbol ? "" : " "}${item}`;
+            }, "") || "No answer available";
+        case "Pair":
+            return payload.pairs?.map(({ left, right }) => `${left} - ${right}`).join(", ")
+                || "No answer available";
+        default:
+            return "No answer available";
+    }
+}
+
+function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
+    const payload = quiz.quiz_payload;
+    let correct = false;
+
+    switch (quiz.type_name) {
+        case "MCQ":
+            correct = typeof value === "number" && value === payload.correct_index;
+            break;
         case "FITB":
             const expected = payload.answer?.trim().toLowerCase();
-            return typeof value === "string" && value.trim().toLowerCase() === expected
-                ? "Correct!"
-                : "Incorrect.";
+            correct = typeof value === "string" && value.trim().toLowerCase() === expected;
+            break;
         case "Order":
-            return JSON.stringify(value) === JSON.stringify(payload.items)
-                ? "Correct!"
-                : "Incorrect";
+            correct = JSON.stringify(value) === JSON.stringify(payload.items);
+            break;
         case "Pair":
-            return value === (payload.pairs?.length ?? 0)
-                ? "Correct!"
-                : "Match all pairs before submitting.";
-        default:
-            return "Unknown question type.";
+            correct = value === (payload.pairs?.length ?? 0);
+            break;
     }
+
+    const messages = correct ? correctMessages : incorrectMessages;
+    return {
+        correct,
+        message: messages[Math.floor(Math.random() * messages.length)],
+        correctAnswer: getAnswer(quiz),
+    };
 }
 
 export default function QuizPage() {
     const {quizzes} = useQuizData();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
-    const [message, setMessage] = useState<string | null>(null);
+    const [result, setResult] = useState<AnswerResult | null>(null);
 
     const quiz = quizzes[currentIndex];
 
     const resetState = () => {
         setValue(undefined);
-        setMessage(null);
+        setResult(null);
     };
 
     const nextQuiz = () => {
@@ -49,10 +86,17 @@ export default function QuizPage() {
         resetState();
     };
 
+    const continueQuiz = () => {
+        nextQuiz();
+    };
+
     const submitAnswer = () => {
         if (!quiz) return;
-        setMessage(evaluate(quiz, value));
+        setResult(evaluate(quiz, value));
     };
+
+    const isPairIncomplete = quiz?.type_name === "Pair"
+        && value !== (quiz.quiz_payload.pairs?.length ?? 0);
 
     return (
         <div className="quiz-page">
@@ -84,15 +128,32 @@ export default function QuizPage() {
                         {quiz && (
                             <QuizRender quiz={quiz} value={value} onChange={setValue} />
                         )}
-                        {message && <p>{message}</p>}
                     </div>
                 </div>
             </main>
 
-            <footer>
+            <footer className={result ? (result.correct ? "correct" : "incorrect") : ""}>
                 <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
+                    {/* dito sa div yung message */}
+                    <div className="answer-message row">
+                        <div className="answer-message-icon col">
+                            <svg xmlns="http://www.w3.org/2000/svg" id="wrong" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" id="correct" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+                        </div>
+                        <div id="answer-message-text">
+                            <h2>{result?.message}</h2>
+                            {!result?.correct && result && <p><b>Correct Answer:</b> {result.correctAnswer}</p>}
+                        </div>
+                    </div>
                     <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}>Skip</button>
-                    <button className="options" id="submit" onClick={submitAnswer} disabled={!quiz}>Submit</button>
+                    <button
+                        className="options"
+                        id="submit"
+                        onClick={result ? continueQuiz : submitAnswer}
+                        disabled={!quiz || (!result && isPairIncomplete)}
+                    >
+                        {result ? "Continue" : "Submit"}
+                    </button>
                 </div>
             </footer>
         </div>
