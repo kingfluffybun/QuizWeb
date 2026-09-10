@@ -25,7 +25,7 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
     metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://quizweb.dev"),
     title: {
-        default: "QuizWeb — Master Web Development with Interactive Quizzes",
+        default: "QuizWeb - Master Web Development with Interactive Quizzes",
         template: "%s | QuizWeb",
     },
     description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript. Practice coding challenges, track daily streaks, and learn web development faster.",
@@ -36,22 +36,25 @@ export const metadata: Metadata = {
         locale: "en_US",
         url: "/",
         siteName: "QuizWeb",
-        title: "QuizWeb — Master Web Development with Interactive Quizzes",
-        description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript.",
+        title: "QuizWeb - Master Web Development with Interactive Quizzes",
+        description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript. Practice coding challenges, track daily streaks, and learn web development faster.",
         images: [
             {
-                url: "/assets/QuizWeb-Logo.svg",
-                width: 800,
-                height: 600,
-                alt: "QuizWeb Logo",
+                url: "/opengraph-image",
+                width: 1200,
+                height: 630,
+                alt: "QuizWeb - Master Web Development with Interactive Quizzes",
+                type: "image/png",
             },
         ],
     },
     twitter: {
         card: "summary_large_image",
-        title: "QuizWeb — Master Web Development with Interactive Quizzes",
-        description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript.",
-        images: ["/assets/QuizWeb-Logo.svg"],
+        title: "QuizWeb - Master Web Development with Interactive Quizzes",
+        description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript. Practice coding challenges, track daily streaks, and learn web development faster.",
+        images: ["/twitter-image"],
+        creator: "@quizweb",
+        site: "@quizweb",
     },
     alternates: {
         canonical: "/",
