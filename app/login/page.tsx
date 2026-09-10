@@ -554,7 +554,7 @@ function AuthPage() {
                                     <div className="recaptcha-container">
                                         <button
                                             type="button"
-                                            className={`recaptcha-btn ${isLoading ? "Verified" : ""}`}
+                                            className={`recaptcha-btn ${recaptchaVerified ? "verified" : ""}`}
                                             onClick={handleReCaptchaVerify}
                                             disabled={recaptchaLoading || recaptchaVerified}
                                         >
@@ -565,7 +565,7 @@ function AuthPage() {
                                                 </>
                                             ) : recaptchaLoading ? (
                                                 <>
-                                                    <span className="loader" />
+                                                    <span className="spinner" />
                                                     <span>Verifying...</span>
                                                 </>
                                             ) : (
