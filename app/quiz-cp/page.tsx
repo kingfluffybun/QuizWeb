@@ -46,15 +46,15 @@ export default function QuizPage() {
                     <div className="instruction-container col">
                         <div className="instruction disabled">
                             <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Initialize a top-level section identifier heading using the text "Baking Recipe</p>
+                            <p>Initialize a top-level section identifier heading using the text &quot;Baking Recipe&quot;.</p>
                         </div>
                         <div className="instruction correct">
                             <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Below the title, add a smaller sub-section identifier heading using the text "Ingredients List".</p>
+                            <p>Below the title, add a smaller sub-section identifier heading using the text &quot;Ingredients List&quot;.</p>
                         </div>
                         <div className="instruction">
                             <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Directly beneath that heading, initialize an unordered list containing exactly three nested list entries: "Flour", "Sugar", and "Eggs".</p>
+                            <p>Directly beneath that heading, initialize an unordered list containing exactly three nested list entries: &quot;Flour&quot;, &quot;Sugar&quot;, and &quot;Eggs&quot;.</p>
                         </div>
                         <div className="instruction">
                             <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
@@ -62,7 +62,7 @@ export default function QuizPage() {
                         </div>
                         <div className="instruction">
                             <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Below the divider line, initialize a numbered ordered list containing exactly two sequential entries: "Mix ingredients together." and "Bake in the oven.".</p>
+                            <p>Below the divider line, initialize a numbered ordered list containing exactly two sequential entries: &quot;Mix ingredients together.&quot; and &quot;Bake in the oven.&quot;.</p>
                         </div>
                         <div className="instruction">
                             <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>

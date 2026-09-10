@@ -2,10 +2,20 @@ import Link from "next/link";
 import { getPendingQuizzes } from "@/app/actions/quiz";
 import PendingReview from "./PendingReview";
 import "#css/input.css";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function PendingPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+  if (session.user.role !== "admin") {
+    redirect("/");
+  }
+
   const pendingQuizzes = await getPendingQuizzes("pending");
 
   return (

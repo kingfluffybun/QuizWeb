@@ -102,7 +102,23 @@
     max-height: 96px;
     height: 100%;
     width: 100%;
-    input[type="radio"] {display: none;}
+    input[type="radio"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+    input[type="radio"]:focus-visible + .options {
+        outline: 3px solid var(--selected-color, #7D3FFF);
+        outline-offset: 3px;
+    }
     input[type="radio"]:checked + .options {
         background-color: var(--selected-background-color);
         border-color: var(--selected-color);
@@ -269,7 +285,24 @@
     }
 }
 
-.pair-left-column input[type="radio"], .pair-right-column input[type="radio"] {display: none;}
+.pair-left-column input[type="radio"], .pair-right-column input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+.pair-left-column input[type="radio"]:focus-visible + .options,
+.pair-right-column input[type="radio"]:focus-visible + .options {
+    outline: 3px solid var(--selected-color, #7D3FFF);
+    outline-offset: 3px;
+}
 .pair-left-column input[type="radio"]:checked + .options,
 .pair-right-column input[type="radio"]:checked + .options {
     background-color: var(--selected-background-color);

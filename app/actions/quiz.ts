@@ -61,6 +61,21 @@ export interface QuizMetricsData {
   facetedBreakdown: QuizFacetedCount[];
 }
 
+export interface QuizItem {
+  quiz_id: number;
+  cat_id: number;
+  sec_id?: number;
+  difficulty_id: number;
+  quiz_type_id: number;
+  cat_name: string;
+  sec_num?: string;
+  difficulty_name: string;
+  type_name: string;
+  question_text: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  quiz_payload: any;
+}
+
 export interface QuizRow extends RowDataPacket {
   quiz_id: number;
   cat_id: number;
@@ -72,6 +87,7 @@ export interface QuizRow extends RowDataPacket {
   difficulty_name: string;
   type_name: string;
   question_text: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   quiz_payload: any;
 }
 
@@ -216,20 +232,7 @@ function getQuizPayload(typeName: string, formData: FormData) {
   return { error: "Unsupported quiz type." };
 }
 
-async function getSectionTableName() {
-  const candidates = ["sec_tbl", "section_tbl", "sections_tbl"];
 
-  for (const tableName of candidates) {
-    try {
-      await db.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
-      return tableName;
-    } catch {
-      // try the next known section table name
-    }
-  }
-
-  return null;
-}
 
 async function quizHasColumn(columnName: string) {
   try {
@@ -531,7 +534,20 @@ export async function getRecentQuizzes() {
   return result.quizzes;
 }
 
-export async function createQuiz(state: any, formData: FormData) {
+async function assertAdminSession() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Unauthorized: Admin privileges required.");
+  }
+  return session;
+}
+
+export async function createQuiz(state: unknown, formData: FormData) {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: "Authentication required to submit quizzes." };
+  }
+
   const catId = formData.get("cat_id");
   const secId = formData.get("sec_id");
   const difficultyId = formData.get("difficulty_id");
@@ -571,7 +587,7 @@ export async function createQuiz(state: any, formData: FormData) {
       "question_text",
       "quiz_payload",
     ];
-    const values: any[] = [
+    const values: unknown[] = [
       catId,
       difficultyId,
       quizTypeId,
@@ -584,7 +600,6 @@ export async function createQuiz(state: any, formData: FormData) {
       values.push(secId);
     }
 
-    const session = await auth();
     const pendingName = (
       session?.user?.name ??
       session?.user?.email?.split("@")[0] ??
@@ -614,6 +629,12 @@ export async function createQuiz(state: any, formData: FormData) {
 }
 
 export async function deleteQuiz(quizId: number) {
+  try {
+    await assertAdminSession();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Unauthorized: Admin privileges required." };
+  }
+
   if (!quizId) {
     return { error: "Quiz ID is required for deletion." };
   }
@@ -629,6 +650,11 @@ export async function deleteQuiz(quizId: number) {
 }
 
 export async function updateQuiz(quizId: number, formData: FormData) {
+  try {
+    await assertAdminSession();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Unauthorized: Admin privileges required." };
+  }
   const catId = formData.get("cat_id");
   const secId = formData.get("sec_id");
   const difficultyId = formData.get("difficulty_id");
@@ -667,7 +693,7 @@ export async function updateQuiz(quizId: number, formData: FormData) {
       "question_text = ?",
       "quiz_payload = ?",
     ];
-    const values: any[] = [
+    const values: unknown[] = [
       catId,
       difficultyId,
       quizTypeId,
@@ -767,17 +793,101 @@ export async function getQuizzes(filters?: {
       params,
     );
 
-    return quizzes.map((quiz) => ({
-      ...quiz,
-      sec_num: quiz.sec_num ?? undefined,
-      quiz_payload:
+    return quizzes.map((quiz) => {
+      const payload =
         typeof quiz.quiz_payload === "string"
           ? JSON.parse(quiz.quiz_payload)
-          : quiz.quiz_payload,
-    }));
+          : quiz.quiz_payload;
+
+      // Finding 8: Sanitize answers and keys before sending to player client
+      const sanitized: Record<string, unknown> = { ...payload };
+      delete sanitized.correct_index;
+      delete sanitized.answer;
+
+      return {
+        ...quiz,
+        sec_num: quiz.sec_num ?? undefined,
+        quiz_payload: sanitized,
+      };
+    });
   } catch (error) {
     console.error("Failed to fetch quizzes:", error);
     return [];
+  }
+}
+
+export async function submitAnswer(quizId: number, submittedValue: unknown) {
+  if (!quizId) {
+    return { error: "Quiz ID is required." };
+  }
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT q.quiz_id, q.quiz_payload, t.type_name 
+       FROM quiz_tbl q
+       JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+       WHERE q.quiz_id = ? LIMIT 1`,
+      [quizId],
+    );
+
+    if (rows.length === 0) {
+      return { error: "Quiz question not found." };
+    }
+
+    const quiz = rows[0];
+    const payload =
+      typeof quiz.quiz_payload === "string"
+        ? JSON.parse(quiz.quiz_payload)
+        : quiz.quiz_payload;
+
+    let isCorrect = false;
+    let message = "Incorrect.";
+
+    switch (quiz.type_name) {
+      case "MCQ": {
+        if (typeof submittedValue === "string") {
+          const expected = payload.options?.[payload.correct_index]?.trim().toLowerCase();
+          isCorrect = !!expected && expected === submittedValue.trim().toLowerCase();
+        } else if (typeof submittedValue === "number") {
+          isCorrect = submittedValue === payload.correct_index;
+        } else {
+          return { error: "Please select an answer." };
+        }
+        message = isCorrect ? "Correct!" : "Incorrect";
+        break;
+      }
+      case "FITB": {
+        const expected = (payload.answer ?? "").trim().toLowerCase();
+        const submitted = typeof submittedValue === "string" ? submittedValue.trim().toLowerCase() : "";
+        isCorrect = submitted !== "" && submitted === expected;
+        message = isCorrect ? "Correct!" : "Incorrect.";
+        break;
+      }
+      case "Order": {
+        if (!Array.isArray(submittedValue)) {
+          return { error: "Please arrange all items before submitting." };
+        }
+        isCorrect = JSON.stringify(submittedValue) === JSON.stringify(payload.items);
+        message = isCorrect ? "Correct!" : "Incorrect";
+        break;
+      }
+      case "Pair": {
+        const totalPairs = payload.pairs?.length ?? 0;
+        isCorrect = submittedValue === totalPairs;
+        message = isCorrect ? "Correct!" : "Match all pairs before submitting.";
+        break;
+      }
+      default:
+        return { error: `Unsupported quiz type: ${quiz.type_name}` };
+    }
+
+    return {
+      correct: isCorrect,
+      message,
+    };
+  } catch (error) {
+    console.error("Failed to evaluate answer:", error);
+    return { error: "An error occurred while evaluating your answer." };
   }
 }
 
@@ -800,6 +910,12 @@ export interface PendingQuiz extends RowDataPacket {
 }
 
 export async function getPendingQuizzes(statusFilter = "pending") {
+  try {
+    await assertAdminSession();
+  } catch {
+    return [];
+  }
+
   try {
     const params: string[] = [];
     let whereClause = "";
@@ -843,6 +959,12 @@ export async function reviewPendingQuiz(
   pendingId: number,
   decision: "approve" | "reject",
 ) {
+  try {
+    await assertAdminSession();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Unauthorized: Admin privileges required." };
+  }
+
   if (!pendingId || !["approve", "reject"].includes(decision)) {
     return { error: "A valid pending quiz and decision are required." };
   }

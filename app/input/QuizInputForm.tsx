@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   createQuiz,
@@ -14,6 +14,7 @@ import type {
   Difficulty,
   QuizType,
   QuizMetricsData,
+  QuizItem,
 } from "../actions/quiz";
 
 interface QuizInputFormProps {
@@ -21,7 +22,7 @@ interface QuizInputFormProps {
   difficulties: Difficulty[];
   types: QuizType[];
   sections?: { sec_id: number; sec_num: string }[];
-  initialRecentQuizzes: any[];
+  initialRecentQuizzes: QuizItem[];
   initialPage: number;
   initialTotalPages: number;
   initialTotalCount: number;
@@ -40,14 +41,16 @@ export default function QuizInputForm({
   initialMetrics,
 }: QuizInputFormProps) {
   const router = useRouter();
-  const [selectedTypeId, setSelectedTypeId] = useState<string>("");
+  const [selectedTypeId, setSelectedTypeId] = useState<string>(
+    () => types[0]?.quiz_type_id?.toString() ?? "",
+  );
   const [recentQuizzes, setRecentQuizzes] =
-    useState<any[]>(initialRecentQuizzes);
+    useState<QuizItem[]>(initialRecentQuizzes);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [isPending, setIsPending] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<any | null>(null);
+  const [editingQuiz, setEditingQuiz] = useState<QuizItem | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -82,8 +85,12 @@ export default function QuizInputForm({
 
   // Live Authoring Input Telemetry States
   const [questionText, setQuestionText] = useState<string>("");
-  const [selectedCatId, setSelectedCatId] = useState<string>("");
-  const [selectedDiffId, setSelectedDiffId] = useState<string>("");
+  const [selectedCatId, setSelectedCatId] = useState<string>(
+    () => categories[0]?.cat_id?.toString() ?? "",
+  );
+  const [selectedDiffId, setSelectedDiffId] = useState<string>(
+    () => difficulties[0]?.difficulty_id?.toString() ?? "",
+  );
   const [selectedSecId, setSelectedSecId] = useState<string>("");
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
@@ -231,25 +238,35 @@ export default function QuizInputForm({
     setCpPromptCount((count) => Math.max(1, count - 1));
   };
 
-  const loadQuizPage = async (page: number) => {
-    setIsPending(true);
-    try {
-      const result = await getPaginatedRecentQuizzes(page, 20, {
-        id: idFilter,
-        search: searchFilter,
-        category: categoryFilter,
-        section: sectionFilter,
-        difficulty: difficultyFilter,
-        type: typeFilter,
-      });
-      setRecentQuizzes(result.quizzes);
-      setCurrentPage(result.currentPage);
-      setTotalPages(result.totalPages);
-      setTotalCount(result.totalCount);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const loadQuizPage = useCallback(
+    async (page: number) => {
+      setIsPending(true);
+      try {
+        const result = await getPaginatedRecentQuizzes(page, 20, {
+          id: idFilter,
+          search: searchFilter,
+          category: categoryFilter,
+          section: sectionFilter,
+          difficulty: difficultyFilter,
+          type: typeFilter,
+        });
+        setRecentQuizzes(result.quizzes as unknown as QuizItem[]);
+        setCurrentPage(result.currentPage);
+        setTotalPages(result.totalPages);
+        setTotalCount(result.totalCount);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      idFilter,
+      searchFilter,
+      categoryFilter,
+      sectionFilter,
+      difficultyFilter,
+      typeFilter,
+    ],
+  );
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
@@ -257,49 +274,9 @@ export default function QuizInputForm({
     }, 150);
 
     return () => window.clearTimeout(refreshTimer);
-  }, [
-    idFilter,
-    searchFilter,
-    categoryFilter,
-    sectionFilter,
-    difficultyFilter,
-    typeFilter,
-  ]);
+  }, [loadQuizPage]);
 
-  useEffect(() => {
-    if (types.length > 0 && !selectedTypeId) {
-      setSelectedTypeId(types[0].quiz_type_id.toString());
-    }
-  }, [types, selectedTypeId]);
 
-  // Synchronize live authoring telemetry states with editing state
-  useEffect(() => {
-    if (editingQuiz) {
-      setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
-      setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
-      setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
-      setQuestionText(editingQuiz.question_text ?? "");
-      if (editingQuiz.type_name === "MCQ") {
-        setMcqOptions(
-          Array.isArray(editingQuiz.quiz_payload?.options)
-            ? editingQuiz.quiz_payload.options
-            : ["", "", "", ""],
-        );
-        setMcqCorrectIndex(editingQuiz.quiz_payload?.correct_index ?? 0);
-      }
-    } else {
-      if (categories.length > 0 && !selectedCatId) {
-        setSelectedCatId(categories[0].cat_id.toString());
-      }
-      if (difficulties.length > 0 && !selectedDiffId) {
-        setSelectedDiffId(difficulties[0].difficulty_id.toString());
-      }
-      setSelectedSecId("");
-      setQuestionText("");
-      setMcqOptions(["", "", "", ""]);
-      setMcqCorrectIndex(0);
-    }
-  }, [editingQuiz, categories, difficulties]);
 
   const refreshMetrics = async () => {
     try {
@@ -475,6 +452,10 @@ export default function QuizInputForm({
 
         // Reset inputs
         setEditingQuiz(null);
+        setSelectedTypeId(types[0]?.quiz_type_id?.toString() ?? "");
+        setSelectedCatId(categories[0]?.cat_id?.toString() ?? "");
+        setSelectedDiffId(difficulties[0]?.difficulty_id?.toString() ?? "");
+        setSelectedSecId("");
         setQuestionText("");
         setMcqOptions(["", "", "", ""]);
         setMcqCorrectIndex(0);
@@ -495,7 +476,7 @@ export default function QuizInputForm({
     }
   };
 
-  const handleEdit = (quiz: any) => {
+  const handleEdit = (quiz: QuizItem) => {
     setEditingQuiz(quiz);
     setSelectedTypeId(quiz.quiz_type_id.toString());
     setSelectedCatId(quiz.cat_id?.toString() ?? "");
@@ -2545,7 +2526,7 @@ export default function QuizInputForm({
                       {quiz.type_name === "Pair" && payload.pairs && (
                         <div>
                           <strong>Matching Pairs:</strong>
-                          {payload.pairs.map((pair: any, i: number) => (
+                          {payload.pairs.map((pair: { left: string; right: string }, i: number) => (
                             <div
                               key={i}
                               style={{
@@ -2569,7 +2550,7 @@ export default function QuizInputForm({
                           }}
                         >
                           {payload.steps && payload.steps.length > 0 ? (
-                            payload.steps.map((step: any, sIdx: number) => (
+                            payload.steps.map((step: { prompt: string; template?: string; expected?: string }, sIdx: number) => (
                               <div
                                 key={sIdx}
                                 style={{

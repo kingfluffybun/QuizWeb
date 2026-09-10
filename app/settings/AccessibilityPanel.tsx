@@ -1,6 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+const emptySubscribe = () => () => {};
+function useIsMounted() {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+
+function getSavedSettings() {
+  if (typeof window === "undefined") {
+    return { theme: "light", uiScale: "100", reduceMotion: false };
+  }
+  try {
+    const saved = localStorage.getItem("app-accessibility-settings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        theme: typeof parsed.theme === "string" ? parsed.theme : "light",
+        uiScale: typeof parsed.uiScale === "string" ? parsed.uiScale : "100",
+        reduceMotion: Boolean(parsed.reduceMotion),
+      };
+    }
+  } catch {}
+  return { theme: "light", uiScale: "100", reduceMotion: false };
+}
 
 type AccessibilityPanelProps = {
   isClosing?: boolean;
@@ -9,24 +32,11 @@ type AccessibilityPanelProps = {
 };
 
 export default function AccessibilityPanel({ isClosing = false, onClose, onClosed }: AccessibilityPanelProps) {
-  const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useState("light");
-  const [uiScale, setUiScale] = useState("100");
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const isMounted = useIsMounted();
+  const [theme, setTheme] = useState(() => getSavedSettings().theme);
+  const [uiScale, setUiScale] = useState(() => getSavedSettings().uiScale);
+  const [reduceMotion, setReduceMotion] = useState(() => getSavedSettings().reduceMotion);
   const panelRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-    const saved = localStorage.getItem("app-accessibility-settings");
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed.theme) setTheme(parsed.theme);
-      if (parsed.uiScale) setUiScale(parsed.uiScale);
-      if (parsed.reduceMotion !== undefined) setReduceMotion(parsed.reduceMotion);
-    } catch {}
-  }, []);
 
   useEffect(() => {
     if (!isMounted) return;

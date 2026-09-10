@@ -1,11 +1,11 @@
 "use client";
 
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
-import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin, clearLoginRateLimit } from "@/app/actions/auth";
+import { signUp, reqPassReset, verifyOTP, resetPass } from "@/app/actions/auth";
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import * as Assets from "@/app/actions/animation/svg_assets";
+import * as Assets from "@/app/components/illustrations/svg_assets";
 import LoginQuiz from "@/app/components/loginQuiz";
 import Image from "next/image";
 import Link from "next/link";
@@ -44,6 +44,7 @@ function AuthPage() {
 
     // ReCaptcha
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState("");
     const [recaptchaLoading, setRecaptchaLoading] = useState(false);
 
     // Forgot pass states
@@ -73,13 +74,6 @@ function AuthPage() {
             return;
         }
 
-        const rateCheck = await checkLoginRateLimit(email);
-        if (!rateCheck.allowed) {
-            setError(rateCheck.message || "Too many login attempts. Please try again later.");
-            setIsLoading(false);
-            return;
-        }
-
         const res = await signIn("credentials", {
             email,
             password,
@@ -87,14 +81,11 @@ function AuthPage() {
         });
 
         if (res?.error) {
-            await recordFailedLogin(email);
-            // setError(`Invalid email or password. ${Math.max(0, rateCheck.remaining - 1)} attempts remaining.`);
-            setError(`Invalid email or password. ${rateCheck.remaining} attempts remaining.`);
+            setError("Invalid email or password, or too many failed attempts.");
             setIsLoading(false);
             return;
         }
 
-        await clearLoginRateLimit(email);
         router.push("/");
     }
 
@@ -126,6 +117,10 @@ function AuthPage() {
         }
 
         setIsLoading(true);
+
+        if (recaptchaToken) {
+            formData.append("recaptchaToken", recaptchaToken);
+        }
 
         // Create account
         const result = await signUp(formData);
@@ -165,6 +160,7 @@ function AuthPage() {
 
         try {
             const token = await executeRecaptcha("signup");
+            setRecaptchaToken(token);
 
             // Verify token
             const res = await fetch("/api/recaptcha", {
@@ -314,13 +310,6 @@ function AuthPage() {
         confirmPassword !== "" &&
         recaptchaVerified;
     
-    const isForgotComplete = 
-        /\S+@\S+\.\S+/.test(forgotEmail) &&
-        forgotOTP.length === 6 &&
-        newPassword.length >= 8 &&
-        newPassword === confirmNewPassword &&
-        allRulesPassed;
-
     const forgotCopy: Record<number, [string, string, string]> = {
         1: ['Step 1', 'Enter your email', 'Use the registered email address for your account.'],
         2: ['Step 2', 'Enter the sent OTP', 'An OTP has been sent to your email.'],
@@ -583,7 +572,7 @@ function AuthPage() {
                                             ) : (
                                                 <>
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                                    <span>I'm not a robot</span>
+                                                    <span>I&apos;m not a robot</span>
                                                 </>
                                             )}
                                         </button>

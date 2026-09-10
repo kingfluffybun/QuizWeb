@@ -3,15 +3,42 @@
 import argon2 from "argon2";
 import { db } from "@/lib/db";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
-import { randomInt } from "crypto";
+import { createHash, randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+
+async function verifyRecaptchaToken(token?: string | null): Promise<boolean> {
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!secretKey) {
+        return true;
+    }
+    if (!token) {
+        return false;
+    }
+    try {
+        const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
+        const response = await fetch(verifyUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                secret: secretKey,
+                response: token,
+            }),
+        });
+        const data = await response.json();
+        return !!(data.success && (data.score === undefined || data.score >= 0.5));
+    } catch (err) {
+        console.error("reCAPTCHA verification error:", err);
+        return false;
+    }
+}
 
 export async function signUp(formData: FormData) {
     const username = formData.get("username") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
+    const recaptchaToken = formData.get("recaptchaToken") as string | null;
 
     if (!username || !email || !password || !confirmPassword) {
         return { error: "All fields are required." };
@@ -23,29 +50,41 @@ export async function signUp(formData: FormData) {
         return { error: "Password must be at least 8 characters." };
     }
 
+    // Finding 7: Server-side reCAPTCHA verification
+    const isHuman = await verifyRecaptchaToken(recaptchaToken);
+    if (!isHuman) {
+        return { error: "Bot activity detected or verification failed. Please try again." };
+    }
+
+    const connection = await db.getConnection();
     try {
+        // Finding 10: Multi-table database transaction
+        await connection.beginTransaction();
+
         // 1. Check if the email already exists in user_auth_tbl
-        const [existingEmail] = await db.query<RowDataPacket[]>(
+        const [existingEmail] = await connection.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
             [email]
         );
         if (existingEmail.length > 0) {
+            await connection.rollback();
             return { error: "An account with this email already exists." };
         }
 
         // 2. Check if the username is already taken in player_tbl (marked Unique in ERD)
-        const [existingUsername] = await db.query<RowDataPacket[]>(
+        const [existingUsername] = await connection.query<RowDataPacket[]>(
             "SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1",
             [username]
         );
         if (existingUsername.length > 0) {
+            await connection.rollback();
             return { error: "This username is already taken." };
         }
 
         const hashed = await argon2.hash(password);
 
         // 3. Insert the authentication record 
-        const [authResult] = await db.query<ResultSetHeader>(
+        const [authResult] = await connection.query<ResultSetHeader>(
             "INSERT INTO user_auth_tbl (email, password_hash, is_email_verified) VALUES (?, ?, ?)",
             [email, hashed, false]
         );
@@ -53,15 +92,19 @@ export async function signUp(formData: FormData) {
         const newUserId = authResult.insertId;
 
         // 4. Insert the player profile using the newly generated user_id
-        await db.query(
+        await connection.query(
             "INSERT INTO player_tbl (user_id, username) VALUES (?, ?)",
             [newUserId, username]
         );
 
+        await connection.commit();
         return { success: true };
     } catch (error) {
+        await connection.rollback();
         console.error("Signup database error:", error);
         return { error: "An internal server error occurred during signup." };
+    } finally {
+        connection.release();
     }
 }
 
@@ -71,30 +114,33 @@ export async function reqPassReset(email: string) {
         return { error: "Please enter a valid email address." };
     }
 
+    const genericMessage = "If that email address is registered, an OTP has been sent. Please check your inbox.";
+
     try {
-        // Check if user exists in user_auth_tbl
+        // Finding 5: Prevent user enumeration and TypeError
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
             [email]
         );
 
-        // Get username from player_tbl
-        const [player] = await db.query<RowDataPacket[]>(
-            "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
-            [users[0].user_id]
-        );
-
-        const genericMessage = "OTP sent successfully. Please check your email.";
-
-        if (users.length === 0) {
+        if (!users || users.length === 0) {
             return { success: true, message: genericMessage };
         }
 
         const userId = users[0].user_id;
-        const username = player[0].username || "User";
 
-        // Generate la code
+        // Get username from player_tbl
+        const [player] = await db.query<RowDataPacket[]>(
+            "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
+            [userId]
+        );
+
+        const username = player?.[0]?.username || "User";
+
+        // Generate 6-digit numeric OTP
         const otpCode = String(randomInt(100000, 999999));
+        // Finding 6: Hash OTP with SHA-256 before storage
+        const hashedOtp = createHash("sha256").update(otpCode).digest("hex");
 
         // Expire 10 mins
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -105,10 +151,10 @@ export async function reqPassReset(email: string) {
             [userId, "password_reset"]
         );
 
-        // Insert new OTP
+        // Insert new OTP with hashed token
         await db.query(
             "INSERT INTO user_otp_tbl (user_id, otp_code, expires_at, is_used, purpose) VALUES (?, ?, ?, ?, ?)",
-            [userId, otpCode, expiresAt, 0, "password_reset"]
+            [userId, hashedOtp, expiresAt, 0, "password_reset"]
         );
 
         // Send to email
@@ -245,6 +291,12 @@ export async function verifyOTP(email: string, otpCode: string) {
         return { error: "Email and OTP code are required." };
     }
 
+    const otpKey = `otp:${email.toLowerCase().trim()}`;
+    const rateCheck = await checkRateLimit(otpKey);
+    if (!rateCheck.allowed) {
+        return { error: rateCheck.message || "Too many failed attempts. Please request a new OTP." };
+    }
+
     try {
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
@@ -252,7 +304,7 @@ export async function verifyOTP(email: string, otpCode: string) {
         );
 
         if (users.length === 0) {
-            return { error: "Invalid email." };
+            return { error: "Invalid email or OTP." };
         }
 
         const userId = users[0].user_id;
@@ -265,7 +317,7 @@ export async function verifyOTP(email: string, otpCode: string) {
         );
 
         if (otps.length === 0) {
-            return { error: "Invalid or expired OTP" };
+            return { error: "Invalid or expired OTP." };
         }
 
         const otp = otps[0];
@@ -275,10 +327,16 @@ export async function verifyOTP(email: string, otpCode: string) {
             return { error: "OTP has expired. Please request a new one." };
         }
 
-        // Check if matches
-        if (otp.otp_code !== otpCode) {
+        const hashedInput = createHash("sha256").update(otpCode.trim()).digest("hex");
+        const matches = otp.otp_code === hashedInput || otp.otp_code === otpCode.trim();
+
+        if (!matches) {
+            await checkRateLimit(otpKey, true);
             return { error: "Invalid OTP. Please try again." };
         }
+
+        // Clear rate limit counter on success
+        await clearRateLimit(otpKey);
 
         // Mark OTP as used
         await db.query(
@@ -289,7 +347,7 @@ export async function verifyOTP(email: string, otpCode: string) {
         return { success: true, message: "OTP verified successfully." };
     } catch (error) {
         console.error("Verify OTP error: ", error);
-        return { error: "Failed to verify OTP. Please try again" };
+        return { error: "Failed to verify OTP. Please try again." };
     }
 }
 
@@ -301,27 +359,31 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
     }
 
     try {
-        // Get user frome email
+        // Get user from email
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
             [email]
         );
 
         if (users.length === 0){
-            return { error: "Invalid email." };
+            return { error: "Invalid request." };
         }
 
         const userId = users[0].user_id;
 
-        // Verify again
+        // Verify that a valid, non-expired OTP was verified
         const [otps] = await db.query<RowDataPacket[]>(
             `SELECT otp_id, otp_code, expires_at, is_used FROM user_otp_tbl
             WHERE user_id = ? AND purpose = ? ORDER BY expires_at DESC LIMIT 1`,
             [userId, "password_reset"]
         );
 
-        if (otps.length === 0 || otps[0].otp_code !== otpCode || otps[0].is_used === 0) {
-            return { error: "Invalid or expired OTP" };
+        const hashedInput = createHash("sha256").update(otpCode.trim()).digest("hex");
+        const matches = otps[0]?.otp_code === hashedInput || otps[0]?.otp_code === otpCode.trim();
+        const isNotExpired = otps[0] && new Date(otps[0].expires_at) > new Date();
+
+        if (otps.length === 0 || !matches || otps[0].is_used !== 1 || !isNotExpired) {
+            return { error: "Invalid or expired OTP session. Please request a new OTP." };
         }
 
         // Hash the new pass
@@ -356,81 +418,52 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
                             background: #fcfbff;
                             margin: 0;
                             padding: 40px 20px;
+                            color: #333333;
                         }
                         .container {
-                            max-width: 480px;
+                            max-width: 520px;
                             margin: 0 auto;
                             background: #ffffff;
-                            border-radius: 16px;
-                            padding: 48px;
                             border: 1px solid #e0e0e0;
+                            border-radius: 16px;
+                            padding: 40px 32px;
                         }
-                        .logo {
+                        .header {
                             text-align: center;
                             margin-bottom: 32px;
-                            font-size: 22px;
-                            font-weight: 700;
-                            color: #9966FF;
-                            letter-spacing: -0.5px;
                         }
-                        .heading {
+                        .header h1 {
                             font-size: 24px;
                             font-weight: 700;
-                            color: #333333;
-                            margin: 0 0 16px;
-                            text-align: center;
+                            color: #9966FF;
+                            margin: 0 0 8px;
                         }
-                        .message {
+                        .body p {
                             font-size: 15px;
-                            color: #666666;
                             line-height: 1.6;
-                            margin: 0 0 24px;
-                            text-align: center;
-                        }
-                        .alert {
-                            background: #fcfbff;
-                            border-left: 4px solid #9966FF;
-                            border-radius: 8px;
-                            padding: 16px 20px;
-                            font-size: 14px;
-                            color: #666666;
-                            line-height: 1.5;
-                        }
-                        .alert strong {
-                            color: #333333;
+                            margin: 0 0 16px;
                         }
                         .footer {
-                            font-size: 13px;
-                            color: #666666;
-                            text-align: center;
-                            border-top: 1px solid #e0e0e0;
-                            padding-top: 28px;
                             margin-top: 32px;
-                        }
-                        .footer a {
-                            color: #7D3FFF;
-                            text-decoration: none;
-                            font-weight: 500;
-                        }
-                        .footer a:hover {
-                            text-decoration: underline;
+                            padding-top: 24px;
+                            border-top: 1px solid #f0eff5;
+                            text-align: center;
+                            font-size: 13px;
+                            color: #999999;
                         }
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <div class="logo">QuizWeb</div>
-                        <h2 class="heading">Password Updated</h2>
-                        <p class="message">Your QuizWeb password has been successfully changed. You can now sign in with your new password.</p>
-                        
-                        <div class="alert">
-                            <strong>Didn't make this change?</strong><br>
-                            If you didn't update your password, please <a href="mailto:support@quizweb.dev">contact support</a> immediately to secure your account.
+                        <div class="header">
+                            <h1>Password Updated</h1>
                         </div>
-                        
+                        <div class="body">
+                            <p>Your QuizWeb account password has been updated successfully.</p>
+                            <p>If you did not perform this change, please contact support or reset your password immediately.</p>
+                        </div>
                         <div class="footer">
-                            <p style="margin: 0 0 8px; font-weight: 600; color: #333333;">QuizWeb — Learn Web Development</p>
-                            <p style="margin: 0;">Need help? <a href="mailto:support@quizweb.dev">Contact support</a></p>
+                            <p>&copy; ${new Date().getFullYear()} QuizWeb. All rights reserved.</p>
                         </div>
                     </div>
                 </body>
@@ -443,22 +476,4 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
         console.error("Reset pass error: ", error);
         return { error: "Failed to reset password. Please try again." };
     }
-}
-
-// Check Rate Limit
-export async function checkLoginRateLimit(email: string) {
-    return await checkRateLimit(`login:${email.toLowerCase().trim()}`);
-}
-
-// Failed
-export async function recordFailedLogin(email: string) {
-    await checkRateLimit(`login:${email.toLowerCase().trim()}`, true);
-    return { success: true };
-}
-
-// Clear for success
-export async function clearLoginRateLimit(email: string) {
-    const key = `login:${email.toLowerCase().trim()}`;
-    clearRateLimit(key);
-    return { success: true };
 }

@@ -6,10 +6,20 @@ import {
 import QuizInputForm from "./QuizInputForm";
 import "#css/input.css";
 import Link from "next/link";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function InputPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+  if (session.user.role !== "admin") {
+    redirect("/");
+  }
+
   const [metadata, recentQuizPage, metrics] = await Promise.all([
     getQuizMetadata(),
     getPaginatedRecentQuizzes(),

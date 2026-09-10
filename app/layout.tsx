@@ -23,7 +23,39 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "Quiz Web",
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://quizweb.dev"),
+    title: {
+        default: "QuizWeb — Master Web Development with Interactive Quizzes",
+        template: "%s | QuizWeb",
+    },
+    description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript. Practice coding challenges, track daily streaks, and learn web development faster.",
+    keywords: ["quiz", "web development", "learn HTML", "learn CSS", "learn JavaScript", "interactive quizzes"],
+    authors: [{ name: "QuizWeb Team" }],
+    openGraph: {
+        type: "website",
+        locale: "en_US",
+        url: "/",
+        siteName: "QuizWeb",
+        title: "QuizWeb — Master Web Development with Interactive Quizzes",
+        description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript.",
+        images: [
+            {
+                url: "/assets/QuizWeb-Logo.svg",
+                width: 800,
+                height: 600,
+                alt: "QuizWeb Logo",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "QuizWeb — Master Web Development with Interactive Quizzes",
+        description: "Interactive bite-sized quizzes for mastering HTML, CSS, and JavaScript.",
+        images: ["/assets/QuizWeb-Logo.svg"],
+    },
+    alternates: {
+        canonical: "/",
+    },
 };
 
 const themeInitScript = `
@@ -56,13 +88,13 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" suppressHydrationWarning>
+        <html lang="en" className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
             <head>
                 <meta charSet="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
             </head>
-            <body className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`}>
+            <body>
                 <AccessibilityInit />
                 {children}
             </body>

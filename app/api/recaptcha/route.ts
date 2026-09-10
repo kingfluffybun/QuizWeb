@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
             hostname: data.hostname,
             errorCodes: data["error-codes"],
         });
-    } catch (err) {
+    } catch {
         return NextResponse.json(
             { success: false, error: "An error occurred." },
             { status: 500 }

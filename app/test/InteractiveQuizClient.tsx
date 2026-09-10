@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import "#css/test_quiz.css";
+
+const emptySubscribe = () => () => {};
+function useIsMounted() {
+    return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
 import { QuizData, QuizStatus } from "./types";
 import QuizHeader from "./components/QuizHeader";
 import QuizFooter from "./components/QuizFooter";
@@ -70,7 +76,7 @@ function getCPSteps(quiz: QuizData | undefined) {
 }
 
 export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
-    const [isMounted, setIsMounted] = useState(false);
+    const isMounted = useIsMounted();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
@@ -82,21 +88,8 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     const activeQuiz = quizzes[currentIndex];
     const payload = activeQuiz?.quiz_payload;
 
-    const [currentAnswer, setCurrentAnswer] = useState<any>(null);
-    const [quizState, setQuizState] = useState<any>(null);
-
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (!activeQuiz) return;
-        const initial = getInitialQuizState(activeQuiz);
-        setCurrentAnswer(initial.answer);
-        setQuizState(initial.state);
-        setCpStepIndex(0);
-        setStepMessage(null);
-    }, [currentIndex, activeQuiz]);
+    const [currentAnswer, setCurrentAnswer] = useState<any>(() => getInitialQuizState(quizzes[0])?.answer);
+    const [quizState, setQuizState] = useState<any>(() => getInitialQuizState(quizzes[0])?.state);
 
     const cpSteps = getCPSteps(activeQuiz);
     const currentStep = cpSteps[cpStepIndex] || cpSteps[0];
@@ -149,7 +142,14 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
 
     const nextQuestion = () => {
         if (currentIndex < quizzes.length - 1 && lives > 0) {
-            setCurrentIndex((prev) => prev + 1);
+            const nextIdx = currentIndex + 1;
+            setCurrentIndex(nextIdx);
+            const nextQuiz = quizzes[nextIdx];
+            const initial = getInitialQuizState(nextQuiz);
+            setCurrentAnswer(initial.answer);
+            setQuizState(initial.state);
+            setCpStepIndex(0);
+            setStepMessage(null);
             setStatus("idle");
         } else {
             setStatus("finished");
