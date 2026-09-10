@@ -913,3 +913,39 @@ export async function reviewPendingQuiz(
     connection.release();
   }
 }
+
+export async function updatePendingQuiz(pendingId: number, questionText: string) {
+  if (!pendingId || !questionText.trim()) {
+    return { error: "A valid pending quiz and question are required." };
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "UPDATE pending_tbl SET question_text = ? WHERE pending_id = ?",
+      [questionText.trim(), pendingId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Pending quiz was not found." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to update pending quiz:", error);
+    return { error: "An error occurred while updating the pending quiz." };
+  }
+}
+
+export async function deletePendingQuiz(pendingId: number) {
+  if (!pendingId) return { error: "Pending quiz ID is required." };
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM pending_tbl WHERE pending_id = ?",
+      [pendingId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Pending quiz was not found." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to delete pending quiz:", error);
+    return { error: "An error occurred while deleting the pending quiz." };
+  }
+}

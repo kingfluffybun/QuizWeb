@@ -1,15 +1,16 @@
 :root {
-  --pending-background: #f6f6f6;
-  --pending-surface: #ffffff;
-  --pending-border: #e0e0e0;
-  --pending-text: #333333;
-  --pending-muted: #666666;
+  --pending-surface: var(--input-surface, #fff);
+  --pending-on-accent: var(--input-on-accent, #fafafa);
+  --pending-background: var(--input-background, #f6f6f6);
+  --pending-border: var(--input-border, #e0e0e0);
+  --pending-text: var(--input-text, #333);
+  --pending-muted: var(--input-muted, #666);
   --pending-accent: var(--primary-color, #9966ff);
   --pending-accent-dark: var(--selected-color, #7d3fff);
-  --pending-success: #047857;
-  --pending-success-background: #ecfdf5;
-  --pending-danger: #b91c1c;
-  --pending-danger-background: #fef2f2;
+  --pending-success: var(--input-success, #059669);
+  --pending-success-background: var(--input-success-background, #ecfdf5);
+  --pending-danger: var(--input-danger, #b91c1c);
+  --pending-danger-background: var(--input-danger-background, #fef2f2);
 }
 
 body {
@@ -24,21 +25,23 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 20px clamp(20px, 5vw, 56px);
+  padding: 20px 40px;
   background-color: var(--pending-accent);
-  color: #ffffff;
+  color: var(--pending-on-accent);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .admin-header h1 {
   margin: 0;
-  color: #ffffff;
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  color: var(--pending-on-accent);
+  font-size: 1.8rem;
 }
 
 .header-link {
-  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pending-on-accent);
   font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
@@ -51,16 +54,166 @@ body {
 }
 
 .pending-container {
-  width: min(100% - 40px, 1120px);
+  width: min(100% - 40px, 1400px);
   margin: 40px auto;
 }
 
-.pending-card {
-  padding: clamp(24px, 4vw, 44px);
-  border: 1px solid var(--pending-border);
+.pending-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+  align-items: start;
+  gap: 40px;
+}
+
+.recent-quizzes-card {
+  min-height: 720px;
+  min-width: 0;
+  padding: 30px;
+  background-color: var(--pending-surface);
+}
+
+.recent-quizzes-card h2 {
+  font-size: 1.5rem;
+}
+
+.recent-quizzes-card .recent-card-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.recent-quizzes-card .recent-card-header h2 {
+  margin-bottom: 0;
+}
+
+.recent-quizzes-card .list-visibility-counter {
+  line-height: 1.2;
+}
+
+.recent-quizzes-card .recent-card-header .list-header-actions {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.recent-quizzes-card .quiz-list-question {
+  font-size: 1.05rem;
+}
+
+.recent-quiz-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.recent-quiz-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.recent-quiz-actions .btn-preview,
+.recent-quiz-actions .btn-edit,
+.recent-quiz-actions .btn-delete {
+  width: 32px;
+  height: 32px;
+}
+
+.recent-quizzes-scroll {
+  max-height: 720px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.recent-quizzes-card .pagination-controls {
+  margin-top: 20px;
+}
+
+.pending-side-card {
+  min-height: 280px;
+  padding: 30px;
+  border: 2px solid var(--pending-border);
   border-radius: 20px;
   background-color: var(--pending-surface);
-  box-shadow: 0 8px 24px rgba(32, 20, 60, 0.06);
+  box-shadow: 0 8px 24px rgba(153, 102, 255, 0.05);
+}
+
+.pending-incoming-heading {
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--pending-border);
+}
+
+.pending-incoming-heading h2 {
+  margin: 0 0 8px;
+  color: var(--pending-text);
+  font-size: 1.2rem;
+}
+
+.pending-incoming-heading p:last-child,
+.pending-incoming-empty {
+  margin: 0;
+  color: var(--pending-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.pending-incoming-list {
+  max-height: 680px;
+  margin-top: 8px;
+  overflow-y: auto;
+}
+
+.pending-incoming-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--pending-border);
+}
+
+.pending-incoming-item:last-child {
+  border-bottom: none;
+}
+
+.pending-incoming-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--pending-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pending-incoming-item h3 {
+  display: -webkit-box;
+  margin: 0 0 6px;
+  overflow: hidden;
+  color: var(--pending-text);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.pending-incoming-item p {
+  margin: 0;
+  color: var(--pending-muted);
+  font-size: 0.75rem;
+}
+
+.pending-incoming-empty {
+  margin-top: 20px;
+}
+
+.pending-card {
+  padding: 30px;
+  border: 2px solid var(--pending-border);
+  border-radius: 20px;
+  background-color: var(--pending-surface);
+  box-shadow: 0 8px 24px rgba(153, 102, 255, 0.05);
 }
 
 .pending-heading {
@@ -68,8 +221,8 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 28px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--pending-border);
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--pending-border);
 }
 
 .pending-eyebrow {
@@ -149,10 +302,13 @@ body {
 }
 
 .pending-item {
-  padding: 22px;
-  border: 1px solid var(--pending-border);
-  border-radius: 14px;
+  padding: 20px 0;
+  border-bottom: 1.5px solid var(--pending-border);
   background-color: var(--pending-surface);
+}
+
+.pending-item:last-child {
+  border-bottom: none;
 }
 
 .pending-item-header {
@@ -229,27 +385,48 @@ body {
 }
 
 .pending-actions button {
-  padding: 10px 16px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 6px;
   border: 0;
   border-radius: 8px;
-  color: #ffffff;
+  background: none;
   cursor: pointer;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
+  transition: background-color 0.2s, color 0.2s, transform 0.1s;
 }
 
 .pending-approve {
-  background-color: var(--pending-success);
+  color: #28a745;
 }
 
 .pending-reject {
-  background-color: var(--pending-danger);
+  color: #ff4d4d;
 }
 
 .pending-actions button:hover:not(:disabled),
 .pending-actions button:focus-visible {
-  filter: brightness(0.9);
+  outline: none;
+}
+
+.pending-approve:hover:not(:disabled),
+.pending-approve:focus-visible {
+  background-color: #e6f9e6;
+  color: #28a745;
+}
+
+.pending-reject:hover:not(:disabled),
+.pending-reject:focus-visible {
+  background-color: #ffe6e6;
+  color: #cc0000;
+}
+
+.pending-actions button:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .pending-empty {
@@ -271,6 +448,23 @@ body {
   .pending-container {
     width: min(100% - 24px, 1120px);
     margin: 24px auto;
+  }
+
+  .pending-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .pending-side-card {
+    min-height: 120px;
+  }
+
+  .pending-incoming-list {
+    max-height: none;
+  }
+
+  .recent-quizzes-scroll {
+    max-height: 600px;
   }
 
   .pending-filters {

@@ -26,6 +26,7 @@ interface QuizInputFormProps {
   initialTotalPages: number;
   initialTotalCount: number;
   initialMetrics?: QuizMetricsData;
+  showRecentQuizzes?: boolean;
 }
 
 export default function QuizInputForm({
@@ -38,6 +39,7 @@ export default function QuizInputForm({
   initialTotalPages,
   initialTotalCount,
   initialMetrics,
+  showRecentQuizzes = true,
 }: QuizInputFormProps) {
   const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
@@ -1773,6 +1775,7 @@ export default function QuizInputForm({
       </div>
 
       {/* List Section */}
+      {showRecentQuizzes && (
       <div className="admin-card">
         <div
           style={{
@@ -2694,6 +2697,7 @@ export default function QuizInputForm({
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

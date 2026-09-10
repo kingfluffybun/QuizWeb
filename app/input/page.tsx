@@ -2,18 +2,21 @@ import {
   getQuizMetadata,
   getPaginatedRecentQuizzes,
   getQuizMetrics,
+  getPendingQuizzes,
 } from "@/app/actions/quiz";
 import QuizInputForm from "./QuizInputForm";
+import IncomingQuizCard from "@/app/components/IncomingQuizCard";
 import "#css/input.css";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function InputPage() {
-  const [metadata, recentQuizPage, metrics] = await Promise.all([
+  const [metadata, recentQuizPage, metrics, incomingQuizzes] = await Promise.all([
     getQuizMetadata(),
     getPaginatedRecentQuizzes(),
     getQuizMetrics(),
+    getPendingQuizzes("all"),
   ]);
 
   return (
@@ -41,7 +44,9 @@ export default async function InputPage() {
           initialTotalPages={recentQuizPage.totalPages}
           initialTotalCount={recentQuizPage.totalCount}
           initialMetrics={metrics}
+          showRecentQuizzes={false}
         />
+        <IncomingQuizCard initialQuizzes={incomingQuizzes} />
       </main>
     </div>
   );
