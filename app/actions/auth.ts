@@ -230,7 +230,7 @@ export async function verifyEmail(token: string) {
 
         // Verify email
         await db.query(
-            `UPDATE user_auth_tbl SET is_email_verified = true AND verification_token = NULL AND verification_expires = NULL WHERE user_id = ?`,
+            `UPDATE user_auth_tbl SET is_email_verified = true verification_token = NULL verification_expires = NULL WHERE user_id = ?`,
             [user.user_id]
         );
 
