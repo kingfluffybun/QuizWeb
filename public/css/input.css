@@ -9,6 +9,8 @@
     --input-danger-background: #fef2f2;
     --input-success: #059669;
     --input-success-background: #ecfdf5;
+    --input-approved: #1d4ed8;
+    --input-approved-background: #dbeafe;
 }
 body {
     background-color: var(--input-background);
@@ -158,7 +160,7 @@ textarea {
     overflow-y: auto;
   }
   .pending-list-status.pending { background: #fff7ed; color: #c2410c; }
-  .pending-list-status.approved { background: var(--input-success-background); color: var(--input-success); }
+  .pending-list-status.approved { background: var(--input-approved-background); color: var(--input-approved); }
   .pending-list-status.rejected { background: #ffe4e6; color: #be123c; }
   .quiz-badge-row .pending-list-status { display: none; }
   .incoming-quiz-item:has(.pending-list-status.pending) .recent-quiz-actions::before,
@@ -177,8 +179,8 @@ textarea {
   }
   .incoming-quiz-item:has(.pending-list-status.approved) .recent-quiz-actions::before {
     content: "Approved";
-    background: var(--input-success-background);
-    color: var(--input-success);
+    background: var(--input-approved-background);
+    color: var(--input-approved);
   }
   .incoming-quiz-item:has(.pending-list-status.rejected) .recent-quiz-actions::before {
     content: "Rejected";
@@ -192,6 +194,13 @@ textarea {
 }
 .recent-quizzes-card {
   min-width: 0;
+}
+
+.incoming-quiz-item:has(.pending-list-status.approved) .recent-quiz-actions::before {
+  background-color: #dbeafe !important;
+  border: 1px solid #93c5fd !important;
+  color: #1d4ed8 !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
 }
 .recent-card-header {
   display: flex;

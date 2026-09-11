@@ -103,10 +103,20 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
     const refreshIncomingQuizzes = () => {
       void getPendingQuizzes("all").then(setQuizzes);
     };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshIncomingQuizzes();
+    };
+    const refreshInterval = window.setInterval(refreshIncomingQuizzes, 5000);
 
     window.addEventListener("quizweb-pending-updated", refreshIncomingQuizzes);
-    return () =>
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(refreshInterval);
       window.removeEventListener("quizweb-pending-updated", refreshIncomingQuizzes);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, []);
 
   const filteredQuizzes = useMemo(() => quizzes.filter((quiz) => {
@@ -126,8 +136,6 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
   const visibleQuizzes = filteredQuizzes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const hasFilters = Boolean(idFilter || search || status || type);
   const clearFilters = () => { setIdFilter(""); setSearch(""); setStatus(""); setType(""); setPage(1); };
-  const refresh = async () => setQuizzes(await getPendingQuizzes("all"));
-
   const copyId = (pendingId: number) => {
     void navigator.clipboard?.writeText(pendingId.toString());
     setCopiedId(pendingId);
@@ -148,7 +156,7 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
     setIsPending(true);
     const result = await deletePendingQuiz(quiz.pending_id);
     if (result.error) window.alert(result.error);
-    else await refresh();
+    else setQuizzes(await getPendingQuizzes("all"));
     setIsPending(false);
   };
 

@@ -139,6 +139,16 @@ export default function RecentQuizzesCard({
     return () => window.clearTimeout(timer);
   }, [loadPage]);
 
+  useEffect(() => {
+    const refreshRecentQuizzes = () => {
+      void loadPage(1);
+    };
+
+    window.addEventListener("quizweb-pending-updated", refreshRecentQuizzes);
+    return () =>
+      window.removeEventListener("quizweb-pending-updated", refreshRecentQuizzes);
+  }, [loadPage]);
+
   const clearFilters = () => {
     setId("");
     setSearch("");
@@ -240,7 +250,7 @@ export default function RecentQuizzesCard({
     <div className="admin-card recent-quizzes-card">
       <div className="recent-card-header">
         <div>
-          <h2>Recently Added Quizzes</h2>
+          <h2>Approved Quizzes</h2>
           <div className="list-visibility-counter">
             Showing <strong>{visibleQuizzes.length}</strong> of <strong>{totalCount}</strong> questions
             {totalCount > 0 && <span className="visibility-ratio">({Math.round((visibleQuizzes.length / totalCount) * 100)}% of bank)</span>}
