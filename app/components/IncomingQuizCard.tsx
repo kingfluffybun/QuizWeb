@@ -12,6 +12,7 @@ type PendingQuiz = {
   pending_id: number;
   question_text: string;
   pending_status: string;
+  pending_note?: string | null;
   cat_name: string;
   sec_num?: string;
   difficulty_name: string;
@@ -187,6 +188,7 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
             <div className="incoming-quiz-title-row"><h3>{quiz.question_text}</h3><div className="recent-quiz-actions"><span className="btn-preview" title="Quiz content shown below" aria-label="Quiz content shown below">{icon(<><path d="M2.062 12.348a1 1 0 0 0 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></>)}</span><button type="button" className="btn-edit" onClick={() => void editQuiz(quiz)} disabled={isPending} title="Edit quiz" aria-label="Edit quiz">{icon(<><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></>)}</button><button type="button" className="btn-delete" onClick={() => void removeQuiz(quiz)} disabled={isPending} title="Delete quiz" aria-label="Delete quiz">{icon(<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 2 2 2v2" /><path d="M10 11v6M14 11v6" /></>)}</button></div></div>
             <div className="quiz-badge-row"><div className="badge-id-container"><button type="button" className={`badge badge-id ${copiedId === quiz.pending_id ? "copied" : ""}`} onClick={() => copyId(quiz.pending_id)} title="Click to copy Pending ID" aria-label={`Copy Pending ID ${quiz.pending_id}`}>{copiedId === quiz.pending_id ? "Copied!" : `ID: #${quiz.pending_id}`}</button><button type="button" className={`badge-id-filter-btn ${idFilter.replace(/^#/, "") === quiz.pending_id.toString() ? "filtered" : ""}`} onClick={() => { setIdFilter(idFilter.replace(/^#/, "") === quiz.pending_id.toString() ? "" : quiz.pending_id.toString()); setPage(1); }} title="Filter by this Pending ID" aria-label={`Filter by Pending ID ${quiz.pending_id}`}>{icon(<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>)}</button></div><span className={`badge pending-list-status ${quiz.pending_status}`}>{quiz.pending_status}</span><span className="badge badge-diff">{quiz.difficulty_name}</span><span className="badge badge-cat">{quiz.cat_name}</span>{quiz.sec_num && <span className="badge badge-type">Section {quiz.sec_num}</span>}<span className="badge badge-type">{quiz.type_name}</span><span className="badge badge-metric-tag">{payloadSummary(quiz)}</span></div>
             <div className="incoming-quiz-details quiz-payload-preview"><PayloadPreview quiz={quiz} /></div>
+            {quiz.pending_status === "rejected" && quiz.pending_note && <div className="incoming-rejection-notes"><strong>Reviewer notes:</strong> {quiz.pending_note}</div>}
           </article>
         ))}
       </div>

@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { getPendingQuizzes, reviewPendingQuiz } from "@/app/actions/quiz";
+import {
+  getPendingQuizzes,
+  reviewPendingQuiz,
+  updatePendingNote,
+} from "@/app/actions/quiz";
 
 type PendingQuiz = {
   pending_id: number;
   question_text: string;
   pending_name: string;
   pending_status: string;
+  pending_note?: string | null;
   cat_name: string;
   sec_num?: string;
   difficulty_name: string;
@@ -60,6 +65,8 @@ export default function PendingReview({
   const [filter, setFilter] = useState("pending");
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [noteQuiz, setNoteQuiz] = useState<PendingQuiz | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   const loadQuizzes = (nextFilter: string) => {
     setFilter(nextFilter);
@@ -69,8 +76,20 @@ export default function PendingReview({
   };
 
   const review = (pendingId: number, decision: "approve" | "reject") => {
+    const rejectionNotes =
+      decision === "reject"
+        ? window.prompt(
+            "Add a note explaining what needs to be changed before resubmission:",
+          )
+        : "";
+    if (decision === "reject" && !rejectionNotes?.trim()) return;
+
     startTransition(async () => {
-      const result = await reviewPendingQuiz(pendingId, decision);
+      const result = await reviewPendingQuiz(
+        pendingId,
+        decision,
+        rejectionNotes ?? "",
+      );
       setMessage(result.error ?? result.message ?? null);
       if (result.success) {
         setQuizzes(await getPendingQuizzes(filter));
@@ -79,31 +98,53 @@ export default function PendingReview({
     });
   };
 
+  const editNote = (quiz: PendingQuiz) => {
+    setNoteQuiz(quiz);
+    setNoteDraft(quiz.pending_note ?? "");
+  };
+
+  const saveNote = () => {
+    if (!noteQuiz || !noteDraft.trim()) return;
+    startTransition(async () => {
+      const result = await updatePendingNote(noteQuiz.pending_id, noteDraft);
+      setMessage(result.error ?? "Note saved.");
+      if (result.success) {
+        setQuizzes(await getPendingQuizzes(filter));
+        setNoteQuiz(null);
+        setNoteDraft("");
+      }
+    });
+  };
+
   return (
-    <section className="pending-card">
+    <div className="pending-review-stack">
+      <section className="pending-card">
       <div className="pending-heading">
         <div>
-          <p className="pending-eyebrow">Content moderation</p>
-          <h2>Quiz submissions</h2>
+          <div className="pending-title-row">
+            <h2>Quiz submissions</h2>
+          </div>
           <p>
             Approve a submission to publish it to the quiz bank, or reject it
             while keeping its history.
           </p>
         </div>
         <div className="pending-filters" aria-label="Review filter">
-          {["pending", "all", "approved", "rejected"].map((status) => (
-            <button
-              key={status}
-              type="button"
-              className={
-                filter === status ? "pending-filter active" : "pending-filter"
-              }
-              onClick={() => loadQuizzes(status)}
+          <label className="pending-status-select-wrap">
+            <span>Status</span>
+            <select
+              className={`pending-status-select ${filter}`}
+              value={filter}
+              onChange={(event) => loadQuizzes(event.target.value)}
               disabled={isPending}
+              aria-label="Filter submissions by status"
             >
-              {status[0].toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+              <option value="pending">Pending</option>
+              <option value="all">All</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -134,6 +175,23 @@ export default function PendingReview({
                 {quiz.pending_name}
               </p>
               <p className="pending-payload">{formatPayload(quiz)}</p>
+              {quiz.pending_status === "rejected" && quiz.pending_note && (
+                <div className="rejection-notes" role="note">
+                  <strong>Reviewer notes:</strong> {quiz.pending_note}
+                </div>
+              )}
+              {quiz.pending_status === "rejected" && (
+                <div className="pending-actions">
+                  <button
+                    type="button"
+                    className="pending-note-button"
+                    onClick={() => editNote(quiz)}
+                    disabled={isPending}
+                  >
+                    {quiz.pending_note ? "Edit Note" : "Add Note"}
+                  </button>
+                </div>
+              )}
               {quiz.pending_status === "pending" && (
                 <div className="pending-actions">
                   <button
@@ -189,6 +247,47 @@ export default function PendingReview({
           ))}
         </div>
       )}
-    </section>
+      </section>
+      {noteQuiz && (
+        <section className="pending-card pending-note-editor-card">
+          <div className="pending-note-editor-heading">
+            <div>
+              <h2>Note for Submission {noteQuiz.pending_id}</h2>
+              <p>
+                Explain what the contributor needs to change before resubmitting
+                this quiz.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="pending-note-cancel"
+              onClick={() => {
+                setNoteQuiz(null);
+                setNoteDraft("");
+              }}
+              disabled={isPending}
+            >
+              Cancel
+            </button>
+          </div>
+          <textarea
+            className="pending-note-textarea"
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            placeholder="Describe the changes needed..."
+            rows={5}
+            autoFocus
+          />
+          <button
+            type="button"
+            className="pending-note-save"
+            onClick={saveNote}
+            disabled={isPending || !noteDraft.trim()}
+          >
+            {isPending ? "Saving Note..." : "Save Note"}
+          </button>
+        </section>
+      )}
+    </div>
   );
 }

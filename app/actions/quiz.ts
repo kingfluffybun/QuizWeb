@@ -791,6 +791,7 @@ export interface PendingQuiz extends RowDataPacket {
   quiz_payload: unknown;
   pending_status: "pending" | "approved" | "rejected" | string;
   pending_name: string;
+  pending_note?: string | null;
   cat_name: string;
   sec_num?: string;
   difficulty_name: string;
@@ -812,6 +813,7 @@ export async function getPendingQuizzes(statusFilter = "pending") {
       `
             SELECT p.pending_id, p.cat_id, p.sec_id, p.difficulty_id, p.quiz_type_id,
                    p.question_text, p.quiz_payload, p.pending_status, p.pending_name,
+                   p.pending_note,
                    c.cat_name, s.sec_num, d.difficulty_name, t.type_name,
                    qa.quiz_id, qa.approved_id
             FROM pending_tbl p
@@ -846,6 +848,7 @@ export async function getPendingQuizById(pendingId: number) {
     const [rows] = await db.query<PendingQuiz[]>(
       `SELECT p.pending_id, p.cat_id, p.sec_id, p.difficulty_id, p.quiz_type_id,
               p.question_text, p.quiz_payload, p.pending_status, p.pending_name,
+              p.pending_note,
               c.cat_name, s.sec_num, d.difficulty_name, t.type_name,
               qa.quiz_id, qa.approved_id
        FROM pending_tbl p
@@ -876,9 +879,13 @@ export async function getPendingQuizById(pendingId: number) {
 export async function reviewPendingQuiz(
   pendingId: number,
   decision: "approve" | "reject",
+  rejectionNotes = "",
 ) {
   if (!pendingId || !["approve", "reject"].includes(decision)) {
     return { error: "A valid pending quiz and decision are required." };
+  }
+  if (decision === "reject" && !rejectionNotes.trim()) {
+    return { error: "A rejection note is required." };
   }
 
   const connection = await db.getConnection();
@@ -901,8 +908,8 @@ export async function reviewPendingQuiz(
 
     if (decision === "reject") {
       await connection.query(
-        "UPDATE pending_tbl SET pending_status = 'rejected' WHERE pending_id = ?",
-        [pendingId],
+        "UPDATE pending_tbl SET pending_status = 'rejected', pending_note = ? WHERE pending_id = ?",
+        [rejectionNotes.trim(), pendingId],
       );
       await connection.commit();
       return {
@@ -964,6 +971,25 @@ export async function updatePendingQuiz(pendingId: number, questionText: string)
   } catch (error) {
     console.error("Failed to update pending quiz:", error);
     return { error: "An error occurred while updating the pending quiz." };
+  }
+}
+
+export async function updatePendingNote(pendingId: number, pendingNote: string) {
+  if (!pendingId || !pendingNote.trim()) {
+    return { error: "A note is required." };
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "UPDATE pending_tbl SET pending_note = ? WHERE pending_id = ? AND pending_status = 'rejected'",
+      [pendingNote.trim(), pendingId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Only rejected quizzes can receive a note." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to update pending note:", error);
+    return { error: "An error occurred while saving the note." };
   }
 }
 
