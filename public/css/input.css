@@ -127,6 +127,7 @@ textarea {
     padding-right: 10px;
   }
   .incoming-quiz-item {
+    position: relative;
     padding: 20px 0;
     border-bottom: 1.5px solid var(--input-border);
   }
@@ -172,6 +173,25 @@ textarea {
   .pending-list-status.pending { background: #fff7ed; color: #c2410c; }
   .pending-list-status.approved { background: var(--input-approved-background); color: var(--input-approved); }
   .pending-list-status.rejected { background: #ffe4e6; color: #be123c; }
+  .pending-note-toggle {
+    position: absolute;
+    top: 22px;
+    right: 197px;
+    z-index: 1;
+    padding: 4px 8px;
+    border: 1px solid #be123c;
+    border-radius: 999px;
+    background: #fff1f2;
+    color: #be123c;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .pending-note-toggle:hover,
+  .pending-note-toggle:focus-visible {
+    background: #ffe4e6;
+  }
   .quiz-badge-row .pending-list-status { display: none; }
   .incoming-quiz-item:has(.pending-list-status.pending) .recent-quiz-actions::before,
   .incoming-quiz-item:has(.pending-list-status.approved) .recent-quiz-actions::before,
