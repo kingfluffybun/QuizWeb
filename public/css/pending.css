@@ -9,6 +9,8 @@
   --pending-accent-dark: var(--selected-color, #7d3fff);
   --pending-success: var(--input-success, #059669);
   --pending-success-background: var(--input-success-background, #ecfdf5);
+  --pending-approved: var(--input-approved, #1d4ed8);
+  --pending-approved-background: var(--input-approved-background, #dbeafe);
   --pending-danger: var(--input-danger, #b91c1c);
   --pending-danger-background: var(--input-danger-background, #fef2f2);
 }
@@ -354,8 +356,8 @@ body {
 }
 
 .pending-status.approved {
-  background-color: var(--pending-success-background);
-  color: var(--pending-success);
+  background-color: var(--pending-approved-background);
+  color: var(--pending-approved);
 }
 
 .pending-status.rejected {

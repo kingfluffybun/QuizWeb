@@ -72,7 +72,10 @@ export default function PendingReview({
     startTransition(async () => {
       const result = await reviewPendingQuiz(pendingId, decision);
       setMessage(result.error ?? result.message ?? null);
-      if (result.success) setQuizzes(await getPendingQuizzes(filter));
+      if (result.success) {
+        setQuizzes(await getPendingQuizzes(filter));
+        window.dispatchEvent(new Event("quizweb-pending-updated"));
+      }
     });
   };
 
