@@ -1,5 +1,9 @@
+:root {
+    --font-mono: var(--font-jetbrains-mono), monospace;
+}
+
 html {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* font: ; */
     background: #fcfbff;
     margin: 0;
     height: 100vh;
@@ -63,42 +67,50 @@ html {
     box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.05);
 }
 
+.logo {
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .logo-img {
-    width: 30px;
-    height: auto;
+    width: auto;
+    height: 40px;
+}
+
+.logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #9966FF;
+    margin-bottom: 8px;
 }
 
 .success-logo, .failed-logo {
+    text-align: center;
+}
+
+.success-icon, .failed-icon {
     width: 100px;
     height: auto;
-    text-align: center;
-    color: #9966FF;
-    letter-spacing: -0.5px;
 }
 
 .success-title {
-    font-size: "28px";
-    font-weight: "700";
-    color: "#9966FF";
-    margin-bottom: "12px";
-}
-
-.success-message {
-    font-size: "16px";
-    color: "#666666";
-    line-height: "1.6";
-    margin-bottom: "24px";
+    font-size: 35px;
+    font-weight: 700;
+    color: #9966FF;
+    margin-bottom: 8px;
 }
 
 .failed-title {
-    font-size: "28px";
-    font-weight: "700";
-    color: "#be123c";
-    margin-bottom: "12px";
+    font-size: 35px;
+    font-weight: 700;
+    color: #ef2e2e;
+    margin-bottom: 8px;
 }
 
-.failed-message {
-    font-size: "16px";
-    color: "#666666";
-    line-height: "1.6";
+.message {
+    font-size: 15px;
+    color: #666666;
+    line-height: 1.6;
 }

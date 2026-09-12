@@ -231,7 +231,7 @@ export async function verifyEmail(token: string) {
 
         // Check if email already exists
         const [existingEmail] = await connection.query<RowDataPacket[]>(
-            `SELECT usr_id FROM user_auth_tbl WHERE email = ? LIMIT = 1`,
+            `SELECT usr_id FROM user_auth_tbl WHERE email = ? LIMIT 1`,
             [pendingUser.email]
         );
 
@@ -247,7 +247,7 @@ export async function verifyEmail(token: string) {
         // Check if username already exists
         const [existingUsername] =
             await connection.query<RowDataPacket[]>(
-                `SELECT usr_id FROM player_tbl WHERE username = ? LIMIT = 1`,
+                `SELECT usr_id FROM player_tbl WHERE username = ? LIMIT 1`,
                 [pendingUser.username]
             );
         
@@ -264,7 +264,7 @@ export async function verifyEmail(token: string) {
         const [authResult] = 
             await connection.query<ResultSetHeader>(
                 `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role) VALUES (?, ?, ?, ?)`,
-                [pendingUser.email, pendingUser.password_hash, true, "user"]
+                [pendingUser.email, pendingUser.password_hash, 1, "user"]
             );
         
         const newUserId = authResult.insertId;
