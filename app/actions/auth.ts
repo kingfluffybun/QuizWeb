@@ -205,7 +205,7 @@ export async function verifyEmail(token: string) {
 
         if (rows.length === 0) {
             return {
-                success: true,
+                success: false,
                 message: "This verification link is invalid or has already been used.",
             };
         }
