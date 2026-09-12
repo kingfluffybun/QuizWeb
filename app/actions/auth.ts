@@ -289,6 +289,7 @@ export async function verifyEmail(token: string) {
             message: "Email verified successfully. You may now close this tab.",
         };
     } catch (error) {
+        console.error(error);
         await connection.rollback();
         return {
             success: false,

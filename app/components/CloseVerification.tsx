@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 
 export default function CloseVerification() {
-    useEffect(() => {
-        window.close();
-    }, []);
+    // useEffect(() => {
+    //     window.close();
+    // }, []);
 
     return (
         <button

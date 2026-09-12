@@ -1,4 +1,4 @@
-/* html {
+html {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #fcfbff;
     margin: 0;
@@ -7,7 +7,7 @@
     justify-content: center;
     align-items: center;
 }
-.container {
+/*.container {
     max-width: 480px;
     margin: 0 auto;
     background: #ffffff;
@@ -64,11 +64,13 @@
 }
 
 .logo-img {
-    width: 100px;
+    width: 30px;
     height: auto;
 }
 
 .success-logo, .failed-logo {
+    width: 100px;
+    height: auto;
     text-align: center;
     color: #9966FF;
     letter-spacing: -0.5px;
