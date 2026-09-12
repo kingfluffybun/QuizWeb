@@ -231,7 +231,7 @@ export async function verifyEmail(token: string) {
 
         // Check if email already exists
         const [existingEmail] = await connection.query<RowDataPacket[]>(
-            `SELECT usr_id FROM user_auth_tbl WHERE email = ? LIMIT 1`,
+            `SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1`,
             [pendingUser.email]
         );
 
@@ -247,7 +247,7 @@ export async function verifyEmail(token: string) {
         // Check if username already exists
         const [existingUsername] =
             await connection.query<RowDataPacket[]>(
-                `SELECT usr_id FROM player_tbl WHERE username = ? LIMIT 1`,
+                `SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1`,
                 [pendingUser.username]
             );
         
