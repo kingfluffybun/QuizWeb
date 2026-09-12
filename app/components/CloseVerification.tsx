@@ -3,11 +3,12 @@
 import { useEffect } from "react";
 
 export default function CloseVerification() {
-    // useEffect(() => {
-    //     setTimeout(() => {
-    //         window.close();
-    //     }, 5000);
-    // }, []);
+    useEffect(() => {
+        setTimeout(() => {
+            window.close();
+        }, 5000);
+    }, []);
+    
     // setTimeout(() => {
     //     useEffect(() => {
     //         window.close();
