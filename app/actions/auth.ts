@@ -264,7 +264,7 @@ export async function verifyEmail(token: string) {
         const [authResult] = 
             await connection.query<ResultSetHeader>(
                 `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role) VALUES (?, ?, ?, ?)`,
-                [pendingUser.email, pendingUser.password_hash, 1, "user"]
+                [pendingUser.email, pendingUser.password_hash, "1", "user"]
             );
         
         const newUserId = authResult.insertId;
