@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
+import { ensureLookupTables } from "@/lib/seedLookup";
 import type { RowDataPacket } from "mysql2";
 
 export interface LearnerProfile {
@@ -23,6 +24,8 @@ export interface LearnerProfile {
 
 export interface CurriculumNode {
     id: string; // `${catId}-${secId}-${diffId}`
+    stepIndex: number; // 1 to 17 in the unified roadmap
+    tier: "Beginner" | "Intermediate" | "Advanced";
     catId: number;
     catName: string;
     secId: number;
@@ -32,6 +35,7 @@ export interface CurriculumNode {
     totalQuestions: number;
     unitTitle: string;
     unitDescription: string;
+    units: string[];
 }
 
 export interface LeaderboardEntry {
@@ -43,29 +47,8 @@ export interface LeaderboardEntry {
     league: "Gold" | "Silver" | "Bronze";
 }
 
-const SECTION_DESCRIPTIONS: Record<string, Record<number, { title: string; desc: string }>> = {
-    HTML: {
-        1: { title: "HTML Foundations", desc: "Basic document structure, headings, and semantic tags." },
-        2: { title: "Text & Formatting", desc: "Paragraphs, links, lists, and inline text semantics." },
-        3: { title: "Media & Embeds", desc: "Images, audio, video, and accessible attributes." },
-        4: { title: "Forms & Controls", desc: "Form inputs, validations, buttons, and accessibility." },
-        5: { title: "Modern HTML5 & APIs", desc: "Canvas, local storage, template elements, and microdata." },
-    },
-    CSS: {
-        1: { title: "CSS Fundamentals", desc: "Selectors, colors, typography, and the box model." },
-        2: { title: "Layouts & Flexbox", desc: "Flexbox container properties, alignment, and wrapping." },
-        3: { title: "CSS Grid Architecture", desc: "Grid templates, gaps, areas, and auto-placement." },
-        4: { title: "Responsive Web Design", desc: "Media queries, container queries, and fluid typography." },
-        5: { title: "Transitions & Animations", desc: "Keyframes, cubic-bezier timing, and transforms." },
-    },
-    JavaScript: {
-        1: { title: "JS Essentials", desc: "Variables, data types, operators, and basic logic." },
-        2: { title: "Functions & Scope", desc: "Arrow functions, closures, callbacks, and scope chains." },
-        3: { title: "DOM Manipulation", desc: "Event listeners, querySelector, and DOM mutations." },
-        4: { title: "Async JavaScript", desc: "Promises, async/await, fetch API, and error handling." },
-        5: { title: "Modern ES6+ & Beyond", desc: "Destructuring, modules, map/set, and performance." },
-    },
-};
+export type { RoadmapSectionDef } from "@/lib/curriculumRoadmap";
+import { UNIFIED_CURRICULUM_ROADMAP } from "@/lib/curriculumRoadmap";
 
 export async function getLearnerProfile(): Promise<LearnerProfile | null> {
     const session = await auth();
@@ -266,8 +249,10 @@ export async function recordQuizAnswer(quizId: number, isCorrect: boolean) {
     }
 }
 
-export async function getCurriculumMap(catName = "HTML"): Promise<CurriculumNode[]> {
+export async function getCurriculumMap(catName?: string): Promise<CurriculumNode[]> {
     try {
+        await ensureLookupTables();
+
         const [rows] = await db.query<RowDataPacket[]>(
             `SELECT c.cat_id, c.cat_name, s.sec_id, s.sec_num, 
                     d.difficulty_id, d.difficulty_name,
@@ -275,34 +260,77 @@ export async function getCurriculumMap(catName = "HTML"): Promise<CurriculumNode
              FROM cat_tbl c
              JOIN sec_tbl s
              JOIN difficulty_tbl d
-             LEFT JOIN quiz_tbl q ON q.cat_id = c.cat_id AND q.sec_id = s.sec_id AND q.difficulty_id = d.difficulty_id
-             WHERE c.cat_name = ?
+             JOIN quiz_tbl q ON q.cat_id = c.cat_id AND q.sec_id = s.sec_id AND q.difficulty_id = d.difficulty_id
              GROUP BY c.cat_id, c.cat_name, s.sec_id, s.sec_num, d.difficulty_id, d.difficulty_name
-             ORDER BY s.sec_num ASC, d.difficulty_id ASC`,
-            [catName]
+             ORDER BY c.cat_id ASC, s.sec_num ASC, d.difficulty_id ASC`
         );
 
-        const descriptions = SECTION_DESCRIPTIONS[catName] || {};
+        const rowMap = new Map<string, RowDataPacket[]>();
+        for (const r of rows) {
+            const key = `${r.cat_name}-${r.sec_num}`;
+            const list = rowMap.get(key) || [];
+            list.push(r);
+            rowMap.set(key, list);
+        }
 
-        return rows.map((r) => {
-            const secInfo = descriptions[r.sec_num] || {
-                title: `Section ${r.sec_num}: ${r.difficulty_name}`,
-                desc: `${catName} concepts and challenges.`,
-            };
+        const roadmap = catName
+            ? UNIFIED_CURRICULUM_ROADMAP.filter((r) => r.catName.toLowerCase() === catName.toLowerCase())
+            : UNIFIED_CURRICULUM_ROADMAP;
 
-            return {
-                id: `${r.cat_id}-${r.sec_id}-${r.difficulty_id}`,
-                catId: r.cat_id,
-                catName: r.cat_name,
-                secId: r.sec_id,
-                secNum: r.sec_num,
-                difficultyId: r.difficulty_id,
-                difficultyName: r.difficulty_name,
-                totalQuestions: Number(r.total_questions) || 0,
-                unitTitle: secInfo.title,
-                unitDescription: secInfo.desc,
-            };
-        });
+        const nodes: CurriculumNode[] = [];
+
+        for (const step of roadmap) {
+            const key = `${step.catName}-${step.secNum}`;
+            const matchingRows = rowMap.get(key) || [];
+            matchingRows.sort((a, b) => a.difficulty_id - b.difficulty_id);
+
+            if (matchingRows.length === 0) {
+                const catId = step.catName === "HTML" ? 1 : step.catName === "CSS" ? 2 : 3;
+                const secId = step.secNum;
+                const diffs = [
+                    { id: 1, name: "Easy" },
+                    { id: 2, name: "Medium" },
+                    { id: 3, name: "Hard" },
+                ];
+                for (const d of diffs) {
+                    nodes.push({
+                        id: `${catId}-${secId}-${d.id}`,
+                        stepIndex: step.stepIndex,
+                        tier: step.tier,
+                        catId,
+                        catName: step.catName,
+                        secId,
+                        secNum: step.secNum,
+                        difficultyId: d.id,
+                        difficultyName: d.name,
+                        totalQuestions: 15,
+                        unitTitle: step.title,
+                        unitDescription: step.desc,
+                        units: step.units,
+                    });
+                }
+            } else {
+                for (const r of matchingRows) {
+                    nodes.push({
+                        id: `${r.cat_id}-${r.sec_id}-${r.difficulty_id}`,
+                        stepIndex: step.stepIndex,
+                        tier: step.tier,
+                        catId: r.cat_id,
+                        catName: r.cat_name,
+                        secId: r.sec_id,
+                        secNum: r.sec_num,
+                        difficultyId: r.difficulty_id,
+                        difficultyName: r.difficulty_name,
+                        totalQuestions: Number(r.total_questions) || 0,
+                        unitTitle: step.title,
+                        unitDescription: step.desc,
+                        units: step.units,
+                    });
+                }
+            }
+        }
+
+        return nodes;
     } catch (err) {
         console.error("getCurriculumMap error:", err);
         return [];
@@ -348,11 +376,19 @@ export async function refillHearts(): Promise<{ success: boolean; error?: string
     const userId = Number(session.user.id);
 
     try {
-        // Refill costs 20 gems or free daily
         const [playerRows] = await db.query<RowDataPacket[]>(
             "SELECT gems, hearts FROM player_tbl WHERE user_id = ? LIMIT 1",
             [userId]
         );
+
+        if (playerRows.length === 0) {
+            return { success: false, error: "Player profile not found. Please refresh the page." };
+        }
+
+        const currentHearts = playerRows[0]?.hearts ?? 5;
+        if (currentHearts >= 5) {
+            return { success: false, error: "Hearts are already full!" };
+        }
 
         const gems = playerRows[0]?.gems ?? 0;
         const cost = 20;
@@ -370,5 +406,97 @@ export async function refillHearts(): Promise<{ success: boolean; error?: string
     } catch (err) {
         console.error("refillHearts error:", err);
         return { success: false, error: "Failed to refill hearts." };
+    }
+}
+
+export async function claimMilestoneChest(
+    stepIndex: number
+): Promise<{ success: boolean; error?: string; xpGained?: number; gemsGained?: number }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: "Not authenticated." };
+    }
+
+    if (!stepIndex || stepIndex < 1 || stepIndex > 17) {
+        return { success: false, error: "Invalid milestone section." };
+    }
+
+    const userId = Number(session.user.id);
+    const bonusXp = 25;
+    const bonusGems = 10;
+
+    try {
+        await db.query(
+            `UPDATE player_tbl 
+             SET xp = xp + ?, 
+                 gems = gems + ? 
+             WHERE user_id = ?`,
+            [bonusXp, bonusGems, userId]
+        );
+
+        return {
+            success: true,
+            xpGained: bonusXp,
+            gemsGained: bonusGems,
+        };
+    } catch (err) {
+        console.error("claimMilestoneChest error:", err);
+        return { success: false, error: "Failed to claim milestone bonus." };
+    }
+}
+
+export async function completeSkipChallenge(
+    catName: string,
+    targetNodeId: string,
+    targetSecNum: number
+): Promise<{ success: boolean; error?: string; unlockedCount?: number; xpGained?: number }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: "Not authenticated." };
+    }
+
+    const userId = Number(session.user.id);
+
+    try {
+        const curriculum = await getCurriculumMap();
+        const targetIndex = curriculum.findIndex((n) => n.id === targetNodeId);
+
+        if (targetIndex === -1) {
+            return { success: false, error: "Target checkpoint not found." };
+        }
+
+        // Mark all lower nodes strictly before the target node as completed with 3 stars
+        const nodesToComplete = curriculum.slice(0, targetIndex);
+
+        for (const node of nodesToComplete) {
+            await db.query(
+                `INSERT INTO player_progress_tbl (user_id, cat_id, sec_id, difficulty_id, stars)
+                 VALUES (?, ?, ?, ?, 3)
+                 ON DUPLICATE KEY UPDATE stars = GREATEST(stars, 3)`,
+                [userId, node.catId, node.secId, node.difficultyId]
+            );
+        }
+
+        const bonusXp = 50;
+        const bonusGems = 15;
+
+        // Update player section and award jump bonus
+        await db.query(
+            `UPDATE player_tbl 
+             SET current_section = GREATEST(current_section, ?),
+                 xp = xp + ?,
+                 gems = gems + ?
+             WHERE user_id = ?`,
+            [targetSecNum, bonusXp, bonusGems, userId]
+        );
+
+        return {
+            success: true,
+            unlockedCount: nodesToComplete.length,
+            xpGained: bonusXp,
+        };
+    } catch (err) {
+        console.error("completeSkipChallenge error:", err);
+        return { success: false, error: "Failed to apply skip challenge progress." };
     }
 }

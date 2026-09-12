@@ -67,13 +67,11 @@ export default async function OpenGraphImage() {
                 <div
                     style={{
                         position: "absolute",
-                        bottom: "-25px",
+                        bottom: "-70px",
                         left: "-5%",
                         width: "110%",
                         height: "135px",
                         backgroundColor: "#FCFBFF",
-                        borderTopLeftRadius: "50% 60px",
-                        borderTopRightRadius: "50% 60px",
                     }}
                 />
 
@@ -83,7 +81,7 @@ export default async function OpenGraphImage() {
                     height="195"
                     viewBox="0 0 729 418"
                     fill="none"
-                    style={{ position: "absolute", bottom: "35px", left: 0 }}
+                    style={{ position: "absolute", bottom: "60px", left: 0 }}
                 >
                     <path
                         d="M620.314 357.134C645.031 357.134 661.019 371.109 665.923 378.096C710.649 378.096 726.244 404.329 728.451 417.445H0.55426V2.9919C89.1229 -15.5427 140.2 56.5606 154.667 94.929C180.561 85.2204 200.52 104.613 207.264 115.523C238.748 99.342 256.795 116.994 262.435 129.13C379.146 61.758 443.03 157.079 448.915 205.622C508.5 190.176 519.534 240.558 508.5 264.829C557.934 259.534 576.055 302.094 579.488 323.301C609.795 314.769 619.334 342.302 620.314 357.134Z"
@@ -109,7 +107,7 @@ export default async function OpenGraphImage() {
                     height="206"
                     viewBox="0 0 788 452"
                     fill="none"
-                    style={{ position: "absolute", bottom: "35px", right: 0 }}
+                    style={{ position: "absolute", bottom: "60px", right: 0 }}
                 >
                     <path
                         d="M116.932 386.183C90.2047 386.183 72.9168 401.294 67.6137 408.85C19.25 408.85 2.38637 437.217 0 451.4H787.103V3.23526C691.33 -16.8069 636.099 61.1612 620.455 102.651C592.455 92.1522 570.872 113.122 563.58 124.92C529.535 107.422 510.02 126.51 503.921 139.633C377.717 66.7813 308.637 169.855 302.273 222.347C237.841 205.645 225.909 260.125 237.841 286.37C184.387 280.644 164.792 326.667 161.08 349.598C128.307 340.373 117.993 370.144 116.932 386.183Z"
@@ -230,7 +228,7 @@ export default async function OpenGraphImage() {
                 <div
                     style={{
                         position: "absolute",
-                        top: "38px",
+                        top: "68px",
                         left: "80px",
                         right: "80px",
                         display: "flex",
@@ -238,6 +236,7 @@ export default async function OpenGraphImage() {
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "12px",
+
                     }}
                 >
                     {/* Brand Badge: Logo + Title */}
@@ -248,31 +247,10 @@ export default async function OpenGraphImage() {
                             gap: "12px",
                         }}
                     >
-                        {/* QuizWeb 3D Isometric Cube Logo */}
-                        <svg width="44" height="50" viewBox="0 0 278 320" fill="none">
-                            <path
-                                d="M123.281 151.994L21.3536 93.1461C21.3536 93.1461 15.1447 88.9307 11.8315 90.8436C8.51829 92.7565 9.06443 100.241 9.06443 100.241L8.76514 226.024C8.76514 226.024 8.97581 233.149 10.9922 237.052C13.3375 241.593 20.3897 246.159 20.3897 246.159L120.149 303.755C120.149 303.755 128.163 309.476 132.472 306.988C136.781 304.5 135.834 294.699 135.834 294.699V173.735C135.834 173.735 135.581 166.048 133.402 161.835C130.869 156.938 123.281 151.994 123.281 151.994Z"
-                                fill="#5924BA"
-                            />
-                            <path
-                                d="M144.968 296.338L144.968 168.067C144.968 167.64 145.035 167.218 145.178 166.816C145.747 165.214 147.403 160.823 149.305 158.255C151.781 154.914 157.257 151.174 157.257 151.174L259.667 92.0482C259.667 92.0482 264.632 88.8418 267.264 90.3614C269.896 91.881 269.602 97.7841 269.602 97.7841V225.736C269.602 225.736 268.714 233.888 266.173 238.289C263.632 242.69 257.016 247.535 257.016 247.535L160.872 304.266C160.872 304.266 153.463 309.174 148.754 306.988C145.084 305.284 144.968 296.338 144.968 296.338Z"
-                                fill="#7C35D3"
-                            />
-                            <path
-                                d="M125.182 142.651L21.4675 82.7711C20.7872 82.3783 20.2327 81.7966 19.9447 81.0657C19.3874 79.651 18.613 77.176 19.185 75.4621C20.0057 73.0026 24.0042 70.8954 24.0042 70.8954L121.835 15.3071C121.835 15.3071 132.189 10.1206 139.305 10.1206C146.422 10.1206 156.775 15.3071 156.775 15.3071L251.715 70.1206C251.715 70.1206 258.703 74.1359 258.703 78.3529C258.703 82.5699 251.715 86.5851 251.715 86.5851L154.607 142.651C154.607 142.651 146.176 149.157 139.894 149.157C133.612 149.157 125.182 142.651 125.182 142.651Z"
-                                fill="#A576E2"
-                            />
-                            <path
-                                d="M117.109 107.23L95.9038 90.3621C95.9038 90.3621 89.7592 84.097 95.9038 77.9524C101.325 72.5307 109.398 79.0367 109.398 79.0367L124.681 90.6022C126.171 91.73 128.244 91.6755 129.673 90.4709L171.566 55.156C171.566 55.156 181.7 46.0242 187.47 51.7947C192.6 56.9246 188.629 62.8236 187.666 64.0905L136.868 107.23C136.868 107.23 131.323 112.29 126.988 112.29C122.653 112.29 117.109 107.23 117.109 107.23Z"
-                                fill="white"
-                            />
-                        </svg>
+
                         <span
                             style={{
-                                fontSize: "32px",
-                                fontWeight: 800,
-                                letterSpacing: "-0.5px",
-                                color: "#FFFFFF",
+                                display: "none",
                             }}
                         >
                             QuizWeb
@@ -282,13 +260,13 @@ export default async function OpenGraphImage() {
                     {/* Headline */}
                     <h1
                         style={{
-                            fontSize: "44px",
+                            fontSize: "60px",
                             fontWeight: 700,
                             lineHeight: 1.18,
                             color: "#FFFFFF",
                             textAlign: "center",
                             margin: 0,
-                            maxWidth: "860px",
+                            maxWidth: "700px",
                             letterSpacing: "-0.5px",
                         }}
                     >
@@ -298,7 +276,7 @@ export default async function OpenGraphImage() {
                     {/* Subtitle */}
                     <p
                         style={{
-                            fontSize: "20px",
+                            fontSize: "25px",
                             fontWeight: 400,
                             lineHeight: 1.45,
                             color: "#F6F1FD",
@@ -310,54 +288,7 @@ export default async function OpenGraphImage() {
                         Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.
                     </p>
 
-                    {/* Call to Action Button */}
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            backgroundColor: "#FCFBFF",
-                            padding: "10px 24px",
-                            borderRadius: "9999px",
-                            boxShadow: "0 8px 24px rgba(89, 36, 186, 0.25)",
-                            marginTop: "6px",
-                        }}
-                    >
-                        <span
-                            style={{
-                                color: "#9966FF",
-                                fontSize: "18px",
-                                fontWeight: 700,
-                                letterSpacing: "-0.2px",
-                            }}
-                        >
-                            Start Learning
-                        </span>
-                        <div
-                            style={{
-                                width: "30px",
-                                height: "30px",
-                                borderRadius: "15px",
-                                backgroundColor: "rgba(153, 102, 255, 0.12)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}
-                        >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="#9966FF"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="m9 18 6-6-6-6" />
-                            </svg>
-                        </div>
-                    </div>
+
                 </div>
             </div>
         ),

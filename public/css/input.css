@@ -1,7 +1,7 @@
 body {
-  background-color: #f6f6f6;
+  background-color: var(--bg-main, #f6f6f6);
   font-family: "Poppins", "Montserrat", sans-serif;
-  color: #333;
+  color: var(--text-main, #333333);
   min-height: 100vh;
   padding: 0;
   margin: 0;

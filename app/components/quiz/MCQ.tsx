@@ -9,7 +9,7 @@ export default function MCQ ({ quiz, value, onChange }: QuestionProps) {
     return (
         <div className="options-container" id="multiple-choice">
             {options.map((option, index) => (
-                <label key={option}>
+                <label key={`${option}-${index}`}>
                 <input
                     type="radio"
                     name={`option-${quiz.quiz_id}`}

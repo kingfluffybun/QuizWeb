@@ -93,7 +93,8 @@ h2 { font-size: clamp(1rem, 2.25vw, 1.5rem); }
 
 p {
     font-family: 'Montserrat', sans-serif;
-    font-size: clamp(0.75rem, 1.75vw, 1.25rem);
+    font-size: clamp(0.875rem, 1.25vw, 1.125rem);
+    line-height: 1.6;
     font-weight: 500;
     color: var(--text-muted);
 }

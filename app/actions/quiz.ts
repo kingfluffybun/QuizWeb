@@ -3,6 +3,8 @@
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { recordQuizAnswer } from "@/app/actions/player";
+import { UNIFIED_CURRICULUM_ROADMAP } from "@/lib/curriculumRoadmap";
+import { ensureLookupTables } from "@/lib/seedLookup";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
 export interface Category {
@@ -249,6 +251,7 @@ async function quizHasColumn(columnName: string) {
 
 export async function getQuizMetadata() {
   try {
+    await ensureLookupTables();
     const [categories] = await db.query<RowDataPacket[]>(
       "SELECT * FROM cat_tbl ORDER BY cat_name",
     );
@@ -765,6 +768,7 @@ export async function getQuizzes(filters?: {
   difficulty_name?: string;
 }) {
   try {
+    await ensureLookupTables();
     const conditions: string[] = [];
     const params: (number | string)[] = [];
     if (filters?.cat_id) {
@@ -815,7 +819,34 @@ export async function getQuizzes(filters?: {
       params,
     );
 
-    return quizzes.map((quiz) => {
+    let finalQuizzes = quizzes;
+    if (finalQuizzes.length === 0 && filters?.cat_name === "HTML" && String(filters?.sec_num) === "4") {
+      const fallbackParams: (number | string)[] = ["CSS", "4"];
+      let fallbackDiff = "";
+      if (filters?.difficulty_name) {
+        fallbackDiff = " AND d.difficulty_name = ?";
+        fallbackParams.push(filters.difficulty_name);
+      }
+      const [fallbackRows] = await db.query<QuizRow[]>(
+        `
+        SELECT q.quiz_id, 1 as cat_id, 4 as sec_id, '4' as sec_num, q.difficulty_id, q.quiz_type_id,
+               q.question_text, q.quiz_payload,
+               'HTML' as cat_name, d.difficulty_name, t.type_name
+        FROM quiz_tbl q
+        JOIN cat_tbl c ON q.cat_id = c.cat_id
+        JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+        JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+        LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
+        WHERE c.cat_name = ? AND s.sec_num = ? ${fallbackDiff}
+        ORDER BY q.quiz_id ASC
+        LIMIT 50
+        `,
+        fallbackParams,
+      );
+      finalQuizzes = fallbackRows;
+    }
+
+    return finalQuizzes.map((quiz) => {
       const payload =
         typeof quiz.quiz_payload === "string"
           ? JSON.parse(quiz.quiz_payload)
@@ -834,6 +865,90 @@ export async function getQuizzes(filters?: {
     });
   } catch (error) {
     console.error("Failed to fetch quizzes:", error);
+    return [];
+  }
+}
+
+export async function getSkipChallengeQuizzes(
+  catName: string,
+  targetSecNum: number,
+  targetDiffName = "Easy"
+) {
+  try {
+    await ensureLookupTables();
+
+    let targetDiffId = 1;
+    if (targetDiffName === "Medium") targetDiffId = 2;
+    if (targetDiffName === "Hard") targetDiffId = 3;
+
+    // Locate target step in the unified roadmap
+    const targetStepIndex = UNIFIED_CURRICULUM_ROADMAP.findIndex(
+      (s) => s.catName.toLowerCase() === catName.toLowerCase() && s.secNum === targetSecNum
+    );
+
+    // Prior steps in the sequential roadmap
+    const priorSteps = targetStepIndex > 0
+      ? UNIFIED_CURRICULUM_ROADMAP.slice(0, targetStepIndex)
+      : [];
+
+    // Build SQL condition for checkpoints strictly lower than the target checkpoint
+    const stepConditions: string[] = [];
+    const queryParams: (string | number)[] = [];
+
+    for (const step of priorSteps) {
+      stepConditions.push("(c.cat_name = ? AND s.sec_num = ?)");
+      queryParams.push(step.catName, step.secNum);
+    }
+
+    // Also include the target step if difficulty is strictly lower
+    if (targetDiffId > 1) {
+      stepConditions.push("(c.cat_name = ? AND s.sec_num = ? AND d.difficulty_id < ?)");
+      queryParams.push(catName, targetSecNum, targetDiffId);
+    }
+
+    if (stepConditions.length === 0) {
+      stepConditions.push("(c.cat_name = ? AND s.sec_num = ?)");
+      queryParams.push(catName, targetSecNum);
+    }
+
+    const whereClause = stepConditions.join(" OR ");
+
+    // Fetch up to 5 questions strictly from lower levels, prioritized by highest difficulty first
+    const [rows] = await db.query<QuizRow[]>(
+      `
+      SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id, q.quiz_type_id,
+             q.question_text, q.quiz_payload,
+             c.cat_name, d.difficulty_name, t.type_name
+      FROM quiz_tbl q
+      JOIN cat_tbl c ON q.cat_id = c.cat_id
+      JOIN sec_tbl s ON q.sec_id = s.sec_id
+      JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+      JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+      WHERE (${whereClause})
+      ORDER BY d.difficulty_id DESC, RAND()
+      LIMIT 5
+      `,
+      queryParams
+    );
+
+    return rows.map((quiz) => {
+      const payload =
+        typeof quiz.quiz_payload === "string"
+          ? JSON.parse(quiz.quiz_payload)
+          : quiz.quiz_payload;
+
+      const sanitized: Record<string, unknown> = { ...payload };
+      delete sanitized.correct_index;
+      delete sanitized.answer;
+
+      return {
+        ...quiz,
+        sec_num: quiz.sec_num ?? undefined,
+        quiz_payload: sanitized,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to fetch skip challenge quizzes:", error);
     return [];
   }
 }

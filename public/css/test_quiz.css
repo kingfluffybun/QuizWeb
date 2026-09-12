@@ -48,6 +48,26 @@
     overflow-y: auto;
 }
 
+@media (max-width: 768px) {
+    .test-page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "navbar"
+            "main"
+            "footer";
+    }
+
+    .test-page nav,
+    .test-page .sidebar {
+        display: none;
+    }
+
+    .test-page main {
+        padding: 16px 12px;
+    }
+}
+
 .main-content {
     max-width: 1000px;
     display: flex;

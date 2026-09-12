@@ -301,3 +301,22 @@
         }
     }
 }
+
+@media (max-width: 768px) {
+    .about > .about-description {
+        grid-template-columns: 1fr;
+        max-width: 90vw;
+        gap: 1.5rem;
+        text-align: left;
+    }
+
+    .about > .about-team {
+        padding: 4rem 1.25rem;
+        min-height: auto;
+    }
+
+    .about > .about-hero {
+        top: 15vh;
+        margin-top: 1rem;
+    }
+}

@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     // Fetch learner data in parallel
     const [profile, curriculum, leaderboard] = await Promise.all([
         getLearnerProfile(),
-        getCurriculumMap("HTML"),
+        getCurriculumMap(),
         getLeaderboard(),
     ]);
 

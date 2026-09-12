@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getQuizzes } from "@/app/actions/quiz";
+import { getQuizzes, getSkipChallengeQuizzes } from "@/app/actions/quiz";
 import type { QuizData } from "@/app/quiz/types";
 
 function shuffleQuizOptions(quiz: QuizData): QuizData {
@@ -34,6 +34,9 @@ export interface QuizFilters {
     cat_name?: string;
     sec_num?: number | string;
     difficulty_name?: string;
+    mode?: string;
+    targetSec?: number | string;
+    targetDiff?: string;
 }
 
 export function useQuizData(filters?: QuizFilters) {
@@ -46,7 +49,16 @@ export function useQuizData(filters?: QuizFilters) {
 
     useEffect(() => {
         let isMounted = true;
-        getQuizzes(filters).then((rows) => {
+        const fetchQuizzes = async () => {
+            if (filters?.mode === "skip") {
+                const targetSec = Number(filters.targetSec || 1);
+                const targetDiff = filters.targetDiff || "Easy";
+                return getSkipChallengeQuizzes(filters.cat_name || "HTML", targetSec, targetDiff);
+            }
+            return getQuizzes(filters);
+        };
+
+        fetchQuizzes().then((rows) => {
             if (isMounted) {
                 setState({
                     quizzes: (rows as QuizData[]).map(shuffleQuizOptions),
@@ -54,6 +66,7 @@ export function useQuizData(filters?: QuizFilters) {
                 });
             }
         });
+
         return () => {
             isMounted = false;
         };

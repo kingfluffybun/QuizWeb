@@ -14,24 +14,21 @@
     }
 }
 
-/* clarence eto yung ibahin mo if gusto mo baguhin yung color-scheme ng darkmode na landing page */
-/* vvvvvvvv */
-
-/* [data-theme="dark"] {
-    .hero { background-color: var(--bg-main); }
+[data-theme="dark"] {
+    .hero { background-color: var(--bg-brand, var(--bg-main)); }
     
     .hero .hero-text > h1, 
     .hero .hero-text p, 
     .hero .hero-text div h1 { color: var(--text-inverse); }
-    #ground { background-color: var(--bg-brand); }
-    .hero2 { background-color: var(--bg-brand); }
+    #ground { background-color: var(--bg-main); }
+    .hero2 { background-color: var(--bg-main); }
     
     .heroDescription > div {
         > h1 { color: var(--text-main); }
         > p { color: var(--text-muted); }
         > svg { color: var(--primary-color); }
     }
-} */
+}
 
 .hero {
     z-index: 1;
@@ -196,7 +193,8 @@
     /* hidden for now */
     .accessibility {display: none;} 
     
-    nav {
+    nav.public-nav,
+    nav:has(#logo-nav) {
         position: fixed !important;
         display: flex;
         padding: 0 2rem;

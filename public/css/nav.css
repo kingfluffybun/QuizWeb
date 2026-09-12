@@ -1,4 +1,5 @@
-nav {
+nav.public-nav,
+nav:has(#logo-nav) {
     top: 0;
     position: fixed;
     display: flex;
@@ -279,7 +280,8 @@ nav {
 }
 
 @media (max-width:768px) {
-    nav button {display: flex;}
+    nav.public-nav button,
+    nav:has(#logo-nav) button {display: flex;}
     
     .nav-options {
         position: fixed;
@@ -301,9 +303,11 @@ nav {
         transition: none;
     }
 
-    nav div:first-child {margin-left: 0;}
+    nav.public-nav div:first-child,
+    nav:has(#logo-nav) div:first-child {margin-left: 0;}
 
-    nav::before {
+    nav.public-nav::before,
+    nav:has(#logo-nav)::before {
         content: "";
         position: absolute;
         inset: 0;
@@ -314,7 +318,8 @@ nav {
         transition: none;
     }
 
-    nav.menu-open {
+    nav.public-nav.menu-open,
+    nav:has(#logo-nav).menu-open {
         position: fixed;
         inset: 0;
         width: 100%;

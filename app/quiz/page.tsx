@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import "#css/quiz.css";
@@ -8,6 +8,7 @@ import { useQuizData } from "@/app/quiz/useQuizData";
 import type { AnswerValue } from "@/app/quiz/types";
 import QuizRender from "@/app/components/quiz/quizRender";
 import { submitAnswer } from "@/app/actions/quiz";
+import { completeSkipChallenge } from "@/app/actions/player";
 
 function QuizContent() {
     const searchParams = useSearchParams();
@@ -17,12 +18,21 @@ function QuizContent() {
     const secParam = searchParams.get("sec") || undefined;
     const diffParam = searchParams.get("diff") || undefined;
     const typeParam = searchParams.get("type") || undefined;
+    const modeParam = searchParams.get("mode") || undefined;
+    const targetSecParam = searchParams.get("targetSec") || undefined;
+    const targetDiffParam = searchParams.get("targetDiff") || undefined;
+    const targetNodeIdParam = searchParams.get("targetNodeId") || undefined;
+
+    const isSkipMode = modeParam === "skip";
 
     const { quizzes, loading } = useQuizData({
         cat_name: catParam,
         sec_num: secParam,
         difficulty_name: diffParam,
         type_name: typeParam,
+        mode: modeParam,
+        targetSec: targetSecParam,
+        targetDiff: targetDiffParam,
     });
 
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -32,7 +42,9 @@ function QuizContent() {
     const [lastResult, setLastResult] = useState<{ correct: boolean; xpGained?: number; streak?: number } | null>(null);
     const [heartsLeft, setHeartsLeft] = useState<number>(5);
     const [sessionXp, setSessionXp] = useState<number>(0);
+    const [correctAnswersCount, setCorrectAnswersCount] = useState<number>(0);
     const [isCompleted, setIsCompleted] = useState<boolean>(false);
+    const skipRewardAppliedRef = useRef(false);
 
     const quiz = quizzes[currentIndex];
 
@@ -76,6 +88,7 @@ function QuizContent() {
 
                 if (isCorrect) {
                     setSessionXp((prev) => prev + xp);
+                    setCorrectAnswersCount((prev) => prev + 1);
                 }
 
                 setLastResult({
@@ -92,12 +105,59 @@ function QuizContent() {
         }
     };
 
+    useEffect(() => {
+        if (isCompleted && isSkipMode && targetNodeIdParam && !skipRewardAppliedRef.current) {
+            skipRewardAppliedRef.current = true;
+            completeSkipChallenge(catParam || "HTML", targetNodeIdParam, Number(targetSecParam || 1)).catch((err) => {
+                console.error("Failed to complete skip challenge:", err);
+            });
+        }
+    }, [isCompleted, isSkipMode, targetNodeIdParam, targetSecParam, catParam]);
+
     if (loading) {
         return (
             <div className="quiz-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⚡</div>
-                    <p style={{ fontWeight: "700", color: "var(--text-muted)" }}>Loading questions...</p>
+                    <p style={{ fontWeight: "700", color: "var(--text-muted)" }}>
+                        {isSkipMode ? "Preparing Jump Placement Test..." : "Loading questions..."}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (heartsLeft === 0) {
+        return (
+            <div className="quiz-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+                <div style={{ textAlign: "center", maxWidth: "480px", width: "90%", padding: "40px", backgroundColor: "var(--bg-card)", borderRadius: "32px", border: "3px solid var(--border-main)", boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}>
+                    <div style={{ fontSize: "4rem", marginBottom: "16px" }}>💔</div>
+                    <h2 style={{ fontSize: "1.8rem", fontWeight: "800", marginBottom: "12px", color: "#ef4444" }}>
+                        Out of Hearts!
+                    </h2>
+                    <p style={{ color: "var(--text-muted)", fontSize: "1.05rem", marginBottom: "28px", lineHeight: "1.5" }}>
+                        {isSkipMode
+                            ? "You couldn't pass the Jump Challenge this time. Practice earlier lessons to build your skills, or try again when your hearts are full!"
+                            : "You ran out of lives for this session. Refill your hearts on the dashboard to continue learning!"}
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => router.push("/dashboard")}
+                        style={{
+                            width: "100%",
+                            padding: "16px",
+                            backgroundColor: "var(--primary-color, #7c3aed)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "20px",
+                            fontSize: "1.1rem",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            boxShadow: "0 6px 0 #5b21b6",
+                        }}
+                    >
+                        RETURN TO DASHBOARD
+                    </button>
                 </div>
             </div>
         );
@@ -110,7 +170,9 @@ function QuizContent() {
                     <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🎯</div>
                     <h2 style={{ marginBottom: "12px" }}>No Questions Found</h2>
                     <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
-                        There are currently no questions matching this specific filter.
+                        {isSkipMode 
+                            ? "No lower-level questions found to test out of this checkpoint." 
+                            : "There are currently no questions matching this specific filter."}
                     </p>
                     <Link
                         href="/dashboard"
@@ -136,6 +198,53 @@ function QuizContent() {
 
     // Session Complete screen
     if (isCompleted) {
+        if (isSkipMode) {
+            return (
+                <div className="quiz-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+                    <div style={{ textAlign: "center", maxWidth: "520px", width: "90%", padding: "40px", backgroundColor: "var(--bg-card)", borderRadius: "32px", border: "3px solid var(--border-main)", boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}>
+                        <div style={{ fontSize: "4.5rem", marginBottom: "16px" }}>🏆</div>
+                        <h1 style={{ fontSize: "2rem", fontWeight: "900", marginBottom: "12px", color: "var(--text-main)" }}>
+                            Jump Challenge Passed!
+                        </h1>
+                        <p style={{ color: "var(--text-muted)", fontSize: "1.05rem", marginBottom: "28px", lineHeight: "1.5" }}>
+                            You proved mastery of the lower levels! Lessons up to <strong>Section {targetSecParam} ({targetDiffParam})</strong> are now unlocked.
+                        </p>
+
+                        <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginBottom: "32px" }}>
+                            <div style={{ padding: "16px 20px", borderRadius: "20px", backgroundColor: "rgba(234, 179, 8, 0.12)", border: "2px solid #eab308" }}>
+                                <div style={{ fontSize: "1.6rem", fontWeight: "900", color: "#ca8a04" }}>+50 XP</div>
+                                <div style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase" }}>Jump Bonus</div>
+                            </div>
+                            <div style={{ padding: "16px 20px", borderRadius: "20px", backgroundColor: "rgba(34, 197, 94, 0.12)", border: "2px solid #22c55e" }}>
+                                <div style={{ fontSize: "1.6rem", fontWeight: "900", color: "#16a34a" }}>⚡ Unlocked</div>
+                                <div style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase" }}>Section {targetSecParam}</div>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => router.push("/dashboard")}
+                            style={{
+                                width: "100%",
+                                padding: "16px",
+                                backgroundColor: "var(--success-color, #22c55e)",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "20px",
+                                fontSize: "1.15rem",
+                                fontWeight: "800",
+                                cursor: "pointer",
+                                boxShadow: "0 6px 0 #15803d",
+                                transition: "all 0.15s ease",
+                            }}
+                        >
+                            GO TO UNLOCKED PATH
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="quiz-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
                 <div style={{ textAlign: "center", maxWidth: "520px", width: "90%", padding: "40px", backgroundColor: "var(--bg-card)", borderRadius: "32px", border: "3px solid var(--border-main)", boxShadow: "0 20px 40px rgba(0,0,0,0.08)" }}>
@@ -151,7 +260,9 @@ function QuizContent() {
                             <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase" }}>Total XP</div>
                         </div>
                         <div style={{ padding: "16px 24px", borderRadius: "20px", backgroundColor: "rgba(249, 115, 22, 0.12)", border: "2px solid #f97316" }}>
-                            <div style={{ fontSize: "1.8rem", fontWeight: "900", color: "#ea580c" }}>🔥 100%</div>
+                            <div style={{ fontSize: "1.8rem", fontWeight: "900", color: "#ea580c" }}>
+                                🔥 {quizzes.length > 0 ? Math.min(100, Math.round((correctAnswersCount / quizzes.length) * 100)) : 100}%
+                            </div>
                             <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase" }}>Accuracy</div>
                         </div>
                     </div>
@@ -193,7 +304,11 @@ function QuizContent() {
 
                         {/* Title details */}
                         <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--text-muted)", marginLeft: "8px" }}>
-                            {catParam ? `${catParam} • Section ${secParam ?? "1"} • ${diffParam ?? "All"}` : "Quiz Web Challenge"}
+                            {isSkipMode
+                                ? `⚡ Placement Test • Jump to Section ${targetSecParam ?? "1"} (${targetDiffParam ?? "Level"})`
+                                : catParam
+                                ? `${catParam} • Section ${secParam ?? "1"} • ${diffParam ?? "All"}`
+                                : "Quiz Web Challenge"}
                         </div>
 
                         {/* Animated Hearts HUD */}
