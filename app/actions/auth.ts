@@ -7,6 +7,7 @@ import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import { auth } from '@/auth';
 
 export async function signUp(formData: FormData) {
     const username = formData.get("username") as string;
@@ -25,46 +26,48 @@ export async function signUp(formData: FormData) {
     }
 
     try {
-        // Check if the email already exists in user_auth_tbl
+        const normalizedEmail = email.trim().toLowerCase();
+        const trimmedUsername = username.trim();
+
+        // Check if the email already exists to a verified account
         const [existingEmail] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email]
+            [normalizedEmail]
         );
         if (existingEmail.length > 0) {
             return { error: "An account with this email already exists." };
         }
 
-        // Check if the username is already taken in player_tbl (marked Unique in ERD)
+        // Check if the username is already taken
         const [existingUsername] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1",
-            [username]
+            [trimmedUsername]
         );
         if (existingUsername.length > 0) {
             return { error: "This username is already taken." };
         }
 
-        const verificationToken = crypto.randomBytes(32).toString("hex");
-        const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        // Remove pending verification
+        await db.query(
+            `DELETE FROM user_vrfy_tbl WHERE email = ? OR username = ?`,
+            [normalizedEmail, trimmedUsername]
+        );
 
         const hashed = await argon2.hash(password);
 
-        // Insert the authentication record 
-        const [authResult] = await db.query<ResultSetHeader>(
-            "INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, verification_token, verification_expires) VALUES (?, ?, ?, ?, ?)",
-            [email, hashed, false, verificationToken, verificationExpires]
-        );
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+        const verificationExpires = new Date(Date.now() + 5 * 60 * 1000);
 
-        const newUserId = authResult.insertId;
+        // Store temporarily
+        await db.query<ResultSetHeader>(
+            `INSERT INTO user_vrfy_tbl (username, email, password_hash, verification_token, expires_at) VALUES (?, ?, ?, ?, ?)`,
+            [trimmedUsername, normalizedEmail, hashed, verificationToken, verificationExpires]
+        )
 
-        // Insert the player profile using the newly generated user_id
-        await db.query(
-            "INSERT INTO player_tbl (user_id, username) VALUES (?, ?)",
-            [newUserId, username]
-        );
+        const verificationLink = `https://quizweb.dev/verify-email/${verificationToken}`;
 
         // Send email for verification
-        try {
-            await sendEmail({
+        await sendEmail({
             to: email,
             subject: "QuizWeb - Email Verification",
             html: `
@@ -73,7 +76,7 @@ export async function signUp(formData: FormData) {
                 <head>
                     <meta charset="utf-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Reset Your Password — QuizWeb</title>
+                    <title>Email Verification — QuizWeb</title>
                     <style>
                         body {
                             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -150,16 +153,16 @@ export async function signUp(formData: FormData) {
                     <div class="container">
                         <div class="logo">QuizWeb</div>
 
-                        <div class="greeting">Hi, ${username}!</div>
+                        <div class="greeting">Hi, ${trimmedUsername}!</div>
                         <div class="message">
-                            We received an account creation tied to this email address.<br/>
+                            We received an account creation using this email address.<br/>
                             Please click the link below to verify your email address.
                         </div>
                         <div class="button">
-                            <a href="https://quizweb.dev/verify-email/${verificationToken}">Verify Email</a>
+                            <a href="${verificationLink}">Verify Email</a>
                         </div>
                         <div class="expiry">
-                            This link will expire in 24 hours.
+                            This link will expire in 5 minutes.
                         </div>
                         <div class="footer">
                             <p style="margin: 0 0 8px; font-weight: 600; color: #333333;">QuizWeb — Learn Web Development</p>
@@ -169,81 +172,130 @@ export async function signUp(formData: FormData) {
                 </body>
                 </html>
             `,
-        })
-        } catch (emailError) {
-            // Remove acc
-            await db.query(
-                "DELETE FROM player_tbl WHERE user_id = ?",
-                [newUserId]
-            );
+        });
 
-            await db.query(
-                "DELETE FROM user_auth_tbl WHERE user_id = ?",
-                [newUserId]
-            );
-
-            return {
-                error: "We couldn't send the verification email. Please try again."
-            };
-        }
-
-        return { success: true };
+        return {
+            success: true,
+            message: "Check your email to verify your email address.",
+        };
     } catch (error) {
-        console.error("Signup database error:", error);
-        return { error: "An internal server error occurred during signup." };
+        return {
+            error: "An internal error occurred. Please try again later.",
+        };
     }
 }
 
 // Verify Email
 export async function verifyEmail(token: string) {
+    if (!token) {
+        return {
+            success: true,
+            message: "Invalid verification link.",
+        };
+    }
+
+    const connection = await db.getConnection();
+
     try {
-        const [rows] = await db.query<any[]>(
-            `SELECT user_id, verification_token FROM user_auth_tbl WHERE verification_token = ? AND is_email_verified = 0 LIMIT 1`,
+        // Find pending verification
+        const [rows] = await connection.query<RowDataPacket[]>(
+            `SELECT verify_id, username, email, password_hash, expires_at FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1`,
             [token]
         );
 
         if (rows.length === 0) {
             return {
-                success: false,
-                message: "Invalid or expired verification token.",
+                success: true,
+                message: "This verification link is invalid or has already been used.",
             };
         }
 
-        const user = rows[0];
-        const expiresAt = new Date(user.verification_expires);
+        const pendingUser = rows[0];
 
-        // Check if token has expired
-        if (Date.now() > expiresAt.getTime()) {
-            // Delete player
-            await db.query("DELETE FROM player_tbl WHERE user_id = ?", [user.user_id]);
+        // Check expiration
+        const expiresAt = new Date(pendingUser.expires_at);
 
-            // Delete authentication record
-            await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [user.user_id]);
+        if (new Date() > expiresAt) {
+            await connection.query(
+                `DELETE FROM user_vrfy_tbl WHERE verify_id = ?`,
+                [pendingUser.verify_id]
+            );
 
             return {
                 success: false,
-                expired: true,
-                message: "This verification link has expired. Your account has been removed.",
+                message: "This verification link has expired. Please sign up again.",
             };
         }
 
-        // Verify email
-        await db.query(
-            `UPDATE user_auth_tbl SET is_email_verified = true, verification_token = NULL, verification_expires = NULL WHERE user_id = ?`,
-            [user.user_id]
+        await connection.beginTransaction();
+
+        // Check if email already exists
+        const [existingEmail] = await connection.query<RowDataPacket[]>(
+            `SELECT usr_id FROM user_auth_tbl WHERE email = ? LIMIT = 1`,
+            [pendingUser.email]
         );
+
+        if (existingEmail.length > 0) {
+            await connection.rollback();
+
+            return {
+                success: false,
+                message: "An account already exists with this email address.",
+            };
+        }
+
+        // Check if username already exists
+        const [existingUsername] =
+            await connection.query<RowDataPacket[]>(
+                `SELECT usr_id FROM player_tbl WHERE username = ? LIMIT = 1`,
+                [pendingUser.username]
+            );
+        
+        if (existingUsername.length > 0) {
+            await connection.rollback();
+
+            return {
+                success: false,
+                message: "This username is already taken.",
+            };
+        }
+
+        // Create acc
+        const [authResult] = 
+            await connection.query<ResultSetHeader>(
+                `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role) VALUES (?, ?, ?, ?)`,
+                [pendingUser.email, pendingUser.password_hash, 1, "user"]
+            );
+        
+        const newUserId = authResult.insertId;
+
+        // Create player
+        await connection.query(
+            `INSERT INTO player_tbl (user_id, username) VALUES (?, ?)`,
+            [newUserId, pendingUser.username]
+        );
+
+        // Delete temp verification
+        await connection.query(
+            `DELETE FROM user_vrfy_tbl WHERE verify_id = ?`,
+            [pendingUser.verify_id]
+        );
+
+        // lala
+        await connection.commit();
 
         return {
             success: true,
-            message: "Email verified successfully.",
+            message: "Email verified successfully. You may now close this tab.",
         };
-
     } catch (error) {
-        console.error("Email verification error:", error);
+        await connection.rollback();
         return {
             success: false,
-            message: "An internal server error occurred during email verification.",
+            message: "An internal error occurred. Please try again later.",
         };
+    } finally {
+        connection.release();
     }
 }
 
