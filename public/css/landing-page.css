@@ -194,7 +194,7 @@
     /* hidden for now */
     .accessibility {display: none;} 
     
-    nav {
+    .public-nav {
         position: fixed !important;
         display: flex;
         padding: 0 2rem;
