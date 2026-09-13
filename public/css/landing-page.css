@@ -95,6 +95,7 @@
     cursor: pointer;
     text-wrap: nowrap;
     transition: 200ms all ease;
+    text-decoration: none;
     > h2, svg {color: var(--primary-color) !important; user-select: none;}
     > .call-to-action-icon {
         background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
