@@ -5,7 +5,7 @@
         "sidebar main"
         "sidebar footer";
     grid-template-rows: 8vh 1fr clamp(140px, 2vh, 220px);
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: minmax(auto, 240px) auto;
     min-height: 100vh;
     background-color: var(--bg-main);
 }
@@ -16,12 +16,6 @@
     width: 100%;
 }
 
-.quiz-page .sidebar {
-    grid-area: sidebar;
-    background-color: var(--bg-card);
-    border-right: 2px solid var(--border-main);
-}
-
 .quiz-page main {
     grid-area: main;
     background-color: var(--bg-main);
@@ -30,7 +24,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 48px clamp(24px, 10vw, 200px);
+    padding: 48px 0;
     gap: 32px;
     
 }
@@ -130,7 +124,7 @@
     max-height: 96px;
     background-color: var(--bg-card);
     border: 3px solid var(--border-main);
-    border-radius: 32px;
+    border-radius: 16px;
     border-bottom: 5px solid var(--border-main);
     font-family: "Poppins", sans-serif;
     font-weight: 600;
@@ -176,14 +170,14 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        height: clamp(44px, 4vh, 60px);
+        height: clamp(36px, 4vh, 44px);
         width: auto;
         aspect-ratio: 1/1;
         border-radius: 8px;
         border: 3px solid var(--border-main);
-        color: var(--text-muted);
+        color: #AFAFAF;
         font-weight: 600;
-        font-size: clamp(1.1rem, 1.5vw, 1.5rem);
+        font-size: clamp(1rem, 1.25vw, 1.25rem);
         transition: all 250ms ease;
         transition: background 350ms ease;
     }
@@ -524,7 +518,8 @@
 .quiz-page footer {
     grid-area: footer;
     background-color: var(--bg-card);
-    border-top: 2px solid var(--border-main);
+    /* border-top: 2px solid var(--border-main); */
+    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06);
     display: flex;
     justify-content: center;
     padding: 36px clamp(24px, 10vw, 200px);
