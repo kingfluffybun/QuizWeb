@@ -31,7 +31,8 @@
     flex-direction: column;
     align-items: center;
     padding: 48px clamp(24px, 10vw, 200px);
-    gap: 20px;
+    gap: 32px;
+    
 }
 
 .quiz-page .quiz-header {
@@ -114,7 +115,7 @@
             color: var(--text-inverse);
         }
     }
-    input[type="radio"]:hover + .options {transform: translateY(-2px);}
+    input[type="radio"]:not(:disabled):hover + .options {transform: translateY(-2px);}
     input[type="radio"]:active + .options {border-bottom-width: 3px; transform: translateY(2px);}
 }
 
@@ -144,13 +145,13 @@
     > svg, p {pointer-events: none;}
     
     /* For draggables */
-    &:hover {
+    &:not(:disabled):hover {
         transform: translateY(-2px); 
         /* border-color: var(--selected-color);  */
         /* background-color: var(--selected-background-color); 
         > p, svg {color: var(--selected-color);} */
     }
-    &:active {
+    &:not(:disabled):active {
         border-color: var(--selected-color); 
         background-color: var(--selected-background-color);
         border-bottom-width: 3px;
@@ -262,6 +263,7 @@
 .pair-left-column, .pair-right-column {
     height: 100%;
     flex: 1;
+    justify-content: flex-start;
     > label {
         max-height: 96px;
         height: 100%;
@@ -545,6 +547,12 @@
             flex-shrink: 0;
         }
 
+        > button#submit:disabled {
+            background-color: #AFAFAF;
+            border: none;
+            cursor: not-allowed;
+        }
+
         > button.options#submit::after {
             content: "";
             position: absolute;
@@ -554,7 +562,7 @@
             height: 100%; width: 100%;
         }
 
-        > button.options#submit:hover::after {background-color: rgba(255, 255, 255, 0.1);}
+        > button.options#submit:not(:disabled):hover::after {background-color: rgba(255, 255, 255, 0.1);}
         > button.options#skip {color: #AFAFAF; background-color: var(--bg-card);}
         > button.options#skip:hover {filter:brightness(0.9); border-color: var(--border-main);}
         > button.options#skip:active {border-bottom-width: 3px;}

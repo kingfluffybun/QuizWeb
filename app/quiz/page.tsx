@@ -69,7 +69,7 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
 }
 
 export default function QuizPage() {
-    // limit ko lang muna saglit to 10 ques - clarence
+    // limit ko lang muna saglit to 10 ques para makita .progress-container - clarence
     // const {quizzes} = useQuizData();
     const {quizzes: allQuizzes} = useQuizData();
     const quizzes = allQuizzes.slice(0, 10);
@@ -96,6 +96,22 @@ export default function QuizPage() {
     const submitAnswer = () => {
         if (!quiz) return;
         setResult(evaluate(quiz, value));
+    };
+
+    const handleAnswerChange = (nextValue: AnswerValue) => {
+        setValue(nextValue);
+
+        const pairCount = quiz?.quiz_payload.pairs?.length ?? 0;
+        if (quiz?.type_name === "Pair" && nextValue === pairCount) {
+            setResult(evaluate(quiz, nextValue));
+        }
+    };
+
+    const handleQuestionKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
+            event.preventDefault();
+            result ? continueQuiz() : submitAnswer();
+        }
     };
 
     const isPairIncomplete = quiz?.type_name === "Pair"
@@ -126,10 +142,10 @@ export default function QuizPage() {
                 </div>
 
                 <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
-                    <div className="quiz-container" key={quiz?.quiz_id}>
+                    <div className="quiz-container" key={quiz?.quiz_id} onKeyDown={handleQuestionKeyDown}>
                         <h1>{quiz?.question_text ?? "Loading question..."}</h1>
                         {quiz && (
-                            <QuizRender quiz={quiz} value={value} onChange={setValue} />
+                            <QuizRender quiz={quiz} value={value} onChange={handleAnswerChange} />
                         )}
                     </div>
                 </div>
@@ -153,7 +169,7 @@ export default function QuizPage() {
                         className="options"
                         id="submit"
                         onClick={result ? continueQuiz : submitAnswer}
-                        disabled={!quiz || (!result && isPairIncomplete)}
+                        disabled={!quiz || (!result && (isPairIncomplete || quiz.type_name === "Pair"))}
                     >
                         {result ? "Continue" : "Submit"}
                     </button>
