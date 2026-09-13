@@ -89,7 +89,9 @@ function AuthPage() {
         if (res?.error) {
             await recordFailedLogin(email);
             // setError(`Invalid email or password. ${Math.max(0, rateCheck.remaining - 1)} attempts remaining.`);
-            setError(`Invalid email or password. ${rateCheck.remaining} attempts remaining.`);
+            if (rateCheck.remaining <= 3) {
+                setError(`Invalid email or password. ${rateCheck.remaining} attempts remaining.`);
+            }
             setIsLoading(false);
             return;
         }

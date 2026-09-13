@@ -1,0 +1,116 @@
+:root {
+    --font-mono: var(--font-jetbrains-mono), monospace;
+}
+
+html {
+    /* font: ; */
+    background: #fcfbff;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+/*.container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 48px;
+    border: 1px solid #e0e0e0;
+    text-align: center;
+}
+.logo {
+    text-align: center;
+    color: #9966FF;
+    letter-spacing: -0.5px;
+}
+.logo-img {
+    width: 100px;
+    height: auto;
+}
+.yay {
+    font-size: 35px;
+    font-weight: 700;
+    color: #9966FF;
+    margin-bottom: 8px;
+}
+.nay {
+    font-size: 35px;
+    font-weight: 700;
+    color: #9966FF;
+    margin-bottom: 8px;
+}
+.message {
+    font-size: 15px;
+    color: #666666;
+    line-height: 1.6;
+} */
+
+.main-email {
+    min-height: "100vh";
+    display: "flex";
+    align-items: center;
+    justify-content: center;
+    background-color: #fcfbff;
+    padding: 20px;
+}
+
+.email-container {
+    width: 100%;
+    max-width: 480px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 48px;
+    border: 1px solid #e0e0e0;
+    text-align: center;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.logo {
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-img {
+    width: auto;
+    height: 40px;
+}
+
+.logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #9966FF;
+    margin-bottom: 8px;
+}
+
+.success-logo, .failed-logo {
+    text-align: center;
+}
+
+.success-icon, .failed-icon {
+    width: 100px;
+    height: auto;
+}
+
+.success-title {
+    font-size: 35px;
+    font-weight: 700;
+    color: #9966FF;
+    margin-bottom: 8px;
+}
+
+.failed-title {
+    font-size: 35px;
+    font-weight: 700;
+    color: #ef2e2e;
+    margin-bottom: 8px;
+}
+
+.message {
+    font-size: 15px;
+    color: #666666;
+    line-height: 1.6;
+}
