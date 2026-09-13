@@ -69,7 +69,10 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
 }
 
 export default function QuizPage() {
-    const {quizzes} = useQuizData();
+    // limit ko lang muna saglit to 10 ques - clarence
+    // const {quizzes} = useQuizData();
+    const {quizzes: allQuizzes} = useQuizData();
+    const quizzes = allQuizzes.slice(0, 10);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
     const [result, setResult] = useState<AnswerResult | null>(null);
