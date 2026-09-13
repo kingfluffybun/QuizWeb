@@ -134,6 +134,7 @@
     padding: 10vh 0;
     margin: 0 auto;
     width: 100%;
+    max-width: 1200px;
 }
 
 .section:nth-child(odd) {
@@ -149,17 +150,13 @@
 }
 
 .section-container {
-    max-width: 1200px;
     height: 100%;
     width: 100%;
 }
 
 .section-content {
-    flex: 1;
     align-items: flex-start;
     justify-content: center;
-    width: 520px;
-    max-width:520px;
     > h1 {
         font-size: clamp(1.75rem, 5vw, 3rem);
         font-weight: 700;
@@ -168,6 +165,7 @@
     } p {
         font-size: 20px;
         line-height: 1.7;
+        width:520px;
     }
 }
 

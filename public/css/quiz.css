@@ -102,6 +102,7 @@
     max-height: 96px;
     height: 100%;
     width: 100%;
+    
     input[type="radio"] {display: none;}
     input[type="radio"]:checked + .options {
         background-color: var(--selected-background-color);
@@ -109,7 +110,7 @@
         > p {color: var(--selected-color);}
         > div {
             background-color: var(--selected-color);
-            border: none;
+            border-color: var(--selected-color);
             color: var(--text-inverse);
         }
     }
@@ -175,13 +176,15 @@
         align-items: center;
         justify-content: center;
         height: clamp(44px, 4vh, 60px);
-        width: clamp(44px, 5vh, 60px);
+        width: auto;
+        aspect-ratio: 1/1;
         border-radius: 8px;
         border: 3px solid var(--border-main);
         color: var(--text-muted);
         font-weight: 600;
         font-size: clamp(1.1rem, 1.5vw, 1.5rem);
-        transition: all 200ms ease;
+        transition: all 250ms ease;
+        transition: background 350ms ease;
     }
 }
 
