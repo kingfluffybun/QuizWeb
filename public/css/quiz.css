@@ -116,7 +116,7 @@
         }
     }
     input[type="radio"]:not(:disabled):hover + .options {transform: translateY(-2px);}
-    input[type="radio"]:active + .options {border-bottom-width: 3px; transform: translateY(2px);}
+    input[type="radio"]:not(:disabled):active + .options {border-bottom-width: 3px; transform: translateY(2px);}
 }
 
 .quiz-page .options {
@@ -145,13 +145,13 @@
     > svg, p {pointer-events: none;}
     
     /* For draggables */
-    &:not(:disabled):hover {
+    &:hover {
         transform: translateY(-2px); 
         /* border-color: var(--selected-color);  */
         /* background-color: var(--selected-background-color); 
         > p, svg {color: var(--selected-color);} */
     }
-    &:not(:disabled):active {
+    &:active {
         border-color: var(--selected-color); 
         background-color: var(--selected-background-color);
         border-bottom-width: 3px;
@@ -550,7 +550,7 @@
         > button#submit:disabled {
             background-color: #AFAFAF;
             border: none;
-            cursor: not-allowed;
+            pointer-events: none;
         }
 
         > button.options#submit::after {

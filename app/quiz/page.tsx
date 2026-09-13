@@ -110,12 +110,31 @@ export default function QuizPage() {
     const handleQuestionKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
             event.preventDefault();
-            result ? continueQuiz() : submitAnswer();
+            if (result) {
+                continueQuiz();
+            } else {
+                submitAnswer();
+            }
         }
     };
 
     const isPairIncomplete = quiz?.type_name === "Pair"
         && value !== (quiz.quiz_payload.pairs?.length ?? 0);
+
+    const isAnswerIncomplete = (() => {
+        if (!quiz) return true;
+
+        switch (quiz.type_name) {
+            case "MCQ":
+                return typeof value !== "number";
+            case "FITB":
+                return typeof value !== "string" || value.trim() === "";
+            case "Pair":
+                return isPairIncomplete;
+            default:
+                return false;
+        }
+    })();
 
     return (
         <div className="quiz-page">
@@ -169,7 +188,7 @@ export default function QuizPage() {
                         className="options"
                         id="submit"
                         onClick={result ? continueQuiz : submitAnswer}
-                        disabled={!quiz || (!result && (isPairIncomplete || quiz.type_name === "Pair"))}
+                        disabled={!quiz || (!result && isAnswerIncomplete)}
                     >
                         {result ? "Continue" : "Submit"}
                     </button>
