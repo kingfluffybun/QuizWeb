@@ -94,6 +94,7 @@
     background-color: var(--bg-main);
     cursor: pointer;
     text-wrap: nowrap;
+    text-decoration: none;
     transition: 200ms all ease;
     > h2, svg {color: var(--primary-color) !important;}
     > svg {user-select: none;}
