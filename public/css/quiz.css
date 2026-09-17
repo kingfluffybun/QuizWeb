@@ -434,6 +434,30 @@
     }
 }
 
+.monaco-editor-shell {
+    overflow: hidden;
+    background-color: #F3F4F6;
+    border-left: 1px solid var(--border-main);
+}
+
+.monaco-code-editor,
+.monaco-code-editor > .monaco-editor,
+.monaco-code-editor > .monaco-editor > .overflow-guard {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.monaco-code-editor .monaco-editor,
+.monaco-code-editor .monaco-editor-background,
+.monaco-code-editor .margin {
+    background-color: #F3F4F6 !important;
+}
+
+.monaco-code-editor .monaco-editor .view-overlays .current-line,
+.monaco-code-editor .monaco-editor .view-overlays .current-line ~ .line-numbers {
+    background: rgba(79, 70, 229, 0.08) !important;
+}
+
 .canvas-container, .code-editor-container {
     gap: 0;
     justify-content: flex-start;

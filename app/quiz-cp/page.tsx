@@ -1,8 +1,25 @@
 "use client";
 
+import Editor from "@monaco-editor/react";
+import { useState } from "react";
 import "#css/quiz.css";
 
+const starterHtml = `<h1>Baking Recipes</h1>
+<h2>Ingredients List</h2>
+<ul>
+    <li>Flour</li>
+    <li>Sugar</li>
+    <li>Eggs</li>
+</ul>
+<hr>
+<ol>
+    <li>Mix ingredients together.</li>
+    <li>Bake in the oven.</li>
+</ol>
+<p>Enjoy your meal!</p>`;
+
 export default function QuizPage() {
+  const [code, setCode] = useState(starterHtml);
   return (
     <div className="quiz-page" id="code-problem">
       <nav></nav>
@@ -85,50 +102,58 @@ export default function QuizPage() {
                             <h2>script.js</h2>
                         </div>
                     </div>
-                    <div className="code-editor-container row">
-                        <div className="line-number">
-                            <p>1</p>
-                            <p>2</p>
-                            <p>3</p>
-                            <p>4</p>
-                            <p>5</p>
-                            <p>6</p>
-                            <p>7</p>
-                            <p>8</p>
-                            <p>9</p>
-                            <p>10</p>
-                            <p>11</p>
-                            <p>12</p>
-                            <p>13</p>
-                            <p>14</p>
-                            <p>15</p>
-                            <p>16</p>
-                            <p>17</p>
-                            <p>18</p>
-                            <p>19</p>
-                            <p>20</p>
-                            <p>21</p>
-                            <p>22</p>
-                            <p>23</p>
-                            <p>24</p>
-                            <p>25</p>
-                            <p>26</p>
-                            <p>27</p>
-                        </div>
-                        <textarea className="code-editor" spellCheck="false" defaultValue={`<h1>Baking Recipes</h1>  
-<h2>Ingredients List</h2>
-<ul>
-    <li>Flour</li>
-    <li>Sugar</li>
-    <li>Eggs</li>
-</ul>
-<hr>
-<ol>
-    <li>Mix ingredients together.</li>
-    <li>Bake in the oven.</li>
-</ol>
-<p>Enjoy your meal!</p>`}>
-                       </textarea>
+                    <div className="code-editor-container monaco-editor-shell row">
+                        <Editor
+                            className="monaco-code-editor"
+                            height="100%"
+                            width="100%"
+                            language="html"
+                            theme="quiz-web"
+                            value={code}
+                            onChange={(value) => setCode(value ?? "")}
+                            beforeMount={(monaco) => {
+                                monaco.editor.defineTheme("quiz-web", {
+                                    base: "vs",
+                                    inherit: true,
+                                    rules: [
+                                        { token: "tag", foreground: "#0F172A" },
+                                        { token: "attribute.name.html", foreground: "#7C3AED" },
+                                        { token: "attribute.value.html", foreground: "#10B981" },
+                                        { token: "delimiter.html", foreground: "#475569" },
+                                        { token: "string", foreground: "#10B981" },
+                                        { token: "comment", foreground: "#94A3B8" },
+                                    ],
+                                    colors: {
+                                        "editor.background": "#F3F4F6",
+                                        "editorLineNumber.foreground": "#9CA3AF",
+                                        "editorLineNumber.activeForeground": "#475569",
+                                        "editorCursor.foreground": "#111827",
+                                        "editor.selectionBackground": "#DBEAFE",
+                                        "editor.inactiveSelectionBackground": "#E2E8F0",
+                                        "editorIndentGuide.background": "#E5E7EB",
+                                        "editorIndentGuide.activeBackground": "#A1A1AA",
+                                        "editor.lineHighlightBackground": "#EEF2FF",
+                                        "editorGroupHeader.tabsBackground": "#F8FAFC",
+                                        "tab.inactiveBackground": "#F8FAFC",
+                                    },
+                                });
+                            }}
+                            options={{
+                                automaticLayout: true,
+                                contextmenu: false,
+                                fontFamily: "JetBrains Mono, 'Fira Code', monospace",
+                                fontSize: 14,
+                                glyphMargin: false,
+                                minimap: { enabled: false },
+                                padding: { top: 16, bottom: 16 },
+                                renderLineHighlight: "all",
+                                roundedSelection: false,
+                                scrollBeyondLastLine: false,
+                                smoothScrolling: true,
+                                tabSize: 4,
+                                wordWrap: "off",
+                            }}
+                        />
                     </div>
                 </div>
                 <div id="preview">
