@@ -4,23 +4,11 @@ import Editor from "@monaco-editor/react";
 import { useState } from "react";
 import "#css/quiz.css";
 
-const starterHtml = `<h1>Baking Recipes</h1>
-<h2>Ingredients List</h2>
-<ul>
-    <li>Flour</li>
-    <li>Sugar</li>
-    <li>Eggs</li>
-</ul>
-<hr>
-<ol>
-    <li>Mix ingredients together.</li>
-    <li>Bake in the oven.</li>
-</ol>
-<p>Enjoy your meal!</p>`;
+const starterHtml = "";
 
 export default function QuizPage() {
   const [code, setCode] = useState(starterHtml);
-  const previewHtml = code.trim() || starterHtml;
+  const previewHtml = code.trim() ? code : "";
 
   return (
     <div className="quiz-page" id="code-problem">
