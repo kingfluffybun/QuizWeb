@@ -11,7 +11,7 @@
 }
 
 .quiz-page.sidebar-collapsed {
-    grid-template-columns: 20px auto;
+    grid-template-columns: 32px auto;
 }
 
 .quiz-page nav {
