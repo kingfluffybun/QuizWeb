@@ -110,7 +110,7 @@
         }
     }
     input[type="radio"]:not(:disabled):hover + .options {transform: translateY(-2px);}
-    input[type="radio"]:not(:disabled):active + .options {border-bottom-width: 3px; transform: translateY(2px);}
+    input[type="radio"]:not(:disabled):active + .options {border-bottom-width: 3px; transform: translateY(2px); div {color: var(--primary-color);}}
 }
 
 .quiz-page .options {
@@ -518,8 +518,8 @@
 .quiz-page footer {
     grid-area: footer;
     background-color: var(--bg-card);
-    /* border-top: 2px solid var(--border-main); */
-    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06);
+    border-top: 2px solid var(--border-main);
+    /* box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); */
     display: flex;
     justify-content: center;
     padding: 36px clamp(24px, 10vw, 200px);

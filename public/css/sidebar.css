@@ -17,8 +17,8 @@
 .sidebar {
     grid-area: sidebar;
     background-color: var(--bg-card);
-    box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.06);
-    /* border-right: 2px solid var(--border-main); */
+    /* box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.06); */
+    border-right: 2px solid var(--border-main);
     display: flex;
     flex-direction: column;
     > .sidebar-nav {
@@ -42,7 +42,7 @@
             width: 40px;
             height: 40px;
             border-radius: 999px;
-            border: 1px solid var(--border-main);
+            border: 2px solid var(--border-main);
             z-index: 1000;
             right: -19px; top: 32px;
         }
