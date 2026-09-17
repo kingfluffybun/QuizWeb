@@ -95,7 +95,8 @@
     cursor: pointer;
     text-wrap: nowrap;
     transition: 200ms all ease;
-    > h2, svg {color: var(--primary-color) !important; user-select: none;}
+    > h2, svg {color: var(--primary-color) !important;}
+    > svg {user-select: none;}
     > .call-to-action-icon {
         background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
         border-radius: 50%;
@@ -176,7 +177,7 @@
     height: 100%;
 }
 
-#laptop, #calendar, #books {height: 100%; width:auto; transform:scale(1.2)}
+#laptop, #calendar, #books {height: 100%; width:auto; transform:scale(1.2); user-select: none;}
 #laptop {
     transform: translateY(40px) scale(1);
 }
