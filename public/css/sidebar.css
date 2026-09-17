@@ -38,11 +38,13 @@
             align-items: center;
             transition: transform 0.2s ease;
             svg {
-                transition: none;
+                opacity: 1;
+                transition: opacity 0.2s ease 0.2s;
             }
             p {
                 font-size: clamp(0.5rem, 1.5vw, 1rem);
-                transition: none;
+                opacity: 1;
+                transition: opacity 0.2s ease 0.2s;
             }
             &:nth-last-child(2) {margin-top: auto;}
         }
@@ -55,6 +57,7 @@
             border: 1px solid var(--border-main);
             z-index: 1000;
             right: -19px; top: 32px;
+            cursor: pointer;
         }
     }
 }
@@ -69,12 +72,18 @@
     }
 
     .sidebar-option {
-        opacity: 0;
         pointer-events: none;
         transform: translateX(-8px);
+
+        svg,
+        p {
+            opacity: 0;
+            transition: none;
+        }
     }
 
     .toggle-sidebar {
         right: -19px;
+        cursor: pointer;
     }
 }
