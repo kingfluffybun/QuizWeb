@@ -48,3 +48,17 @@
         }
     }
 }
+
+.quiz-page.sidebar-collapsed {
+    .sidebar-nav {
+        padding: 0;
+    }
+
+    .sidebar-option {
+        display: none;
+    }
+
+    .toggle-sidebar {
+        right: -20px;
+    }
+}

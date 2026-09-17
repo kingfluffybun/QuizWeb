@@ -76,6 +76,7 @@ export default function QuizPage() {
     const {quizzes: allQuizzes} = useQuizData();
     const quizzes = allQuizzes.slice(0, 10);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [value, setValue] = useState<AnswerValue>(undefined);
     const [result, setResult] = useState<AnswerResult | null>(null);
 
@@ -139,7 +140,7 @@ export default function QuizPage() {
     })();
 
     return (
-        <div className="quiz-page">
+        <div className={`quiz-page${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
             <nav>
                 <div className="navbar-header">
                     <Image src="/assets/QuizWeb-Logo.svg" width={52} height={52} alt=""/>
@@ -149,16 +150,23 @@ export default function QuizPage() {
                     </div>
                 </div>
             </nav>
-            <div className="sidebar">
+            <div className="sidebar" id="quiz-sidebar">
                 <div className="sidebar-nav">
                     <div className="sidebar-option">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-house"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                         <p>Home</p>
                     </div>
                     {/* toggle sidebar */}
-                    <div className="toggle-sidebar col">
+                    <button
+                        className="toggle-sidebar col"
+                        type="button"
+                        aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        aria-expanded={!isSidebarCollapsed}
+                        aria-controls="quiz-sidebar"
+                        onClick={() => setIsSidebarCollapsed((isCollapsed) => !isCollapsed)}
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-panel-left"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
-                    </div>
+                    </button>
                     <div className="sidebar-option">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-minus"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="M9 10h6"/></svg>
                         <p>Learn</p>

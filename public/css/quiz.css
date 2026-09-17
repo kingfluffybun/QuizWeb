@@ -10,6 +10,10 @@
     background-color: var(--bg-main);
 }
 
+.quiz-page.sidebar-collapsed {
+    grid-template-columns: 20px auto;
+}
+
 .quiz-page nav {
     grid-area: navbar;
     background-color: var(--primary-color);
@@ -625,5 +629,3 @@ footer.incorrect {
         }
     }
 }
-
-
