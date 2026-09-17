@@ -69,6 +69,7 @@
         color: var(--text-inverse); 
         font-size: clamp(0.75rem, 2vw, 1.25rem);
     }
+    img {user-select: none;}
 }
 
 .nav-options {

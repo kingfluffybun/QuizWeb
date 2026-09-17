@@ -9,9 +9,11 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "@monaco-editor/react": "^4.7.0",
         "animejs": "^4.5.0",
         "argon2": "^0.45.1",
         "argon2id": "^1.0.1",
+        "monaco-editor": "^0.56.0",
         "mysql2": "^3.23.3",
         "next": "^16.3.4",
         "next-auth": "^5.0.0-beta.32",

@@ -5,9 +5,14 @@
         "sidebar main"
         "sidebar footer";
     grid-template-rows: 8vh 1fr clamp(140px, 2vh, 220px);
-    grid-template-columns: minmax(auto, 240px) auto;
+    grid-template-columns: minmax(0, 240px) auto;
+    transition: grid-template-columns 0.2s ease;
     min-height: 100vh;
     background-color: var(--bg-main);
+}
+
+.quiz-page.sidebar-collapsed {
+    grid-template-columns: 32px auto;
 }
 
 .quiz-page nav {
@@ -367,6 +372,41 @@
     {& + div {border-left: 2px solid var(--border-main);}}
 }
 
+.file-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 18px;
+    background: #f3f4f6;
+    border: none;
+    border-bottom: 4px solid transparent;
+    color: #111827;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    > svg {
+        width: 22px;
+        height: 22px;
+        color: inherit;
+    }
+    > h2 {
+        margin: 0;
+        font-size: clamp(0.8rem, 1.4vw, 1.2rem);
+        font-weight: 600;
+    }
+}
+
+.file-tab.active {
+    background: #ffffff;
+    border-bottom-color: #7c3aed;
+    box-shadow: inset 0 -1px 0 #ffffff;
+}
+
+.file-tab:not(.active) {
+    color: #1f2937;
+}
+
 .instruction-container {
     padding: 12px;
 }
@@ -429,6 +469,30 @@
     }
 }
 
+.monaco-editor-shell {
+    overflow: hidden;
+    background-color: #F3F4F6;
+    border-left: 1px solid var(--border-main);
+}
+
+.monaco-code-editor,
+.monaco-code-editor > .monaco-editor,
+.monaco-code-editor > .monaco-editor > .overflow-guard {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.monaco-code-editor .monaco-editor,
+.monaco-code-editor .monaco-editor-background,
+.monaco-code-editor .margin {
+    background-color: #F3F4F6 !important;
+}
+
+.monaco-code-editor .monaco-editor .view-overlays .current-line,
+.monaco-code-editor .monaco-editor .view-overlays .current-line ~ .line-numbers {
+    background: rgba(79, 70, 229, 0.08) !important;
+}
+
 .canvas-container, .code-editor-container {
     gap: 0;
     justify-content: flex-start;
@@ -481,16 +545,12 @@
 }
 
 .canvas-container {
-    > .canvas {
-        display: flex;
-        justify-content: flex-start;
-        align-items: flex-start;
+    > .preview-frame {
         width: 100%;
         flex: 1;
-        padding: 12px;
-        gap: 0;
-        background-color: #fff;
-        > p, h1, h2, h3, ul, ol, li {all: revert;}
+        min-height: 0;
+        border: 0;
+        background: #fff;
     }
     > .console {
         width: 100%;
@@ -625,5 +685,3 @@ footer.incorrect {
         }
     }
 }
-
-
