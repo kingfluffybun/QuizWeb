@@ -23,7 +23,7 @@ export default function PublicNav() {
   };
 
   return (
-    <nav className={menuOpen ? "menu-open" : ""}>
+    <nav className={`public-nav${menuOpen ? " menu-open" : ""}`}>
       <div className="col" id="logo-nav">
         <Link href="/">
           <div className="logo col">

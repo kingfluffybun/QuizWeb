@@ -1,4 +1,4 @@
-nav {
+.public-nav {
     top: 0;
     position: fixed;
     display: flex;
@@ -279,7 +279,7 @@ nav {
 }
 
 @media (max-width:768px) {
-    nav button {display: flex;}
+    .public-nav button {display: flex;}
     
     .nav-options {
         position: fixed;
@@ -301,9 +301,9 @@ nav {
         transition: none;
     }
 
-    nav div:first-child {margin-left: 0;}
+    .public-nav div:first-child {margin-left: 0;}
 
-    nav::before {
+    .public-nav::before {
         content: "";
         position: absolute;
         inset: 0;
@@ -314,7 +314,7 @@ nav {
         transition: none;
     }
 
-    nav.menu-open {
+    .public-nav.menu-open {
         position: fixed;
         inset: 0;
         width: 100%;

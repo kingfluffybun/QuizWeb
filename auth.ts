@@ -26,6 +26,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const password = credentials?.password as string;
                 if (!email || !password) return null;
 
+                const [existingUser] = await db.query<RowDataPacket[]>(
+                    "SELECT user_id FROM user_auth_tbl WHERE email = ? AND is_email_verified = 1 LIMIT 1",
+                    [email]
+                );
+                
+                if (existingUser.length === 0) {
+                    return null;
+                };
+
                 const rateCheck = await checkRateLimit(`login:${email.toLowerCase().trim()}`);
                 if (!rateCheck.allowed) {
                     throw new Error(rateCheck.message || "Too many login attempts. Please try again later.");
@@ -62,17 +71,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     callbacks: {
         async signIn({ user, account }) {
             // Handle database syncing for new OAuth Logins
-            if (account?.provider === "google" || account?.provider === "github" && user.email) {
+            if ((account?.provider === "google" || account?.provider === "github") && user.email) {
                 try {
-                    // 1. Check if user already exists in user_auth_tbl
+                    console.log("Sign in detected.");
+                    // 1. Check if user already exists in user_auth_tbl and is verified
                     const [existingUser] = await db.query<RowDataPacket[]>(
-                        "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
+                        "SELECT user_id FROM user_auth_tbl WHERE email = ? AND is_email_verified = 1 LIMIT 1",
                         [user.email]
                     );
 
                     let userId: number;
 
                     if (existingUser.length === 0) {
+                        console.log("New user detected.");
                         // Insert new user authentication record
                         const [authResult] = await db.query<ResultSetHeader>(
                             "INSERT INTO user_auth_tbl (email, is_email_verified) VALUES (?, ?)",

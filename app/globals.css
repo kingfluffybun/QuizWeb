@@ -120,6 +120,12 @@ small {
 
 body {background-color: var(--bg-main);}
 
+input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
+select,
+textarea {
+    border: 2px solid #e0e0e0;
+}
+
 @media (prefers-color-scheme: dark) {
     [data-theme="system"] {
         --primary-color: #a377ff;

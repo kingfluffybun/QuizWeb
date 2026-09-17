@@ -791,6 +791,7 @@ export interface PendingQuiz extends RowDataPacket {
   quiz_payload: unknown;
   pending_status: "pending" | "approved" | "rejected" | string;
   pending_name: string;
+  pending_note?: string | null;
   cat_name: string;
   sec_num?: string;
   difficulty_name: string;
@@ -812,6 +813,7 @@ export async function getPendingQuizzes(statusFilter = "pending") {
       `
             SELECT p.pending_id, p.cat_id, p.sec_id, p.difficulty_id, p.quiz_type_id,
                    p.question_text, p.quiz_payload, p.pending_status, p.pending_name,
+                   p.pending_note,
                    c.cat_name, s.sec_num, d.difficulty_name, t.type_name,
                    qa.quiz_id, qa.approved_id
             FROM pending_tbl p
@@ -839,12 +841,51 @@ export async function getPendingQuizzes(statusFilter = "pending") {
   }
 }
 
+export async function getPendingQuizById(pendingId: number) {
+  if (!pendingId) return undefined;
+
+  try {
+    const [rows] = await db.query<PendingQuiz[]>(
+      `SELECT p.pending_id, p.cat_id, p.sec_id, p.difficulty_id, p.quiz_type_id,
+              p.question_text, p.quiz_payload, p.pending_status, p.pending_name,
+              p.pending_note,
+              c.cat_name, s.sec_num, d.difficulty_name, t.type_name,
+              qa.quiz_id, qa.approved_id
+       FROM pending_tbl p
+       JOIN cat_tbl c ON p.cat_id = c.cat_id
+       LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
+       JOIN difficulty_tbl d ON p.difficulty_id = d.difficulty_id
+       JOIN quiz_type_tbl t ON p.quiz_type_id = t.quiz_type_id
+       LEFT JOIN quiz_approved_tbl qa ON p.pending_id = qa.pending_id
+       WHERE p.pending_id = ?
+       LIMIT 1`,
+      [pendingId],
+    );
+    const quiz = rows[0];
+    if (!quiz) return undefined;
+    return {
+      ...quiz,
+      quiz_payload:
+        typeof quiz.quiz_payload === "string"
+          ? JSON.parse(quiz.quiz_payload)
+          : quiz.quiz_payload,
+    };
+  } catch (error) {
+    console.error("Failed to fetch pending quiz:", error);
+    return undefined;
+  }
+}
+
 export async function reviewPendingQuiz(
   pendingId: number,
   decision: "approve" | "reject",
+  rejectionNotes = "",
 ) {
   if (!pendingId || !["approve", "reject"].includes(decision)) {
     return { error: "A valid pending quiz and decision are required." };
+  }
+  if (decision === "reject" && !rejectionNotes.trim()) {
+    return { error: "A rejection note is required." };
   }
 
   const connection = await db.getConnection();
@@ -867,8 +908,8 @@ export async function reviewPendingQuiz(
 
     if (decision === "reject") {
       await connection.query(
-        "UPDATE pending_tbl SET pending_status = 'rejected' WHERE pending_id = ?",
-        [pendingId],
+        "UPDATE pending_tbl SET pending_status = 'rejected', pending_note = ? WHERE pending_id = ?",
+        [rejectionNotes.trim(), pendingId],
       );
       await connection.commit();
       return {
@@ -911,5 +952,98 @@ export async function reviewPendingQuiz(
     return { error: "An error occurred while reviewing the quiz." };
   } finally {
     connection.release();
+  }
+}
+
+export async function updatePendingQuiz(pendingId: number, questionText: string) {
+  if (!pendingId || !questionText.trim()) {
+    return { error: "A valid pending quiz and question are required." };
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "UPDATE pending_tbl SET question_text = ? WHERE pending_id = ?",
+      [questionText.trim(), pendingId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Pending quiz was not found." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to update pending quiz:", error);
+    return { error: "An error occurred while updating the pending quiz." };
+  }
+}
+
+export async function updatePendingNote(pendingId: number, pendingNote: string) {
+  if (!pendingId || !pendingNote.trim()) {
+    return { error: "A note is required." };
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "UPDATE pending_tbl SET pending_note = ? WHERE pending_id = ? AND pending_status = 'rejected'",
+      [pendingNote.trim(), pendingId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Only rejected quizzes can receive a note." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to update pending note:", error);
+    return { error: "An error occurred while saving the note." };
+  }
+}
+
+export async function updatePendingQuizFromForm(
+  pendingId: number,
+  formData: FormData,
+) {
+  const catId = formData.get("cat_id");
+  const secId = formData.get("sec_id");
+  const difficultyId = formData.get("difficulty_id");
+  const quizTypeId = formData.get("quiz_type_id");
+  const questionText = formData.get("question_text") ?? formData.get("cp_prompt_0");
+
+  if (!pendingId || !catId || !difficultyId || !quizTypeId || !questionText) {
+    return { error: "Quiz ID, category, difficulty, type, and question are all required." };
+  }
+
+  try {
+    const [typeRows] = await db.query<RowDataPacket[]>(
+      "SELECT type_name FROM quiz_type_tbl WHERE quiz_type_id = ?",
+      [quizTypeId],
+    );
+    if (typeRows.length === 0) return { error: "Invalid quiz type selected." };
+    const parsedPayload = getQuizPayload(typeRows[0].type_name, formData);
+    if (parsedPayload.error) return { error: parsedPayload.error };
+
+    const [result] = await db.query<ResultSetHeader>(
+      `UPDATE pending_tbl
+       SET cat_id = ?, sec_id = ?, difficulty_id = ?, quiz_type_id = ?, question_text = ?, quiz_payload = ?
+       WHERE pending_id = ?`,
+      [catId, secId || null, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload), pendingId],
+    );
+    return result.affectedRows === 0
+      ? { success: true, message: "No changes were needed." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to update pending quiz:", error);
+    return { error: "An error occurred while updating the pending quiz." };
+  }
+}
+
+export async function deletePendingQuiz(pendingId: number) {
+  if (!pendingId) return { error: "Pending quiz ID is required." };
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM pending_tbl WHERE pending_id = ?",
+      [pendingId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Pending quiz was not found." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to delete pending quiz:", error);
+    return { error: "An error occurred while deleting the pending quiz." };
   }
 }

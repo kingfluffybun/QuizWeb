@@ -1124,7 +1124,7 @@ h1, h2, .eyebrow { font-family: 'Poppins', sans-serif; }
   color: var(--primary-color);
 }
 
-.input-group input {
+.input-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
   flex: 1;
   width: 100%;
   border: 0;
@@ -1345,7 +1345,7 @@ button:focus-visible, a:focus-visible {
 }
 
 .recaptcha-container {
-    margin: 16px 0;
+    margin: 4px 0; 
     display: flex;
     flex-direction: column;
     gap: 8px;

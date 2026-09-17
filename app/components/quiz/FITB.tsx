@@ -11,6 +11,7 @@ export default function FITB ({ value, onChange }: QuestionProps) {
             value={answer}
             onChange={(event) => onChange(event.target.value)}
             placeholder="Type the missing word"
+            spellCheck="false"
         />
         </div>
     );

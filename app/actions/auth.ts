@@ -1,11 +1,13 @@
 "use server";
 
 import argon2 from "argon2";
+import crypto from "crypto";
 import { db } from "@/lib/db";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import { auth } from '@/auth';
 
 export async function signUp(formData: FormData) {
     const username = formData.get("username") as string;
@@ -24,44 +26,277 @@ export async function signUp(formData: FormData) {
     }
 
     try {
-        // 1. Check if the email already exists in user_auth_tbl
+        const normalizedEmail = email.trim().toLowerCase();
+        const trimmedUsername = username.trim();
+
+        // Check if the email already exists to a verified account
         const [existingEmail] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email]
+            [normalizedEmail]
         );
         if (existingEmail.length > 0) {
             return { error: "An account with this email already exists." };
         }
 
-        // 2. Check if the username is already taken in player_tbl (marked Unique in ERD)
+        // Check if the username is already taken
         const [existingUsername] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1",
-            [username]
+            [trimmedUsername]
         );
         if (existingUsername.length > 0) {
             return { error: "This username is already taken." };
         }
 
+        // Remove pending verification
+        await db.query(
+            `DELETE FROM user_vrfy_tbl WHERE email = ? OR username = ?`,
+            [normalizedEmail, trimmedUsername]
+        );
+
         const hashed = await argon2.hash(password);
 
-        // 3. Insert the authentication record 
-        const [authResult] = await db.query<ResultSetHeader>(
-            "INSERT INTO user_auth_tbl (email, password_hash, is_email_verified) VALUES (?, ?, ?)",
-            [email, hashed, false]
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+        const verificationExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+        // Store temporarily
+        await db.query<ResultSetHeader>(
+            `INSERT INTO user_vrfy_tbl (username, email, password_hash, verification_token, expires_at) VALUES (?, ?, ?, ?, ?)`,
+            [trimmedUsername, normalizedEmail, hashed, verificationToken, verificationExpires]
+        )
+
+        const verificationLink = `https://quizweb.dev/verify-email/${verificationToken}`;
+
+        // Send email for verification
+        await sendEmail({
+            to: email,
+            subject: "QuizWeb - Email Verification",
+            html: `
+            <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Email Verification — QuizWeb</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            background: #fcfbff;
+                            margin: 0;
+                            padding: 40px 20px;
+                        }
+                        .container {
+                            max-width: 480px;
+                            margin: 0 auto;
+                            background: #ffffff;
+                            border-radius: 16px;
+                            padding: 48px;
+                            border: 1px solid #e0e0e0;
+                        }
+                        .logo {
+                            text-align: center;
+                            margin-bottom: 32px;
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: #9966FF;
+                            letter-spacing: -0.5px;
+                        }
+                        .greeting {
+                            font-size: 20px;
+                            font-weight: 600;
+                            color: #333333;
+                            margin-bottom: 12px;
+                        }
+                        .message {
+                            font-size: 15px;
+                            color: #666666;
+                            line-height: 1.6;
+                            margin-bottom: 28px;
+                        }
+                            .button {
+                            text-align: center;
+                            margin-bottom: 28px;
+                        }
+                        .button a {
+                            display: inline-block;
+                            background: #9966FF;
+                            color: #ffffff;
+                            text-decoration: none;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                        }
+                        .expiry {
+                            font-size: 14px;
+                            color: #9966FF;
+                            text-align: center;
+                            margin-bottom: 28px;
+                            font-weight: 500;
+                        }
+                        .footer {
+                            font-size: 13px;
+                            color: #666666;
+                            text-align: center;
+                            border-top: 1px solid #e0e0e0;
+                            padding-top: 28px;
+                        }
+                        .footer a {
+                            color: #7D3FFF;
+                            text-decoration: none;
+                            font-weight: 500;
+                        }
+                        .footer a:hover {
+                            text-decoration: underline;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="logo">QuizWeb</div>
+
+                        <div class="greeting">Hi, ${trimmedUsername}!</div>
+                        <div class="message">
+                            We received an account creation using this email address.<br/>
+                            Please click the link below to verify your email address.
+                        </div>
+                        <div class="button">
+                            <a href="${verificationLink}">Verify Email</a>
+                        </div>
+                        <div class="expiry">
+                            This link will expire in 5 minutes.
+                        </div>
+                        <div class="footer">
+                            <p style="margin: 0 0 8px; font-weight: 600; color: #333333;">QuizWeb — Learn Web Development</p>
+                            <p style="margin: 0;">Need help? <a href="mailto:support@quizweb.dev">Contact support</a></p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+        });
+
+        return {
+            success: true,
+            message: "Check your email to verify your email address.",
+        };
+    } catch (error) {
+        return {
+            error: "An internal error occurred. Please try again later.",
+        };
+    }
+}
+
+// Verify Email
+export async function verifyEmail(token: string) {
+    if (!token) {
+        return {
+            success: true,
+            message: "Invalid verification link.",
+        };
+    }
+
+    const connection = await db.getConnection();
+
+    try {
+        // Find pending verification
+        const [rows] = await connection.query<RowDataPacket[]>(
+            `SELECT verify_id, username, email, password_hash, expires_at FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1`,
+            [token]
         );
 
+        if (rows.length === 0) {
+            return {
+                success: false,
+                message: "This verification link is invalid or has already been used.",
+            };
+        }
+
+        const pendingUser = rows[0];
+
+        // Check expiration
+        const expiresAt = new Date(pendingUser.expires_at);
+
+        if (new Date() > expiresAt) {
+            await connection.query(
+                `DELETE FROM user_vrfy_tbl WHERE verify_id = ?`,
+                [pendingUser.verify_id]
+            );
+
+            return {
+                success: false,
+                message: "This verification link has expired. Please sign up again.",
+            };
+        }
+
+        await connection.beginTransaction();
+
+        // Check if email already exists
+        const [existingEmail] = await connection.query<RowDataPacket[]>(
+            `SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1`,
+            [pendingUser.email]
+        );
+
+        if (existingEmail.length > 0) {
+            await connection.rollback();
+
+            return {
+                success: false,
+                message: "An account already exists with this email address.",
+            };
+        }
+
+        // Check if username already exists
+        const [existingUsername] =
+            await connection.query<RowDataPacket[]>(
+                `SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1`,
+                [pendingUser.username]
+            );
+        
+        if (existingUsername.length > 0) {
+            await connection.rollback();
+
+            return {
+                success: false,
+                message: "This username is already taken.",
+            };
+        }
+
+        // Create acc
+        const [authResult] = 
+            await connection.query<ResultSetHeader>(
+                `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role) VALUES (?, ?, ?, ?)`,
+                [pendingUser.email, pendingUser.password_hash, 1, "user"]
+            );
+        
         const newUserId = authResult.insertId;
 
-        // 4. Insert the player profile using the newly generated user_id
-        await db.query(
-            "INSERT INTO player_tbl (user_id, username) VALUES (?, ?)",
-            [newUserId, username]
+        // Create player
+        await connection.query(
+            `INSERT INTO player_tbl (user_id, username) VALUES (?, ?)`,
+            [newUserId, pendingUser.username]
         );
 
-        return { success: true };
+        // Delete temp verification
+        await connection.query(
+            `DELETE FROM user_vrfy_tbl WHERE verify_id = ?`,
+            [pendingUser.verify_id]
+        );
+
+        // lala
+        await connection.commit();
+
+        return {
+            success: true,
+            message: "Email verified successfully. You may now close this tab.",
+        };
     } catch (error) {
-        console.error("Signup database error:", error);
-        return { error: "An internal server error occurred during signup." };
+        console.error(error);
+        await connection.rollback();
+        return {
+            success: false,
+            message: "An internal error occurred. Please try again later.",
+        };
+    } finally {
+        connection.release();
     }
 }
 
@@ -84,7 +319,7 @@ export async function reqPassReset(email: string) {
             [users[0].user_id]
         );
 
-        const genericMessage = "OTP sent successfully. Please check your email.";
+        const genericMessage = "If the email is valid, you will receive an email.";
 
         if (users.length === 0) {
             return { success: true, message: genericMessage };
@@ -96,8 +331,8 @@ export async function reqPassReset(email: string) {
         // Generate la code
         const otpCode = String(randomInt(100000, 999999));
 
-        // Expire 10 mins
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        // Expire 5 mins
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
         // Invalidate any existing unused OTPs for this user
         await db.query(
@@ -215,7 +450,7 @@ export async function reqPassReset(email: string) {
                             <div class="otp-code">${otpCode}</div>
                         </div>
                         
-                        <p class="expiry">This code expires in 10 minutes</p>
+                        <p class="expiry">This code expires in 5 minutes</p>
                         
                         <p class="message">If you didn't request a password reset, you can safely ignore this email.</p>
                         
