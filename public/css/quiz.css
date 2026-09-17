@@ -516,10 +516,50 @@
         align-items: flex-start;
         width: 100%;
         flex: 1;
-        padding: 12px;
+        padding: 20px 24px 12px;
         gap: 0;
         background-color: #fff;
-        > p, h1, h2, h3, ul, ol, li {all: revert;}
+        font-family: "Poppins", "Segoe UI", sans-serif;
+        color: #111827;
+        line-height: 1.4;
+        > p, h1, h2, h3, ul, ol, li, hr {all: revert;}
+        > h1 {
+            margin: 0 0 20px;
+            font-size: clamp(2.3rem, 4vw, 4rem);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        > h2 {
+            margin: 0 0 18px;
+            font-size: clamp(2rem, 3vw, 3rem);
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        > ul {
+            margin: 0 0 18px 28px;
+            padding-left: 0;
+            list-style: disc;
+        }
+        > ol {
+            margin: 0 0 18px 28px;
+            padding-left: 0;
+            list-style: decimal;
+        }
+        > li {
+            margin: 4px 0;
+            font-size: 1.05rem;
+        }
+        > hr {
+            width: 100%;
+            border: 0;
+            border-top: 1px solid #d1d5db;
+            margin: 18px 0 22px;
+        }
+        > p {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
     }
     > .console {
         width: 100%;

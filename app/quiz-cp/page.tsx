@@ -20,6 +20,8 @@ const starterHtml = `<h1>Baking Recipes</h1>
 
 export default function QuizPage() {
   const [code, setCode] = useState(starterHtml);
+  const previewHtml = code.trim() || starterHtml;
+
   return (
     <div className="quiz-page" id="code-problem">
       <nav></nav>
@@ -172,20 +174,10 @@ export default function QuizPage() {
                         </div>
                     </div>
                     <div className="canvas-container col">
-                        <div className="canvas col">
-                            <h1>Baking Recipes</h1>      
-                            <h2>Ingredients List</h2>
-                            <ul>
-                                <li>Flour</li>
-                                <li>Sugar</li>
-                                <li>Eggs</li>
-                            </ul>
-                            <ol>
-                                <li>Mix ingredients together.</li>
-                                <li>Bake in the oven.</li>
-                            </ol>
-                            <p>Enjoy your meal!</p>
-                        </div>
+                        <div
+                            className="canvas col"
+                            dangerouslySetInnerHTML={{ __html: previewHtml }}
+                        />
                         <div className="console">
                             <div className="header">
                                 <div>
