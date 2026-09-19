@@ -124,8 +124,11 @@ export default function QuizInputForm({
   // Live Authoring Input Telemetry States
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
-  const [lessonCard, setLessonCard] = useState<string>("");
-  const [lessonText, setLessonText] = useState<string>("");
+  const [lessonSlides, setLessonSlides] = useState<
+    { card: string; text: string }[]
+  >([{ card: "", text: "" }]);
+  const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
+  const [currentPendingQuizIndex, setCurrentPendingQuizIndex] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const [selectedDiffId, setSelectedDiffId] = useState<string>("");
   const [selectedSecId, setSelectedSecId] = useState<string>("");
@@ -411,6 +414,20 @@ export default function QuizInputForm({
     setCpPromptCount((count) => count + 1);
   };
 
+  const handleNextLessonSlide = () => {
+    if (currentLessonSlide < lessonSlides.length - 1) {
+      setCurrentLessonSlide((slideIndex) => slideIndex + 1);
+      return;
+    }
+
+    setLessonSlides((slides) => [...slides, { card: "", text: "" }]);
+    setCurrentLessonSlide((slideIndex) => slideIndex + 1);
+  };
+
+  const handlePreviousLessonSlide = () => {
+    setCurrentLessonSlide((slideIndex) => Math.max(0, slideIndex - 1));
+  };
+
   const handleRemoveCPStep = () => {
     setCpPromptCount((count) => Math.max(1, count - 1));
   };
@@ -521,8 +538,8 @@ export default function QuizInputForm({
       setSelectedUnit("");
       setQuestionText("");
       setUnitTitle("");
-      setLessonCard("");
-      setLessonText("");
+      setLessonSlides([{ card: "", text: "" }]);
+      setCurrentLessonSlide(0);
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -739,8 +756,8 @@ export default function QuizInputForm({
       setEditingQuiz(null);
       setQuestionText("");
       setUnitTitle("");
-      setLessonCard("");
-      setLessonText("");
+      setLessonSlides([{ card: "", text: "" }]);
+      setCurrentLessonSlide(0);
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -786,9 +803,17 @@ export default function QuizInputForm({
             firstQuiz.quiz_type_id?.toString(),
         )?.type_name ?? "";
       setQueuedQuizzes(pendingQuizzes.slice(1));
+      setCurrentPendingQuizIndex(0);
       setUnitTitle(quiz.question_text ?? "");
-      setLessonCard(lesson.lesson_format ?? "");
-      setLessonText(lesson.lesson_text ?? "");
+      setLessonSlides(
+        Array.isArray(lesson.lesson_slides) && lesson.lesson_slides.length > 0
+          ? lesson.lesson_slides.map((slide: any) => ({
+              card: slide.card ?? slide.lesson_format ?? "",
+              text: slide.text ?? slide.lesson_text ?? "",
+            }))
+          : [{ card: lesson.lesson_format ?? "", text: lesson.lesson_text ?? "" }],
+      );
+      setCurrentLessonSlide(0);
       setAssessment(quiz.quiz_payload?.assessment?.assessment ?? "");
       setEditingQuiz({
         ...firstQuiz,
@@ -865,6 +890,9 @@ export default function QuizInputForm({
           type.quiz_type_id.toString() === nextQuiz.quiz_type_id?.toString(),
       )?.type_name ?? "";
     setQueuedQuizzes([...queuedQuizzes.slice(1), currentEntry]);
+    setCurrentPendingQuizIndex(
+      (quizIndex) => (quizIndex + 1) % (queuedQuizzes.length + 1),
+    );
     setEditingQuiz({
       ...nextQuiz,
       type_name: nextQuizTypeName,
@@ -894,6 +922,11 @@ export default function QuizInputForm({
           type.quiz_type_id.toString() === previousQuiz.quiz_type_id?.toString(),
       )?.type_name ?? "";
     setQueuedQuizzes([currentEntry, ...queuedQuizzes.slice(0, -1)]);
+    setCurrentPendingQuizIndex(
+      (quizIndex) =>
+        (quizIndex - 1 + queuedQuizzes.length + 1) %
+        (queuedQuizzes.length + 1),
+    );
     setEditingQuiz({
       ...previousQuiz,
       type_name: previousQuizTypeName,
@@ -912,8 +945,8 @@ export default function QuizInputForm({
     setSelectedSecId("");
     setQuestionText("");
     setUnitTitle("");
-    setLessonCard("");
-    setLessonText("");
+    setLessonSlides([{ card: "", text: "" }]);
+    setCurrentLessonSlide(0);
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
     setFitbAnswer("");
@@ -1503,30 +1536,82 @@ export default function QuizInputForm({
             </select>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="lesson_card">Lesson Card</label>
-            <textarea
-              id="lesson_card"
-              name="lesson_card"
-              className="form-textarea"
-              placeholder="Enter the lesson card / lesson format here..."
-              rows={6}
-              value={lessonCard}
-              onChange={(event) => setLessonCard(event.target.value)}
-            />
-          </div>
+          <div className="lesson-slide-section">
+            <div className="lesson-slide-heading">
+              <h3>Lesson slide</h3>
+            </div>
+            <div className="lesson-slide-group">
+              {lessonSlides.map((slide, index) =>
+                index === currentLessonSlide ? (
+                <div className="lesson-slide-fields" key={index}>
+                  <div className="lesson-slide-number">Slide {index + 1}</div>
+                  <div className="form-group">
+                    <label htmlFor={`lesson_card_${index}`}>Lesson Card</label>
+                    <textarea
+                      id={`lesson_card_${index}`}
+                      name={`lesson_card_${index}`}
+                      className="form-textarea"
+                      placeholder="Enter the lesson card / lesson format here..."
+                      rows={6}
+                      value={slide.card}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, card: value }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
+                    />
+                  </div>
 
-          <div className="form-group">
-            <label htmlFor="lesson_text">Lesson Text</label>
-            <textarea
-              id="lesson_text"
-              name="lesson_text"
-              className="form-textarea"
-              placeholder="Enter the lesson text content here..."
-              rows={8}
-              value={lessonText}
-              onChange={(event) => setLessonText(event.target.value)}
-            />
+                  <div className="form-group">
+                    <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
+                    <textarea
+                      id={`lesson_text_${index}`}
+                      name={`lesson_text_${index}`}
+                      className="form-textarea"
+                      placeholder="Enter the lesson text content here..."
+                      rows={8}
+                      value={slide.text}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, text: value }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+                ) : null,
+              )}
+            </div>
+            <div className="lesson-slide-navigation">
+              <button
+                type="button"
+                className="btn-primary lesson-slide-nav-button"
+                onClick={handlePreviousLessonSlide}
+                disabled={currentLessonSlide === 0}
+              >
+                Previous Slide
+              </button>
+              <span className="lesson-slide-counter">
+                Slide {currentLessonSlide + 1} of {lessonSlides.length}
+              </span>
+              <button
+                type="button"
+                className="btn-primary lesson-slide-nav-button"
+                onClick={handleNextLessonSlide}
+              >
+                Next Slide
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
@@ -2229,6 +2314,9 @@ export default function QuizInputForm({
                 >
                   Previous Quiz
                 </button>
+                <span className="pending-quiz-counter">
+                  Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
+                </span>
                 <button
                   type="button"
                   className="btn-primary queue-button"
