@@ -1,6 +1,5 @@
-import { getQuizMetadata, getUnits, requireAdmin } from "@/app/actions/quiz";
+import { getQuizMetadata, getUnits } from "@/app/actions/quiz";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import UnitInputForm from "./UnitInputForm";
 import "#css/input.css";
 import Link from "next/link";
@@ -16,8 +15,6 @@ async function QuizEditor() {
 }
 
 export default async function InputPage() {
-  if (!(await requireAdmin())) redirect("/login");
-
   return (
     <div>
       <header className="admin-header">
