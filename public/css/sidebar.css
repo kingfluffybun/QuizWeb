@@ -5,18 +5,21 @@
     height: 8vh;
     padding: 12px 20px;
     > div {
-        line-height: 1.2;
+        line-height: 1.25;
         display: flex; flex-direction: column;
         h2, p {color: var(--text-inverse);}
-        h2 { font-size: clamp(0.5rem, 1.75vw, 1.25rem); }
-        p {font-size: clamp(0.5rem, 1.5vw, 1rem); font-weight: 400;}
+        h2 { font-size: clamp(0.25rem, 1.5vw, 1rem); }
+        p {font-size: clamp(0.25rem, 1.25vw, 0.75rem); font-weight: 400;}
     }
-    
+}
+
+.quiz-page.sidebar-collapsed {
+    grid-template-columns: 96px auto;
 }
 
 .sidebar {
     grid-area: sidebar;
-    background-color: var(--bg-card);
+    background-color: white;
     border-right: 2px solid var(--border-main);
     width: 240px;
     overflow: visible;
@@ -31,19 +34,24 @@
         position: relative;
         p, svg {color: var(--text-muted);}
         .sidebar-option {
-            padding: 12px 20px;
+            padding: 12px 16px;
+            margin-right: 16px;
+            border-radius: 8px;
             display: flex;
             gap: 12px;
             align-items: center;
-            transition: transform 0.2s ease;
+            transition: all 0.2s ease;
+            cursor: pointer;
             svg {
                 opacity: 1;
                 transition: opacity 0.2s ease 0.2s;
+                min-width: 28px;
             }
             p {
                 font-size: clamp(0.5rem, 1.5vw, 1rem);
                 opacity: 1;
                 transition: opacity 0.2s ease 0.2s;
+                text-wrap: nowrap;
             }
             &:nth-last-child(2) {margin-top: auto;}
         }
@@ -57,32 +65,37 @@
             z-index: 1000;
             right: -19px; top: 32px;
             cursor: pointer;
+            transition: all 0.2s ease;
+            &:hover {border-color: var(--text-muted);}
         }
     }
 }
 
+.sidebar-option.active {
+    background-color: #ede8ff;
+    > svg, p {color: #701ee3;}
+}
+
+.sidebar-option:not(.active):hover {
+    background-color:#f5f2ff;
+}
+
+/* harvy preferebly mga nasa 48px-64px yung width ng collapse */
 .quiz-page.sidebar-collapsed {
     .sidebar {
-        width: 32px;
-    }
-
-    .sidebar-nav {
-        padding: 0;
+        width: 96px;
     }
 
     .sidebar-option {
-        pointer-events: none;
-        transform: translateX(-8px);
-
-        svg,
+        padding: 12px;
         p {
+            display: none;
             opacity: 0;
             transition: none;
         }
     }
 
     .toggle-sidebar {
-        right: -19px;
         cursor: pointer;
     }
 }
