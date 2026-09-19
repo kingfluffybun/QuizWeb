@@ -796,7 +796,12 @@ export default function QuizInputForm({
         setMessage({ type: "error", text: "This pending unit has no quizzes to edit." });
         return;
       }
-      const lesson = quiz.quiz_payload?.lesson_card?.lesson_card ?? {};
+      const lessonDocument = quiz.quiz_payload?.lesson_card ?? {};
+      const savedSlides = Array.isArray(lessonDocument.lesson_slide)
+        ? lessonDocument.lesson_slide
+        : Array.isArray(lessonDocument.lesson_slides)
+          ? lessonDocument.lesson_slides
+          : [];
       const firstQuizTypeName =
         types.find(
           (type) =>
@@ -807,12 +812,15 @@ export default function QuizInputForm({
       setCurrentPendingQuizIndex(0);
       setUnitTitle(quiz.question_text ?? "");
       setLessonSlides(
-        Array.isArray(lesson.lesson_slides) && lesson.lesson_slides.length > 0
-          ? lesson.lesson_slides.map((slide: any) => ({
-              card: slide.card ?? slide.lesson_format ?? "",
-              text: slide.text ?? slide.lesson_text ?? "",
+        savedSlides.length > 0
+          ? savedSlides.map((slide: any) => ({
+              card: slide.lesson_card ?? slide.card ?? slide.lesson_format ?? "",
+              text: slide.lesson_text ?? slide.text ?? "",
             }))
-          : [{ card: lesson.lesson_format ?? "", text: lesson.lesson_text ?? "" }],
+          : [{
+              card: lessonDocument.lesson_format ?? "",
+              text: lessonDocument.lesson_text ?? "",
+            }],
       );
       setCurrentLessonSlide(0);
       setAssessment(quiz.quiz_payload?.assessment?.assessment ?? "");
@@ -3328,12 +3336,16 @@ export default function QuizInputForm({
                           <div>
                             <div>
                               <strong>Lesson Card:</strong>{" "}
-                              {payload?.lesson_card?.lesson_card?.lesson_format ??
+                              {payload?.lesson_card?.lesson_slide?.[0]
+                                ?.lesson_card ??
+                                payload?.lesson_card?.lesson_card?.lesson_format ??
                                 ""}
                             </div>
                             <div>
                               <strong>Lesson Text:</strong>{" "}
-                              {payload?.lesson_card?.lesson_card?.lesson_text ??
+                              {payload?.lesson_card?.lesson_slide?.[0]
+                                ?.lesson_text ??
+                                payload?.lesson_card?.lesson_card?.lesson_text ??
                                 ""}
                             </div>
                             <div>

@@ -317,14 +317,16 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     .map(([name, value]) => {
       const index = name.slice("lesson_card_".length);
       return {
-        lesson_format: String(value).trim(),
+        lesson_card: String(value).trim(),
         lesson_text: getText(`lesson_text_${index}`),
       };
     });
-  const lessonCard = lessonSlides[0]?.lesson_format ?? "";
-  const lessonText = lessonSlides[0]?.lesson_text ?? "";
   const unitAssessment = getText("assessment");
-  if (!lessonTitle || !lessonCard || !lessonText) {
+  if (
+    !lessonTitle ||
+    lessonSlides.length === 0 ||
+    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+  ) {
     return {
       error: "Lesson title, lesson card, and lesson text are required.",
     };
@@ -348,11 +350,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   }
 
   const lessonDocument = JSON.stringify({
-    lesson_card: {
-      lesson_format: lessonCard,
-      lesson_text: lessonText,
-      lesson_slides: lessonSlides,
-    },
+    lesson_slide: lessonSlides,
   });
   const quizDocument = JSON.stringify(parsedQuizJson);
   const assessmentDocument = JSON.stringify({
@@ -1335,16 +1333,20 @@ export async function updatePendingUnitFromForm(
     .map(([name, value]) => {
       const index = name.slice("lesson_card_".length);
       return {
-        lesson_format: String(value).trim(),
+        lesson_card: String(value).trim(),
         lesson_text: String(formData.get(`lesson_text_${index}`) ?? "").trim(),
       };
     });
-  const lessonCard = lessonSlides[0]?.lesson_format ?? "";
-  const lessonText = lessonSlides[0]?.lesson_text ?? "";
   const assessment = String(formData.get("assessment") ?? "").trim();
   const rawQuizJson = formData.get("quiz_json");
 
-  if (!pendingId || !unitTitle || !sectionId || !lessonCard || !lessonText) {
+  if (
+    !pendingId ||
+    !unitTitle ||
+    !sectionId ||
+    lessonSlides.length === 0 ||
+    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+  ) {
     return { error: "Unit title, section, lesson card, and lesson text are required." };
   }
 
@@ -1367,7 +1369,7 @@ export async function updatePendingUnitFromForm(
       [
         unitTitle,
         sectionId,
-        JSON.stringify({ lesson_card: { lesson_format: lessonCard, lesson_text: lessonText, lesson_slides: lessonSlides } }),
+        JSON.stringify({ lesson_slide: lessonSlides }),
         JSON.stringify(quizzes),
         JSON.stringify({ assessment }),
         pendingId,
