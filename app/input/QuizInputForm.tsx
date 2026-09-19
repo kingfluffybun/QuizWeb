@@ -1655,7 +1655,7 @@ export default function QuizInputForm({
                 setOptionCount(4);
               }}
             >
-              {types.map((t) => (
+              {types.filter((t) => t.type_name !== "CP").map((t) => (
                 <option key={t.quiz_type_id} value={t.quiz_type_id}>
                   {t.type_name} (
                   {t.type_name === "MCQ"
@@ -1666,8 +1666,6 @@ export default function QuizInputForm({
                         ? "Syntax Arrangement"
                         : t.type_name === "Pair"
                           ? "Matching Type"
-                          : t.type_name === "CP"
-                            ? "Coding Problem"
                             : t.type_name}
                   )
                 </option>
@@ -1675,23 +1673,7 @@ export default function QuizInputForm({
             </select>
           </div>
 
-          {selectedTypeName === "CP" && (
-            <div className="form-group">
-              <label htmlFor="cp_title">Coding Problem Title</label>
-              <input
-                id="cp_title"
-                name="cp_title"
-                type="text"
-                className="form-input"
-                placeholder="Enter coding problem title..."
-                defaultValue={editingQuiz?.quiz_payload?.title ?? ""}
-                required
-              />
-            </div>
-          )}
-
-          {selectedTypeName !== "CP" && (
-            <div className="form-group form-group-flex">
+          <div className="form-group form-group-flex">
               <div
                 style={{
                   display: "flex",
@@ -1746,7 +1728,6 @@ export default function QuizInputForm({
                 required
               />
             </div>
-          )}
 
           {selectedTypeName === "CP" && (
             <div className="form-group form-group-flex">
