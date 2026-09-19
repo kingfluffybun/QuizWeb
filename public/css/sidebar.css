@@ -23,7 +23,7 @@
     border-right: 2px solid var(--border-main);
     width: 240px;
     overflow: visible;
-    transition: width 0.2s ease;
+    transition: width 0.2s ease-in;
     display: flex;
     flex-direction: column;
     > .sidebar-nav {
@@ -40,7 +40,7 @@
             display: flex;
             gap: 12px;
             align-items: center;
-            transition: all 0.2s ease;
+            transition: all 0.2s ease-in;
             cursor: pointer;
             svg {
                 opacity: 1;
@@ -89,7 +89,6 @@
     .sidebar-option {
         padding: 12px;
         p {
-            display: none;
             opacity: 0;
             transition: none;
         }
