@@ -298,7 +298,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   }
 
   const unitId = formData.get("unit_id");
-  const sectionId = formData.get("sec_id");
+  const sectionId = formData.get("unit_sec_id");
   if (!sectionId || (unitId && !/^[1-9]\d*$/.test(String(unitId)))) {
     return { error: "A valid Section ID is required." };
   }

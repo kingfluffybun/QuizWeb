@@ -10,13 +10,13 @@ import {
   getPendingQuizById,
   deleteQuiz,
   getQuizMetrics,
+  saveUnit,
 } from "../actions/quiz";
 import type {
   Category,
   Difficulty,
   QuizType,
   QuizMetricsData,
-  UnitRow,
 } from "../actions/quiz";
 import LessonInputForm from "./LessonInputForm";
 
@@ -30,7 +30,6 @@ interface QuizInputFormProps {
   initialTotalPages: number;
   initialTotalCount: number;
   initialMetrics?: QuizMetricsData;
-  initialUnits: UnitRow[];
   showRecentQuizzes?: boolean;
   initialEditingQuiz?: any;
 }
@@ -45,7 +44,6 @@ export default function QuizInputForm({
   initialTotalPages,
   initialTotalCount,
   initialMetrics,
-  initialUnits,
   showRecentQuizzes = true,
   initialEditingQuiz,
 }: QuizInputFormProps) {
@@ -512,6 +510,12 @@ export default function QuizInputForm({
     const formData = new FormData(event.currentTarget);
 
     try {
+      const lessonResult = await saveUnit(null, formData);
+      if (lessonResult.error) {
+        setMessage({ type: "error", text: lessonResult.error });
+        return;
+      }
+
       const result = editingQuiz
         ? editingQuiz.pending_id
           ? await updatePendingQuizFromForm(editingQuiz.pending_id, formData)
@@ -631,7 +635,6 @@ export default function QuizInputForm({
   return (
     <>
       {/* Top Full-Width Metrics Banner */}
-      <LessonInputForm sections={sections} initialUnits={initialUnits} />
       <section
         className="admin-metrics-banner analytics-legacy-hidden"
         aria-label="Quiz Bank Analytics"
@@ -1127,10 +1130,12 @@ export default function QuizInputForm({
 
       {/* Form Section */}
       <div className="admin-card">
+        <LessonInputForm sections={sections} embedded />
+
         <h2>
           {editingQuiz
             ? `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
-            : "Create New Quiz Question"}
+            : "Create New Unit"}
         </h2>
 
         {message && (
