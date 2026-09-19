@@ -578,6 +578,10 @@
     > .console.console-open .console-maximize svg {
         transform: rotate(180deg);
     }
+
+    > .console.console-open {
+        padding: 0;
+    }
 }
 
 .console-output {
