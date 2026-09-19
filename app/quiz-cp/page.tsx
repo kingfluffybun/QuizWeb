@@ -208,6 +208,7 @@ export default function QuizPage() {
                             value={code[activeFile]}
                             onChange={(value) => {
                               const nextValue = value ?? "";
+                              setConsoleMessages([]);
                               setCode((previous) => ({ ...previous, [activeFile]: nextValue }));
                             }}
                             beforeMount={(monaco) => {
@@ -276,7 +277,6 @@ export default function QuizPage() {
                             className="preview-frame"
                             ref={previewFrameRef}
                             srcDoc={previewDoc}
-                            onLoad={() => setConsoleMessages([])}
                         />
                         <div className={`console${isConsoleOpen ? " console-open" : ""}`}>
                             <div className="header">
