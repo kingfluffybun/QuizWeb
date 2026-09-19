@@ -558,8 +558,10 @@
         border-top: 2px solid var(--border-main);
         > .header {
             > div {border: none;}
-            > .console-maximize {
+            > div > .console-maximize {
                 justify-content: flex-end;
+                margin-left: auto;
+                padding: 0;
                 border: 0;
                 background: transparent;
                 color: inherit;

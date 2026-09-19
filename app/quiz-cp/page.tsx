@@ -97,10 +97,6 @@ export default function QuizPage() {
     return () => window.removeEventListener("message", handlePreviewMessage);
   }, []);
 
-  useEffect(() => {
-    setConsoleMessages([]);
-  }, [previewDoc]);
-
   const fileMeta: Record<FileKey, { label: string; language: "html" | "css" | "javascript" }> = {
     html: { label: "index.html", language: "html" },
     css: { label: "style.css", language: "css" },
@@ -280,13 +276,13 @@ export default function QuizPage() {
                             className="preview-frame"
                             ref={previewFrameRef}
                             srcDoc={previewDoc}
+                            onLoad={() => setConsoleMessages([])}
                         />
                         <div className={`console${isConsoleOpen ? " console-open" : ""}`}>
                             <div className="header">
                                 <div>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-terminal"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/></svg>
                                     <h2>Console</h2>
-                                </div>
                                 <button
                                     className="console-maximize"
                                     type="button"
@@ -296,6 +292,7 @@ export default function QuizPage() {
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>
                                 </button>
+                                </div>
                             </div>
                             {isConsoleOpen && (
                                 <div className="console-output" aria-live="polite">
