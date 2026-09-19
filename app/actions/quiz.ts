@@ -314,6 +314,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   const lessonTitle = getText("unit_title");
   const lessonCard = getText("lesson_card");
   const lessonText = getText("lesson_text");
+  const unitAssessment = getText("assessment");
   if (!lessonTitle || !lessonCard || !lessonText) {
     return {
       error: "Lesson title, lesson card, and lesson text are required.",
@@ -344,9 +345,9 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     },
   });
   const quizDocument = JSON.stringify(parsedQuizJson);
-  const assessmentDocument = JSON.stringify(
-    parsedQuizJson.map((entry: any) => entry.quiz_payload?.assessment ?? ""),
-  );
+  const assessmentDocument = JSON.stringify({
+    assessment: unitAssessment,
+  });
   const session = await auth();
   const pendingName = (
     session?.user?.name ??

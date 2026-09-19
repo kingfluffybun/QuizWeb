@@ -92,6 +92,15 @@ export default function QuizInputForm({
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("id_desc");
   const [optionCount, setOptionCount] = useState(4);
+  const [orderItems, setOrderItems] = useState<string[]>(["", "", "", ""]);
+  const [pairValues, setPairValues] = useState<
+    { left: string; right: string }[]
+  >([
+    { left: "", right: "" },
+    { left: "", right: "" },
+    { left: "", right: "" },
+    { left: "", right: "" },
+  ]);
   const [cpPromptCount, setCpPromptCount] = useState(1);
   const [copiedQuizId, setCopiedQuizId] = useState<number | null>(null);
 
@@ -120,6 +129,7 @@ export default function QuizInputForm({
   const [queuedQuizzes, setQueuedQuizzes] = useState<any[]>([]);
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
+  const [fitbAnswer, setFitbAnswer] = useState<string>("");
   const [assessment, setAssessment] = useState<string>("");
   const hasInitializedType = useRef(false);
 
@@ -281,8 +291,6 @@ export default function QuizInputForm({
       const options = [0, 1, 2, 3].map(
         (idx) => (formData.get(`option_${idx}`) as string | null)?.trim() ?? "",
       );
-      const assessment =
-        (formData.get("assessment") as string | null)?.trim() ?? "";
       const correct = Number(formData.get("correct_option_index") ?? mcqCorrectIndex);
 
       if (options.some((option) => !option) || Number.isNaN(correct)) {
@@ -292,7 +300,6 @@ export default function QuizInputForm({
       return makeBase(questionText.trim(), {
         options,
         correct_index: correct,
-        ...(assessment ? { assessment } : {}),
       });
     }
 
@@ -374,7 +381,14 @@ export default function QuizInputForm({
     setQuestionText("");
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
-    setAssessment("");
+    setFitbAnswer("");
+    setOrderItems(["", "", "", ""]);
+    setPairValues([
+      { left: "", right: "" },
+      { left: "", right: "" },
+      { left: "", right: "" },
+      { left: "", right: "" },
+    ]);
     setOptionCount(4);
     setCpPromptCount(1);
     setMessage({
@@ -385,6 +399,8 @@ export default function QuizInputForm({
 
   const handleAddOption = () => {
     setOptionCount((count) => count + 1);
+    setOrderItems((items) => [...items, ""]);
+    setPairValues((pairs) => [...pairs, { left: "", right: "" }]);
   };
 
   const handleAddCPPrompt = () => {
@@ -449,6 +465,24 @@ export default function QuizInputForm({
       setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
       setQuestionText(editingQuiz.question_text ?? "");
       setAssessment(editingQuiz.quiz_payload?.assessment ?? "");
+      setFitbAnswer(editingQuiz.quiz_payload?.answer ?? "");
+      setOrderItems(
+        editingQuiz.type_name === "Order" &&
+          Array.isArray(editingQuiz.quiz_payload?.items)
+          ? editingQuiz.quiz_payload.items
+          : ["", "", "", ""],
+      );
+      setPairValues(
+        editingQuiz.type_name === "Pair" &&
+          Array.isArray(editingQuiz.quiz_payload?.pairs)
+          ? editingQuiz.quiz_payload.pairs
+          : [
+              { left: "", right: "" },
+              { left: "", right: "" },
+              { left: "", right: "" },
+              { left: "", right: "" },
+            ],
+      );
       if (editingQuiz.type_name === "MCQ") {
         setMcqOptions(
           Array.isArray(editingQuiz.quiz_payload?.options)
@@ -483,6 +517,14 @@ export default function QuizInputForm({
       setQuestionText("");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
+      setFitbAnswer("");
+      setOrderItems(["", "", "", ""]);
+      setPairValues([
+        { left: "", right: "" },
+        { left: "", right: "" },
+        { left: "", right: "" },
+        { left: "", right: "" },
+      ]);
       setAssessment("");
     }
   }, [editingQuiz, categories, difficulties]);
@@ -672,6 +714,15 @@ export default function QuizInputForm({
       setQuestionText("");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
+      setFitbAnswer("");
+      setOrderItems(["", "", "", ""]);
+      setPairValues([
+        { left: "", right: "" },
+        { left: "", right: "" },
+        { left: "", right: "" },
+        { left: "", right: "" },
+      ]);
+      setAssessment("");
       setOptionCount(4);
       setCpPromptCount(1);
 
@@ -703,6 +754,22 @@ export default function QuizInputForm({
       );
       setMcqCorrectIndex(quiz.quiz_payload?.correct_index ?? 0);
     }
+    setFitbAnswer(quiz.type_name === "FITB" ? quiz.quiz_payload?.answer ?? "" : "");
+    setOrderItems(
+      quiz.type_name === "Order" && Array.isArray(quiz.quiz_payload?.items)
+        ? quiz.quiz_payload.items
+        : ["", "", "", ""],
+    );
+    setPairValues(
+      quiz.type_name === "Pair" && Array.isArray(quiz.quiz_payload?.pairs)
+        ? quiz.quiz_payload.pairs
+        : [
+            { left: "", right: "" },
+            { left: "", right: "" },
+            { left: "", right: "" },
+            { left: "", right: "" },
+          ],
+    );
     setOptionCount(
       quiz.type_name === "Order"
         ? Math.max(4, quiz.quiz_payload?.items?.length ?? 0)
@@ -729,6 +796,14 @@ export default function QuizInputForm({
     setQuestionText("");
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
+    setFitbAnswer("");
+    setOrderItems(["", "", "", ""]);
+    setPairValues([
+      { left: "", right: "" },
+      { left: "", right: "" },
+      { left: "", right: "" },
+      { left: "", right: "" },
+    ]);
     setOptionCount(4);
     setCpPromptCount(1);
     setMessage(null);
@@ -1759,41 +1834,6 @@ export default function QuizInputForm({
                   </div>
                 ))}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  flexWrap: "wrap",
-                  marginTop: "18px",
-                  marginBottom: "18px",
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn-primary queue-button"
-                  onClick={handleAddToUnitQueue}
-                  disabled={isPending || queuedQuizzes.length >= 10}
-                >
-                  {queuedQuizzes.length >= 10
-                    ? "Unit Full (10/10)"
-                    : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
-                </button>
-              </div>
-
-              <div className="form-group" style={{ marginTop: "0" }}>
-                <label htmlFor="assessment">Assessment</label>
-                <textarea
-                  id="assessment"
-                  name="assessment"
-                  className="form-textarea"
-                  rows={4}
-                  placeholder="Provide the assessment explanation..."
-                  value={assessment}
-                  onChange={(event) => setAssessment(event.target.value)}
-                />
-              </div>
-
               {/* Duplicate choices warning */}
               {hasDuplicateOptions && (
                 <div className="form-warning-alert" role="alert">
@@ -1863,7 +1903,8 @@ export default function QuizInputForm({
                 name="fitb_answer"
                 placeholder="Enter the correct answer word(s)..."
                 className="form-input"
-                defaultValue={editingQuiz?.quiz_payload?.answer ?? ""}
+                value={fitbAnswer}
+                onChange={(event) => setFitbAnswer(event.target.value)}
                 required
               />
             </div>
@@ -1933,9 +1974,12 @@ export default function QuizInputForm({
                         name={`order_${idx}`}
                         placeholder={`Sequence Item ${idx + 1}`}
                         className="form-input"
-                        defaultValue={
-                          editingQuiz?.quiz_payload?.items?.[idx] ?? ""
-                        }
+                        value={orderItems[idx] ?? ""}
+                        onChange={(event) => {
+                          const updated = [...orderItems];
+                          updated[idx] = event.target.value;
+                          setOrderItems(updated);
+                        }}
                         required
                       />
                     </div>
@@ -2008,9 +2052,15 @@ export default function QuizInputForm({
                         name={`pair_left_${idx}`}
                         placeholder="Left Key"
                         className="form-input"
-                        defaultValue={
-                          editingQuiz?.quiz_payload?.pairs?.[idx]?.left ?? ""
-                        }
+                        value={pairValues[idx]?.left ?? ""}
+                        onChange={(event) => {
+                          const updated = [...pairValues];
+                          updated[idx] = {
+                            ...updated[idx],
+                            left: event.target.value,
+                          };
+                          setPairValues(updated);
+                        }}
                         required
                       />
                       <span style={{ color: "#aaa" }}>&harr;</span>
@@ -2019,9 +2069,15 @@ export default function QuizInputForm({
                         name={`pair_right_${idx}`}
                         placeholder="Right Value"
                         className="form-input"
-                        defaultValue={
-                          editingQuiz?.quiz_payload?.pairs?.[idx]?.right ?? ""
-                        }
+                        value={pairValues[idx]?.right ?? ""}
+                        onChange={(event) => {
+                          const updated = [...pairValues];
+                          updated[idx] = {
+                            ...updated[idx],
+                            right: event.target.value,
+                          };
+                          setPairValues(updated);
+                        }}
                         required
                       />
                     </div>
@@ -2030,6 +2086,41 @@ export default function QuizInputForm({
               </div>
             </div>
           )}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flexWrap: "wrap",
+              marginTop: "18px",
+              marginBottom: "18px",
+            }}
+          >
+            <button
+              type="button"
+              className="btn-primary queue-button"
+              onClick={handleAddToUnitQueue}
+              disabled={isPending || queuedQuizzes.length >= 10}
+            >
+              {queuedQuizzes.length >= 10
+                ? "Unit Full (10/10)"
+                : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
+            </button>
+          </div>
+
+          <div className="form-group" style={{ marginTop: "18px" }}>
+            <label htmlFor="assessment">Assessment</label>
+            <textarea
+              id="assessment"
+              name="assessment"
+              className="form-textarea"
+              rows={4}
+              placeholder="Provide the assessment explanation..."
+              value={assessment}
+              onChange={(event) => setAssessment(event.target.value)}
+            />
+          </div>
 
           <div
             style={{
