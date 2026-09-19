@@ -84,6 +84,18 @@ export interface UnitRow extends RowDataPacket {
   assessment_json: unknown;
 }
 
+export async function requireAdmin() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return false;
+
+  const [rows] = await db.query<RowDataPacket[]>(
+    "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+    [userId],
+  );
+  return rows[0]?.user_role === "admin";
+}
+
 function getIndexedFormValues(formData: FormData, prefix: string) {
   const values: string[] = [];
   for (let index = 0; ; index++) {
@@ -280,6 +292,10 @@ export async function getQuizMetadata() {
 }
 
 export async function saveUnit(_state: unknown, formData: FormData) {
+  if (!(await requireAdmin())) {
+    return { error: "Only administrators can manage units." };
+  }
+
   const unitId = formData.get("unit_id");
   const sectionId = formData.get("sec_id");
   if (!sectionId || (unitId && !/^[1-9]\d*$/.test(String(unitId)))) {
@@ -356,6 +372,8 @@ export async function saveUnit(_state: unknown, formData: FormData) {
 }
 
 export async function getUnits() {
+  if (!(await requireAdmin())) return [];
+
   try {
     const [rows] = await db.query<UnitRow[]>(
       `SELECT u.unit_id, u.sec_id, s.sec_num,
@@ -387,6 +405,10 @@ function parseJsonColumn(value: unknown) {
 }
 
 export async function deleteUnit(unitId: number) {
+  if (!(await requireAdmin())) {
+    return { error: "Only administrators can manage units." };
+  }
+
   if (!Number.isInteger(unitId) || unitId < 1) {
     return { error: "A valid Unit ID is required." };
   }
