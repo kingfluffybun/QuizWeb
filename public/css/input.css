@@ -640,6 +640,7 @@ textarea {
 .lesson-slide-heading {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin: 0 0 10px;
 }
 .lesson-slide-heading h3 {
@@ -648,6 +649,11 @@ textarea {
   font-family: "Poppins", sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
+}
+.lesson-slide-add {
+  width: 34px;
+  height: 34px;
+  padding: 5px;
 }
 .lesson-slide-navigation {
   display: flex;

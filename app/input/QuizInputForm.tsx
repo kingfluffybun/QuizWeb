@@ -417,9 +417,10 @@ export default function QuizInputForm({
   const handleNextLessonSlide = () => {
     if (currentLessonSlide < lessonSlides.length - 1) {
       setCurrentLessonSlide((slideIndex) => slideIndex + 1);
-      return;
     }
+  };
 
+  const handleAddLessonSlide = () => {
     setLessonSlides((slides) => [...slides, { card: "", text: "" }]);
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
@@ -1539,6 +1540,29 @@ export default function QuizInputForm({
           <div className="lesson-slide-section">
             <div className="lesson-slide-heading">
               <h3>Lesson slide</h3>
+              <button
+                type="button"
+                className="btn-add-option lesson-slide-add"
+                onClick={handleAddLessonSlide}
+                title="Add lesson slide"
+                aria-label="Add lesson slide"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
             </div>
             <div className="lesson-slide-group">
               {lessonSlides.map((slide, index) =>
@@ -1608,6 +1632,7 @@ export default function QuizInputForm({
                 type="button"
                 className="btn-primary lesson-slide-nav-button"
                 onClick={handleNextLessonSlide}
+                disabled={currentLessonSlide === lessonSlides.length - 1}
               >
                 Next Slide
               </button>
