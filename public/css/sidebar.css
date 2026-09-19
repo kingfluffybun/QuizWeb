@@ -23,7 +23,7 @@
     border-right: 2px solid var(--border-main);
     width: 240px;
     overflow: visible;
-    transition: width 0.2s ease;
+    transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
     > .sidebar-nav {
@@ -63,7 +63,7 @@
             border-radius: 999px;
             border: 2px solid var(--border-main);
             z-index: 1000;
-            right: -19px; top: 32px;
+            right: -20.5px; top: 32px;
             cursor: pointer;
             transition: all 0.2s ease;
             &:hover {border-color: var(--text-muted);}
