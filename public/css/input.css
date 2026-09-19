@@ -817,8 +817,11 @@ textarea {
   font-weight: 600;
   white-space: nowrap;
 }
+.pending-quiz-nav-button {
+  width: 72px;
+}
 .lesson-slide-navigation .lesson-slide-nav-button {
-  width: auto;
+  width: 72px;
   min-height: 32px;
   margin-top: 0;
   padding: 6px 11px;
@@ -1012,6 +1015,16 @@ textarea {
   font-family: "Montserrat", sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
+}
+.admin-card .queue-action-status {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 1 auto;
+  margin: 0;
+  margin-top: 0;
+  padding: 8px 12px;
+  font-size: 0.8rem;
 }
 .status-success {
   background-color: #d4edda;

@@ -398,10 +398,16 @@ export default function QuizInputForm({
     ]);
     setOptionCount(4);
     setCpPromptCount(1);
-    setMessage({
+    const queueMessage = {
       type: "success",
       text: `Quiz added to unit queue (${queuedQuizzes.length + 1}/10).`,
-    });
+    } as const;
+    setMessage(queueMessage);
+    window.setTimeout(() => {
+      setMessage((currentMessage) =>
+        currentMessage?.text === queueMessage.text ? null : currentMessage,
+      );
+    }, 2000);
   };
 
   const handleAddOption = () => {
@@ -1631,7 +1637,7 @@ export default function QuizInputForm({
                 onClick={handlePreviousLessonSlide}
                 disabled={currentLessonSlide === 0}
               >
-                Previous Slide
+                Previous
               </button>
               <span className="lesson-slide-counter">
                 Slide {currentLessonSlide + 1} of {lessonSlides.length}
@@ -1642,7 +1648,7 @@ export default function QuizInputForm({
                 onClick={handleNextLessonSlide}
                 disabled={currentLessonSlide === lessonSlides.length - 1}
               >
-                Next Slide
+                Next
               </button>
             </div>
           </div>
@@ -2281,43 +2287,50 @@ export default function QuizInputForm({
             }}
           >
             {!editingQuiz?._pendingUnit && (
-              <button
-                type="button"
-                className="btn-primary queue-button"
-                onClick={handleAddToUnitQueue}
-                disabled={isPending || queuedQuizzes.length >= 10}
-              >
-                {queuedQuizzes.length >= 10
-                  ? "Unit Full (10/10)"
-                  : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn-primary queue-button"
+                  onClick={handleAddToUnitQueue}
+                  disabled={isPending || queuedQuizzes.length >= 10}
+                >
+                  {queuedQuizzes.length >= 10
+                    ? "Unit Full (10/10)"
+                    : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
+                </button>
+                {message && (
+                  <div className={`status-message queue-action-status status-${message.type}`}>
+                    {message.text}
+                  </div>
+                )}
+              </>
             )}
             {editingQuiz?._pendingUnit && queuedQuizzes.length > 0 && (
               <>
                 <button
                   type="button"
-                  className="btn-primary queue-button"
+                  className="btn-primary queue-button pending-quiz-nav-button"
                   onClick={handlePreviousPendingQuiz}
                   disabled={isPending}
                 >
-                  Previous Quiz
+                  Previous
                 </button>
                 <span className="pending-quiz-counter">
                   Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
                 </span>
                 <button
                   type="button"
-                  className="btn-primary queue-button"
+                  className="btn-primary queue-button pending-quiz-nav-button"
                   onClick={handleNextPendingQuiz}
                   disabled={isPending}
                 >
-                  Next Quiz
+                  Next
                 </button>
               </>
             )}
           </div>
 
-          {message && (
+          {message && editingQuiz?._pendingUnit && (
             <div className={`status-message status-${message.type}`}>
               {message.text}
             </div>
