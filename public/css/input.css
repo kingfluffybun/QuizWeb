@@ -741,6 +741,13 @@ textarea {
   cursor: not-allowed;
   transform: none;
 }
+.queue-button {
+  width: auto;
+  margin-top: 0;
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  border-radius: 10px;
+}
 .pagination-button {
   padding: 8px 14px;
   border: none;

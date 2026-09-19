@@ -305,13 +305,8 @@ export async function getQuizMetadata() {
 }
 
 export async function saveUnit(_state: unknown, formData: FormData) {
-  if (!(await requireAdmin())) {
-    return { error: "Only administrators can manage units." };
-  }
-
-  const unitId = formData.get("unit_id");
-  const sectionId = formData.get("unit_sec_id");
-  if (!sectionId || (unitId && !/^[1-9]\d*$/.test(String(unitId)))) {
+  const sectionId = formData.get("sec_id") ?? formData.get("unit_sec_id");
+  if (!sectionId) {
     return { error: "A valid Section ID is required." };
   }
 
@@ -325,43 +320,69 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     };
   }
 
+  const rawQuizJson = formData.get("quiz_json");
+  const parsedQuizJson = (() => {
+    if (typeof rawQuizJson !== "string" || !rawQuizJson.trim()) {
+      return [];
+    }
+    try {
+      const value = JSON.parse(rawQuizJson);
+      return Array.isArray(value) ? value : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  if (parsedQuizJson.length === 0) {
+    return { error: "At least one quiz is required before submitting the unit." };
+  }
+
   const lessonDocument = JSON.stringify({
     lesson_card: {
       lesson_format: lessonCard,
       lesson_text: lessonText,
     },
   });
-  const quiz = JSON.stringify({});
-  const assessment = JSON.stringify({});
+  const quizDocument = JSON.stringify(parsedQuizJson);
+  const assessmentDocument = JSON.stringify(
+    parsedQuizJson.map((entry: any) => entry.quiz_payload?.assessment ?? ""),
+  );
+  const session = await auth();
+  const pendingName = (
+    session?.user?.name ??
+    session?.user?.email?.split("@")[0] ??
+    "Contributor"
+  ).slice(0, 50);
 
   try {
-    if (unitId) {
-      const [result] = await db.query<ResultSetHeader>(
-        `UPDATE unit_tbl
-         SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?, quiz_json = ?, assessment_json = ?
-         WHERE unit_id = ?`,
-        [lessonTitle, sectionId, lessonDocument, quiz, assessment, unitId],
-      );
-      return result.affectedRows === 0
-        ? { error: "Unit was not found." }
-        : { success: true, unitId: Number(unitId) };
-    }
-
     const [result] = await db.query<ResultSetHeader>(
-      `INSERT INTO unit_tbl (unit_title, sec_id, unit_lesson_card_json, quiz_json, assessment_json)
-       VALUES (?, ?, ?, ?, ?)`,
-      [lessonTitle, sectionId, lessonDocument, quiz, assessment],
+      `INSERT INTO pending_tbl
+       (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
+        unit_assessment_json, pending_status, pending_name)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+      [
+        lessonTitle,
+        sectionId,
+        lessonDocument,
+        quizDocument,
+        assessmentDocument,
+        pendingName,
+      ],
     );
-    return { success: true, unitId: result.insertId };
+
+    return {
+      success: true,
+      pending: true,
+      pendingId: result.insertId,
+      message: "Unit submitted for review.",
+    };
   } catch (error) {
-    console.error("Failed to save unit:", error);
-    return { error: "An error occurred while saving the unit." };
+    console.error("Failed to submit unit for review:", error);
+    return { error: "An error occurred while submitting the unit for review." };
   }
 }
 
 export async function getUnits() {
-  if (!(await requireAdmin())) return [];
-
   try {
     const [rows] = await db.query<UnitRow[]>(
       `SELECT u.unit_id, u.unit_title, u.sec_id, s.sec_num,
@@ -393,10 +414,6 @@ function parseJsonColumn(value: unknown) {
 }
 
 export async function deleteUnit(unitId: number) {
-  if (!(await requireAdmin())) {
-    return { error: "Only administrators can manage units." };
-  }
-
   if (!Number.isInteger(unitId) || unitId < 1) {
     return { error: "A valid Unit ID is required." };
   }
@@ -964,23 +981,22 @@ export async function getQuizzes(filters?: {
   }
 }
 
-export interface PendingQuiz extends RowDataPacket {
+export interface PendingUnit extends RowDataPacket {
   pending_id: number;
-  cat_id: number;
-  sec_id?: number;
-  difficulty_id: number;
-  quiz_type_id: number;
-  question_text: string;
-  quiz_payload: unknown;
+  unit_title: string;
+  sec_id: number;
+  unit_lesson_card_json: unknown;
+  unit_quiz_json: unknown;
+  unit_assessment_json: unknown;
   pending_status: "pending" | "approved" | "rejected" | string;
   pending_name: string;
   pending_note?: string | null;
-  cat_name: string;
   sec_num?: string;
+  question_text: string;
+  cat_name: string;
   difficulty_name: string;
   type_name: string;
-  quiz_id?: number;
-  approved_id?: number;
+  quiz_payload: unknown;
 }
 
 export async function getPendingQuizzes(statusFilter = "pending") {
@@ -992,32 +1008,35 @@ export async function getPendingQuizzes(statusFilter = "pending") {
       params.push(statusFilter);
     }
 
-    const [rows] = await db.query<PendingQuiz[]>(
+        const [rows] = await db.query<PendingUnit[]>(
       `
-            SELECT p.pending_id, p.cat_id, p.sec_id, p.difficulty_id, p.quiz_type_id,
-                   p.question_text, p.quiz_payload, p.pending_status, p.pending_name,
-                   p.pending_note,
-                   c.cat_name, s.sec_num, d.difficulty_name, t.type_name,
-                   qa.quiz_id, qa.approved_id
+           SELECT p.pending_id, p.unit_title, p.sec_id,
+             p.unit_lesson_card_json, p.unit_quiz_json,
+             p.unit_assessment_json, p.pending_status, p.pending_name,
+             p.pending_note, s.sec_num
             FROM pending_tbl p
-            JOIN cat_tbl c ON p.cat_id = c.cat_id
             LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
-            JOIN difficulty_tbl d ON p.difficulty_id = d.difficulty_id
-            JOIN quiz_type_tbl t ON p.quiz_type_id = t.quiz_type_id
-            LEFT JOIN quiz_approved_tbl qa ON p.pending_id = qa.pending_id
             ${whereClause}
             ORDER BY p.pending_id DESC
         `,
       params,
     );
 
-    return rows.map((row) => ({
-      ...row,
-      quiz_payload:
-        typeof row.quiz_payload === "string"
-          ? JSON.parse(row.quiz_payload)
-          : row.quiz_payload,
-    }));
+    return rows.map((row) => {
+      const unitQuizJson = parseJsonColumn(row.unit_quiz_json);
+      const firstQuiz = Array.isArray(unitQuizJson) ? unitQuizJson[0] : {};
+      return {
+        ...row,
+        unit_lesson_card_json: parseJsonColumn(row.unit_lesson_card_json),
+        unit_quiz_json: unitQuizJson,
+        unit_assessment_json: parseJsonColumn(row.unit_assessment_json),
+        question_text: row.unit_title,
+        cat_name: "",
+        difficulty_name: "",
+        type_name: "Unit",
+        quiz_payload: firstQuiz?.quiz_payload ?? {},
+      };
+    });
   } catch (error) {
     console.error("Failed to fetch pending quizzes:", error);
     return [];
@@ -1028,30 +1047,31 @@ export async function getPendingQuizById(pendingId: number) {
   if (!pendingId) return undefined;
 
   try {
-    const [rows] = await db.query<PendingQuiz[]>(
-      `SELECT p.pending_id, p.cat_id, p.sec_id, p.difficulty_id, p.quiz_type_id,
-              p.question_text, p.quiz_payload, p.pending_status, p.pending_name,
-              p.pending_note,
-              c.cat_name, s.sec_num, d.difficulty_name, t.type_name,
-              qa.quiz_id, qa.approved_id
+    const [rows] = await db.query<PendingUnit[]>(
+      `SELECT p.pending_id, p.unit_title, p.sec_id,
+              p.unit_lesson_card_json, p.unit_quiz_json,
+              p.unit_assessment_json, p.pending_status, p.pending_name,
+              p.pending_note, s.sec_num
        FROM pending_tbl p
-       JOIN cat_tbl c ON p.cat_id = c.cat_id
        LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
-       JOIN difficulty_tbl d ON p.difficulty_id = d.difficulty_id
-       JOIN quiz_type_tbl t ON p.quiz_type_id = t.quiz_type_id
-       LEFT JOIN quiz_approved_tbl qa ON p.pending_id = qa.pending_id
        WHERE p.pending_id = ?
        LIMIT 1`,
       [pendingId],
     );
     const quiz = rows[0];
     if (!quiz) return undefined;
+    const unitQuizJson = parseJsonColumn(quiz.unit_quiz_json);
+    const firstQuiz = Array.isArray(unitQuizJson) ? unitQuizJson[0] : {};
     return {
       ...quiz,
-      quiz_payload:
-        typeof quiz.quiz_payload === "string"
-          ? JSON.parse(quiz.quiz_payload)
-          : quiz.quiz_payload,
+      unit_lesson_card_json: parseJsonColumn(quiz.unit_lesson_card_json),
+      unit_quiz_json: unitQuizJson,
+      unit_assessment_json: parseJsonColumn(quiz.unit_assessment_json),
+      question_text: quiz.unit_title,
+      cat_name: "",
+      difficulty_name: "",
+      type_name: "Unit",
+      quiz_payload: firstQuiz?.quiz_payload ?? {},
     };
   } catch (error) {
     console.error("Failed to fetch pending quiz:", error);
@@ -1078,15 +1098,15 @@ export async function reviewPendingQuiz(
       "SELECT * FROM pending_tbl WHERE pending_id = ? FOR UPDATE",
       [pendingId],
     );
-    const pendingQuiz = pendingRows[0];
-    if (!pendingQuiz) {
+    const pendingUnit = pendingRows[0];
+    if (!pendingUnit) {
       await connection.rollback();
-      return { error: "Pending quiz not found." };
+      return { error: "Pending unit not found." };
     }
 
-    if (pendingQuiz.pending_status !== "pending") {
+    if (pendingUnit.pending_status !== "pending") {
       await connection.rollback();
-      return { error: "This quiz has already been reviewed." };
+      return { error: "This unit has already been reviewed." };
     }
 
     if (decision === "reject") {
@@ -1097,29 +1117,29 @@ export async function reviewPendingQuiz(
       await connection.commit();
       return {
         success: true,
-        message: "Quiz rejected and retained in the review history.",
+        message: "Unit rejected and retained in the review history.",
       };
     }
 
-    const [quizResult] = await connection.query<ResultSetHeader>(
-      `INSERT INTO quiz_tbl (cat_id, sec_id, difficulty_id, quiz_type_id, question_text, quiz_payload)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+    const [unitResult] = await connection.query<ResultSetHeader>(
+      `INSERT INTO unit_tbl
+       (unit_title, sec_id, unit_lesson_card_json, quiz_json, assessment_json)
+       VALUES (?, ?, ?, ?, ?)`,
       [
-        pendingQuiz.cat_id,
-        pendingQuiz.sec_id,
-        pendingQuiz.difficulty_id,
-        pendingQuiz.quiz_type_id,
-        pendingQuiz.question_text,
-        typeof pendingQuiz.quiz_payload === "object"
-          ? JSON.stringify(pendingQuiz.quiz_payload)
-          : pendingQuiz.quiz_payload,
+        pendingUnit.unit_title,
+        pendingUnit.sec_id,
+        typeof pendingUnit.unit_lesson_card_json === "object"
+          ? JSON.stringify(pendingUnit.unit_lesson_card_json)
+          : pendingUnit.unit_lesson_card_json,
+        typeof pendingUnit.unit_quiz_json === "object"
+          ? JSON.stringify(pendingUnit.unit_quiz_json)
+          : pendingUnit.unit_quiz_json,
+        typeof pendingUnit.unit_assessment_json === "object"
+          ? JSON.stringify(pendingUnit.unit_assessment_json)
+          : pendingUnit.unit_assessment_json,
       ],
     );
 
-    await connection.query(
-      "INSERT INTO quiz_approved_tbl (pending_id, quiz_id) VALUES (?, ?)",
-      [pendingId, quizResult.insertId],
-    );
     await connection.query(
       "UPDATE pending_tbl SET pending_status = 'approved' WHERE pending_id = ?",
       [pendingId],
@@ -1127,7 +1147,8 @@ export async function reviewPendingQuiz(
     await connection.commit();
     return {
       success: true,
-      message: "Quiz approved and added to the quiz bank.",
+      unitId: unitResult.insertId,
+      message: "Unit approved and added to the unit bank.",
     };
   } catch (error) {
     await connection.rollback();

@@ -9,51 +9,21 @@ import {
 
 type PendingQuiz = {
   pending_id: number;
-  question_text: string;
+  unit_title: string;
+  sec_num?: string;
   pending_name: string;
   pending_status: string;
   pending_note?: string | null;
-  cat_name: string;
-  sec_num?: string;
-  difficulty_name: string;
-  type_name: string;
-  quiz_payload: {
-    options?: string[];
-    correct_index?: number;
-    answer?: string;
-    items?: string[];
-    pairs?: { left: string; right: string }[];
-    title?: string;
-    steps?: { prompt: string; expected: string }[];
-  };
+  unit_lesson_card_json: { lesson_card?: { lesson_format?: string; lesson_text?: string } };
+  unit_quiz_json: unknown;
 };
 
 function formatPayload(quiz: PendingQuiz) {
-  const payload = quiz.quiz_payload;
-  if (quiz.type_name === "MCQ" && payload.options) {
-    return payload.options
-      .map(
-        (option, index) =>
-          `${index === payload.correct_index ? "Correct: " : ""}${option}`,
-      )
-      .join(" | ");
-  }
-  if (quiz.type_name === "FITB") return `Answer: ${payload.answer ?? ""}`;
-  if (quiz.type_name === "Order") return payload.items?.join(" -> ") ?? "";
-  if (quiz.type_name === "Pair") {
-    return (
-      payload.pairs
-        ?.map((pair) => `${pair.left} = ${pair.right}`)
-        .join(" | ") ?? ""
-    );
-  }
-  return (
-    payload.steps
-      ?.map((step) => `${step.prompt}: ${step.expected}`)
-      .join(" | ") ??
-    payload.title ??
-    ""
-  );
+  const quizzes = Array.isArray(quiz.unit_quiz_json) ? quiz.unit_quiz_json : [];
+  const lesson = quiz.unit_lesson_card_json?.lesson_card;
+  return `${quizzes.length === 1 ? "1 quiz" : `${quizzes.length} quizzes`} queued${
+    lesson?.lesson_format ? ` | ${lesson.lesson_format}` : ""
+  }`;
 }
 
 export default function PendingReview({
@@ -168,10 +138,9 @@ export default function PendingReview({
                   {quiz.pending_status}
                 </span>
               </div>
-              <h3>{quiz.question_text}</h3>
+                <h3>{quiz.unit_title}</h3>
               <p className="pending-meta">
-                {quiz.cat_name} / {quiz.difficulty_name} / {quiz.type_name}
-                {quiz.sec_num ? ` / Section ${quiz.sec_num}` : ""} / By{" "}
+                  {quiz.sec_num ? `Section ${quiz.sec_num} / ` : ""}By{" "}
                 {quiz.pending_name}
               </p>
               <p className="pending-payload">{formatPayload(quiz)}</p>

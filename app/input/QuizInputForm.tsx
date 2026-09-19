@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   createQuiz,
@@ -116,8 +116,12 @@ export default function QuizInputForm({
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const [selectedDiffId, setSelectedDiffId] = useState<string>("");
   const [selectedSecId, setSelectedSecId] = useState<string>("");
+  const [selectedUnit, setSelectedUnit] = useState<string>("");
+  const [queuedQuizzes, setQueuedQuizzes] = useState<any[]>([]);
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
+  const [assessment, setAssessment] = useState<string>("");
+  const hasInitializedType = useRef(false);
 
   const handleCopyId = (quizId: number) => {
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -250,6 +254,135 @@ export default function QuizInputForm({
   );
   const selectedTypeName = selectedType ? selectedType.type_name : "";
 
+  const buildCurrentQuizEntry = () => {
+    const form = document.getElementById("unit-form") as HTMLFormElement | null;
+    if (!form) return null;
+
+    const formData = new FormData(form);
+    const typeName =
+      selectedTypeName ||
+      types.find((t) => t.quiz_type_id.toString() === selectedTypeId)?.type_name;
+
+    if (!typeName || !selectedCatId || !selectedDiffId || !selectedSecId || !selectedUnit) {
+      return null;
+    }
+
+    const makeBase = (questionTextValue: string, payload: Record<string, unknown>) => ({
+      cat_id: Number(selectedCatId),
+      sec_id: Number(selectedSecId),
+      unit: Number(selectedUnit),
+      difficulty_id: Number(selectedDiffId),
+      quiz_type_id: Number(selectedTypeId),
+      question_text: questionTextValue,
+      quiz_payload: payload,
+    });
+
+    if (typeName === "MCQ") {
+      const options = [0, 1, 2, 3].map(
+        (idx) => (formData.get(`option_${idx}`) as string | null)?.trim() ?? "",
+      );
+      const assessment =
+        (formData.get("assessment") as string | null)?.trim() ?? "";
+      const correct = Number(formData.get("correct_option_index") ?? mcqCorrectIndex);
+
+      if (options.some((option) => !option) || Number.isNaN(correct)) {
+        return null;
+      }
+
+      return makeBase(questionText.trim(), {
+        options,
+        correct_index: correct,
+        ...(assessment ? { assessment } : {}),
+      });
+    }
+
+    if (typeName === "FITB") {
+      const answer = (formData.get("fitb_answer") as string | null)?.trim() ?? "";
+      if (!answer) return null;
+      return makeBase(questionText.trim() || "Fill in the blank", {
+        answer,
+      });
+    }
+
+    if (typeName === "Order") {
+      const items = Array.from({ length: optionCount }, (_, idx) =>
+        (formData.get(`order_${idx}`) as string | null)?.trim() ?? "",
+      ).filter(Boolean);
+      if (items.length < 4) return null;
+      return makeBase(questionText.trim() || "Arrange the items in order", {
+        items,
+      });
+    }
+
+    if (typeName === "Pair") {
+      const pairs = Array.from({ length: optionCount }, (_, idx) => ({
+        left: (formData.get(`pair_left_${idx}`) as string | null)?.trim() ?? "",
+        right: (formData.get(`pair_right_${idx}`) as string | null)?.trim() ?? "",
+      })).filter((pair) => pair.left && pair.right);
+      if (pairs.length < 4) return null;
+      return makeBase(questionText.trim() || "Match the items", {
+        pairs,
+      });
+    }
+
+    if (typeName === "CP") {
+      const title = (formData.get("cp_title") as string | null)?.trim() ?? "";
+      const promptCount = Number(formData.get("cp_prompt_count") ?? cpPromptCount);
+      const steps: any[] = [];
+      for (let idx = 0; idx < promptCount; idx++) {
+        const prompt = (formData.get(`cp_prompt_${idx}`) as string | null)?.trim() ?? "";
+        const template = (formData.get(`cp_template_${idx}`) as string | null)?.trim() ?? "";
+        const expected = (formData.get(`cp_expected_${idx}`) as string | null)?.trim() ?? "";
+        if (prompt || template || expected) {
+          if (!prompt || !expected) return null;
+          steps.push({ prompt, template, expected });
+        }
+      }
+      if (!title || steps.length === 0) return null;
+      return makeBase(questionText.trim() || title, {
+        title,
+        steps,
+        prompts: steps.map((step) => step.prompt),
+        prompt: steps[0].prompt,
+        template: steps[0].template,
+        expected: steps[0].expected,
+      });
+    }
+
+    return null;
+  };
+
+  const handleAddToUnitQueue = () => {
+    const nextEntry = buildCurrentQuizEntry();
+    if (!nextEntry) {
+      setMessage({
+        type: "error",
+        text: "Please complete the current quiz before adding it to the unit.",
+      });
+      return;
+    }
+
+    if (queuedQuizzes.length >= 10) {
+      setMessage({
+        type: "error",
+        text: "A unit can hold up to 10 quizzes before saving.",
+      });
+      return;
+    }
+
+    setQueuedQuizzes((prev) => [...prev, nextEntry]);
+    setQuestionText("");
+    setMcqOptions(["", "", "", ""]);
+    setMcqCorrectIndex(0);
+    setAssessment("");
+    setOptionCount(4);
+    setCpPromptCount(1);
+    setMessage({
+      type: "success",
+      text: `Quiz added to unit queue (${queuedQuizzes.length + 1}/10).`,
+    });
+  };
+
   const handleAddOption = () => {
     setOptionCount((count) => count + 1);
   };
@@ -301,8 +434,9 @@ export default function QuizInputForm({
   ]);
 
   useEffect(() => {
-    if (types.length > 0 && !selectedTypeId) {
+    if (types.length > 0 && !hasInitializedType.current) {
       setSelectedTypeId(types[0].quiz_type_id.toString());
+      hasInitializedType.current = true;
     }
   }, [types, selectedTypeId]);
 
@@ -314,6 +448,7 @@ export default function QuizInputForm({
       setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
       setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
       setQuestionText(editingQuiz.question_text ?? "");
+      setAssessment(editingQuiz.quiz_payload?.assessment ?? "");
       if (editingQuiz.type_name === "MCQ") {
         setMcqOptions(
           Array.isArray(editingQuiz.quiz_payload?.options)
@@ -344,9 +479,11 @@ export default function QuizInputForm({
         setSelectedDiffId(difficulties[0].difficulty_id.toString());
       }
       setSelectedSecId("");
+      setSelectedUnit("");
       setQuestionText("");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
+      setAssessment("");
     }
   }, [editingQuiz, categories, difficulties]);
 
@@ -507,6 +644,12 @@ export default function QuizInputForm({
     setMessage(null);
 
     const formData = new FormData(event.currentTarget);
+    const currentEntry = buildCurrentQuizEntry();
+    const unitQuizBatch = queuedQuizzes.length > 0 ? queuedQuizzes : currentEntry ? [currentEntry] : [];
+
+    if (unitQuizBatch.length > 0) {
+      formData.set("quiz_json", JSON.stringify(unitQuizBatch));
+    }
 
     try {
       const unitResult = await saveUnit(null, formData);
@@ -517,7 +660,9 @@ export default function QuizInputForm({
 
       setMessage({
         type: "success",
-        text: "Unit saved successfully!",
+        text:
+          ("message" in unitResult ? unitResult.message : undefined) ??
+          "Quiz submission sent for review successfully.",
       });
 
       router.refresh();
@@ -1126,7 +1271,20 @@ export default function QuizInputForm({
           </div>
         )}
 
-        <form key={editingQuiz?.quiz_id ?? "new"} onSubmit={handleSubmit}>
+        <form id="unit-form" key={editingQuiz?.quiz_id ?? "new"} onSubmit={handleSubmit}>
+          <input type="hidden" name="quiz_json" value={JSON.stringify(queuedQuizzes)} />
+          <div className="form-group">
+            <label htmlFor="unit_title">Lesson Title</label>
+            <input
+              id="unit_title"
+              name="unit_title"
+              type="text"
+              className="form-input"
+              placeholder="Enter the lesson title..."
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label htmlFor="cat_id">Category</label>
             <select
@@ -1239,25 +1397,48 @@ export default function QuizInputForm({
             );
           })()}
 
-          <div className="form-group">
-            <label htmlFor="sec_id">Section</label>
-            <select
-              id="sec_id"
-              name="sec_id"
-              className="form-select"
-              required
-              value={selectedSecId}
-              onChange={(e) => setSelectedSecId(e.target.value)}
-            >
-              <option value="" disabled>
-                Select Section
-              </option>
-              {sections.map((section) => (
-                <option key={section.sec_id} value={section.sec_id.toString()}>
-                  {section.sec_num}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="form-group">
+              <label htmlFor="sec_id">Section</label>
+              <select
+                id="sec_id"
+                name="sec_id"
+                className="form-select"
+                required
+                value={selectedSecId}
+                onChange={(e) => setSelectedSecId(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select Section
                 </option>
-              ))}
-            </select>
+                {sections.map((section) => (
+                  <option key={section.sec_id} value={section.sec_id.toString()}>
+                    {section.sec_num}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="unit">Unit</label>
+              <select
+                id="unit"
+                name="unit"
+                className="form-select"
+                required
+                value={selectedUnit}
+                onChange={(e) => setSelectedUnit(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select Unit
+                </option>
+                {[1, 2, 3].map((unitNumber) => (
+                  <option key={unitNumber} value={unitNumber.toString()}>
+                    {unitNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
@@ -1578,7 +1759,29 @@ export default function QuizInputForm({
                   </div>
                 ))}
               </div>
-              <div className="form-group" style={{ marginTop: "18px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  marginTop: "18px",
+                  marginBottom: "18px",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn-primary queue-button"
+                  onClick={handleAddToUnitQueue}
+                  disabled={isPending || queuedQuizzes.length >= 10}
+                >
+                  {queuedQuizzes.length >= 10
+                    ? "Unit Full (10/10)"
+                    : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
+                </button>
+              </div>
+
+              <div className="form-group" style={{ marginTop: "0" }}>
                 <label htmlFor="assessment">Assessment</label>
                 <textarea
                   id="assessment"
@@ -1586,7 +1789,8 @@ export default function QuizInputForm({
                   className="form-textarea"
                   rows={4}
                   placeholder="Provide the assessment explanation..."
-                  defaultValue={editingQuiz?.quiz_payload?.assessment ?? ""}
+                  value={assessment}
+                  onChange={(event) => setAssessment(event.target.value)}
                 />
               </div>
 
@@ -1645,6 +1849,7 @@ export default function QuizInputForm({
                   </span>
                 </div>
               )}
+
             </div>
           )}
 
@@ -1826,20 +2031,29 @@ export default function QuizInputForm({
             </div>
           )}
 
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={isPending}
-            style={{ marginTop: "10px" }}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flexWrap: "wrap",
+              marginTop: "10px",
+            }}
           >
-            {isPending
-              ? editingQuiz
-                ? "Saving Quiz..."
-                : "Adding Quiz..."
-              : editingQuiz
-                ? "Save Changes"
-                : "Add New Unit"}
-          </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isPending}
+            >
+              {isPending
+                ? editingQuiz
+                  ? "Saving Quiz..."
+                  : "Adding Quiz..."
+                : editingQuiz
+                  ? "Save Changes"
+                  : "Add New Unit"}
+            </button>
+          </div>
           {editingQuiz && (
             <button
               type="button"
