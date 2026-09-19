@@ -2193,11 +2193,11 @@ export default function QuizInputForm({
               style={{ display: "flex", flexDirection: "column", gap: "3px" }}
             >
               <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
-                Recently Added Quizzes
+                Recently Added Units
               </h2>
               <div className="list-visibility-counter">
                 Showing <strong>{filteredQuizzes.length}</strong> of{" "}
-                <strong>{metrics.totalQuizzes || totalCount}</strong> questions
+                <strong>{metrics.totalQuizzes || totalCount}</strong> units
                 {metrics.totalQuizzes > 0 && (
                   <span className="visibility-ratio">
                     (
@@ -2613,13 +2613,12 @@ export default function QuizInputForm({
 
           {recentQuizzes.length === 0 ? (
             <div className="empty-state">
-              No quiz questions created yet. Use the form on the left to add
-              one!
+                No units submitted yet. Use the form on the left to add one!
             </div>
           ) : filteredQuizzes.length === 0 ? (
             <div className="empty-state">
               <p style={{ margin: "0 0 12px 0" }}>
-                No quiz questions found matching the selected filters.
+                No units found matching the selected filters.
               </p>
               <button
                 type="button"
@@ -2854,7 +2853,9 @@ export default function QuizInputForm({
                           </div>
                         );
                       })()}
-                      <span className="badge badge-cat">{quiz.cat_name}</span>
+                      {quiz.type_name !== "Unit" && (
+                        <span className="badge badge-cat">{quiz.cat_name}</span>
+                      )}
                       {quiz.sec_num && (
                         <span className="badge badge-type">
                           Section {quiz.sec_num}
@@ -2863,7 +2864,11 @@ export default function QuizInputForm({
                       <span className="badge badge-diff">
                         {quiz.difficulty_name}
                       </span>
-                      <span className="badge badge-type">{quiz.type_name}</span>
+                      <span className="badge badge-type">
+                        {quiz.type_name === "Unit"
+                          ? `Unit ${payload?.unit_number ?? ""}`.trim()
+                          : quiz.type_name}
+                      </span>
                       {quiz.type_name === "MCQ" && payload?.options && (
                         <span
                           className="badge badge-metric-tag"
@@ -2897,6 +2902,16 @@ export default function QuizInputForm({
                             payload?.prompts?.length ||
                             1}{" "}
                           step{(payload?.steps?.length || 1) > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {quiz.type_name === "Unit" && (
+                        <span
+                          className="badge badge-metric-tag"
+                          title="Queued quizzes"
+                        >
+                          {Array.isArray(payload?.quizzes)
+                            ? payload.quizzes.length
+                            : 0} quizzes
                         </span>
                       )}
                     </div>
@@ -3070,6 +3085,31 @@ export default function QuizInputForm({
                                 </div>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {quiz.type_name === "Unit" && (
+                          <div>
+                            <div>
+                              <strong>Lesson Card:</strong>{" "}
+                              {payload?.lesson_card?.lesson_card?.lesson_format ??
+                                ""}
+                            </div>
+                            <div>
+                              <strong>Lesson Text:</strong>{" "}
+                              {payload?.lesson_card?.lesson_card?.lesson_text ??
+                                ""}
+                            </div>
+                            <div>
+                              <strong>Assessment:</strong>{" "}
+                              {payload?.assessment?.assessment ?? ""}
+                            </div>
+                            <div>
+                              <strong>Quizzes:</strong>{" "}
+                              {Array.isArray(payload?.quizzes)
+                                ? payload.quizzes.length
+                                : 0} quizzes
+                            </div>
                           </div>
                         )}
                       </div>

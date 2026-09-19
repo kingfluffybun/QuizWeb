@@ -621,7 +621,66 @@ export async function getPaginatedRecentQuizzes(
 ) {
   try {
     if (!(await tableExists("quiz_tbl"))) {
-      return { quizzes: [], currentPage: 1, totalPages: 1, totalCount: 0 };
+      const safePageSize = Math.max(1, Math.floor(pageSize));
+      const search = filters.search?.trim() ?? "";
+      const idSearch = filters.id?.replace(/^[#\s]+/, "").trim() ?? "";
+      const section = filters.section?.trim() ?? "";
+      const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+                p.unit_lesson_card_json, p.unit_quiz_json,
+                p.unit_assessment_json, p.pending_status, p.pending_name
+         FROM pending_tbl p
+         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+         WHERE (? = '' OR CAST(p.pending_id AS CHAR) LIKE ?)
+           AND (? = '' OR p.unit_title LIKE ? OR p.pending_name LIKE ?)
+           AND (? = '' OR s.sec_num = ?)
+         ORDER BY p.pending_id DESC`,
+        [
+          idSearch,
+          `%${idSearch}%`,
+          search,
+          `%${search}%`,
+          `%${search}%`,
+          section,
+          section,
+        ],
+      );
+      const units = rows.map((row) => {
+        const lessonCard = parseJsonColumn(row.unit_lesson_card_json);
+        const quizzes = parseJsonColumn(row.unit_quiz_json);
+        const assessment = parseJsonColumn(row.unit_assessment_json);
+        const unitNumber = Array.isArray(quizzes) ? quizzes[0]?.unit : null;
+        return {
+          quiz_id: row.pending_id,
+          cat_id: 0,
+          sec_id: row.sec_id,
+          difficulty_id: 0,
+          quiz_type_id: 0,
+          question_text: row.unit_title,
+          cat_name: "Unit",
+          sec_num: row.sec_num,
+          difficulty_name: row.pending_status,
+          type_name: "Unit",
+          quiz_payload: {
+            title: row.unit_title,
+            lesson_card: lessonCard,
+            quizzes,
+            assessment,
+            unit_number: unitNumber,
+            pending_name: row.pending_name,
+          },
+        };
+      });
+      const totalCount = units.length;
+      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
+      const offset = (currentPage - 1) * safePageSize;
+      return {
+        quizzes: units.slice(offset, offset + safePageSize),
+        currentPage,
+        totalPages,
+        totalCount,
+      };
     }
 
     const safePageSize = Math.max(1, Math.floor(pageSize));
