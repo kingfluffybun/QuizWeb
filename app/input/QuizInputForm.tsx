@@ -416,6 +416,11 @@ export default function QuizInputForm({
     setPairValues((pairs) => [...pairs, { left: "", right: "" }]);
   };
 
+  const handleRemovePair = (indexToRemove: number) => {
+    setOptionCount((count) => Math.max(1, count - 1));
+    setPairValues((pairs) => pairs.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleAddCPPrompt = () => {
     setCpPromptCount((count) => count + 1);
   };
@@ -1576,6 +1581,9 @@ export default function QuizInputForm({
                   <path d="M5 12h14" />
                   <path d="M12 5v14" />
                 </svg>
+                <span className="lesson-slide-add-tooltip" role="tooltip">
+                  Add new slide
+                </span>
               </button>
             </div>
             <div className="lesson-slide-group">
@@ -2192,16 +2200,9 @@ export default function QuizInputForm({
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "10px" }}
                 >
-                  <span
-                    className={`completeness-badge ${optionCount >= 4 ? "ready" : "pending"}`}
-                  >
-                    {optionCount >= 4
-                      ? `✓ ${optionCount} pairs (Ready)`
-                      : `${optionCount}/4 pairs (Min 4)`}
-                  </span>
                   <button
                     type="button"
-                    className="btn-add-option"
+                    className="btn-add-option pair-add-button"
                     onClick={handleAddOption}
                     title="Add pair"
                     aria-label="Add pair"
@@ -2221,6 +2222,9 @@ export default function QuizInputForm({
                       <path d="M5 12h14" />
                       <path d="M12 5v14" />
                     </svg>
+                    <span className="pair-add-tooltip" role="tooltip">
+                      Add new pair
+                    </span>
                   </button>
                 </div>
               </label>
@@ -2266,6 +2270,32 @@ export default function QuizInputForm({
                         }}
                         required
                       />
+                      <button
+                        type="button"
+                        className="btn-delete pair-remove-button"
+                        onClick={() => handleRemovePair(idx)}
+                        title={`Remove pair ${idx + 1}`}
+                        aria-label={`Remove pair ${idx + 1}`}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          <line x1="10" x2="10" y1="11" y2="17" />
+                          <line x1="14" x2="14" y1="11" y2="17" />
+                        </svg>
+                      </button>
                     </div>
                   ),
                 )}
@@ -2290,13 +2320,16 @@ export default function QuizInputForm({
               <>
                 <button
                   type="button"
-                  className="btn-primary queue-button"
+                  className="btn-primary queue-button queue-add-button"
                   onClick={handleAddToUnitQueue}
                   disabled={isPending || queuedQuizzes.length >= 10}
                 >
                   {queuedQuizzes.length >= 10
                     ? "Unit Full (10/10)"
-                    : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
+                    : `Add Quiz (${queuedQuizzes.length}/10)`}
+                  <span className="queue-add-tooltip" role="tooltip">
+                    Add new Quiz to Unit
+                  </span>
                 </button>
                 {message && (
                   <div className={`status-message queue-action-status status-${message.type}`}>
@@ -2343,7 +2376,7 @@ export default function QuizInputForm({
               name="assessment"
               className="form-textarea"
               rows={4}
-              placeholder="Provide the assessment explanation..."
+              placeholder="Complete this after finishing the unit."
               value={assessment}
               onChange={(event) => setAssessment(event.target.value)}
             />
