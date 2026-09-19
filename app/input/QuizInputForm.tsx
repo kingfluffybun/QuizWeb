@@ -16,7 +16,9 @@ import type {
   Difficulty,
   QuizType,
   QuizMetricsData,
+  UnitRow,
 } from "../actions/quiz";
+import LessonInputForm from "./LessonInputForm";
 
 interface QuizInputFormProps {
   categories: Category[];
@@ -28,6 +30,7 @@ interface QuizInputFormProps {
   initialTotalPages: number;
   initialTotalCount: number;
   initialMetrics?: QuizMetricsData;
+  initialUnits: UnitRow[];
   showRecentQuizzes?: boolean;
   initialEditingQuiz?: any;
 }
@@ -42,6 +45,7 @@ export default function QuizInputForm({
   initialTotalPages,
   initialTotalCount,
   initialMetrics,
+  initialUnits,
   showRecentQuizzes = true,
   initialEditingQuiz,
 }: QuizInputFormProps) {
@@ -53,7 +57,9 @@ export default function QuizInputForm({
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [isPending, setIsPending] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<any | null>(initialEditingQuiz ?? null);
+  const [editingQuiz, setEditingQuiz] = useState<any | null>(
+    initialEditingQuiz ?? null,
+  );
 
   useEffect(() => {
     if (initialEditingQuiz || typeof window === "undefined") return;
@@ -625,8 +631,9 @@ export default function QuizInputForm({
   return (
     <>
       {/* Top Full-Width Metrics Banner */}
+      <LessonInputForm sections={sections} initialUnits={initialUnits} />
       <section
-        className="admin-metrics-banner"
+        className="admin-metrics-banner analytics-legacy-hidden"
         aria-label="Quiz Bank Analytics"
       >
         <div className="metrics-banner-header">
@@ -1828,246 +1835,89 @@ export default function QuizInputForm({
 
       {/* List Section */}
       {showRecentQuizzes && (
-      <div className="admin-card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "2px solid #e0e0e0",
-            paddingBottom: "10px",
-            marginBottom: "20px",
-            flexWrap: "wrap",
-            gap: "12px",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-            <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
-              Recently Added Quizzes
-            </h2>
-            <div className="list-visibility-counter">
-              Showing <strong>{filteredQuizzes.length}</strong> of{" "}
-              <strong>{metrics.totalQuizzes || totalCount}</strong> questions
-              {metrics.totalQuizzes > 0 && (
-                <span className="visibility-ratio">
-                  (
-                  {Math.round(
-                    (filteredQuizzes.length / metrics.totalQuizzes) * 100,
-                  )}
-                  % of bank)
-                </span>
-              )}
+        <div className="admin-card">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              borderBottom: "2px solid #e0e0e0",
+              paddingBottom: "10px",
+              marginBottom: "20px",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "3px" }}
+            >
+              <h2 style={{ margin: 0, borderBottom: "none", paddingBottom: 0 }}>
+                Recently Added Quizzes
+              </h2>
+              <div className="list-visibility-counter">
+                Showing <strong>{filteredQuizzes.length}</strong> of{" "}
+                <strong>{metrics.totalQuizzes || totalCount}</strong> questions
+                {metrics.totalQuizzes > 0 && (
+                  <span className="visibility-ratio">
+                    (
+                    {Math.round(
+                      (filteredQuizzes.length / metrics.totalQuizzes) * 100,
+                    )}
+                    % of bank)
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="list-header-actions">
-            <div className="sort-wrapper">
-              <label
-                htmlFor="sort-by-select"
-                className="sort-label"
-                title="Sort Quizzes"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="sort-icon"
-                  aria-hidden="true"
+            <div className="list-header-actions">
+              <div className="sort-wrapper">
+                <label
+                  htmlFor="sort-by-select"
+                  className="sort-label"
+                  title="Sort Quizzes"
                 >
-                  <path d="m3 16 4 4 4-4" />
-                  <path d="M7 20V4" />
-                  <path d="m21 8-4-4-4 4" />
-                  <path d="M17 4v16" />
-                </svg>
-                <span className="sort-label-text">Sort:</span>
-              </label>
-              <select
-                id="sort-by-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="sort-select"
-                aria-label="Sort quizzes"
-              >
-                <option value="id_desc">ID: High to Low (Newest)</option>
-                <option value="id_asc">ID: Low to High (Oldest)</option>
-                <option value="text_asc">Question: A → Z</option>
-                <option value="text_desc">Question: Z → A</option>
-                <option value="diff_asc">Difficulty: Easy → Hard</option>
-                <option value="diff_desc">Difficulty: Hard → Easy</option>
-              </select>
-            </div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="sort-icon"
+                    aria-hidden="true"
+                  >
+                    <path d="m3 16 4 4 4-4" />
+                    <path d="M7 20V4" />
+                    <path d="m21 8-4-4-4 4" />
+                    <path d="M17 4v16" />
+                  </svg>
+                  <span className="sort-label-text">Sort:</span>
+                </label>
+                <select
+                  id="sort-by-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sort-select"
+                  aria-label="Sort quizzes"
+                >
+                  <option value="id_desc">ID: High to Low (Newest)</option>
+                  <option value="id_asc">ID: Low to High (Oldest)</option>
+                  <option value="text_asc">Question: A → Z</option>
+                  <option value="text_desc">Question: Z → A</option>
+                  <option value="diff_asc">Difficulty: Easy → Hard</option>
+                  <option value="diff_desc">Difficulty: Hard → Easy</option>
+                </select>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`filter-toggle-btn ${isFilterOpen || hasActiveFilters ? "active" : ""}`}
-              aria-expanded={isFilterOpen}
-              title="Toggle Filters"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-funnel-icon lucide-funnel"
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`filter-toggle-btn ${isFilterOpen || hasActiveFilters ? "active" : ""}`}
+                aria-expanded={isFilterOpen}
+                title="Toggle Filters"
               >
-                <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
-              </svg>
-              <span>Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="filter-badge">{activeFilterCount}</span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Active Filters Display */}
-        {hasActiveFilters && (
-          <div className="active-filters-bar" aria-label="Active filters">
-            <span
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: "600",
-                color: "#666",
-              }}
-            >
-              Active:
-            </span>
-            {idFilter.trim() !== "" && (
-              <span className="active-filter-tag">
-                ID: #{idFilter.replace(/^[#\s]+/, "")}
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setIdFilter("")}
-                  title="Remove ID filter"
-                  aria-label="Remove ID filter"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {searchFilter.trim() !== "" && (
-              <span className="active-filter-tag">
-                Search: &ldquo;{searchFilter}&rdquo;
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setSearchFilter("")}
-                  title="Remove search query"
-                  aria-label="Remove search query"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {categoryFilter !== "" && (
-              <span className="active-filter-tag">
-                Cat: {categoryFilter}
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setCategoryFilter("")}
-                  title="Remove category filter"
-                  aria-label="Remove category filter"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {sectionFilter !== "" && (
-              <span className="active-filter-tag">
-                Sec: {sectionFilter}
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setSectionFilter("")}
-                  title="Remove section filter"
-                  aria-label="Remove section filter"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {difficultyFilter !== "" && (
-              <span className="active-filter-tag">
-                Diff: {difficultyFilter}
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setDifficultyFilter("")}
-                  title="Remove difficulty filter"
-                  aria-label="Remove difficulty filter"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {typeFilter !== "" && (
-              <span className="active-filter-tag">
-                Type: {typeFilter}
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setTypeFilter("")}
-                  title="Remove type filter"
-                  aria-label="Remove type filter"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {sortBy !== "id_desc" && (
-              <span className="active-filter-tag">
-                Sort:{" "}
-                {sortBy === "id_asc"
-                  ? "Oldest First"
-                  : sortBy === "text_asc"
-                    ? "A → Z"
-                    : sortBy === "text_desc"
-                      ? "Z → A"
-                      : sortBy === "diff_asc"
-                        ? "Easy → Hard"
-                        : sortBy === "diff_desc"
-                          ? "Hard → Easy"
-                          : sortBy}
-                <button
-                  type="button"
-                  className="active-filter-tag-close"
-                  onClick={() => setSortBy("id_desc")}
-                  title="Reset to default sort"
-                  aria-label="Reset to default sort"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            <button
-              type="button"
-              className="filter-clear-btn"
-              onClick={handleClearFilters}
-              style={{ marginLeft: "auto", fontSize: "0.78rem" }}
-            >
-              Clear All
-            </button>
-          </div>
-        )}
-
-        {/* Collapsible Filter Panel */}
-        {isFilterOpen && (
-          <div className="filter-panel">
-            <div className="filter-panel-header">
-              <span className="filter-label-container">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
@@ -2082,405 +1932,501 @@ export default function QuizInputForm({
                 >
                   <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
                 </svg>
-                <span>Filter & Search Options</span>
-              </span>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className="filter-clear-btn"
-                >
-                  Clear Filters
-                </button>
-              )}
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="filter-badge">{activeFilterCount}</span>
+                )}
+              </button>
             </div>
-            <div className="filter-grid">
-              {/* Question ID Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Question ID</span>
-                <div
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={idFilter}
-                    onChange={(e) => setIdFilter(e.target.value)}
-                    placeholder="e.g. 42 or #42"
-                    className="filter-input"
-                    aria-label="Filter by Question ID"
-                  />
-                  {idFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setIdFilter("")}
-                      style={{
-                        position: "absolute",
-                        right: "10px",
-                        background: "none",
-                        border: "none",
-                        color: "#999",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        padding: 0,
-                      }}
-                      title="Clear ID filter"
-                      aria-label="Clear ID filter"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
+          </div>
 
-              {/* Search Prompt Text Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Search Prompt / Text</span>
-                <div
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={searchFilter}
-                    onChange={(e) => setSearchFilter(e.target.value)}
-                    placeholder="Search question text..."
-                    className="filter-input"
-                    aria-label="Search by prompt text"
-                  />
-                  {searchFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchFilter("")}
-                      style={{
-                        position: "absolute",
-                        right: "10px",
-                        background: "none",
-                        border: "none",
-                        color: "#999",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        padding: 0,
-                      }}
-                      title="Clear search text"
-                      aria-label="Clear search text"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Category Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Category</span>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="filter-select"
-                  aria-label="Filter by category"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat.cat_id} value={cat.cat_name}>
-                      {cat.cat_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Section Filter */}
-              {sections.length > 0 && (
-                <div className="filter-group">
-                  <span className="filter-group-title">Section</span>
-                  <select
-                    value={sectionFilter}
-                    onChange={(e) => setSectionFilter(e.target.value)}
-                    className="filter-select"
-                    aria-label="Filter by section"
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="active-filters-bar" aria-label="Active filters">
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: "600",
+                  color: "#666",
+                }}
+              >
+                Active:
+              </span>
+              {idFilter.trim() !== "" && (
+                <span className="active-filter-tag">
+                  ID: #{idFilter.replace(/^[#\s]+/, "")}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setIdFilter("")}
+                    title="Remove ID filter"
+                    aria-label="Remove ID filter"
                   >
-                    <option value="">All Sections</option>
-                    {sections.map((sec) => (
-                      <option key={sec.sec_id} value={sec.sec_num.toString()}>
-                        Section {sec.sec_num}
+                    ×
+                  </button>
+                </span>
+              )}
+              {searchFilter.trim() !== "" && (
+                <span className="active-filter-tag">
+                  Search: &ldquo;{searchFilter}&rdquo;
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setSearchFilter("")}
+                    title="Remove search query"
+                    aria-label="Remove search query"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {categoryFilter !== "" && (
+                <span className="active-filter-tag">
+                  Cat: {categoryFilter}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setCategoryFilter("")}
+                    title="Remove category filter"
+                    aria-label="Remove category filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {sectionFilter !== "" && (
+                <span className="active-filter-tag">
+                  Sec: {sectionFilter}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setSectionFilter("")}
+                    title="Remove section filter"
+                    aria-label="Remove section filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {difficultyFilter !== "" && (
+                <span className="active-filter-tag">
+                  Diff: {difficultyFilter}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setDifficultyFilter("")}
+                    title="Remove difficulty filter"
+                    aria-label="Remove difficulty filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {typeFilter !== "" && (
+                <span className="active-filter-tag">
+                  Type: {typeFilter}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setTypeFilter("")}
+                    title="Remove type filter"
+                    aria-label="Remove type filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {sortBy !== "id_desc" && (
+                <span className="active-filter-tag">
+                  Sort:{" "}
+                  {sortBy === "id_asc"
+                    ? "Oldest First"
+                    : sortBy === "text_asc"
+                      ? "A → Z"
+                      : sortBy === "text_desc"
+                        ? "Z → A"
+                        : sortBy === "diff_asc"
+                          ? "Easy → Hard"
+                          : sortBy === "diff_desc"
+                            ? "Hard → Easy"
+                            : sortBy}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setSortBy("id_desc")}
+                    title="Reset to default sort"
+                    aria-label="Reset to default sort"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              <button
+                type="button"
+                className="filter-clear-btn"
+                onClick={handleClearFilters}
+                style={{ marginLeft: "auto", fontSize: "0.78rem" }}
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
+          {/* Collapsible Filter Panel */}
+          {isFilterOpen && (
+            <div className="filter-panel">
+              <div className="filter-panel-header">
+                <span className="filter-label-container">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-funnel-icon lucide-funnel"
+                  >
+                    <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
+                  </svg>
+                  <span>Filter & Search Options</span>
+                </span>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="filter-clear-btn"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              <div className="filter-grid">
+                {/* Question ID Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Question ID</span>
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={idFilter}
+                      onChange={(e) => setIdFilter(e.target.value)}
+                      placeholder="e.g. 42 or #42"
+                      className="filter-input"
+                      aria-label="Filter by Question ID"
+                    />
+                    {idFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setIdFilter("")}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          background: "none",
+                          border: "none",
+                          color: "#999",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          padding: 0,
+                        }}
+                        title="Clear ID filter"
+                        aria-label="Clear ID filter"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Search Prompt Text Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">
+                    Search Prompt / Text
+                  </span>
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={searchFilter}
+                      onChange={(e) => setSearchFilter(e.target.value)}
+                      placeholder="Search question text..."
+                      className="filter-input"
+                      aria-label="Search by prompt text"
+                    />
+                    {searchFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchFilter("")}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          background: "none",
+                          border: "none",
+                          color: "#999",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          padding: 0,
+                        }}
+                        title="Clear search text"
+                        aria-label="Clear search text"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Category</span>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by category"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.cat_id} value={cat.cat_name}>
+                        {cat.cat_name}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
 
-              {/* Difficulty Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Difficulty</span>
-                <select
-                  value={difficultyFilter}
-                  onChange={(e) => setDifficultyFilter(e.target.value)}
-                  className="filter-select"
-                  aria-label="Filter by difficulty"
-                >
-                  <option value="">All Difficulties</option>
-                  {difficulties.map((diff) => (
-                    <option
-                      key={diff.difficulty_id}
-                      value={diff.difficulty_name}
+                {/* Section Filter */}
+                {sections.length > 0 && (
+                  <div className="filter-group">
+                    <span className="filter-group-title">Section</span>
+                    <select
+                      value={sectionFilter}
+                      onChange={(e) => setSectionFilter(e.target.value)}
+                      className="filter-select"
+                      aria-label="Filter by section"
                     >
-                      {diff.difficulty_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                      <option value="">All Sections</option>
+                      {sections.map((sec) => (
+                        <option key={sec.sec_id} value={sec.sec_num.toString()}>
+                          Section {sec.sec_num}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {/* Type Filter */}
-              <div className="filter-group">
-                <span className="filter-group-title">Quiz Type</span>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="filter-select"
-                  aria-label="Filter by quiz type"
-                >
-                  <option value="">All Types</option>
-                  {types.map((t) => (
-                    <option key={t.quiz_type_id} value={t.type_name}>
-                      {t.type_name}
-                    </option>
-                  ))}
-                </select>
+                {/* Difficulty Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Difficulty</span>
+                  <select
+                    value={difficultyFilter}
+                    onChange={(e) => setDifficultyFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by difficulty"
+                  >
+                    <option value="">All Difficulties</option>
+                    {difficulties.map((diff) => (
+                      <option
+                        key={diff.difficulty_id}
+                        value={diff.difficulty_name}
+                      >
+                        {diff.difficulty_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Type Filter */}
+                <div className="filter-group">
+                  <span className="filter-group-title">Quiz Type</span>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="filter-select"
+                    aria-label="Filter by quiz type"
+                  >
+                    <option value="">All Types</option>
+                    {types.map((t) => (
+                      <option key={t.quiz_type_id} value={t.type_name}>
+                        {t.type_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {recentQuizzes.length === 0 ? (
-          <div className="empty-state">
-            No quiz questions created yet. Use the form on the left to add one!
-          </div>
-        ) : filteredQuizzes.length === 0 ? (
-          <div className="empty-state">
-            <p style={{ margin: "0 0 12px 0" }}>
-              No quiz questions found matching the selected filters.
-            </p>
-            <button
-              type="button"
-              className="filter-clear-btn"
+          {recentQuizzes.length === 0 ? (
+            <div className="empty-state">
+              No quiz questions created yet. Use the form on the left to add
+              one!
+            </div>
+          ) : filteredQuizzes.length === 0 ? (
+            <div className="empty-state">
+              <p style={{ margin: "0 0 12px 0" }}>
+                No quiz questions found matching the selected filters.
+              </p>
+              <button
+                type="button"
+                className="filter-clear-btn"
+                style={{
+                  backgroundColor: "#fee2e2",
+                  color: "#ef4444",
+                  border: "1px solid #fca5a5",
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  display: "inline-block",
+                }}
+                onClick={handleClearFilters}
+              >
+                Reset All Filters
+              </button>
+            </div>
+          ) : (
+            <div
               style={{
-                backgroundColor: "#fee2e2",
-                color: "#ef4444",
-                border: "1px solid #fca5a5",
-                padding: "6px 14px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                display: "inline-block",
+                maxHeight: "1144px",
+                overflowY: "auto",
+                paddingRight: "10px",
               }}
-              onClick={handleClearFilters}
             >
-              Reset All Filters
-            </button>
-          </div>
-        ) : (
-          <div
-            style={{
-              maxHeight: "1144px",
-              overflowY: "auto",
-              paddingRight: "10px",
-            }}
-          >
-            {filteredQuizzes.map((quiz) => {
-              const payload = quiz.quiz_payload;
-              return (
-                <div key={quiz.quiz_id} className="quiz-list-item">
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: "16px",
-                    }}
-                  >
-                    <div
-                      className="quiz-list-question"
-                      style={{ marginBottom: 0 }}
-                    >
-                      {quiz.type_name === "CP" && quiz.quiz_payload?.title
-                        ? quiz.quiz_payload.title
-                        : quiz.question_text}
-                    </div>
+              {filteredQuizzes.map((quiz) => {
+                const payload = quiz.quiz_payload;
+                return (
+                  <div key={quiz.quiz_id} className="quiz-list-item">
                     <div
                       style={{
                         display: "flex",
-                        gap: "8px",
-                        flexShrink: 0,
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "16px",
                       }}
                     >
-                      <button
-                        type="button"
-                        className="btn-preview"
-                        onClick={() =>
-                          router.push(`/test?quizId=${quiz.quiz_id}`)
-                        }
-                        title={`Preview Question (ID: #${quiz.quiz_id})`}
-                        aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
+                      <div
+                        className="quiz-list-question"
+                        style={{ marginBottom: 0 }}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-eye"
-                        >
-                          <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-edit"
-                        onClick={() => handleEdit(quiz)}
-                        title={`Edit Question (ID: #${quiz.quiz_id})`}
-                        aria-label={`Edit Question (ID: #${quiz.quiz_id})`}
+                        {quiz.type_name === "CP" && quiz.quiz_payload?.title
+                          ? quiz.quiz_payload.title
+                          : quiz.question_text}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexShrink: 0,
+                        }}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-pencil"
+                        <button
+                          type="button"
+                          className="btn-preview"
+                          onClick={() =>
+                            router.push(`/test?quizId=${quiz.quiz_id}`)
+                          }
+                          title={`Preview Question (ID: #${quiz.quiz_id})`}
+                          aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
                         >
-                          <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
-                          <path d="m16 5 3 3" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={() => handleDelete(quiz.quiz_id)}
-                        title={`Delete Question (ID: #${quiz.quiz_id})`}
-                        aria-label={`Delete Question (ID: #${quiz.quiz_id})`}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-trash-2"
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-eye"
+                          >
+                            <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-edit"
+                          onClick={() => handleEdit(quiz)}
+                          title={`Edit Question (ID: #${quiz.quiz_id})`}
+                          aria-label={`Edit Question (ID: #${quiz.quiz_id})`}
                         >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          <line x1="10" x2="10" y1="11" y2="17" />
-                          <line x1="14" x2="14" y1="11" y2="17" />
-                        </svg>
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-pencil"
+                          >
+                            <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                            <path d="m16 5 3 3" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          onClick={() => handleDelete(quiz.quiz_id)}
+                          title={`Delete Question (ID: #${quiz.quiz_id})`}
+                          aria-label={`Delete Question (ID: #${quiz.quiz_id})`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-trash-2"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" x2="10" y1="11" y2="17" />
+                            <line x1="14" x2="14" y1="11" y2="17" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="quiz-badge-row">
-                    {(() => {
-                      const cleanFilter = idFilter
-                        .replace(/^[#\s]+/, "")
-                        .trim();
-                      const isThisIdFiltered =
-                        cleanFilter !== "" &&
-                        cleanFilter === quiz.quiz_id.toString();
-                      return (
-                        <div
-                          className={`badge-id-container ${isThisIdFiltered ? "active-filter" : ""}`}
-                        >
-                          <button
-                            type="button"
-                            className={`badge badge-id ${copiedQuizId === quiz.quiz_id ? "copied" : ""}`}
-                            onClick={() => handleCopyId(quiz.quiz_id)}
-                            title="Click to copy Question ID"
-                            aria-label={`Copy Question ID ${quiz.quiz_id}`}
+                    <div className="quiz-badge-row">
+                      {(() => {
+                        const cleanFilter = idFilter
+                          .replace(/^[#\s]+/, "")
+                          .trim();
+                        const isThisIdFiltered =
+                          cleanFilter !== "" &&
+                          cleanFilter === quiz.quiz_id.toString();
+                        return (
+                          <div
+                            className={`badge-id-container ${isThisIdFiltered ? "active-filter" : ""}`}
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="11"
-                              height="11"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
+                            <button
+                              type="button"
+                              className={`badge badge-id ${copiedQuizId === quiz.quiz_id ? "copied" : ""}`}
+                              onClick={() => handleCopyId(quiz.quiz_id)}
+                              title="Click to copy Question ID"
+                              aria-label={`Copy Question ID ${quiz.quiz_id}`}
                             >
-                              {copiedQuizId === quiz.quiz_id ? (
-                                <polyline points="20 6 9 17 4 12" />
-                              ) : (
-                                <>
-                                  <rect
-                                    width="14"
-                                    height="14"
-                                    x="8"
-                                    y="8"
-                                    rx="2"
-                                    ry="2"
-                                  />
-                                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                                </>
-                              )}
-                            </svg>
-                            <span>
-                              {copiedQuizId === quiz.quiz_id
-                                ? "Copied!"
-                                : `ID: #${quiz.quiz_id}`}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className={`badge-id-filter-btn ${isThisIdFiltered ? "filtered" : ""}`}
-                            onClick={() => handleToggleIdFilter(quiz.quiz_id)}
-                            title={
-                              isThisIdFiltered
-                                ? "Clear ID filter"
-                                : "Filter by this Question ID"
-                            }
-                            aria-label={
-                              isThisIdFiltered
-                                ? "Clear ID filter"
-                                : `Filter by Question ID ${quiz.quiz_id}`
-                            }
-                          >
-                            {isThisIdFiltered ? (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="11"
-                                height="11"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                              >
-                                <path d="M18 6 6 18" />
-                                <path d="m6 6 12 12" />
-                              </svg>
-                            ) : (
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="11"
@@ -2493,182 +2439,284 @@ export default function QuizInputForm({
                                 strokeLinejoin="round"
                                 aria-hidden="true"
                               >
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.3-4.3" />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })()}
-                    <span className="badge badge-cat">{quiz.cat_name}</span>
-                    {quiz.sec_num && (
-                      <span className="badge badge-type">
-                        Section {quiz.sec_num}
-                      </span>
-                    )}
-                    <span className="badge badge-diff">
-                      {quiz.difficulty_name}
-                    </span>
-                    <span className="badge badge-type">{quiz.type_name}</span>
-                    {quiz.type_name === "MCQ" && payload?.options && (
-                      <span
-                        className="badge badge-metric-tag"
-                        title="Number of options"
-                      >
-                        {payload.options.length} options
-                      </span>
-                    )}
-                    {quiz.type_name === "Order" && payload?.items && (
-                      <span
-                        className="badge badge-metric-tag"
-                        title="Sequence items"
-                      >
-                        {payload.items.length} items
-                      </span>
-                    )}
-                    {quiz.type_name === "Pair" && payload?.pairs && (
-                      <span
-                        className="badge badge-metric-tag"
-                        title="Matching pairs"
-                      >
-                        {payload.pairs.length} pairs
-                      </span>
-                    )}
-                    {quiz.type_name === "CP" && (
-                      <span
-                        className="badge badge-metric-tag"
-                        title="Problem steps"
-                      >
-                        {payload?.steps?.length ||
-                          payload?.prompts?.length ||
-                          1}{" "}
-                        step{(payload?.steps?.length || 1) > 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-                  {payload && (
-                    <div className="quiz-payload-preview">
-                      {/* MCQ Rendering */}
-                      {quiz.type_name === "MCQ" && payload.options && (
-                        <div>
-                          <strong>Options:</strong>
-                          {payload.options.map((opt: string, i: number) => {
-                            const isCorrect = payload.correct_index === i;
-                            return (
-                              <div key={i} className="quiz-payload-option">
-                                <span>
-                                  {i + 1}. {opt}
-                                </span>
-                                {isCorrect && (
-                                  <span className="correct-text">
-                                    (Correct)
-                                  </span>
+                                {copiedQuizId === quiz.quiz_id ? (
+                                  <polyline points="20 6 9 17 4 12" />
+                                ) : (
+                                  <>
+                                    <rect
+                                      width="14"
+                                      height="14"
+                                      x="8"
+                                      y="8"
+                                      rx="2"
+                                      ry="2"
+                                    />
+                                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                                  </>
                                 )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* FITB Rendering */}
-                      {quiz.type_name === "FITB" && (
-                        <div>
-                          <strong>Correct Answer:</strong>{" "}
-                          <span className="correct-text">{payload.answer}</span>
-                        </div>
-                      )}
-
-                      {/* Order Rendering */}
-                      {quiz.type_name === "Order" && payload.items && (
-                        <div>
-                          <strong>Correct Order:</strong>
-                          {payload.items.map((item: string, i: number) => (
-                            <div
-                              key={i}
-                              style={{
-                                margin: "4px 0",
-                              }}
+                              </svg>
+                              <span>
+                                {copiedQuizId === quiz.quiz_id
+                                  ? "Copied!"
+                                  : `ID: #${quiz.quiz_id}`}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`badge-id-filter-btn ${isThisIdFiltered ? "filtered" : ""}`}
+                              onClick={() => handleToggleIdFilter(quiz.quiz_id)}
+                              title={
+                                isThisIdFiltered
+                                  ? "Clear ID filter"
+                                  : "Filter by this Question ID"
+                              }
+                              aria-label={
+                                isThisIdFiltered
+                                  ? "Clear ID filter"
+                                  : `Filter by Question ID ${quiz.quiz_id}`
+                              }
                             >
-                              {i + 1}. {item}
-                            </div>
-                          ))}
-                        </div>
+                              {isThisIdFiltered ? (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="11"
+                                  height="11"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <path d="M18 6 6 18" />
+                                  <path d="m6 6 12 12" />
+                                </svg>
+                              ) : (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="11"
+                                  height="11"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="11" cy="11" r="8" />
+                                  <path d="m21 21-4.3-4.3" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })()}
+                      <span className="badge badge-cat">{quiz.cat_name}</span>
+                      {quiz.sec_num && (
+                        <span className="badge badge-type">
+                          Section {quiz.sec_num}
+                        </span>
                       )}
-
-                      {/* Pair Rendering */}
-                      {quiz.type_name === "Pair" && payload.pairs && (
-                        <div>
-                          <strong>Matching Pairs:</strong>
-                          {payload.pairs.map((pair: any, i: number) => (
-                            <div
-                              key={i}
-                              style={{
-                                margin: "4px 0",
-                              }}
-                            >
-                              <code>{pair.left}</code> &harr;{" "}
-                              <code>{pair.right}</code>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* CP Rendering */}
-                      {quiz.type_name === "CP" && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }}
+                      <span className="badge badge-diff">
+                        {quiz.difficulty_name}
+                      </span>
+                      <span className="badge badge-type">{quiz.type_name}</span>
+                      {quiz.type_name === "MCQ" && payload?.options && (
+                        <span
+                          className="badge badge-metric-tag"
+                          title="Number of options"
                         >
-                          {payload.steps && payload.steps.length > 0 ? (
-                            payload.steps.map((step: any, sIdx: number) => (
+                          {payload.options.length} options
+                        </span>
+                      )}
+                      {quiz.type_name === "Order" && payload?.items && (
+                        <span
+                          className="badge badge-metric-tag"
+                          title="Sequence items"
+                        >
+                          {payload.items.length} items
+                        </span>
+                      )}
+                      {quiz.type_name === "Pair" && payload?.pairs && (
+                        <span
+                          className="badge badge-metric-tag"
+                          title="Matching pairs"
+                        >
+                          {payload.pairs.length} pairs
+                        </span>
+                      )}
+                      {quiz.type_name === "CP" && (
+                        <span
+                          className="badge badge-metric-tag"
+                          title="Problem steps"
+                        >
+                          {payload?.steps?.length ||
+                            payload?.prompts?.length ||
+                            1}{" "}
+                          step{(payload?.steps?.length || 1) > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                    {payload && (
+                      <div className="quiz-payload-preview">
+                        {/* MCQ Rendering */}
+                        {quiz.type_name === "MCQ" && payload.options && (
+                          <div>
+                            <strong>Options:</strong>
+                            {payload.options.map((opt: string, i: number) => {
+                              const isCorrect = payload.correct_index === i;
+                              return (
+                                <div key={i} className="quiz-payload-option">
+                                  <span>
+                                    {i + 1}. {opt}
+                                  </span>
+                                  {isCorrect && (
+                                    <span className="correct-text">
+                                      (Correct)
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* FITB Rendering */}
+                        {quiz.type_name === "FITB" && (
+                          <div>
+                            <strong>Correct Answer:</strong>{" "}
+                            <span className="correct-text">
+                              {payload.answer}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Order Rendering */}
+                        {quiz.type_name === "Order" && payload.items && (
+                          <div>
+                            <strong>Correct Order:</strong>
+                            {payload.items.map((item: string, i: number) => (
                               <div
-                                key={sIdx}
+                                key={i}
                                 style={{
-                                  backgroundColor: "#f8fafc",
-                                  border: "1px solid #cbd5e1",
-                                  padding: "10px 12px",
-                                  borderRadius: "8px",
-                                  margin: "2px 0",
+                                  margin: "4px 0",
                                 }}
                               >
+                                {i + 1}. {item}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Pair Rendering */}
+                        {quiz.type_name === "Pair" && payload.pairs && (
+                          <div>
+                            <strong>Matching Pairs:</strong>
+                            {payload.pairs.map((pair: any, i: number) => (
+                              <div
+                                key={i}
+                                style={{
+                                  margin: "4px 0",
+                                }}
+                              >
+                                <code>{pair.left}</code> &harr;{" "}
+                                <code>{pair.right}</code>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* CP Rendering */}
+                        {quiz.type_name === "CP" && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            {payload.steps && payload.steps.length > 0 ? (
+                              payload.steps.map((step: any, sIdx: number) => (
                                 <div
+                                  key={sIdx}
                                   style={{
-                                    fontWeight: "700",
-                                    marginBottom: "4px",
-                                    color: "#1e293b",
+                                    backgroundColor: "#f8fafc",
+                                    border: "1px solid #cbd5e1",
+                                    padding: "10px 12px",
+                                    borderRadius: "8px",
+                                    margin: "2px 0",
                                   }}
                                 >
-                                  Step {sIdx + 1}
-                                </div>
-                                <div>
-                                  <strong>Instruction:</strong> {step.prompt}
-                                </div>
-                                {step.template && (
+                                  <div
+                                    style={{
+                                      fontWeight: "700",
+                                      marginBottom: "4px",
+                                      color: "#1e293b",
+                                    }}
+                                  >
+                                    Step {sIdx + 1}
+                                  </div>
+                                  <div>
+                                    <strong>Instruction:</strong> {step.prompt}
+                                  </div>
+                                  {step.template && (
+                                    <div style={{ marginTop: "6px" }}>
+                                      <strong>Initial Code Template:</strong>
+                                      <pre
+                                        style={{
+                                          margin: "2px 0 0 0",
+                                          backgroundColor: "#f1f5f9",
+                                          padding: "6px",
+                                          borderRadius: "4px",
+                                          fontSize: "0.8rem",
+                                          overflowX: "auto",
+                                        }}
+                                      >
+                                        {step.template}
+                                      </pre>
+                                    </div>
+                                  )}
                                   <div style={{ marginTop: "6px" }}>
-                                    <strong>Initial Code Template:</strong>
+                                    <strong>Expected Output:</strong>
                                     <pre
                                       style={{
                                         margin: "2px 0 0 0",
-                                        backgroundColor: "#f1f5f9",
+                                        backgroundColor: "#e2f0d9",
                                         padding: "6px",
                                         borderRadius: "4px",
                                         fontSize: "0.8rem",
                                         overflowX: "auto",
                                       }}
                                     >
-                                      {step.template}
+                                      {step.expected}
                                     </pre>
                                   </div>
-                                )}
-                                <div style={{ marginTop: "6px" }}>
+                                </div>
+                              ))
+                            ) : (
+                              <div>
+                                <div>
+                                  <strong>Template:</strong>
+                                  <pre
+                                    style={{
+                                      margin: "4px 0",
+                                      backgroundColor: "#eee",
+                                      padding: "6px",
+                                      borderRadius: "4px",
+                                      fontSize: "0.8rem",
+                                      overflowX: "auto",
+                                    }}
+                                  >
+                                    {payload.template}
+                                  </pre>
+                                </div>
+                                <div>
                                   <strong>Expected Output:</strong>
                                   <pre
                                     style={{
-                                      margin: "2px 0 0 0",
+                                      margin: "4px 0",
                                       backgroundColor: "#e2f0d9",
                                       padding: "6px",
                                       borderRadius: "4px",
@@ -2676,79 +2724,45 @@ export default function QuizInputForm({
                                       overflowX: "auto",
                                     }}
                                   >
-                                    {step.expected}
+                                    {payload.expected}
                                   </pre>
                                 </div>
                               </div>
-                            ))
-                          ) : (
-                            <div>
-                              <div>
-                                <strong>Template:</strong>
-                                <pre
-                                  style={{
-                                    margin: "4px 0",
-                                    backgroundColor: "#eee",
-                                    padding: "6px",
-                                    borderRadius: "4px",
-                                    fontSize: "0.8rem",
-                                    overflowX: "auto",
-                                  }}
-                                >
-                                  {payload.template}
-                                </pre>
-                              </div>
-                              <div>
-                                <strong>Expected Output:</strong>
-                                <pre
-                                  style={{
-                                    margin: "4px 0",
-                                    backgroundColor: "#e2f0d9",
-                                    padding: "6px",
-                                    borderRadius: "4px",
-                                    fontSize: "0.8rem",
-                                    overflowX: "auto",
-                                  }}
-                                >
-                                  {payload.expected}
-                                </pre>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-        {totalCount > 0 && (
-          <div className="pagination-controls" aria-label="Quiz pagination">
-            <button
-              type="button"
-              className="pagination-button"
-              onClick={() => loadQuizPage(currentPage - 1)}
-              disabled={isPending || currentPage === 1}
-            >
-              Previous
-            </button>
-            <span className="pagination-status">
-              Page {currentPage} of {totalPages} ({totalCount} questions)
-            </span>
-            <button
-              type="button"
-              className="pagination-button"
-              onClick={() => loadQuizPage(currentPage + 1)}
-              disabled={isPending || currentPage === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </div>
+          {totalCount > 0 && (
+            <div className="pagination-controls" aria-label="Quiz pagination">
+              <button
+                type="button"
+                className="pagination-button"
+                onClick={() => loadQuizPage(currentPage - 1)}
+                disabled={isPending || currentPage === 1}
+              >
+                Previous
+              </button>
+              <span className="pagination-status">
+                Page {currentPage} of {totalPages} ({totalCount} questions)
+              </span>
+              <button
+                type="button"
+                className="pagination-button"
+                onClick={() => loadQuizPage(currentPage + 1)}
+                disabled={isPending || currentPage === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </>
   );

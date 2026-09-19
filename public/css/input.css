@@ -60,6 +60,9 @@ textarea {
   grid-template-columns: 1.2fr 1fr;
   gap: 40px;
 }
+.analytics-legacy-hidden {
+  display: none !important;
+}
 .unit-editor-card {
   grid-column: 1 / -1;
   background: var(--input-surface);

@@ -77,6 +77,7 @@ export interface QuizRow extends RowDataPacket {
 
 export interface UnitRow extends RowDataPacket {
   unit_id: number;
+  unit_title: string;
   sec_id: number;
   sec_num?: string;
   unit_lesson_card_json: unknown;
@@ -303,56 +304,26 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   }
 
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
-  const lessonTitle = getText("lesson_title");
+  const lessonTitle = getText("unit_title");
   const lessonContent = getText("lesson_content");
-  const quizQuestion = getText("quiz_question");
-  const quizOptions = [0, 1, 2, 3].map((index) =>
-    getText(`quiz_option_${index}`),
-  );
-  const correctAnswer = getText("correct_answer");
-  const assessmentInstructions = getText("assessment_instructions");
-  const assessmentItems = getText("assessment_items");
-  const passingScore = Number(formData.get("passing_score"));
-
-  if (
-    !lessonTitle ||
-    !lessonContent ||
-    !quizQuestion ||
-    quizOptions.some((option) => !option) ||
-    !correctAnswer ||
-    !quizOptions.includes(correctAnswer) ||
-    !assessmentInstructions ||
-    !assessmentItems ||
-    !Number.isFinite(passingScore)
-  ) {
-    return { error: "Complete all lesson, quiz, and assessment fields." };
+  if (!lessonTitle || !lessonContent) {
+    return { error: "Lesson title and content are required." };
   }
 
   const lessonCard = JSON.stringify({
     title: lessonTitle,
     content: lessonContent,
   });
-  const quiz = JSON.stringify({
-    question: quizQuestion,
-    options: quizOptions,
-    correct_answer: correctAnswer,
-  });
-  const assessment = JSON.stringify({
-    instructions: assessmentInstructions,
-    items: assessmentItems
-      .split(/\r?\n/)
-      .map((item) => item.trim())
-      .filter(Boolean),
-    passing_score: passingScore,
-  });
+  const quiz = JSON.stringify({});
+  const assessment = JSON.stringify({});
 
   try {
     if (unitId) {
       const [result] = await db.query<ResultSetHeader>(
         `UPDATE unit_tbl
-         SET sec_id = ?, unit_lesson_card_json = ?, quiz_json = ?, assessment_json = ?
+         SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?, quiz_json = ?, assessment_json = ?
          WHERE unit_id = ?`,
-        [sectionId, lessonCard, quiz, assessment, unitId],
+        [lessonTitle, sectionId, lessonCard, quiz, assessment, unitId],
       );
       return result.affectedRows === 0
         ? { error: "Unit was not found." }
@@ -360,9 +331,9 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     }
 
     const [result] = await db.query<ResultSetHeader>(
-      `INSERT INTO unit_tbl (sec_id, unit_lesson_card_json, quiz_json, assessment_json)
-       VALUES (?, ?, ?, ?)`,
-      [sectionId, lessonCard, quiz, assessment],
+      `INSERT INTO unit_tbl (unit_title, sec_id, unit_lesson_card_json, quiz_json, assessment_json)
+       VALUES (?, ?, ?, ?, ?)`,
+      [lessonTitle, sectionId, lessonCard, quiz, assessment],
     );
     return { success: true, unitId: result.insertId };
   } catch (error) {
@@ -376,7 +347,7 @@ export async function getUnits() {
 
   try {
     const [rows] = await db.query<UnitRow[]>(
-      `SELECT u.unit_id, u.sec_id, s.sec_num,
+      `SELECT u.unit_id, u.unit_title, u.sec_id, s.sec_num,
               u.unit_lesson_card_json, u.quiz_json, u.assessment_json
        FROM unit_tbl u
        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
