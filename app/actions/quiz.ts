@@ -1314,6 +1314,55 @@ export async function updatePendingQuizFromForm(
   }
 }
 
+export async function updatePendingUnitFromForm(
+  pendingId: number,
+  formData: FormData,
+) {
+  const unitTitle = String(formData.get("unit_title") ?? "").trim();
+  const sectionId = formData.get("sec_id");
+  const lessonCard = String(formData.get("lesson_card") ?? "").trim();
+  const lessonText = String(formData.get("lesson_text") ?? "").trim();
+  const assessment = String(formData.get("assessment") ?? "").trim();
+  const rawQuizJson = formData.get("quiz_json");
+
+  if (!pendingId || !unitTitle || !sectionId || !lessonCard || !lessonText) {
+    return { error: "Unit title, section, lesson card, and lesson text are required." };
+  }
+
+  let quizzes: unknown[];
+  try {
+    quizzes = typeof rawQuizJson === "string" ? JSON.parse(rawQuizJson) : [];
+  } catch {
+    return { error: "The queued quiz data is invalid." };
+  }
+  if (!Array.isArray(quizzes) || quizzes.length === 0) {
+    return { error: "At least one quiz is required for the unit." };
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      `UPDATE pending_tbl
+       SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?,
+           unit_quiz_json = ?, unit_assessment_json = ?
+       WHERE pending_id = ?`,
+      [
+        unitTitle,
+        sectionId,
+        JSON.stringify({ lesson_card: { lesson_format: lessonCard, lesson_text: lessonText } }),
+        JSON.stringify(quizzes),
+        JSON.stringify({ assessment }),
+        pendingId,
+      ],
+    );
+    return result.affectedRows === 0
+      ? { error: "Pending unit was not found." }
+      : { success: true, message: "Pending unit updated successfully." };
+  } catch (error) {
+    console.error("Failed to update pending unit:", error);
+    return { error: "An error occurred while updating the pending unit." };
+  }
+}
+
 export async function deletePendingQuiz(pendingId: number) {
   if (!pendingId) return { error: "Pending quiz ID is required." };
 

@@ -7,6 +7,7 @@ import {
   getPaginatedRecentQuizzes,
   updateQuiz,
   updatePendingQuizFromForm,
+  updatePendingUnitFromForm,
   getPendingQuizById,
   deleteQuiz,
   getQuizMetrics,
@@ -122,6 +123,9 @@ export default function QuizInputForm({
 
   // Live Authoring Input Telemetry States
   const [questionText, setQuestionText] = useState<string>("");
+  const [unitTitle, setUnitTitle] = useState<string>("");
+  const [lessonCard, setLessonCard] = useState<string>("");
+  const [lessonText, setLessonText] = useState<string>("");
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const [selectedDiffId, setSelectedDiffId] = useState<string>("");
   const [selectedSecId, setSelectedSecId] = useState<string>("");
@@ -463,8 +467,9 @@ export default function QuizInputForm({
       setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
       setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
       setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
+      setSelectedUnit(editingQuiz.unit?.toString() ?? "");
       setQuestionText(editingQuiz.question_text ?? "");
-      setAssessment(editingQuiz.quiz_payload?.assessment ?? "");
+      setAssessment(editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "");
       setFitbAnswer(editingQuiz.quiz_payload?.answer ?? "");
       setOrderItems(
         editingQuiz.type_name === "Order" &&
@@ -515,6 +520,9 @@ export default function QuizInputForm({
       setSelectedSecId("");
       setSelectedUnit("");
       setQuestionText("");
+      setUnitTitle("");
+      setLessonCard("");
+      setLessonText("");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -697,14 +705,22 @@ export default function QuizInputForm({
     const formData = new FormData(event.currentTarget);
     formData.set("sec_id", selectedSecId);
     const currentEntry = buildCurrentQuizEntry();
-    const unitQuizBatch = queuedQuizzes.length > 0 ? queuedQuizzes : currentEntry ? [currentEntry] : [];
+    const unitQuizBatch = editingQuiz?._pendingUnit
+      ? (currentEntry ? [currentEntry, ...queuedQuizzes] : queuedQuizzes)
+      : queuedQuizzes.length > 0
+        ? queuedQuizzes
+        : currentEntry
+          ? [currentEntry]
+          : [];
 
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
     }
 
     try {
-      const unitResult = await saveUnit(null, formData);
+      const unitResult = editingQuiz?._pendingUnit
+        ? await updatePendingUnitFromForm(editingQuiz.pending_id, formData)
+        : await saveUnit(null, formData);
       if (unitResult.error) {
         setMessage({ type: "error", text: unitResult.error });
         return;
@@ -722,6 +738,9 @@ export default function QuizInputForm({
       // Reset inputs
       setEditingQuiz(null);
       setQuestionText("");
+      setUnitTitle("");
+      setLessonCard("");
+      setLessonText("");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -750,6 +769,36 @@ export default function QuizInputForm({
   };
 
   const handleEdit = (quiz: any) => {
+    if (quiz.type_name === "Unit") {
+      const pendingQuizzes = Array.isArray(quiz.quiz_payload?.quizzes)
+        ? quiz.quiz_payload.quizzes
+        : [];
+      const firstQuiz = pendingQuizzes[0];
+      if (!firstQuiz) {
+        setMessage({ type: "error", text: "This pending unit has no quizzes to edit." });
+        return;
+      }
+      const lesson = quiz.quiz_payload?.lesson_card?.lesson_card ?? {};
+      const firstQuizTypeName =
+        types.find(
+          (type) =>
+            type.quiz_type_id.toString() ===
+            firstQuiz.quiz_type_id?.toString(),
+        )?.type_name ?? "";
+      setQueuedQuizzes(pendingQuizzes.slice(1));
+      setUnitTitle(quiz.question_text ?? "");
+      setLessonCard(lesson.lesson_format ?? "");
+      setLessonText(lesson.lesson_text ?? "");
+      setAssessment(quiz.quiz_payload?.assessment?.assessment ?? "");
+      setEditingQuiz({
+        ...firstQuiz,
+        type_name: firstQuizTypeName,
+        pending_id: quiz.quiz_id,
+        _pendingUnit: true,
+        unit_assessment: quiz.quiz_payload?.assessment?.assessment ?? "",
+      });
+      return;
+    }
     setEditingQuiz(quiz);
     setSelectedTypeId(quiz.quiz_type_id.toString());
     setSelectedCatId(quiz.cat_id?.toString() ?? "");
@@ -797,6 +846,64 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
+  const handleNextPendingQuiz = () => {
+    if (!editingQuiz?._pendingUnit || queuedQuizzes.length === 0) return;
+
+    const currentEntry = buildCurrentQuizEntry();
+    if (!currentEntry) {
+      setMessage({
+        type: "error",
+        text: "Please complete the current quiz before moving to the next one.",
+      });
+      return;
+    }
+
+    const nextQuiz = queuedQuizzes[0];
+    const nextQuizTypeName =
+      types.find(
+        (type) =>
+          type.quiz_type_id.toString() === nextQuiz.quiz_type_id?.toString(),
+      )?.type_name ?? "";
+    setQueuedQuizzes([...queuedQuizzes.slice(1), currentEntry]);
+    setEditingQuiz({
+      ...nextQuiz,
+      type_name: nextQuizTypeName,
+      pending_id: editingQuiz.pending_id,
+      _pendingUnit: true,
+      unit_assessment: assessment,
+    });
+    setMessage(null);
+  };
+
+  const handlePreviousPendingQuiz = () => {
+    if (!editingQuiz?._pendingUnit || queuedQuizzes.length === 0) return;
+
+    const currentEntry = buildCurrentQuizEntry();
+    if (!currentEntry) {
+      setMessage({
+        type: "error",
+        text: "Please complete the current quiz before moving to the previous one.",
+      });
+      return;
+    }
+
+    const previousQuiz = queuedQuizzes[queuedQuizzes.length - 1];
+    const previousQuizTypeName =
+      types.find(
+        (type) =>
+          type.quiz_type_id.toString() === previousQuiz.quiz_type_id?.toString(),
+      )?.type_name ?? "";
+    setQueuedQuizzes([currentEntry, ...queuedQuizzes.slice(0, -1)]);
+    setEditingQuiz({
+      ...previousQuiz,
+      type_name: previousQuizTypeName,
+      pending_id: editingQuiz.pending_id,
+      _pendingUnit: true,
+      unit_assessment: assessment,
+    });
+    setMessage(null);
+  };
+
   const handleCancelEdit = () => {
     setEditingQuiz(null);
     setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
@@ -804,6 +911,9 @@ export default function QuizInputForm({
     setSelectedDiffId(difficulties[0]?.difficulty_id?.toString() ?? "");
     setSelectedSecId("");
     setQuestionText("");
+    setUnitTitle("");
+    setLessonCard("");
+    setLessonText("");
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
     setFitbAnswer("");
@@ -1346,16 +1456,11 @@ export default function QuizInputForm({
       <div className="admin-card">
         <h2>
           {editingQuiz
-            ? `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
+            ? editingQuiz._pendingUnit
+              ? `Edit Pending Unit (ID: #${editingQuiz.pending_id})`
+              : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
             : "Create New Unit"}
         </h2>
-
-        {message && (
-          <div className={`status-message status-${message.type}`}>
-            {message.text}
-          </div>
-        )}
-
         <form
           id="unit-form"
           key={editingQuiz?.quiz_id ?? "new"}
@@ -1371,6 +1476,8 @@ export default function QuizInputForm({
               type="text"
               className="form-input"
               placeholder="Enter the lesson title..."
+              value={unitTitle}
+              onChange={(event) => setUnitTitle(event.target.value)}
               required
             />
           </div>
@@ -1404,6 +1511,8 @@ export default function QuizInputForm({
               className="form-textarea"
               placeholder="Enter the lesson card / lesson format here..."
               rows={6}
+              value={lessonCard}
+              onChange={(event) => setLessonCard(event.target.value)}
             />
           </div>
 
@@ -1415,6 +1524,8 @@ export default function QuizInputForm({
               className="form-textarea"
               placeholder="Enter the lesson text content here..."
               rows={8}
+              value={lessonText}
+              onChange={(event) => setLessonText(event.target.value)}
             />
           </div>
 
@@ -2106,23 +2217,54 @@ export default function QuizInputForm({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
+              justifyContent: editingQuiz?._pendingUnit
+                ? "space-between"
+                : "flex-start",
+              gap: "16px",
               flexWrap: "wrap",
-              marginTop: "18px",
+              marginTop: "0",
               marginBottom: "18px",
             }}
           >
-            <button
-              type="button"
-              className="btn-primary queue-button"
-              onClick={handleAddToUnitQueue}
-              disabled={isPending || queuedQuizzes.length >= 10}
-            >
-              {queuedQuizzes.length >= 10
-                ? "Unit Full (10/10)"
-                : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
-            </button>
+            {!editingQuiz?._pendingUnit && (
+              <button
+                type="button"
+                className="btn-primary queue-button"
+                onClick={handleAddToUnitQueue}
+                disabled={isPending || queuedQuizzes.length >= 10}
+              >
+                {queuedQuizzes.length >= 10
+                  ? "Unit Full (10/10)"
+                  : `Add Quiz to Unit (${queuedQuizzes.length}/10)`}
+              </button>
+            )}
+            {editingQuiz?._pendingUnit && queuedQuizzes.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  className="btn-primary queue-button"
+                  onClick={handlePreviousPendingQuiz}
+                  disabled={isPending}
+                >
+                  Previous Quiz
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary queue-button"
+                  onClick={handleNextPendingQuiz}
+                  disabled={isPending}
+                >
+                  Next Quiz
+                </button>
+              </>
+            )}
           </div>
+
+          {message && (
+            <div className={`status-message status-${message.type}`}>
+              {message.text}
+            </div>
+          )}
 
           <div className="form-group" style={{ marginTop: "18px" }}>
             <label htmlFor="assessment">Assessment</label>
