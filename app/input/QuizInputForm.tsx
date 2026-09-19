@@ -685,7 +685,17 @@ export default function QuizInputForm({
     setIsPending(true);
     setMessage(null);
 
+    if (!selectedSecId) {
+      setMessage({
+        type: "error",
+        text: "Please select a Section before adding the unit.",
+      });
+      setIsPending(false);
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
+    formData.set("sec_id", selectedSecId);
     const currentEntry = buildCurrentQuizEntry();
     const unitQuizBatch = queuedQuizzes.length > 0 ? queuedQuizzes : currentEntry ? [currentEntry] : [];
 
@@ -1346,7 +1356,12 @@ export default function QuizInputForm({
           </div>
         )}
 
-        <form id="unit-form" key={editingQuiz?.quiz_id ?? "new"} onSubmit={handleSubmit}>
+        <form
+          id="unit-form"
+          key={editingQuiz?.quiz_id ?? "new"}
+          onSubmit={handleSubmit}
+          noValidate={queuedQuizzes.length > 0}
+        >
           <input type="hidden" name="quiz_json" value={JSON.stringify(queuedQuizzes)} />
           <div className="form-group">
             <label htmlFor="unit_title">Lesson Title</label>

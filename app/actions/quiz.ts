@@ -359,14 +359,15 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     const [result] = await db.query<ResultSetHeader>(
       `INSERT INTO pending_tbl
        (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
-        unit_assessment_json, pending_status, pending_name)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+        unit_assessment_json, pending_status, pending_note, pending_name)
+             VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
       [
         lessonTitle,
         sectionId,
         lessonDocument,
         quizDocument,
         assessmentDocument,
+        "",
         pendingName,
       ],
     );
