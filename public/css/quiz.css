@@ -554,7 +554,6 @@
     }
     > .console {
         width: 100%;
-        padding: 4px 0;
         border-top: 2px solid var(--border-main);
         > .header {
             > div {border: none;}
@@ -570,17 +569,33 @@
             }
         }
         .console-output {
+            max-height: 0;
+            min-height: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-top-color: transparent;
+            transition:
+                max-height 250ms ease,
+                min-height 250ms ease,
+                padding 250ms ease,
+                border-top-color 250ms ease;
+        }
+    }
+
+    > .console.console-open {
+        .console-output {
             max-height: 240px;
+            min-height: 180px;
+            overflow: auto;
+            padding-top: 16px;
+            padding-bottom: 16px;
             border-top: 1px solid var(--border-main);
         }
     }
 
     > .console.console-open .console-maximize svg {
         transform: rotate(180deg);
-    }
-
-    > .console.console-open {
-        padding: 0;
     }
 }
 

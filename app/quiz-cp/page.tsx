@@ -294,20 +294,22 @@ export default function QuizPage() {
                                 </button>
                                 </div>
                             </div>
-                            {isConsoleOpen && (
-                                <div className="console-output" aria-live="polite">
-                                    {consoleMessages.length === 0 ? (
-                                        <p className="console-empty">No console output yet.</p>
-                                    ) : (
-                                        consoleMessages.map((message, index) => (
-                                            <div className={`console-line console-${message.level}`} key={`${index}-${message.text}`}>
-                                                <span className="console-level">{message.level}</span>
-                                                <code>{message.text}</code>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
+                            <div
+                                className="console-output"
+                                aria-live="polite"
+                                aria-hidden={!isConsoleOpen}
+                            >
+                                {consoleMessages.length === 0 ? (
+                                    <p className="console-empty">No console output yet.</p>
+                                ) : (
+                                    consoleMessages.map((message, index) => (
+                                        <div className={`console-line console-${message.level}`} key={`${index}-${message.text}`}>
+                                            <span className="console-level">{message.level}</span>
+                                            <code>{message.text}</code>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
