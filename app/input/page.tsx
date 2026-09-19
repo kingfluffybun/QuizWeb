@@ -1,45 +1,23 @@
-import {
-  getQuizMetadata,
-  getQuizMetrics,
-  getPendingQuizzes,
-} from "@/app/actions/quiz";
+import { getQuizMetadata, getUnits, requireAdmin } from "@/app/actions/quiz";
 import { Suspense } from "react";
-import QuizInputForm from "./QuizInputForm";
-import IncomingQuizCard from "@/app/components/IncomingQuizCard";
+import { redirect } from "next/navigation";
+import UnitInputForm from "./UnitInputForm";
 import "#css/input.css";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 async function QuizEditor() {
-  const [metadata, metrics] = await Promise.all([
-    getQuizMetadata(),
-    getQuizMetrics(),
-  ]);
+  const [metadata, units] = await Promise.all([getQuizMetadata(), getUnits()]);
 
   return (
-    <QuizInputForm
-      categories={metadata.categories}
-      difficulties={metadata.difficulties}
-      types={metadata.types}
-      sections={metadata.sections ?? []}
-      initialRecentQuizzes={[]}
-      initialPage={1}
-      initialTotalPages={1}
-      initialTotalCount={0}
-      initialMetrics={metrics}
-      showRecentQuizzes={false}
-      initialEditingQuiz={undefined}
-    />
+    <UnitInputForm sections={metadata.sections ?? []} initialUnits={units} />
   );
 }
 
-async function IncomingQuizzes() {
-  const incomingQuizzes = await getPendingQuizzes("all");
-  return <IncomingQuizCard initialQuizzes={incomingQuizzes} />;
-}
-
 export default async function InputPage() {
+  if (!(await requireAdmin())) redirect("/login");
+
   return (
     <div>
       <header className="admin-header">
@@ -55,11 +33,10 @@ export default async function InputPage() {
       </header>
 
       <main className="admin-container">
-        <Suspense fallback={<div className="admin-card">Loading quiz editor...</div>}>
+        <Suspense
+          fallback={<div className="admin-card">Loading unit editor...</div>}
+        >
           <QuizEditor />
-        </Suspense>
-        <Suspense fallback={<div className="admin-card">Loading incoming quizzes...</div>}>
-          <IncomingQuizzes />
         </Suspense>
       </main>
     </div>
