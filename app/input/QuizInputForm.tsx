@@ -1671,51 +1671,6 @@ export default function QuizInputForm({
             </select>
           </div>
 
-          {/* Contextual Curriculum Gap Nudge */}
-          {(() => {
-            if (!selectedCatId || !selectedDiffId) return null;
-            const cat = categories.find(
-              (c) => c.cat_id.toString() === selectedCatId,
-            );
-            const diff = difficulties.find(
-              (d) => d.difficulty_id.toString() === selectedDiffId,
-            );
-            if (!cat || !diff) return null;
-            const catMatrix = metrics.matrix?.find(
-              (m) => m.cat_name.toLowerCase() === cat.cat_name.toLowerCase(),
-            );
-            const count = catMatrix?.difficulties?.[diff.difficulty_name] ?? 0;
-            return (
-              <div className="curriculum-nudge-pill" role="status">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 16v-4" />
-                  <path d="M12 8h.01" />
-                </svg>
-                <span>
-                  <strong>Curriculum Insight:</strong>{" "}
-                  {count === 0
-                    ? "🚀 High priority! "
-                    : count < 4
-                      ? "💡 Low coverage: "
-                      : "✓ "}
-                  Currently <strong>{count}</strong> {diff.difficulty_name}{" "}
-                  question{count === 1 ? "" : "s"} in <em>{cat.cat_name}</em>.
-                </span>
-              </div>
-            );
-          })()}
-
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div className="form-group">
               <label htmlFor="sec_id">Section</label>
