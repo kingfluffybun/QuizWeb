@@ -75,6 +75,15 @@ export interface QuizRow extends RowDataPacket {
   quiz_payload: any;
 }
 
+export interface UnitRow extends RowDataPacket {
+  unit_id: number;
+  sec_id: number;
+  sec_num?: string;
+  unit_lesson_card_json: unknown;
+  quiz_json: unknown;
+  assessment_json: unknown;
+}
+
 function getIndexedFormValues(formData: FormData, prefix: string) {
   const values: string[] = [];
   for (let index = 0; ; index++) {
@@ -267,6 +276,132 @@ export async function getQuizMetadata() {
   } catch (error) {
     console.error("Failed to fetch quiz metadata:", error);
     return { categories: [], difficulties: [], types: [], sections: [] };
+  }
+}
+
+export async function saveUnit(_state: unknown, formData: FormData) {
+  const unitId = formData.get("unit_id");
+  const sectionId = formData.get("sec_id");
+  if (!sectionId || (unitId && !/^[1-9]\d*$/.test(String(unitId)))) {
+    return { error: "A valid Section ID is required." };
+  }
+
+  const getText = (name: string) => String(formData.get(name) ?? "").trim();
+  const lessonTitle = getText("lesson_title");
+  const lessonContent = getText("lesson_content");
+  const quizQuestion = getText("quiz_question");
+  const quizOptions = [0, 1, 2, 3].map((index) =>
+    getText(`quiz_option_${index}`),
+  );
+  const correctAnswer = getText("correct_answer");
+  const assessmentInstructions = getText("assessment_instructions");
+  const assessmentItems = getText("assessment_items");
+  const passingScore = Number(formData.get("passing_score"));
+
+  if (
+    !lessonTitle ||
+    !lessonContent ||
+    !quizQuestion ||
+    quizOptions.some((option) => !option) ||
+    !correctAnswer ||
+    !quizOptions.includes(correctAnswer) ||
+    !assessmentInstructions ||
+    !assessmentItems ||
+    !Number.isFinite(passingScore)
+  ) {
+    return { error: "Complete all lesson, quiz, and assessment fields." };
+  }
+
+  const lessonCard = JSON.stringify({
+    title: lessonTitle,
+    content: lessonContent,
+  });
+  const quiz = JSON.stringify({
+    question: quizQuestion,
+    options: quizOptions,
+    correct_answer: correctAnswer,
+  });
+  const assessment = JSON.stringify({
+    instructions: assessmentInstructions,
+    items: assessmentItems
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean),
+    passing_score: passingScore,
+  });
+
+  try {
+    if (unitId) {
+      const [result] = await db.query<ResultSetHeader>(
+        `UPDATE unit_tbl
+         SET sec_id = ?, unit_lesson_card_json = ?, quiz_json = ?, assessment_json = ?
+         WHERE unit_id = ?`,
+        [sectionId, lessonCard, quiz, assessment, unitId],
+      );
+      return result.affectedRows === 0
+        ? { error: "Unit was not found." }
+        : { success: true, unitId: Number(unitId) };
+    }
+
+    const [result] = await db.query<ResultSetHeader>(
+      `INSERT INTO unit_tbl (sec_id, unit_lesson_card_json, quiz_json, assessment_json)
+       VALUES (?, ?, ?, ?)`,
+      [sectionId, lessonCard, quiz, assessment],
+    );
+    return { success: true, unitId: result.insertId };
+  } catch (error) {
+    console.error("Failed to save unit:", error);
+    return { error: "An error occurred while saving the unit." };
+  }
+}
+
+export async function getUnits() {
+  try {
+    const [rows] = await db.query<UnitRow[]>(
+      `SELECT u.unit_id, u.sec_id, s.sec_num,
+              u.unit_lesson_card_json, u.quiz_json, u.assessment_json
+       FROM unit_tbl u
+       LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
+       ORDER BY u.unit_id DESC`,
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      unit_lesson_card_json: parseJsonColumn(row.unit_lesson_card_json),
+      quiz_json: parseJsonColumn(row.quiz_json),
+      assessment_json: parseJsonColumn(row.assessment_json),
+    }));
+  } catch (error) {
+    console.error("Failed to fetch units:", error);
+    return [];
+  }
+}
+
+function parseJsonColumn(value: unknown) {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+export async function deleteUnit(unitId: number) {
+  if (!Number.isInteger(unitId) || unitId < 1) {
+    return { error: "A valid Unit ID is required." };
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM unit_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Unit was not found." }
+      : { success: true };
+  } catch (error) {
+    console.error("Failed to delete unit:", error);
+    return { error: "An error occurred while deleting the unit." };
   }
 }
 
@@ -955,7 +1090,10 @@ export async function reviewPendingQuiz(
   }
 }
 
-export async function updatePendingQuiz(pendingId: number, questionText: string) {
+export async function updatePendingQuiz(
+  pendingId: number,
+  questionText: string,
+) {
   if (!pendingId || !questionText.trim()) {
     return { error: "A valid pending quiz and question are required." };
   }
@@ -974,7 +1112,10 @@ export async function updatePendingQuiz(pendingId: number, questionText: string)
   }
 }
 
-export async function updatePendingNote(pendingId: number, pendingNote: string) {
+export async function updatePendingNote(
+  pendingId: number,
+  pendingNote: string,
+) {
   if (!pendingId || !pendingNote.trim()) {
     return { error: "A note is required." };
   }
@@ -1001,10 +1142,14 @@ export async function updatePendingQuizFromForm(
   const secId = formData.get("sec_id");
   const difficultyId = formData.get("difficulty_id");
   const quizTypeId = formData.get("quiz_type_id");
-  const questionText = formData.get("question_text") ?? formData.get("cp_prompt_0");
+  const questionText =
+    formData.get("question_text") ?? formData.get("cp_prompt_0");
 
   if (!pendingId || !catId || !difficultyId || !quizTypeId || !questionText) {
-    return { error: "Quiz ID, category, difficulty, type, and question are all required." };
+    return {
+      error:
+        "Quiz ID, category, difficulty, type, and question are all required.",
+    };
   }
 
   try {
@@ -1020,7 +1165,15 @@ export async function updatePendingQuizFromForm(
       `UPDATE pending_tbl
        SET cat_id = ?, sec_id = ?, difficulty_id = ?, quiz_type_id = ?, question_text = ?, quiz_payload = ?
        WHERE pending_id = ?`,
-      [catId, secId || null, difficultyId, quizTypeId, questionText.toString().trim(), JSON.stringify(parsedPayload.payload), pendingId],
+      [
+        catId,
+        secId || null,
+        difficultyId,
+        quizTypeId,
+        questionText.toString().trim(),
+        JSON.stringify(parsedPayload.payload),
+        pendingId,
+      ],
     );
     return result.affectedRows === 0
       ? { success: true, message: "No changes were needed." }
