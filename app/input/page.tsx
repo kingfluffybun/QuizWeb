@@ -1,20 +1,21 @@
-import { getQuizMetadata, getUnits } from "@/app/actions/quiz";
-import { Suspense } from "react";
-import UnitInputForm from "./UnitInputForm";
-import "#css/input.css";
 import Link from "next/link";
+import {
+  getPaginatedRecentQuizzes,
+  getQuizMetadata,
+  getQuizMetrics,
+} from "@/app/actions/quiz";
+import QuizInputForm from "./QuizInputForm";
+import "#css/input.css";
 
 export const dynamic = "force-dynamic";
 
-async function QuizEditor() {
-  const [metadata, units] = await Promise.all([getQuizMetadata(), getUnits()]);
-
-  return (
-    <UnitInputForm sections={metadata.sections ?? []} initialUnits={units} />
-  );
-}
-
 export default async function InputPage() {
+  const [metadata, recentQuizPage, metrics] = await Promise.all([
+    getQuizMetadata(),
+    getPaginatedRecentQuizzes(),
+    getQuizMetrics(),
+  ]);
+
   return (
     <div>
       <header className="admin-header">
@@ -30,11 +31,17 @@ export default async function InputPage() {
       </header>
 
       <main className="admin-container">
-        <Suspense
-          fallback={<div className="admin-card">Loading unit editor...</div>}
-        >
-          <QuizEditor />
-        </Suspense>
+        <QuizInputForm
+          categories={metadata.categories}
+          difficulties={metadata.difficulties}
+          types={metadata.types}
+          sections={metadata.sections}
+          initialRecentQuizzes={recentQuizPage.quizzes}
+          initialPage={recentQuizPage.currentPage}
+          initialTotalPages={recentQuizPage.totalPages}
+          initialTotalCount={recentQuizPage.totalCount}
+          initialMetrics={metrics}
+        />
       </main>
     </div>
   );
