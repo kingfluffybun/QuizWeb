@@ -312,8 +312,17 @@ export async function saveUnit(_state: unknown, formData: FormData) {
 
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
   const lessonTitle = getText("unit_title");
-  const lessonCard = getText("lesson_card");
-  const lessonText = getText("lesson_text");
+  const lessonSlides = Array.from(formData.entries())
+    .filter(([name]) => /^lesson_card_\d+$/.test(name))
+    .map(([name, value]) => {
+      const index = name.slice("lesson_card_".length);
+      return {
+        lesson_format: String(value).trim(),
+        lesson_text: getText(`lesson_text_${index}`),
+      };
+    });
+  const lessonCard = lessonSlides[0]?.lesson_format ?? "";
+  const lessonText = lessonSlides[0]?.lesson_text ?? "";
   const unitAssessment = getText("assessment");
   if (!lessonTitle || !lessonCard || !lessonText) {
     return {
@@ -342,6 +351,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     lesson_card: {
       lesson_format: lessonCard,
       lesson_text: lessonText,
+      lesson_slides: lessonSlides,
     },
   });
   const quizDocument = JSON.stringify(parsedQuizJson);
@@ -1320,8 +1330,17 @@ export async function updatePendingUnitFromForm(
 ) {
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
   const sectionId = formData.get("sec_id");
-  const lessonCard = String(formData.get("lesson_card") ?? "").trim();
-  const lessonText = String(formData.get("lesson_text") ?? "").trim();
+  const lessonSlides = Array.from(formData.entries())
+    .filter(([name]) => /^lesson_card_\d+$/.test(name))
+    .map(([name, value]) => {
+      const index = name.slice("lesson_card_".length);
+      return {
+        lesson_format: String(value).trim(),
+        lesson_text: String(formData.get(`lesson_text_${index}`) ?? "").trim(),
+      };
+    });
+  const lessonCard = lessonSlides[0]?.lesson_format ?? "";
+  const lessonText = lessonSlides[0]?.lesson_text ?? "";
   const assessment = String(formData.get("assessment") ?? "").trim();
   const rawQuizJson = formData.get("quiz_json");
 
@@ -1348,7 +1367,7 @@ export async function updatePendingUnitFromForm(
       [
         unitTitle,
         sectionId,
-        JSON.stringify({ lesson_card: { lesson_format: lessonCard, lesson_text: lessonText } }),
+        JSON.stringify({ lesson_card: { lesson_format: lessonCard, lesson_text: lessonText, lesson_slides: lessonSlides } }),
         JSON.stringify(quizzes),
         JSON.stringify({ assessment }),
         pendingId,
