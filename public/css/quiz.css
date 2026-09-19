@@ -558,10 +558,59 @@
         border-top: 2px solid var(--border-main);
         > .header {
             > div {border: none;}
-            > .console-maximize {justify-content: flex-end; svg{width: 32px; height: auto;}}
+            > .console-maximize {
+                justify-content: flex-end;
+                border: 0;
+                background: transparent;
+                color: inherit;
+                cursor: pointer;
+                svg {width: 32px; height: auto;}
+            }
+        }
+        .console-output {
+            max-height: 240px;
+            border-top: 1px solid var(--border-main);
         }
     }
+
+    > .console.console-open .console-maximize svg {
+        transform: rotate(180deg);
+    }
 }
+
+.console-output {
+    min-height: 180px;
+    overflow: auto;
+    padding: 16px 20px;
+    background: #111827;
+    color: #E5E7EB;
+    font-family: var(--font-jetbrains-mono);
+}
+
+.console-empty {
+    margin: 0;
+    color: #9CA3AF;
+}
+
+.console-line {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    code {font: inherit;}
+}
+
+.console-level {
+    min-width: 44px;
+    color: #93C5FD;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.console-warn .console-level {color: #FCD34D;}
+.console-error .console-level {color: #FCA5A5;}
 
 
 #code-problem {

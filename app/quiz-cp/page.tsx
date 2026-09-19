@@ -1,7 +1,7 @@
 "use client";
 
 import Editor from "@monaco-editor/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "#css/quiz.css";
 
 const defaultFiles = {
@@ -13,9 +13,17 @@ const defaultFiles = {
 const fileOrder = ["html", "css", "js"] as const;
 type FileKey = (typeof fileOrder)[number];
 
+type ConsoleMessage = {
+  level: "log" | "warn" | "error";
+  text: string;
+};
+
 export default function QuizPage() {
   const [activeFile, setActiveFile] = useState<FileKey>("html");
   const [code, setCode] = useState<Record<FileKey, string>>(defaultFiles);
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
 
   const previewDoc = useMemo(() => {
     const safeJs = code.js.replace(/<\/script>/gi, "<\\/script>");
@@ -27,10 +35,71 @@ export default function QuizPage() {
         </head>
         <body>
           ${code.html}
+          <script>
+            (() => {
+              const formatValue = (value) => {
+                if (typeof value === "string") return value;
+                try {
+                  const serialized = JSON.stringify(value);
+                  return serialized === undefined ? String(value) : serialized;
+                } catch {
+                  return String(value);
+                }
+              };
+
+              const sendConsoleMessage = (level, args) => {
+                parent.postMessage({
+                  source: "quiz-preview-console",
+                  level,
+                  text: args.map(formatValue).join(" ")
+                }, "*");
+              };
+
+              ["log", "warn", "error"].forEach((level) => {
+                const original = console[level];
+                console[level] = (...args) => {
+                  sendConsoleMessage(level, args);
+                  original(...args);
+                };
+              });
+
+              window.addEventListener("error", (event) => {
+                sendConsoleMessage("error", [event.message]);
+              });
+            })();
+          <\/script>
           <script>${safeJs}<\/script>
         </body>
       </html>`;
   }, [code.css, code.html, code.js]);
+
+  useEffect(() => {
+    const handlePreviewMessage = (event: MessageEvent) => {
+      if (event.source !== previewFrameRef.current?.contentWindow) return;
+
+      const data = event.data;
+      if (
+        !data ||
+        data.source !== "quiz-preview-console" ||
+        !["log", "warn", "error"].includes(data.level) ||
+        typeof data.text !== "string"
+      ) {
+        return;
+      }
+
+      setConsoleMessages((messages) => [
+        ...messages,
+        { level: data.level as ConsoleMessage["level"], text: data.text },
+      ]);
+    };
+
+    window.addEventListener("message", handlePreviewMessage);
+    return () => window.removeEventListener("message", handlePreviewMessage);
+  }, []);
+
+  useEffect(() => {
+    setConsoleMessages([]);
+  }, [previewDoc]);
 
   const fileMeta: Record<FileKey, { label: string; language: "html" | "css" | "javascript" }> = {
     html: { label: "index.html", language: "html" },
@@ -209,18 +278,39 @@ export default function QuizPage() {
                         <iframe
                             title="code preview"
                             className="preview-frame"
+                            ref={previewFrameRef}
                             srcDoc={previewDoc}
                         />
-                        <div className="console">
+                        <div className={`console${isConsoleOpen ? " console-open" : ""}`}>
                             <div className="header">
                                 <div>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-terminal"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/></svg>
                                     <h2>Console</h2>
                                 </div>
-                                <div className="console-maximize">
+                                <button
+                                    className="console-maximize"
+                                    type="button"
+                                    aria-label={isConsoleOpen ? "Collapse console output" : "Expand console output"}
+                                    aria-expanded={isConsoleOpen}
+                                    onClick={() => setIsConsoleOpen((isOpen) => !isOpen)}
+                                >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>
-                                </div>
+                                </button>
                             </div>
+                            {isConsoleOpen && (
+                                <div className="console-output" aria-live="polite">
+                                    {consoleMessages.length === 0 ? (
+                                        <p className="console-empty">No console output yet.</p>
+                                    ) : (
+                                        consoleMessages.map((message, index) => (
+                                            <div className={`console-line console-${message.level}`} key={`${index}-${message.text}`}>
+                                                <span className="console-level">{message.level}</span>
+                                                <code>{message.text}</code>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
