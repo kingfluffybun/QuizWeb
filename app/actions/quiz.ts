@@ -115,6 +115,8 @@ function getQuizPayload(typeName: string, formData: FormData) {
       (index) => formData.get(`option_${index}`) as string,
     );
     const correctIndex = formData.get("correct_option_index");
+    const assessment =
+      (formData.get("assessment") as string | null)?.trim() ?? "";
 
     if (options.some((option) => !option) || correctIndex === null) {
       return {
@@ -127,6 +129,7 @@ function getQuizPayload(typeName: string, formData: FormData) {
       payload: {
         options: options.map((option) => option.trim()),
         correct_index: parseInt(correctIndex as string, 10),
+        ...(assessment ? { assessment } : {}),
       },
     };
   }
@@ -238,6 +241,15 @@ function getQuizPayload(typeName: string, formData: FormData) {
   return { error: "Unsupported quiz type." };
 }
 
+async function tableExists(tableName: string) {
+  try {
+    await db.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function getSectionTableName() {
   const candidates = ["sec_tbl", "section_tbl", "sections_tbl"];
 
@@ -305,14 +317,19 @@ export async function saveUnit(_state: unknown, formData: FormData) {
 
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
   const lessonTitle = getText("unit_title");
-  const lessonContent = getText("lesson_content");
-  if (!lessonTitle || !lessonContent) {
-    return { error: "Lesson title and content are required." };
+  const lessonCard = getText("lesson_card");
+  const lessonText = getText("lesson_text");
+  if (!lessonTitle || !lessonCard || !lessonText) {
+    return {
+      error: "Lesson title, lesson card, and lesson text are required.",
+    };
   }
 
-  const lessonCard = JSON.stringify({
-    title: lessonTitle,
-    content: lessonContent,
+  const lessonDocument = JSON.stringify({
+    lesson_card: {
+      lesson_format: lessonCard,
+      lesson_text: lessonText,
+    },
   });
   const quiz = JSON.stringify({});
   const assessment = JSON.stringify({});
@@ -323,7 +340,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
         `UPDATE unit_tbl
          SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?, quiz_json = ?, assessment_json = ?
          WHERE unit_id = ?`,
-        [lessonTitle, sectionId, lessonCard, quiz, assessment, unitId],
+        [lessonTitle, sectionId, lessonDocument, quiz, assessment, unitId],
       );
       return result.affectedRows === 0
         ? { error: "Unit was not found." }
@@ -333,7 +350,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     const [result] = await db.query<ResultSetHeader>(
       `INSERT INTO unit_tbl (unit_title, sec_id, unit_lesson_card_json, quiz_json, assessment_json)
        VALUES (?, ?, ?, ?, ?)`,
-      [lessonTitle, sectionId, lessonCard, quiz, assessment],
+      [lessonTitle, sectionId, lessonDocument, quiz, assessment],
     );
     return { success: true, unitId: result.insertId };
   } catch (error) {
@@ -400,6 +417,20 @@ export async function deleteUnit(unitId: number) {
 
 export async function getQuizMetrics(): Promise<QuizMetricsData> {
   try {
+    const quizTableAvailable = await tableExists("quiz_tbl");
+    if (!quizTableAvailable) {
+      return {
+        totalQuizzes: 0,
+        byCategory: [],
+        byType: [],
+        byDifficulty: [],
+        bySection: [],
+        lowCoverageSections: [],
+        matrix: [],
+        facetedBreakdown: [],
+      };
+    }
+
     // 1. Total count
     const [totalRows] = await db.query<RowDataPacket[]>(
       "SELECT COUNT(*) AS total FROM quiz_tbl",
@@ -570,6 +601,10 @@ export async function getPaginatedRecentQuizzes(
   } = {},
 ) {
   try {
+    if (!(await tableExists("quiz_tbl"))) {
+      return { quizzes: [], currentPage: 1, totalPages: 1, totalCount: 0 };
+    }
+
     const safePageSize = Math.max(1, Math.floor(pageSize));
     const where: string[] = [];
     const params: (string | number)[] = [];
@@ -660,6 +695,13 @@ export async function getRecentQuizzes() {
 }
 
 export async function createQuiz(state: any, formData: FormData) {
+  if (!(await tableExists("quiz_tbl"))) {
+    return {
+      error:
+        "The quiz bank table is not available in the current database schema.",
+    };
+  }
+
   const catId = formData.get("cat_id");
   const secId = formData.get("sec_id");
   const difficultyId = formData.get("difficulty_id");
@@ -745,6 +787,12 @@ export async function deleteQuiz(quizId: number) {
   if (!quizId) {
     return { error: "Quiz ID is required for deletion." };
   }
+  if (!(await tableExists("quiz_tbl"))) {
+    return {
+      error:
+        "The quiz bank table is not available in the current database schema.",
+    };
+  }
   try {
     await db.query("DELETE FROM quiz_tbl WHERE quiz_id = ?", [quizId]);
     return { success: true };
@@ -757,6 +805,13 @@ export async function deleteQuiz(quizId: number) {
 }
 
 export async function updateQuiz(quizId: number, formData: FormData) {
+  if (!(await tableExists("quiz_tbl"))) {
+    return {
+      error:
+        "The quiz bank table is not available in the current database schema.",
+    };
+  }
+
   const catId = formData.get("cat_id");
   const secId = formData.get("sec_id");
   const difficultyId = formData.get("difficulty_id");

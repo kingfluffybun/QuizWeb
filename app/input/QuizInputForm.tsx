@@ -18,7 +18,6 @@ import type {
   QuizType,
   QuizMetricsData,
 } from "../actions/quiz";
-import LessonInputForm from "./LessonInputForm";
 
 interface QuizInputFormProps {
   categories: Category[];
@@ -510,44 +509,29 @@ export default function QuizInputForm({
     const formData = new FormData(event.currentTarget);
 
     try {
-      const lessonResult = await saveUnit(null, formData);
-      if (lessonResult.error) {
-        setMessage({ type: "error", text: lessonResult.error });
+      const unitResult = await saveUnit(null, formData);
+      if (unitResult.error) {
+        setMessage({ type: "error", text: unitResult.error });
         return;
       }
 
-      const result = editingQuiz
-        ? editingQuiz.pending_id
-          ? await updatePendingQuizFromForm(editingQuiz.pending_id, formData)
-          : await updateQuiz(editingQuiz.quiz_id, formData)
-        : await createQuiz(null, formData);
-      if (result.error) {
-        setMessage({ type: "error", text: result.error });
-      } else if (result.success) {
-        setMessage({
-          type: "success",
-          text: editingQuiz
-            ? "Quiz successfully updated!"
-            : "Quiz submitted for review!",
-        });
+      setMessage({
+        type: "success",
+        text: "Unit saved successfully!",
+      });
 
-        if (editingQuiz?.pending_id) {
-          router.replace("/input");
-        }
-        window.dispatchEvent(new Event("quizweb-pending-updated"));
-        router.refresh();
+      router.refresh();
 
-        // Reset inputs
-        setEditingQuiz(null);
-        setQuestionText("");
-        setMcqOptions(["", "", "", ""]);
-        setMcqCorrectIndex(0);
-        setOptionCount(4);
-        setCpPromptCount(1);
+      // Reset inputs
+      setEditingQuiz(null);
+      setQuestionText("");
+      setMcqOptions(["", "", "", ""]);
+      setMcqCorrectIndex(0);
+      setOptionCount(4);
+      setCpPromptCount(1);
 
-        // Refresh list and metrics
-        await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
-      }
+      // Refresh list and metrics
+      await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
     } catch (err) {
       console.error("Submission error:", err);
       setMessage({
@@ -1130,8 +1114,6 @@ export default function QuizInputForm({
 
       {/* Form Section */}
       <div className="admin-card">
-        <LessonInputForm sections={sections} embedded />
-
         <h2>
           {editingQuiz
             ? `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
@@ -1164,6 +1146,28 @@ export default function QuizInputForm({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="lesson_card">Lesson Card</label>
+            <textarea
+              id="lesson_card"
+              name="lesson_card"
+              className="form-textarea"
+              placeholder="Enter the lesson card / lesson format here..."
+              rows={6}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="lesson_text">Lesson Text</label>
+            <textarea
+              id="lesson_text"
+              name="lesson_text"
+              className="form-textarea"
+              placeholder="Enter the lesson text content here..."
+              rows={8}
+            />
           </div>
 
           <div className="form-group">
@@ -1574,6 +1578,18 @@ export default function QuizInputForm({
                   </div>
                 ))}
               </div>
+              <div className="form-group" style={{ marginTop: "18px" }}>
+                <label htmlFor="assessment">Assessment</label>
+                <textarea
+                  id="assessment"
+                  name="assessment"
+                  className="form-textarea"
+                  rows={4}
+                  placeholder="Provide the assessment explanation..."
+                  defaultValue={editingQuiz?.quiz_payload?.assessment ?? ""}
+                />
+              </div>
+
               {/* Duplicate choices warning */}
               {hasDuplicateOptions && (
                 <div className="form-warning-alert" role="alert">
@@ -1822,7 +1838,7 @@ export default function QuizInputForm({
                 : "Adding Quiz..."
               : editingQuiz
                 ? "Save Changes"
-                : "Add Quiz Question"}
+                : "Add New Unit"}
           </button>
           {editingQuiz && (
             <button
