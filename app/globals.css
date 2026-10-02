@@ -3,7 +3,8 @@
     --font-mono: var(--font-jetbrains-mono), monospace;
 
     /* Brand Colors */
-    --primary-color: #9966FF;
+    /* #9966FF;  */
+    --primary-color: #A883EA;
     --selected-color: #7D3FFF;
     --selected-background-color: rgba(153, 102, 255, 0.08);
     --background-color: #A883EA;

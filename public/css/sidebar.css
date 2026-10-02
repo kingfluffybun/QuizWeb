@@ -2,8 +2,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 8vh;
-    padding: 12px 20px;
+    height: 80px;
+    padding: 12px 16px;
     > div {
         line-height: 1.25;
         display: flex; flex-direction: column;
@@ -13,8 +13,25 @@
     }
 }
 
+/* .toggle-sidebar-nav {
+    width: 76px;
+} */
+
+.toggle-sidebar {
+    background-color: transparent;
+    aspect-ratio: 1;
+    padding: 0 8px;
+    margin: 0 4px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    svg {color: white;}
+    &:hover {background-color:#f5f2ff; svg{color: var(--primary-color);}}
+}
+
 .quiz-page.sidebar-collapsed {
-    grid-template-columns: 96px auto;
+    grid-template-columns: 80px auto;
 }
 
 .sidebar {
@@ -30,12 +47,12 @@
         display: flex;
         flex-direction: column;
         flex: 1;
-        padding: 24px 12px;
+        padding: 24px 16px;
         position: relative;
         p, svg {color: var(--text-muted);}
         .sidebar-option {
-            padding: 12px 16px;
-            margin-right: 16px;
+            min-width: 48px;
+            padding: 12px;
             border-radius: 8px;
             display: flex;
             gap: 12px;
@@ -45,7 +62,7 @@
             svg {
                 opacity: 1;
                 transition: opacity 0.2s ease 0.2s;
-                min-width: 28px;
+                min-width: 24px;
             }
             p {
                 font-size: clamp(0.5rem, 1.5vw, 1rem);
@@ -55,25 +72,12 @@
             }
             &:nth-last-child(2) {margin-top: auto;}
         }
-        .toggle-sidebar {
-            position: absolute;
-            background-color: var(--bg-card);
-            width: 40px;
-            height: 40px;
-            border-radius: 999px;
-            border: 2px solid var(--border-main);
-            z-index: 1000;
-            right: -20.5px; top: 32px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            &:hover {border-color: var(--text-muted);}
-        }
     }
 }
 
 .sidebar-option.active {
-    background-color: #ede8ff;
-    > svg, p {color: #701ee3;}
+    background-color: var(--primary-color);
+    > svg, p {color: white;}
 }
 
 .sidebar-option:not(.active):hover {
@@ -83,11 +87,10 @@
 /* harvy preferebly mga nasa 48px-64px yung width ng collapse */
 .quiz-page.sidebar-collapsed {
     .sidebar {
-        width: 96px;
+        width: 80px;
     }
 
     .sidebar-option {
-        padding: 12px;
         p {
             opacity: 0;
             transition: none;
