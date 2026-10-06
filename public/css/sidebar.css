@@ -26,11 +26,13 @@
     border-radius: 999px;
     cursor: pointer;
     transition: all 0.2s ease;
+    outline: none;
     svg {color: white;}
     &:hover {background-color:#f5f2ff; svg{color: var(--primary-color);}}
 }
 
-.quiz-page.sidebar-collapsed {
+.quiz-page.sidebar-collapsed,
+.dashboard-page.sidebar-collapsed {
     grid-template-columns: 80px auto;
 }
 
@@ -43,6 +45,7 @@
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
     > .sidebar-nav {
         display: flex;
         flex-direction: column;
@@ -85,7 +88,8 @@
 }
 
 /* harvy preferebly mga nasa 48px-64px yung width ng collapse */
-.quiz-page.sidebar-collapsed {
+.quiz-page.sidebar-collapsed,
+.dashboard-page.sidebar-collapsed {
     .sidebar {
         width: 80px;
     }
