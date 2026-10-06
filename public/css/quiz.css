@@ -4,7 +4,7 @@
         "navbar navbar"
         "sidebar main"
         "sidebar footer";
-    grid-template-rows: 8vh 1fr clamp(140px, 2vh, 220px);
+    grid-template-rows: 80px 1fr clamp(140px, 2vh, 220px);
     grid-template-columns: 240px auto;
     transition: grid-template-columns 0.2s ease;
     min-height: 100vh;
@@ -25,7 +25,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 48px 0;
+    padding: 48px clamp(24px, 10vw, 200px);
     gap: 32px;
     
 }
