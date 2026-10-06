@@ -95,6 +95,7 @@ function getCPSteps(quiz: QuizData | undefined) {
 export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
     const [isMounted, setIsMounted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
@@ -108,13 +109,10 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     const unitTitle = (activeQuiz as any)?.unit_title ?? "";
     const unitLessonCard = (activeQuiz as any)?.unit_lesson_card ?? {};
     const unitAssessment = (activeQuiz as any)?.unit_assessment ?? {};
-    const lessonText = typeof unitLessonCard === "object"
-        ? unitLessonCard.lesson_slide?.[0]?.lesson_text ??
-          unitLessonCard.lesson_card?.lesson_text ??
-          unitLessonCard.lesson_text ??
-          ""
-        : "";
-    const lessonCardText = lessonText;
+    const lessonSlides = typeof unitLessonCard === "object" && Array.isArray(unitLessonCard.lesson_slide)
+        ? unitLessonCard.lesson_slide
+        : [{ lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "" }];
+    const lessonText = lessonSlides[lessonSlideIndex]?.lesson_text ?? "";
     const assessmentText = typeof unitAssessment === "object"
         ? unitAssessment.assessment ?? ""
         : String(unitAssessment ?? "");
@@ -249,12 +247,35 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 <div className="main-content">
                     <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
 
-                    {(unitTitle || lessonText || lessonCardText) && (
+                    {(unitTitle || lessonText) && (
                         <div className="unit-meta" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
                             {unitTitle && <h2 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>{unitTitle}</h2>}
-                            {(lessonText || lessonCardText) && (
+                            {lessonText && (
                                 <div>
-                                    <strong>Lesson Text:</strong> {lessonText || lessonCardText}
+                                    {lessonText}
+                                </div>
+                            )}
+                            {lessonSlides.length > 1 && (
+                                <div className="lesson-slide-controls">
+                                    <button
+                                        type="button"
+                                        className="lesson-slide-button"
+                                        onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
+                                        disabled={lessonSlideIndex === 0}
+                                        aria-label="Previous lesson slide"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span aria-live="polite">{lessonSlideIndex + 1} / {lessonSlides.length}</span>
+                                    <button
+                                        type="button"
+                                        className="lesson-slide-button"
+                                        onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
+                                        disabled={lessonSlideIndex === lessonSlides.length - 1}
+                                        aria-label="Next lesson slide"
+                                    >
+                                        Next
+                                    </button>
                                 </div>
                             )}
                         </div>

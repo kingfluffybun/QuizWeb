@@ -995,8 +995,13 @@ export async function deleteQuiz(quizId: number) {
     };
   }
   try {
-    await db.query("DELETE FROM quiz_tbl WHERE quiz_id = ?", [quizId]);
-    return { success: true };
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM quiz_tbl WHERE quiz_id = ?",
+      [quizId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Quiz was not found." }
+      : { success: true };
   } catch (error) {
     console.error("Failed to delete quiz:", error);
     return {

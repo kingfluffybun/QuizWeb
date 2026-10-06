@@ -10,6 +10,7 @@ import {
   updatePendingUnitFromForm,
   getPendingQuizById,
   deleteQuiz,
+  deletePendingQuiz,
   getQuizMetrics,
   saveUnit,
 } from "../actions/quiz";
@@ -733,6 +734,9 @@ export default function QuizInputForm({
 
     const formData = new FormData(event.currentTarget);
     formData.set("sec_id", selectedSecId);
+    lessonSlides.forEach((slide, index) => {
+      formData.set(`lesson_text_${index}`, slide.text);
+    });
     const currentEntry = buildCurrentQuizEntry();
     const unitQuizBatch = editingQuiz?._pendingUnit
       ? (currentEntry ? [currentEntry, ...queuedQuizzes] : queuedQuizzes)
@@ -983,19 +987,22 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
-  const handleDelete = async (quizId: number) => {
-    if (!confirm("Are you sure you want to delete this quiz question?")) {
+  const handleDelete = async (quizId: number, typeName: string) => {
+    const isUnit = typeName === "Unit";
+    if (!confirm(`Are you sure you want to delete this ${isUnit ? "unit" : "quiz question"}?`)) {
       return;
     }
 
     try {
-      const result = await deleteQuiz(quizId);
+      const result = isUnit
+        ? await deletePendingQuiz(quizId)
+        : await deleteQuiz(quizId);
       if (result.error) {
         setMessage({ type: "error", text: result.error });
       } else if (result.success) {
         setMessage({
           type: "success",
-          text: "Quiz successfully deleted!",
+          text: `${isUnit ? "Unit" : "Quiz"} successfully deleted!`,
         });
 
         // Refresh list and metrics
@@ -2947,9 +2954,9 @@ export default function QuizInputForm({
                         <button
                           type="button"
                           className="btn-delete"
-                          onClick={() => handleDelete(quiz.quiz_id)}
-                          title={`Delete Question (ID: #${quiz.quiz_id})`}
-                          aria-label={`Delete Question (ID: #${quiz.quiz_id})`}
+                          onClick={() => handleDelete(quiz.quiz_id, quiz.type_name)}
+                          title={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
+                          aria-label={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
