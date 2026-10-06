@@ -780,6 +780,121 @@ export async function getRecentQuizzes() {
   return result.quizzes;
 }
 
+export async function getUnitById(unitId: number) {
+  if (!Number.isInteger(unitId) || unitId < 1) return null;
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+              p.unit_lesson_card_json, p.unit_quiz_json,
+              p.unit_assessment_json, p.pending_status, p.pending_name
+       FROM pending_tbl p
+       LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+       WHERE p.pending_id = ?
+       LIMIT 1`,
+      [unitId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+
+    const quizzes = parseJsonColumn(row.unit_quiz_json);
+    return {
+      quiz_id: row.pending_id,
+      cat_id: 0,
+      sec_id: row.sec_id,
+      difficulty_id: 0,
+      quiz_type_id: 0,
+      question_text: row.unit_title,
+      cat_name: "Unit",
+      sec_num: row.sec_num,
+      difficulty_name: row.pending_status,
+      type_name: "Unit",
+      quiz_payload: {
+        title: row.unit_title,
+        lesson_card: parseJsonColumn(row.unit_lesson_card_json),
+        quizzes,
+        assessment: parseJsonColumn(row.unit_assessment_json),
+        unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
+        pending_name: row.pending_name,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch selected unit:", error);
+    return null;
+  }
+}
+
+export async function getQuizOrUnitById(id: number) {
+  if (!Number.isInteger(id) || id < 1) return null;
+
+  try {
+    if (!(await tableExists("quiz_tbl"))) {
+      const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+                p.unit_lesson_card_json, p.unit_quiz_json,
+                p.unit_assessment_json, p.pending_status, p.pending_name
+         FROM pending_tbl p
+         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+         WHERE p.pending_id = ?
+         LIMIT 1`,
+        [id],
+      );
+      const row = rows[0];
+      if (!row) return null;
+
+      const quizzes = parseJsonColumn(row.unit_quiz_json);
+      return {
+        quiz_id: row.pending_id,
+        cat_id: 0,
+        sec_id: row.sec_id,
+        difficulty_id: 0,
+        quiz_type_id: 0,
+        question_text: row.unit_title,
+        cat_name: "Unit",
+        sec_num: row.sec_num,
+        difficulty_name: row.pending_status,
+        type_name: "Unit",
+        quiz_payload: {
+          title: row.unit_title,
+          lesson_card: parseJsonColumn(row.unit_lesson_card_json),
+          quizzes,
+          assessment: parseJsonColumn(row.unit_assessment_json),
+          unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
+          pending_name: row.pending_name,
+        },
+      };
+    }
+
+    const [rows] = await db.query<QuizRow[]>(
+      `SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id,
+              q.quiz_type_id, q.question_text, q.quiz_payload,
+              c.cat_name, d.difficulty_name, t.type_name
+       FROM quiz_tbl q
+       JOIN cat_tbl c ON q.cat_id = c.cat_id
+       JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+       JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+       LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
+       WHERE q.quiz_id = ?
+       LIMIT 1`,
+      [id],
+    );
+    const quiz = rows[0];
+    if (!quiz) return null;
+
+    return {
+      ...quiz,
+      sec_num: quiz.sec_num ?? undefined,
+      quiz_payload:
+        typeof quiz.quiz_payload === "string"
+          ? parseJsonColumn(quiz.quiz_payload)
+          : quiz.quiz_payload,
+    };
+  } catch (error) {
+    console.error("Failed to fetch selected quiz or unit:", error);
+    return null;
+  }
+}
+
 export async function createQuiz(state: any, formData: FormData) {
   if (!(await tableExists("quiz_tbl"))) {
     return {

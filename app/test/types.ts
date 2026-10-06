@@ -1,5 +1,5 @@
 export type QuizType = "MCQ" | "FITB" | "Order" | "Pair" | "CP" | string;
-export type QuizStatus = "idle" | "correct" | "incorrect" | "finished";
+export type QuizStatus = "idle" | "correct" | "incorrect" | "assessment" | "finished";
 
 export interface PairItem {
     left: string;

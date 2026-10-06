@@ -1,4 +1,4 @@
-import { getRecentQuizzes } from "@/app/actions/quiz";
+import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import InteractiveQuizClient from "./InteractiveQuizClient";
 
 export const revalidate = 3600;
@@ -32,13 +32,21 @@ function unwrapUnitQuizzes(quizzes: any[]) {
 export default async function InteractiveQuizPage({
     searchParams,
 }: {
-    searchParams: Promise<{ quizId?: string }>;
+    searchParams: Promise<{ quizId?: string; unitId?: string }>;
 }) {
-    const quizzes = unwrapUnitQuizzes(await getRecentQuizzes());
-    const { quizId } = await searchParams;
-    const selectedQuizId = Number(quizId);
-    const selectedQuiz = quizzes.find((quiz) => quiz.quiz_id === selectedQuizId);
-    const quizzesToDisplay = quizId ? (selectedQuiz ? [selectedQuiz] : []) : quizzes;
+    const { quizId, unitId } = await searchParams;
+    const selectedUnitId = unitId ? Number(unitId) : null;
+    const selectedQuizId = quizId ? Number(quizId) : null;
+    const selectedUnit = selectedUnitId
+        ? await getUnitById(selectedUnitId)
+        : null;
+    const selectedQuiz = !selectedUnit && selectedQuizId
+        ? await getQuizOrUnitById(selectedQuizId)
+        : null;
+    const selectedPayload = selectedUnit ?? selectedQuiz;
+    const quizzesToDisplay = selectedPayload
+        ? unwrapUnitQuizzes([selectedPayload])
+        : [];
 
     if (quizzesToDisplay.length === 0) {
         return (

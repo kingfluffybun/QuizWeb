@@ -188,6 +188,8 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         if (currentIndex < quizzes.length - 1 && lives > 0) {
             setCurrentIndex((prev) => prev + 1);
             setStatus("idle");
+        } else if (assessmentText) {
+            setStatus("assessment");
         } else {
             setStatus("finished");
         }
@@ -195,10 +197,46 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
 
     if (!isMounted || !activeQuiz) return null;
 
+    if (status === "assessment") {
+        return (
+            <div className="test-page">
+                <nav />
+                <div className="sidebar" />
+                <main>
+                    <div className="main-content">
+                        <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
+                        <div className="unit-meta anim-enter" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
+                            <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                <strong>Assessment:</strong> {assessmentText}
+                            </div>
+                        </div>
+                    </div>
+                </main>
+                <footer>
+                    <div className="footer-content" style={{ justifyContent: "flex-end" }}>
+                        <button
+                            className="options footer-btn anim-pop"
+                            id="submit"
+                            onClick={() => setStatus("finished")}
+                        >
+                            Continue
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        );
+    }
+
     if (status === "finished") {
         return (
             <div className="test-page">
-                <main><GameOverCard lives={lives} score={score} totalQuizzes={quizzes.length} /></main>
+                <main>
+                    <GameOverCard
+                        lives={lives}
+                        score={score}
+                        totalQuizzes={quizzes.length}
+                    />
+                </main>
             </div>
         );
     }
@@ -211,17 +249,12 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 <div className="main-content">
                     <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
 
-                    {(unitTitle || lessonText || lessonCardText || assessmentText) && (
+                    {(unitTitle || lessonText || lessonCardText) && (
                         <div className="unit-meta" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
                             {unitTitle && <h2 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>{unitTitle}</h2>}
                             {(lessonText || lessonCardText) && (
-                                <div style={{ marginBottom: "8px" }}>
-                                    <strong>Lesson Text:</strong> {lessonText || lessonCardText}
-                                </div>
-                            )}
-                            {assessmentText && (
                                 <div>
-                                    <strong>Assessment:</strong> {assessmentText}
+                                    <strong>Lesson Text:</strong> {lessonText || lessonCardText}
                                 </div>
                             )}
                         </div>
