@@ -12,31 +12,54 @@ import QuizOrder from "./components/questions/QuizOrder";
 import QuizPair from "./components/questions/QuizPair";
 import QuizCP from "./components/questions/QuizCP";
 
+function normalizeQuizType(typeName?: string) {
+    return (typeName ?? "").trim().toLowerCase();
+}
+
+function resolveQuizType(quiz: QuizData | undefined): string {
+    if (!quiz) return "";
+
+    const key = normalizeQuizType(quiz.type_name);
+    if (["mcq", "fitb", "order", "pair", "cp"].includes(key)) {
+        return key.toUpperCase();
+    }
+
+    const payload = quiz.quiz_payload ?? {};
+    if (Array.isArray(payload.options)) return "MCQ";
+    if (Array.isArray(payload.items)) return "Order";
+    if (Array.isArray(payload.pairs)) return "Pair";
+    if (Array.isArray(payload.steps) || Array.isArray(payload.prompts) || payload.template !== undefined || payload.expected !== undefined) return "CP";
+    if (payload.answer !== undefined) return "FITB";
+
+    return "";
+}
+
 function getInitialQuizState(quiz: QuizData | undefined) {
     if (!quiz) return { answer: null, state: null };
     const payload = quiz.quiz_payload;
+    const typeName = resolveQuizType(quiz);
 
     let answer: any = null;
     let state: any = null;
 
-    if (quiz.type_name === "MCQ" && payload?.options) {
+    if (typeName === "MCQ" && payload?.options) {
         const opts = payload.options.map((text, id) => ({ id, text }));
         state = {
             options: opts.sort(() => Math.random() - 0.5),
             correctId: payload.correct_index ?? 0
         };
         answer = null;
-    } else if (quiz.type_name === "Order" && payload?.items) {
+    } else if (typeName === "Order" && payload?.items) {
         answer = [...payload.items].sort(() => Math.random() - 0.5);
-    } else if (quiz.type_name === "Pair" && payload?.pairs) {
+    } else if (typeName === "Pair" && payload?.pairs) {
         answer = {
             left: payload.pairs.map((p) => p.left).sort(() => Math.random() - 0.5),
             right: payload.pairs.map((p) => p.right).sort(() => Math.random() - 0.5)
         };
-    } else if (quiz.type_name === "CP") {
+    } else if (typeName === "CP") {
         const steps = getCPSteps(quiz);
         answer = steps[0]?.template || payload?.template || "";
-    } else if (quiz.type_name === "FITB") {
+    } else if (typeName === "FITB") {
         answer = "";
     }
 
@@ -44,7 +67,7 @@ function getInitialQuizState(quiz: QuizData | undefined) {
 }
 
 function getCPSteps(quiz: QuizData | undefined) {
-    if (!quiz || quiz.type_name !== "CP") return [];
+    if (!quiz || resolveQuizType(quiz) !== "CP") return [];
     const payload = quiz.quiz_payload;
     if (payload?.steps && payload.steps.length > 0) {
         return payload.steps.map((s) => ({
@@ -81,6 +104,20 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
 
     const activeQuiz = quizzes[currentIndex];
     const payload = activeQuiz?.quiz_payload;
+    const activeQuizType = resolveQuizType(activeQuiz);
+    const unitTitle = (activeQuiz as any)?.unit_title ?? "";
+    const unitLessonCard = (activeQuiz as any)?.unit_lesson_card ?? {};
+    const unitAssessment = (activeQuiz as any)?.unit_assessment ?? {};
+    const lessonText = typeof unitLessonCard === "object"
+        ? unitLessonCard.lesson_slide?.[0]?.lesson_text ??
+          unitLessonCard.lesson_card?.lesson_text ??
+          unitLessonCard.lesson_text ??
+          ""
+        : "";
+    const lessonCardText = lessonText;
+    const assessmentText = typeof unitAssessment === "object"
+        ? unitAssessment.assessment ?? ""
+        : String(unitAssessment ?? "");
 
     const [currentAnswer, setCurrentAnswer] = useState<any>(null);
     const [quizState, setQuizState] = useState<any>(null);
@@ -105,7 +142,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         if (status !== "idle" || !activeQuiz || !payload) return;
         let isCorrect = false;
 
-        switch (activeQuiz.type_name) {
+        switch (activeQuizType) {
             case "MCQ":
                 isCorrect = currentAnswer === quizState?.correctId;
                 break;
@@ -174,23 +211,39 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 <div className="main-content">
                     <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
 
+                    {(unitTitle || lessonText || lessonCardText || assessmentText) && (
+                        <div className="unit-meta" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
+                            {unitTitle && <h2 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>{unitTitle}</h2>}
+                            {(lessonText || lessonCardText) && (
+                                <div style={{ marginBottom: "8px" }}>
+                                    <strong>Lesson Text:</strong> {lessonText || lessonCardText}
+                                </div>
+                            )}
+                            {assessmentText && (
+                                <div>
+                                    <strong>Assessment:</strong> {assessmentText}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div key={currentIndex} className={`quiz-container anim-enter ${status === "incorrect" ? "anim-shake" : ""} ${status === "correct" ? "anim-pop" : ""}`}>
                         <h1 className="quiz-question-title">{activeQuiz.question_text}</h1>
 
                         <div className="options-container">
-                            {activeQuiz.type_name === "MCQ" && quizState?.options && (
+                            {activeQuizType === "MCQ" && quizState?.options && (
                                 <QuizMCQ options={quizState.options} correctId={quizState.correctId} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "FITB" && (
+                            {activeQuizType === "FITB" && (
                                 <QuizFITB payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "Order" && currentAnswer && (
+                            {activeQuizType === "Order" && currentAnswer && (
                                 <QuizOrder payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "Pair" && currentAnswer && (
+                            {activeQuizType === "Pair" && currentAnswer && (
                                 <QuizPair payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "CP" && (
+                            {activeQuizType === "CP" && (
                                 <QuizCP
                                     payload={payload}
                                     currentStepIndex={cpStepIndex}
@@ -202,6 +255,15 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                                     status={status}
                                     stepMessage={stepMessage}
                                 />
+                            )}
+
+                            {!activeQuizType && (
+                                <div className="options" style={{ padding: "16px 24px" }}>
+                                    <strong>Raw payload</strong>
+                                    <pre style={{ whiteSpace: "pre-wrap", marginTop: "12px" }}>
+                                        {JSON.stringify(payload ?? {}, null, 2)}
+                                    </pre>
+                                </div>
                             )}
 
                             {status === "correct" && <div className="feedback-msg feedback-correct anim-enter">Correct! Excellent work.</div>}

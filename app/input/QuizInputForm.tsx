@@ -124,9 +124,9 @@ export default function QuizInputForm({
   // Live Authoring Input Telemetry States
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
-  const [lessonSlides, setLessonSlides] = useState<
-    { card: string; text: string }[]
-  >([{ card: "", text: "" }]);
+  const [lessonSlides, setLessonSlides] = useState<{ text: string }[]>([
+    { text: "" },
+  ]);
   const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
   const [currentPendingQuizIndex, setCurrentPendingQuizIndex] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
@@ -432,7 +432,7 @@ export default function QuizInputForm({
   };
 
   const handleAddLessonSlide = () => {
-    setLessonSlides((slides) => [...slides, { card: "", text: "" }]);
+    setLessonSlides((slides) => [...slides, { text: "" }]);
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
@@ -550,7 +550,7 @@ export default function QuizInputForm({
       setSelectedUnit("");
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ card: "", text: "" }]);
+      setLessonSlides([{ text: "" }]);
       setCurrentLessonSlide(0);
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
@@ -768,7 +768,7 @@ export default function QuizInputForm({
       setEditingQuiz(null);
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ card: "", text: "" }]);
+      setLessonSlides([{ text: "" }]);
       setCurrentLessonSlide(0);
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
@@ -807,7 +807,10 @@ export default function QuizInputForm({
         setMessage({ type: "error", text: "This pending unit has no quizzes to edit." });
         return;
       }
-      const lessonDocument = quiz.quiz_payload?.lesson_card ?? {};
+      const lessonDocument =
+        quiz.quiz_payload?.lesson_card ??
+        quiz.quiz_payload?.lesson_text ??
+        {};
       const savedSlides = Array.isArray(lessonDocument.lesson_slide)
         ? lessonDocument.lesson_slide
         : Array.isArray(lessonDocument.lesson_slides)
@@ -825,11 +828,9 @@ export default function QuizInputForm({
       setLessonSlides(
         savedSlides.length > 0
           ? savedSlides.map((slide: any) => ({
-              card: slide.lesson_card ?? slide.card ?? slide.lesson_format ?? "",
               text: slide.lesson_text ?? slide.text ?? "",
             }))
           : [{
-              card: lessonDocument.lesson_format ?? "",
               text: lessonDocument.lesson_text ?? "",
             }],
       );
@@ -965,7 +966,7 @@ export default function QuizInputForm({
     setSelectedSecId("");
     setQuestionText("");
     setUnitTitle("");
-    setLessonSlides([{ card: "", text: "" }]);
+    setLessonSlides([{ text: "" }]);
     setCurrentLessonSlide(0);
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
@@ -1591,28 +1592,6 @@ export default function QuizInputForm({
                 index === currentLessonSlide ? (
                 <div className="lesson-slide-fields" key={index}>
                   <div className="lesson-slide-number">Slide {index + 1}</div>
-                  <div className="form-group">
-                    <label htmlFor={`lesson_card_${index}`}>Lesson Card</label>
-                    <textarea
-                      id={`lesson_card_${index}`}
-                      name={`lesson_card_${index}`}
-                      className="form-textarea"
-                      placeholder="Enter the lesson card / lesson format here..."
-                      rows={6}
-                      value={slide.card}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setLessonSlides((slides) =>
-                          slides.map((currentSlide, slideIndex) =>
-                            slideIndex === index
-                              ? { ...currentSlide, card: value }
-                              : currentSlide,
-                          ),
-                        );
-                      }}
-                    />
-                  </div>
-
                   <div className="form-group">
                     <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
                     <textarea
@@ -2921,7 +2900,7 @@ export default function QuizInputForm({
                           type="button"
                           className="btn-preview"
                           onClick={() =>
-                            router.push(`/test?quizId=${quiz.quiz_id}`)
+                            router.push(`/test`)
                           }
                           title={`Preview Question (ID: #${quiz.quiz_id})`}
                           aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
@@ -3336,17 +3315,11 @@ export default function QuizInputForm({
                         {quiz.type_name === "Unit" && (
                           <div>
                             <div>
-                              <strong>Lesson Card:</strong>{" "}
-                              {payload?.lesson_card?.lesson_slide?.[0]
-                                ?.lesson_card ??
-                                payload?.lesson_card?.lesson_card?.lesson_format ??
-                                ""}
-                            </div>
-                            <div>
                               <strong>Lesson Text:</strong>{" "}
                               {payload?.lesson_card?.lesson_slide?.[0]
                                 ?.lesson_text ??
                                 payload?.lesson_card?.lesson_card?.lesson_text ??
+                                payload?.lesson_card?.lesson_text ??
                                 ""}
                             </div>
                             <div>

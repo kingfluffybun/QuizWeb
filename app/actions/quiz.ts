@@ -313,22 +313,22 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
   const lessonTitle = getText("unit_title");
   const lessonSlides = Array.from(formData.entries())
-    .filter(([name]) => /^lesson_card_\d+$/.test(name))
-    .map(([name, value]) => {
-      const index = name.slice("lesson_card_".length);
+    .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .map(([name]) => {
+      const index = name.slice("lesson_text_".length);
+      const lessonText = getText(`lesson_text_${index}`);
       return {
-        lesson_card: String(value).trim(),
-        lesson_text: getText(`lesson_text_${index}`),
+        lesson_text: lessonText,
       };
     });
   const unitAssessment = getText("assessment");
   if (
     !lessonTitle ||
     lessonSlides.length === 0 ||
-    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+    lessonSlides.some((slide) => !slide.lesson_text)
   ) {
     return {
-      error: "Lesson title, lesson card, and lesson text are required.",
+      error: "Lesson title and lesson text are required.",
     };
   }
 
@@ -1329,12 +1329,12 @@ export async function updatePendingUnitFromForm(
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
   const sectionId = formData.get("sec_id");
   const lessonSlides = Array.from(formData.entries())
-    .filter(([name]) => /^lesson_card_\d+$/.test(name))
-    .map(([name, value]) => {
-      const index = name.slice("lesson_card_".length);
+    .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .map(([name]) => {
+      const index = name.slice("lesson_text_".length);
+      const lessonText = String(formData.get(`lesson_text_${index}`) ?? "").trim();
       return {
-        lesson_card: String(value).trim(),
-        lesson_text: String(formData.get(`lesson_text_${index}`) ?? "").trim(),
+        lesson_text: lessonText,
       };
     });
   const assessment = String(formData.get("assessment") ?? "").trim();
@@ -1345,9 +1345,9 @@ export async function updatePendingUnitFromForm(
     !unitTitle ||
     !sectionId ||
     lessonSlides.length === 0 ||
-    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+    lessonSlides.some((slide) => !slide.lesson_text)
   ) {
-    return { error: "Unit title, section, lesson card, and lesson text are required." };
+    return { error: "Unit title, section, and lesson text are required." };
   }
 
   let quizzes: unknown[];
