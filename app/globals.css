@@ -4,7 +4,8 @@
 
     /* Brand Colors */
     /* #9966FF;  */
-    --primary-color: #A883EA;
+    /* #A883EA; */
+    --primary-color: #9966FF;
     --selected-color: #7D3FFF;
     --selected-background-color: rgba(153, 102, 255, 0.08);
     --background-color: #A883EA;
@@ -90,7 +91,7 @@ h1, h2 {
     font-weight: 600;
 }
 h1 { font-size: clamp(1.25rem, 3.25vw, 2rem); }
-h2 { font-size: clamp(1rem, 2.25vw, 1.5rem); }
+h2 { font-size: clamp(0.75rem, 2vw, 1.25rem); }
 
 p {
     font-family: 'Montserrat', sans-serif;
