@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Editor from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
 import {
   createQuiz,
@@ -125,10 +126,15 @@ export default function QuizInputForm({
   // Live Authoring Input Telemetry States
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
-  const [lessonSlides, setLessonSlides] = useState<{ text: string }[]>([
-    { text: "" },
+  const [lessonSlides, setLessonSlides] = useState<
+    { text: string; code: string }[]
+  >([
+    { text: "", code: "" },
   ]);
   const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
+  const [lessonEditorView, setLessonEditorView] = useState<"code" | "result">(
+    "code",
+  );
   const [currentPendingQuizIndex, setCurrentPendingQuizIndex] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const [selectedDiffId, setSelectedDiffId] = useState<string>("");
@@ -433,7 +439,7 @@ export default function QuizInputForm({
   };
 
   const handleAddLessonSlide = () => {
-    setLessonSlides((slides) => [...slides, { text: "" }]);
+    setLessonSlides((slides) => [...slides, { text: "", code: "" }]);
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
@@ -551,8 +557,9 @@ export default function QuizInputForm({
       setSelectedUnit("");
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ text: "" }]);
+      setLessonSlides([{ text: "", code: "" }]);
       setCurrentLessonSlide(0);
+      setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -736,6 +743,7 @@ export default function QuizInputForm({
     formData.set("sec_id", selectedSecId);
     lessonSlides.forEach((slide, index) => {
       formData.set(`lesson_text_${index}`, slide.text);
+      formData.set(`lesson_code_${index}`, slide.code);
     });
     const currentEntry = buildCurrentQuizEntry();
     const unitQuizBatch = editingQuiz?._pendingUnit
@@ -772,8 +780,9 @@ export default function QuizInputForm({
       setEditingQuiz(null);
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ text: "" }]);
+      setLessonSlides([{ text: "", code: "" }]);
       setCurrentLessonSlide(0);
+      setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -833,12 +842,15 @@ export default function QuizInputForm({
         savedSlides.length > 0
           ? savedSlides.map((slide: any) => ({
               text: slide.lesson_text ?? slide.text ?? "",
+              code: slide.lesson_code ?? slide.code ?? "",
             }))
           : [{
               text: lessonDocument.lesson_text ?? "",
+              code: lessonDocument.lesson_code ?? "",
             }],
       );
       setCurrentLessonSlide(0);
+      setLessonEditorView("code");
       setAssessment(quiz.quiz_payload?.assessment?.assessment ?? "");
       setEditingQuiz({
         ...firstQuiz,
@@ -970,8 +982,9 @@ export default function QuizInputForm({
     setSelectedSecId("");
     setQuestionText("");
     setUnitTitle("");
-    setLessonSlides([{ text: "" }]);
+    setLessonSlides([{ text: "", code: "" }]);
     setCurrentLessonSlide(0);
+    setLessonEditorView("code");
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
     setFitbAnswer("");
@@ -1619,6 +1632,67 @@ export default function QuizInputForm({
                         );
                       }}
                     />
+                  </div>
+                  <div className="lesson-code-editor">
+                    <div
+                      className="lesson-code-tabs"
+                      role="tablist"
+                      aria-label={`Slide ${index + 1} code and result`}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={lessonEditorView === "code"}
+                        className={`lesson-code-tab${lessonEditorView === "code" ? " active" : ""}`}
+                        onClick={() => setLessonEditorView("code")}
+                      >
+                        Code
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={lessonEditorView === "result"}
+                        className={`lesson-code-tab${lessonEditorView === "result" ? " active" : ""}`}
+                        onClick={() => setLessonEditorView("result")}
+                      >
+                        Result
+                      </button>
+                    </div>
+                    <div className="lesson-code-panel">
+                      {lessonEditorView === "code" ? (
+                        <Editor
+                          height="250px"
+                          language="html"
+                          theme="vs-dark"
+                          value={slide.code}
+                          onChange={(value) => {
+                            const code = value ?? "";
+                            setLessonSlides((slides) =>
+                              slides.map((currentSlide, slideIndex) =>
+                                slideIndex === index
+                                  ? { ...currentSlide, code }
+                                  : currentSlide,
+                              ),
+                            );
+                          }}
+                          options={{
+                            automaticLayout: true,
+                            fontSize: 13,
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            wordWrap: "on",
+                            ariaLabel: `HTML code for slide ${index + 1}`,
+                          }}
+                        />
+                      ) : (
+                        <iframe
+                          className="lesson-code-result"
+                          title={`Slide ${index + 1} code result`}
+                          sandbox=""
+                          srcDoc={slide.code}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
                 ) : null,

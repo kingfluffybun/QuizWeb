@@ -314,11 +314,17 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   const lessonTitle = getText("unit_title");
   const lessonSlides = Array.from(formData.entries())
     .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .sort(
+      ([left], [right]) =>
+        Number(left.slice("lesson_text_".length)) -
+        Number(right.slice("lesson_text_".length)),
+    )
     .map(([name]) => {
       const index = name.slice("lesson_text_".length);
       const lessonText = getText(`lesson_text_${index}`);
       return {
         lesson_text: lessonText,
+        lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
       };
     });
   const unitAssessment = getText("assessment");
@@ -1450,11 +1456,17 @@ export async function updatePendingUnitFromForm(
   const sectionId = formData.get("sec_id");
   const lessonSlides = Array.from(formData.entries())
     .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .sort(
+      ([left], [right]) =>
+        Number(left.slice("lesson_text_".length)) -
+        Number(right.slice("lesson_text_".length)),
+    )
     .map(([name]) => {
       const index = name.slice("lesson_text_".length);
       const lessonText = String(formData.get(`lesson_text_${index}`) ?? "").trim();
       return {
         lesson_text: lessonText,
+        lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
       };
     });
   const assessment = String(formData.get("assessment") ?? "").trim();

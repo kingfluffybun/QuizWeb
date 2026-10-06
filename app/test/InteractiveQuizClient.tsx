@@ -113,6 +113,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         ? unitLessonCard.lesson_slide
         : [{ lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "" }];
     const lessonText = lessonSlides[lessonSlideIndex]?.lesson_text ?? "";
+    const lessonCode = lessonSlides[lessonSlideIndex]?.lesson_code ?? "";
     const assessmentText = typeof unitAssessment === "object"
         ? unitAssessment.assessment ?? ""
         : String(unitAssessment ?? "");
@@ -247,13 +248,21 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 <div className="main-content">
                     <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
 
-                    {(unitTitle || lessonText) && (
+                    {(unitTitle || lessonText || lessonCode) && (
                         <div className="unit-meta" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
                             {unitTitle && <h2 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>{unitTitle}</h2>}
                             {lessonText && (
                                 <div>
                                     {lessonText}
                                 </div>
+                            )}
+                            {lessonCode && (
+                                <iframe
+                                    className="lesson-code-preview"
+                                    title={`Lesson code result, slide ${lessonSlideIndex + 1}`}
+                                    sandbox=""
+                                    srcDoc={lessonCode}
+                                />
                             )}
                             {lessonSlides.length > 1 && (
                                 <div className="lesson-slide-controls">

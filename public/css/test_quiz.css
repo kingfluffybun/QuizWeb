@@ -119,6 +119,16 @@
     color: var(--text-muted);
 }
 
+.lesson-code-preview {
+    display: block;
+    width: 100%;
+    min-height: 180px;
+    margin-top: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
 .lesson-slide-button {
     padding: 8px 14px;
     border: 1px solid var(--border-main);
