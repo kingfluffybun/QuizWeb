@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Editor from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
 import {
   createQuiz,
@@ -10,6 +11,7 @@ import {
   updatePendingUnitFromForm,
   getPendingQuizById,
   deleteQuiz,
+  deletePendingQuiz,
   getQuizMetrics,
   saveUnit,
 } from "../actions/quiz";
@@ -125,9 +127,14 @@ export default function QuizInputForm({
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
   const [lessonSlides, setLessonSlides] = useState<
-    { card: string; text: string }[]
-  >([{ card: "", text: "" }]);
+    { text: string; code: string }[]
+  >([
+    { text: "", code: "" },
+  ]);
   const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
+  const [lessonEditorView, setLessonEditorView] = useState<"code" | "result">(
+    "code",
+  );
   const [currentPendingQuizIndex, setCurrentPendingQuizIndex] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const [selectedDiffId, setSelectedDiffId] = useState<string>("");
@@ -432,7 +439,7 @@ export default function QuizInputForm({
   };
 
   const handleAddLessonSlide = () => {
-    setLessonSlides((slides) => [...slides, { card: "", text: "" }]);
+    setLessonSlides((slides) => [...slides, { text: "", code: "" }]);
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
@@ -550,8 +557,9 @@ export default function QuizInputForm({
       setSelectedUnit("");
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ card: "", text: "" }]);
+      setLessonSlides([{ text: "", code: "" }]);
       setCurrentLessonSlide(0);
+      setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -733,6 +741,10 @@ export default function QuizInputForm({
 
     const formData = new FormData(event.currentTarget);
     formData.set("sec_id", selectedSecId);
+    lessonSlides.forEach((slide, index) => {
+      formData.set(`lesson_text_${index}`, slide.text);
+      formData.set(`lesson_code_${index}`, slide.code);
+    });
     const currentEntry = buildCurrentQuizEntry();
     const unitQuizBatch = editingQuiz?._pendingUnit
       ? (currentEntry ? [currentEntry, ...queuedQuizzes] : queuedQuizzes)
@@ -768,8 +780,9 @@ export default function QuizInputForm({
       setEditingQuiz(null);
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ card: "", text: "" }]);
+      setLessonSlides([{ text: "", code: "" }]);
       setCurrentLessonSlide(0);
+      setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
       setMcqCorrectIndex(0);
       setFitbAnswer("");
@@ -807,7 +820,10 @@ export default function QuizInputForm({
         setMessage({ type: "error", text: "This pending unit has no quizzes to edit." });
         return;
       }
-      const lessonDocument = quiz.quiz_payload?.lesson_card ?? {};
+      const lessonDocument =
+        quiz.quiz_payload?.lesson_card ??
+        quiz.quiz_payload?.lesson_text ??
+        {};
       const savedSlides = Array.isArray(lessonDocument.lesson_slide)
         ? lessonDocument.lesson_slide
         : Array.isArray(lessonDocument.lesson_slides)
@@ -825,15 +841,16 @@ export default function QuizInputForm({
       setLessonSlides(
         savedSlides.length > 0
           ? savedSlides.map((slide: any) => ({
-              card: slide.lesson_card ?? slide.card ?? slide.lesson_format ?? "",
               text: slide.lesson_text ?? slide.text ?? "",
+              code: slide.lesson_code ?? slide.code ?? "",
             }))
           : [{
-              card: lessonDocument.lesson_format ?? "",
               text: lessonDocument.lesson_text ?? "",
+              code: lessonDocument.lesson_code ?? "",
             }],
       );
       setCurrentLessonSlide(0);
+      setLessonEditorView("code");
       setAssessment(quiz.quiz_payload?.assessment?.assessment ?? "");
       setEditingQuiz({
         ...firstQuiz,
@@ -965,8 +982,9 @@ export default function QuizInputForm({
     setSelectedSecId("");
     setQuestionText("");
     setUnitTitle("");
-    setLessonSlides([{ card: "", text: "" }]);
+    setLessonSlides([{ text: "", code: "" }]);
     setCurrentLessonSlide(0);
+    setLessonEditorView("code");
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
     setFitbAnswer("");
@@ -982,19 +1000,22 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
-  const handleDelete = async (quizId: number) => {
-    if (!confirm("Are you sure you want to delete this quiz question?")) {
+  const handleDelete = async (quizId: number, typeName: string) => {
+    const isUnit = typeName === "Unit";
+    if (!confirm(`Are you sure you want to delete this ${isUnit ? "unit" : "quiz question"}?`)) {
       return;
     }
 
     try {
-      const result = await deleteQuiz(quizId);
+      const result = isUnit
+        ? await deletePendingQuiz(quizId)
+        : await deleteQuiz(quizId);
       if (result.error) {
         setMessage({ type: "error", text: result.error });
       } else if (result.success) {
         setMessage({
           type: "success",
-          text: "Quiz successfully deleted!",
+          text: `${isUnit ? "Unit" : "Quiz"} successfully deleted!`,
         });
 
         // Refresh list and metrics
@@ -1592,28 +1613,6 @@ export default function QuizInputForm({
                 <div className="lesson-slide-fields" key={index}>
                   <div className="lesson-slide-number">Slide {index + 1}</div>
                   <div className="form-group">
-                    <label htmlFor={`lesson_card_${index}`}>Lesson Card</label>
-                    <textarea
-                      id={`lesson_card_${index}`}
-                      name={`lesson_card_${index}`}
-                      className="form-textarea"
-                      placeholder="Enter the lesson card / lesson format here..."
-                      rows={6}
-                      value={slide.card}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setLessonSlides((slides) =>
-                          slides.map((currentSlide, slideIndex) =>
-                            slideIndex === index
-                              ? { ...currentSlide, card: value }
-                              : currentSlide,
-                          ),
-                        );
-                      }}
-                    />
-                  </div>
-
-                  <div className="form-group">
                     <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
                     <textarea
                       id={`lesson_text_${index}`}
@@ -1633,6 +1632,67 @@ export default function QuizInputForm({
                         );
                       }}
                     />
+                  </div>
+                  <div className="lesson-code-editor">
+                    <div
+                      className="lesson-code-tabs"
+                      role="tablist"
+                      aria-label={`Slide ${index + 1} code and result`}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={lessonEditorView === "code"}
+                        className={`lesson-code-tab${lessonEditorView === "code" ? " active" : ""}`}
+                        onClick={() => setLessonEditorView("code")}
+                      >
+                        Code
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={lessonEditorView === "result"}
+                        className={`lesson-code-tab${lessonEditorView === "result" ? " active" : ""}`}
+                        onClick={() => setLessonEditorView("result")}
+                      >
+                        Result
+                      </button>
+                    </div>
+                    <div className="lesson-code-panel">
+                      {lessonEditorView === "code" ? (
+                        <Editor
+                          height="250px"
+                          language="html"
+                          theme="vs-dark"
+                          value={slide.code}
+                          onChange={(value) => {
+                            const code = value ?? "";
+                            setLessonSlides((slides) =>
+                              slides.map((currentSlide, slideIndex) =>
+                                slideIndex === index
+                                  ? { ...currentSlide, code }
+                                  : currentSlide,
+                              ),
+                            );
+                          }}
+                          options={{
+                            automaticLayout: true,
+                            fontSize: 13,
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            wordWrap: "on",
+                            ariaLabel: `HTML code for slide ${index + 1}`,
+                          }}
+                        />
+                      ) : (
+                        <iframe
+                          className="lesson-code-result"
+                          title={`Slide ${index + 1} code result`}
+                          sandbox=""
+                          srcDoc={slide.code}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
                 ) : null,
@@ -2921,7 +2981,7 @@ export default function QuizInputForm({
                           type="button"
                           className="btn-preview"
                           onClick={() =>
-                            router.push(`/test?quizId=${quiz.quiz_id}`)
+                            router.push(`/test?unitId=${quiz.quiz_id}`)
                           }
                           title={`Preview Question (ID: #${quiz.quiz_id})`}
                           aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
@@ -2968,9 +3028,9 @@ export default function QuizInputForm({
                         <button
                           type="button"
                           className="btn-delete"
-                          onClick={() => handleDelete(quiz.quiz_id)}
-                          title={`Delete Question (ID: #${quiz.quiz_id})`}
-                          aria-label={`Delete Question (ID: #${quiz.quiz_id})`}
+                          onClick={() => handleDelete(quiz.quiz_id, quiz.type_name)}
+                          title={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
+                          aria-label={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -3336,17 +3396,11 @@ export default function QuizInputForm({
                         {quiz.type_name === "Unit" && (
                           <div>
                             <div>
-                              <strong>Lesson Card:</strong>{" "}
-                              {payload?.lesson_card?.lesson_slide?.[0]
-                                ?.lesson_card ??
-                                payload?.lesson_card?.lesson_card?.lesson_format ??
-                                ""}
-                            </div>
-                            <div>
                               <strong>Lesson Text:</strong>{" "}
                               {payload?.lesson_card?.lesson_slide?.[0]
                                 ?.lesson_text ??
                                 payload?.lesson_card?.lesson_card?.lesson_text ??
+                                payload?.lesson_card?.lesson_text ??
                                 ""}
                             </div>
                             <div>

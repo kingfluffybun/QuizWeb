@@ -313,22 +313,28 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
   const lessonTitle = getText("unit_title");
   const lessonSlides = Array.from(formData.entries())
-    .filter(([name]) => /^lesson_card_\d+$/.test(name))
-    .map(([name, value]) => {
-      const index = name.slice("lesson_card_".length);
+    .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .sort(
+      ([left], [right]) =>
+        Number(left.slice("lesson_text_".length)) -
+        Number(right.slice("lesson_text_".length)),
+    )
+    .map(([name]) => {
+      const index = name.slice("lesson_text_".length);
+      const lessonText = getText(`lesson_text_${index}`);
       return {
-        lesson_card: String(value).trim(),
-        lesson_text: getText(`lesson_text_${index}`),
+        lesson_text: lessonText,
+        lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
       };
     });
   const unitAssessment = getText("assessment");
   if (
     !lessonTitle ||
     lessonSlides.length === 0 ||
-    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+    lessonSlides.some((slide) => !slide.lesson_text)
   ) {
     return {
-      error: "Lesson title, lesson card, and lesson text are required.",
+      error: "Lesson title and lesson text are required.",
     };
   }
 
@@ -780,6 +786,121 @@ export async function getRecentQuizzes() {
   return result.quizzes;
 }
 
+export async function getUnitById(unitId: number) {
+  if (!Number.isInteger(unitId) || unitId < 1) return null;
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+              p.unit_lesson_card_json, p.unit_quiz_json,
+              p.unit_assessment_json, p.pending_status, p.pending_name
+       FROM pending_tbl p
+       LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+       WHERE p.pending_id = ?
+       LIMIT 1`,
+      [unitId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+
+    const quizzes = parseJsonColumn(row.unit_quiz_json);
+    return {
+      quiz_id: row.pending_id,
+      cat_id: 0,
+      sec_id: row.sec_id,
+      difficulty_id: 0,
+      quiz_type_id: 0,
+      question_text: row.unit_title,
+      cat_name: "Unit",
+      sec_num: row.sec_num,
+      difficulty_name: row.pending_status,
+      type_name: "Unit",
+      quiz_payload: {
+        title: row.unit_title,
+        lesson_card: parseJsonColumn(row.unit_lesson_card_json),
+        quizzes,
+        assessment: parseJsonColumn(row.unit_assessment_json),
+        unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
+        pending_name: row.pending_name,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch selected unit:", error);
+    return null;
+  }
+}
+
+export async function getQuizOrUnitById(id: number) {
+  if (!Number.isInteger(id) || id < 1) return null;
+
+  try {
+    if (!(await tableExists("quiz_tbl"))) {
+      const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+                p.unit_lesson_card_json, p.unit_quiz_json,
+                p.unit_assessment_json, p.pending_status, p.pending_name
+         FROM pending_tbl p
+         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+         WHERE p.pending_id = ?
+         LIMIT 1`,
+        [id],
+      );
+      const row = rows[0];
+      if (!row) return null;
+
+      const quizzes = parseJsonColumn(row.unit_quiz_json);
+      return {
+        quiz_id: row.pending_id,
+        cat_id: 0,
+        sec_id: row.sec_id,
+        difficulty_id: 0,
+        quiz_type_id: 0,
+        question_text: row.unit_title,
+        cat_name: "Unit",
+        sec_num: row.sec_num,
+        difficulty_name: row.pending_status,
+        type_name: "Unit",
+        quiz_payload: {
+          title: row.unit_title,
+          lesson_card: parseJsonColumn(row.unit_lesson_card_json),
+          quizzes,
+          assessment: parseJsonColumn(row.unit_assessment_json),
+          unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
+          pending_name: row.pending_name,
+        },
+      };
+    }
+
+    const [rows] = await db.query<QuizRow[]>(
+      `SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id,
+              q.quiz_type_id, q.question_text, q.quiz_payload,
+              c.cat_name, d.difficulty_name, t.type_name
+       FROM quiz_tbl q
+       JOIN cat_tbl c ON q.cat_id = c.cat_id
+       JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+       JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+       LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
+       WHERE q.quiz_id = ?
+       LIMIT 1`,
+      [id],
+    );
+    const quiz = rows[0];
+    if (!quiz) return null;
+
+    return {
+      ...quiz,
+      sec_num: quiz.sec_num ?? undefined,
+      quiz_payload:
+        typeof quiz.quiz_payload === "string"
+          ? parseJsonColumn(quiz.quiz_payload)
+          : quiz.quiz_payload,
+    };
+  } catch (error) {
+    console.error("Failed to fetch selected quiz or unit:", error);
+    return null;
+  }
+}
+
 export async function createQuiz(state: any, formData: FormData) {
   if (!(await tableExists("quiz_tbl"))) {
     return {
@@ -880,8 +1001,13 @@ export async function deleteQuiz(quizId: number) {
     };
   }
   try {
-    await db.query("DELETE FROM quiz_tbl WHERE quiz_id = ?", [quizId]);
-    return { success: true };
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM quiz_tbl WHERE quiz_id = ?",
+      [quizId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Quiz was not found." }
+      : { success: true };
   } catch (error) {
     console.error("Failed to delete quiz:", error);
     return {
@@ -1329,12 +1455,18 @@ export async function updatePendingUnitFromForm(
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
   const sectionId = formData.get("sec_id");
   const lessonSlides = Array.from(formData.entries())
-    .filter(([name]) => /^lesson_card_\d+$/.test(name))
-    .map(([name, value]) => {
-      const index = name.slice("lesson_card_".length);
+    .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .sort(
+      ([left], [right]) =>
+        Number(left.slice("lesson_text_".length)) -
+        Number(right.slice("lesson_text_".length)),
+    )
+    .map(([name]) => {
+      const index = name.slice("lesson_text_".length);
+      const lessonText = String(formData.get(`lesson_text_${index}`) ?? "").trim();
       return {
-        lesson_card: String(value).trim(),
-        lesson_text: String(formData.get(`lesson_text_${index}`) ?? "").trim(),
+        lesson_text: lessonText,
+        lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
       };
     });
   const assessment = String(formData.get("assessment") ?? "").trim();
@@ -1345,9 +1477,9 @@ export async function updatePendingUnitFromForm(
     !unitTitle ||
     !sectionId ||
     lessonSlides.length === 0 ||
-    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+    lessonSlides.some((slide) => !slide.lesson_text)
   ) {
-    return { error: "Unit title, section, lesson card, and lesson text are required." };
+    return { error: "Unit title, section, and lesson text are required." };
   }
 
   let quizzes: unknown[];
