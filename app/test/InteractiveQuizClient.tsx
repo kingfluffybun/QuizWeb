@@ -96,6 +96,7 @@ function getCPSteps(quiz: QuizData | undefined) {
 export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
     const [isMounted, setIsMounted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
@@ -115,6 +116,13 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     const assessmentText = typeof unitAssessment === "object"
         ? unitAssessment.assessment ?? ""
         : String(unitAssessment ?? "");
+    const hasLesson = Boolean(
+        unitTitle ||
+        lessonSlides.some(
+            (slide: { lesson_text?: string; lesson_code?: string }) =>
+                slide.lesson_text || slide.lesson_code,
+        ),
+    );
 
     const [currentAnswer, setCurrentAnswer] = useState<any>(null);
     const [quizState, setQuizState] = useState<any>(null);
@@ -238,6 +246,37 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         );
     }
 
+    if (hasLesson && !hasStartedQuiz) {
+        return (
+            <div className="test-page">
+                <nav />
+                <div className="sidebar" />
+                <main>
+                    <div className="main-content">
+                        <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
+                        <LessonCard
+                            key={activeQuiz?.quiz_id ?? currentIndex}
+                            title={unitTitle}
+                            slides={lessonSlides}
+                            className="unit-meta"
+                        />
+                    </div>
+                </main>
+                <footer>
+                    <div className="footer-content lesson-footer-content">
+                        <button
+                            className="options footer-btn"
+                            id="submit"
+                            onClick={() => setHasStartedQuiz(true)}
+                        >
+                            Start Quiz
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        );
+    }
+
     return (
         <div className="test-page">
             <nav />
@@ -245,19 +284,6 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
             <main>
                 <div className="main-content">
                     <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
-
-                    {(unitTitle ||
-                        lessonSlides.some(
-                            (slide: { lesson_text?: string; lesson_code?: string }) =>
-                                slide.lesson_text || slide.lesson_code,
-                        )) && (
-                        <LessonCard
-                            key={activeQuiz?.quiz_id ?? currentIndex}
-                            title={unitTitle}
-                            slides={lessonSlides}
-                            className="unit-meta"
-                        />
-                    )}
 
                     <div key={currentIndex} className={`quiz-container anim-enter ${status === "incorrect" ? "anim-shake" : ""} ${status === "correct" ? "anim-pop" : ""}`}>
                         <h1 className="quiz-question-title">{activeQuiz.question_text}</h1>

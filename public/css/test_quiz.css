@@ -362,6 +362,10 @@ footer {
     gap: 16px;
 }
 
+.lesson-footer-content {
+    justify-content: flex-end;
+}
+
 .footer-btn {
     justify-content: center;
     min-height: 54px;
