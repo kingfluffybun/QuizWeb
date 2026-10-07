@@ -11,6 +11,7 @@ import QuizFITB from "./components/questions/QuizFITB";
 import QuizOrder from "./components/questions/QuizOrder";
 import QuizPair from "./components/questions/QuizPair";
 import QuizCP from "./components/questions/QuizCP";
+import LessonCard from "@/app/components/LessonCard";
 
 function normalizeQuizType(typeName?: string) {
     return (typeName ?? "").trim().toLowerCase();
@@ -95,7 +96,6 @@ function getCPSteps(quiz: QuizData | undefined) {
 export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
     const [isMounted, setIsMounted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
@@ -112,8 +112,6 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     const lessonSlides = typeof unitLessonCard === "object" && Array.isArray(unitLessonCard.lesson_slide)
         ? unitLessonCard.lesson_slide
         : [{ lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "" }];
-    const lessonText = lessonSlides[lessonSlideIndex]?.lesson_text ?? "";
-    const lessonCode = lessonSlides[lessonSlideIndex]?.lesson_code ?? "";
     const assessmentText = typeof unitAssessment === "object"
         ? unitAssessment.assessment ?? ""
         : String(unitAssessment ?? "");
@@ -248,46 +246,17 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                 <div className="main-content">
                     <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
 
-                    {(unitTitle || lessonText || lessonCode) && (
-                        <div className="unit-meta" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
-                            {unitTitle && <h2 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>{unitTitle}</h2>}
-                            {lessonText && (
-                                <div>
-                                    {lessonText}
-                                </div>
-                            )}
-                            {lessonCode && (
-                                <iframe
-                                    className="lesson-code-preview"
-                                    title={`Lesson code result, slide ${lessonSlideIndex + 1}`}
-                                    sandbox=""
-                                    srcDoc={lessonCode}
-                                />
-                            )}
-                            {lessonSlides.length > 1 && (
-                                <div className="lesson-slide-controls">
-                                    <button
-                                        type="button"
-                                        className="lesson-slide-button"
-                                        onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
-                                        disabled={lessonSlideIndex === 0}
-                                        aria-label="Previous lesson slide"
-                                    >
-                                        Previous
-                                    </button>
-                                    <span aria-live="polite">{lessonSlideIndex + 1} / {lessonSlides.length}</span>
-                                    <button
-                                        type="button"
-                                        className="lesson-slide-button"
-                                        onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
-                                        disabled={lessonSlideIndex === lessonSlides.length - 1}
-                                        aria-label="Next lesson slide"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                    {(unitTitle ||
+                        lessonSlides.some(
+                            (slide: { lesson_text?: string; lesson_code?: string }) =>
+                                slide.lesson_text || slide.lesson_code,
+                        )) && (
+                        <LessonCard
+                            key={activeQuiz?.quiz_id ?? currentIndex}
+                            title={unitTitle}
+                            slides={lessonSlides}
+                            className="unit-meta"
+                        />
                     )}
 
                     <div key={currentIndex} className={`quiz-container anim-enter ${status === "incorrect" ? "anim-shake" : ""} ${status === "correct" ? "anim-pop" : ""}`}>

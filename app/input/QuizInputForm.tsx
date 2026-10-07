@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
+import LessonCard from "@/app/components/LessonCard";
 import {
   createQuiz,
   getPaginatedRecentQuizzes,
@@ -1612,27 +1613,6 @@ export default function QuizInputForm({
                 index === currentLessonSlide ? (
                 <div className="lesson-slide-fields" key={index}>
                   <div className="lesson-slide-number">Slide {index + 1}</div>
-                  <div className="form-group">
-                    <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
-                    <textarea
-                      id={`lesson_text_${index}`}
-                      name={`lesson_text_${index}`}
-                      className="form-textarea"
-                      placeholder="Enter the lesson text content here..."
-                      rows={8}
-                      value={slide.text}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setLessonSlides((slides) =>
-                          slides.map((currentSlide, slideIndex) =>
-                            slideIndex === index
-                              ? { ...currentSlide, text: value }
-                              : currentSlide,
-                          ),
-                        );
-                      }}
-                    />
-                  </div>
                   <div className="lesson-code-editor">
                     <div
                       className="lesson-code-tabs"
@@ -1693,6 +1673,27 @@ export default function QuizInputForm({
                         />
                       )}
                     </div>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
+                    <textarea
+                      id={`lesson_text_${index}`}
+                      name={`lesson_text_${index}`}
+                      className="form-textarea"
+                      placeholder="Enter the lesson text content here..."
+                      rows={8}
+                      value={slide.text}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, text: value }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
+                    />
                   </div>
                 </div>
                 ) : null,
@@ -2479,9 +2480,27 @@ export default function QuizInputForm({
         </form>
       </div>
 
+      <div className="lesson-preview-card admin-card">
+        <div className="lesson-preview-heading">
+          <div>
+            <p className="lesson-preview-kicker">Live preview</p>
+            <h2>Lesson Card</h2>
+          </div>
+          <span>Matches quiz output</span>
+        </div>
+        <LessonCard
+          title={unitTitle}
+          slides={lessonSlides.map((slide) => ({
+            lesson_text: slide.text,
+            lesson_code: slide.code,
+          }))}
+          className="lesson-preview-surface"
+        />
+      </div>
+
       {/* List Section */}
       {showRecentQuizzes && (
-        <div className="admin-card">
+        <div className="admin-card recent-units-card">
           <div
             style={{
               display: "flex",
@@ -2953,7 +2972,20 @@ export default function QuizInputForm({
               {filteredQuizzes.map((quiz) => {
                 const payload = quiz.quiz_payload;
                 return (
-                  <div key={quiz.quiz_id} className="quiz-list-item">
+                  <div
+                    key={quiz.quiz_id}
+                    className="quiz-list-item"
+                    onClick={() => handleEdit(quiz)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleEdit(quiz);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    title="Select this unit to edit"
+                  >
                     <div
                       style={{
                         display: "flex",
@@ -2976,6 +3008,7 @@ export default function QuizInputForm({
                           gap: "8px",
                           flexShrink: 0,
                         }}
+                        onClick={(event) => event.stopPropagation()}
                       >
                         <button
                           type="button"

@@ -53,12 +53,106 @@ textarea {
   opacity: 0.8;
 }
 .admin-container {
-  max-width: 1400px;
-  margin: 40px auto;
-  padding: 0 20px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin: 24px auto;
+  padding: 0 12px;
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 40px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.admin-container > .admin-card {
+  min-width: 0;
+}
+.recent-units-card {
+  grid-column: auto;
+  min-width: 0;
+}
+.lesson-preview-card {
+  min-width: 0;
+  align-self: start;
+  position: sticky;
+  top: 24px;
+}
+.lesson-preview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid var(--input-border);
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+.lesson-preview-heading h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lesson-preview-heading > span {
+  color: var(--input-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lesson-preview-kicker {
+  color: var(--primary-color);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+.lesson-preview-surface,
+.lesson-card {
+  border-radius: 12px;
+  background: var(--bg-card, #1f2937);
+  color: var(--text-main, #f8fafc);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.lesson-card h2 {
+  margin: 0 0 12px;
+  color: inherit;
+  font-size: 1.35rem;
+}
+.lesson-card-text {
+  width: 100%;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  text-align: center;
+}
+.lesson-card-empty {
+  background: #f8fafc;
+  color: var(--input-muted);
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.lesson-card-empty p {
+  margin: 0;
+}
+.lesson-card .lesson-code-preview {
+  width: min(100%, 640px);
+  margin: 16px auto 0;
+  border: 0;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+.lesson-card .lesson-slide-controls {
+  justify-content: center;
+}
+.lesson-card .lesson-slide-button {
+  width: auto;
+  min-width: 96px;
+  margin-inline: auto;
 }
 .analytics-legacy-hidden {
   display: none !important;
@@ -317,6 +411,10 @@ textarea {
 @media (max-width: 900px) {
   .admin-container {
     display: block;
+  }
+  .lesson-preview-card {
+    position: static;
+    margin-bottom: 24px;
   }
   .unit-editor-card {
     margin-bottom: 24px;
