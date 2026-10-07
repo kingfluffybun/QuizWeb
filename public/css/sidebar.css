@@ -38,7 +38,7 @@
 
 .sidebar {
     grid-area: sidebar;
-    background-color: white;
+    background-color: var(--bg-main);
     border-right: 2px solid var(--border-main);
     width: 240px;
     overflow: visible;
