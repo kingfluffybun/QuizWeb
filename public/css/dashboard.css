@@ -103,8 +103,21 @@
     border-radius: 12px;
     width: 100%; height: 100%;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.08), 0px 12px 24px rgba(0, 0, 0, 0.1);
-    h2 {color: var(--text-main); margin-bottom: 12px;}
+    h2 {color: var(--text-main);}
     p {font-size: clamp(0.5rem, 1.5vw, 1rem)}
+    .card-title {
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        > .quick-action {
+            font-size: clamp(0.5rem, 1.75vw, 1rem);
+            color: var(--primary-color);
+            text-transform: uppercase;
+            /* temporary */
+            cursor: pointer; 
+        }
+    }
 }
 
 
@@ -185,6 +198,7 @@
 .calendar-container {
     display: flex;
     justify-content: space-between;
+    gap: 48px;
 }
 
 .calendar {
@@ -224,23 +238,49 @@
 
 /* Streak Calendar - Streak */
 
-.streak-no {
+.streak {
     display: flex;
+    flex-direction: column;
+    gap: 12px;
     flex: 1;
-    margin-top: -24px;
-    > .streak-progress-bar {
-        border-radius: 999%;
-        border: 16px solid #FF7504;
-        aspect-ratio: 1;
-        padding: 24px;
-        svg {height: auto; width: 80px;}
-    }
-    h1 {font-size: clamp(4rem, 6vw, 4.75rem); margin: -20px 0; font-weight: 800;}
-    p {font-size: clamp(0.75rem, 1.75vw, 1.25rem);}
-    h1, p {color: #FF7504;}
+    p {line-height: 1.5;}
 }
 
-.streak-day {gap: 0;}
+.streak-status {
+    display: flex;
+    justify-content: flex-start;
+    gap: 24px;
+    > .streak-progress-bar {
+        /* border-radius: 999%;
+        border: 16px solid #FF7504; */
+        aspect-ratio: 1;
+        /* padding: 24px; */
+    svg {height: auto; width: 100px;}
+    }
+    h1 {font-size: clamp(4rem, 6vw, 4.75rem); margin: -20px 0; font-weight: 800; color: #FF7504;}
+    p {font-size: clamp(0.75rem, 1.75vw, 1.25rem);}
+}
+
+.streak-no-of-days {
+    gap: 0;
+    align-items: flex-start;
+    p {text-wrap: nowrap;}
+}
+
+.streak-week {
+    display: flex;
+    justify-content: space-between;
+}
+
+.streak-day {
+    aspect-ratio: 1;
+    height: 40px; width: auto;
+    border-radius: 999px;
+    background-color: hsl(260, 100%, 70%, 10%);
+    svg {display: none; color: var(--text-inverse);}
+    &.active {background-color: var(--primary-color); svg {display: flex;}}
+    &.today {background-color: transparent; border: 2px dashed var(--primary-color);}
+}
 
 /* Daily Goal */
 
@@ -299,7 +339,7 @@
     display: flex;
     background-color: hsl(260, 100%, 70%, 10%);
     border-radius: 999px;
-    padding: 4px;
+    padding: 8px;
 
     input[type="radio"] {
         display: none;
