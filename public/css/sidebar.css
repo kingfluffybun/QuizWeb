@@ -62,6 +62,7 @@
             align-items: center;
             transition: all 0.2s ease;
             cursor: pointer;
+            text-decoration: none;
             svg {
                 opacity: 1;
                 transition: opacity 0.2s ease 0.2s;
