@@ -363,7 +363,6 @@ export default function QuizLandingClient({
                                 >
                                     Previous
                                 </button>
-                                <span aria-live="polite">{lessonSlideIndex + 1} / {lessonSlides.length}</span>
                                 {lessonSlideIndex === lessonSlides.length - 1 ? (
                                     <button
                                         type="button"
