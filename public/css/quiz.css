@@ -676,6 +676,7 @@
     border-radius: 20px;
     padding: 12px;
     display: flex;
+    align-items: center;
     gap: 12px;
     > .check-circle {
         min-width: 28px; height: 28px; 
@@ -738,7 +739,7 @@
             display: flex;
             justify-content: center;
             border-radius: 16px;
-            width: 160px;
+            width: 180px;
             padding: 16px 0;
             outline: none;
             border: none;
