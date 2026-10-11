@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import "#css/quiz.css";
 import "#css/sidebar.css"
+import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import { useQuizData } from "@/app/quiz/useQuizData";
 import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import QuizRender from "@/app/components/quiz/quizRender";
 import Sidebar from "@/app/components/Sidebar";
+import InteractiveQuizClient from "@/app/test/InteractiveQuizClient";
 
 type AnswerResult = {
     correct: boolean;
@@ -17,6 +21,43 @@ type AnswerResult = {
 
 const correctMessages = ["That's correct!", "Excellent job!", "Well done!"];
 const incorrectMessages = ["Hard luck!", "That’s incorrect.", "Not quite right."];
+
+function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
+    return quizzes.flatMap((quiz) => {
+        const quizRecord = quiz as Partial<QuizData>;
+        const payload = quizRecord.quiz_payload && typeof quizRecord.quiz_payload === "object"
+            ? quizRecord.quiz_payload
+            : {};
+        const nestedQuizzes = payload.quizzes;
+        const unitTitle = typeof payload.title === "string" ? payload.title : quizRecord.question_text ?? "";
+
+        if (Array.isArray(nestedQuizzes) && nestedQuizzes.length > 0) {
+            return nestedQuizzes.map((entry, index) => {
+                const entryRecord = entry as Partial<QuizData>;
+                return {
+                ...entryRecord,
+                unit_title: unitTitle,
+                unit_lesson_card: payload.lesson_card ?? {},
+                unit_assessment: payload.assessment ?? {},
+                quiz_id: entryRecord.quiz_id ?? quizRecord.quiz_id ?? index,
+                question_text: entryRecord.question_text ?? quizRecord.question_text ?? `Question ${index + 1}`,
+                type_name: entryRecord.type_name ?? quizRecord.type_name ?? "",
+                quiz_payload: entryRecord.quiz_payload ?? {},
+                };
+            });
+        }
+
+        return [{
+            ...quizRecord,
+            unit_title: unitTitle,
+            unit_lesson_card: payload.lesson_card ?? {},
+            unit_assessment: payload.assessment ?? {},
+            question_text: quizRecord.question_text ?? "Quiz",
+            type_name: quizRecord.type_name ?? "",
+            quiz_payload: quizRecord.quiz_payload ?? {},
+        }];
+    });
+}
 
 function getAnswer(quiz: QuizData) {
     const payload = quiz.quiz_payload;
@@ -72,13 +113,54 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
 }
 
 export default function QuizPage() {
-    // limit ko lang muna saglit to 10 ques para makita .progress-container - clarence
-    // const {quizzes} = useQuizData();
+    // These hooks are also initialized for the selected-quiz view to preserve hook order.
     const {quizzes: allQuizzes, units} = useQuizData();
     const quizzes = allQuizzes.slice(0, 10);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
     const [result, setResult] = useState<AnswerResult | null>(null);
+    const [selectedQuizzes, setSelectedQuizzes] = useState<QuizData[] | null>(null);
+    const searchParams = useSearchParams();
+    const unitIdParam = searchParams.get("unitId");
+    const quizIdParam = searchParams.get("quizId");
+    const sourceParam = searchParams.get("source");
+
+    useEffect(() => {
+        if (!unitIdParam && !quizIdParam) return;
+
+        let cancelled = false;
+        const loadSelectedQuiz = async () => {
+            const unitId = unitIdParam ? Number(unitIdParam) : null;
+            const quizId = quizIdParam ? Number(quizIdParam) : null;
+            const selectedUnit = unitId ? await getUnitById(unitId) : null;
+            const selectedQuiz = !selectedUnit && quizId
+                ? await getQuizOrUnitById(quizId)
+                : null;
+            const selectedPayload = selectedUnit ?? selectedQuiz;
+
+            if (!cancelled) {
+                setSelectedQuizzes(selectedPayload ? unwrapUnitQuizzes([selectedPayload]) : []);
+            }
+        };
+
+        void loadSelectedQuiz();
+        return () => {
+            cancelled = true;
+        };
+    }, [quizIdParam, unitIdParam]);
+
+    if (unitIdParam || quizIdParam) {
+        if (selectedQuizzes === null) {
+            return <main style={{ display: "flex", justifyContent: "center", padding: "50px" }}>Loading quiz...</main>;
+        }
+
+        return (
+            <InteractiveQuizClient
+                quizzes={selectedQuizzes}
+                completionDestination={sourceParam === "quiz" ? "home" : "input"}
+            />
+        );
+    }
 
     const quiz = quizzes[currentIndex];
 
@@ -182,7 +264,7 @@ export default function QuizPage() {
                                             {unit.quiz_count} {unit.quiz_count === 1 ? "question" : "questions"}
                                         </p>
                                     </div>
-                                    <Link href={`/test?unitId=${unit.pending_id}&source=quiz`} className="available-unit-link">
+                                    <Link href={`/quiz?unitId=${unit.pending_id}&source=quiz`} className="available-unit-link">
                                         Start unit
                                     </Link>
                                 </article>
