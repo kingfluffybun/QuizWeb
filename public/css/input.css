@@ -1028,6 +1028,27 @@ textarea {
   font-size: 1rem;
   font-weight: 700;
 }
+.lesson-code-toggle {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.lesson-code-toggle:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.lesson-code-toggle:focus-visible,
+.lesson-code-remove:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
 .lesson-code-editor {
   margin: 0 0 16px;
   overflow: hidden;
@@ -1035,12 +1056,29 @@ textarea {
   border-radius: 10px;
   background: #1e1e1e;
 }
-.lesson-code-tabs {
+.lesson-code-header {
   display: flex;
-  justify-content: flex-end;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
   padding: 6px 8px;
   background: #252526;
+}
+.lesson-code-remove {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+.lesson-code-remove:hover {
+  background: #3f3f46;
+  color: #ffffff;
+}
+.lesson-code-tabs {
+  display: flex;
+  gap: 4px;
 }
 .lesson-code-tab {
   min-width: 54px;

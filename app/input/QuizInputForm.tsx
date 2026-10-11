@@ -163,10 +163,8 @@ export default function QuizInputForm({
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
   const [lessonSlides, setLessonSlides] = useState<
-    { text: string; code: string }[]
-  >([
-    { text: "", code: "" },
-  ]);
+    { text: string; code?: string }[]
+  >([{ text: "" }]);
   const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
   const [lessonEditorView, setLessonEditorView] = useState<"code" | "result">(
     "code",
@@ -484,7 +482,7 @@ export default function QuizInputForm({
   };
 
   const handleAddLessonSlide = () => {
-    setLessonSlides((slides) => [...slides, { text: "", code: "" }]);
+    setLessonSlides((slides) => [...slides, { text: "" }]);
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
@@ -631,7 +629,7 @@ export default function QuizInputForm({
       setSelectedUnit("");
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ text: "", code: "" }]);
+      setLessonSlides([{ text: "" }]);
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
@@ -820,7 +818,9 @@ export default function QuizInputForm({
     formData.set("sec_id", selectedSecId);
     lessonSlides.forEach((slide, index) => {
       formData.set(`lesson_text_${index}`, slide.text);
-      formData.set(`lesson_code_${index}`, slide.code);
+      if (slide.code !== undefined) {
+        formData.set(`lesson_code_${index}`, slide.code);
+      }
     });
     const currentEntry = buildCurrentQuizEntry();
     const unitQuizBatch = editingQuiz?._pendingUnit
@@ -857,7 +857,7 @@ export default function QuizInputForm({
       setEditingQuiz(null);
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ text: "", code: "" }]);
+      setLessonSlides([{ text: "" }]);
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
@@ -923,11 +923,15 @@ export default function QuizInputForm({
         savedSlides.length > 0
           ? savedSlides.map((slide: any) => ({
               text: slide.lesson_text ?? slide.text ?? "",
-              code: slide.lesson_code ?? slide.code ?? "",
+              ...((slide.lesson_code ?? slide.code) !== undefined
+                ? { code: slide.lesson_code ?? slide.code }
+                : {}),
             }))
           : [{
               text: lessonDocument.lesson_text ?? "",
-              code: lessonDocument.lesson_code ?? "",
+              ...(lessonDocument.lesson_code !== undefined
+                ? { code: lessonDocument.lesson_code }
+                : {}),
             }],
       );
       setCurrentLessonSlide(0);
@@ -1079,7 +1083,7 @@ export default function QuizInputForm({
     setSelectedSecId("");
     setQuestionText("");
     setUnitTitle("");
-    setLessonSlides([{ text: "", code: "" }]);
+    setLessonSlides([{ text: "" }]);
     setCurrentLessonSlide(0);
     setLessonEditorView("code");
     setMcqOptions(["", "", "", ""]);
@@ -1728,67 +1732,103 @@ export default function QuizInputForm({
                 index === currentLessonSlide ? (
                 <div className="lesson-slide-fields" key={index}>
                   <div className="lesson-slide-number">Slide {index + 1}</div>
-                  <div className="lesson-code-editor">
-                    <div
-                      className="lesson-code-tabs"
-                      role="tablist"
-                      aria-label={`Slide ${index + 1} code and result`}
+                  {slide.code === undefined ? (
+                    <button
+                      type="button"
+                      className="lesson-code-toggle"
+                      onClick={() => {
+                        setLessonEditorView("code");
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, code: "" }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
                     >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={lessonEditorView === "code"}
-                        className={`lesson-code-tab${lessonEditorView === "code" ? " active" : ""}`}
-                        onClick={() => setLessonEditorView("code")}
-                      >
-                        Code
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={lessonEditorView === "result"}
-                        className={`lesson-code-tab${lessonEditorView === "result" ? " active" : ""}`}
-                        onClick={() => setLessonEditorView("result")}
-                      >
-                        Result
-                      </button>
-                    </div>
-                    <div className="lesson-code-panel">
-                      {lessonEditorView === "code" ? (
-                        <Editor
-                          height="250px"
-                          language="html"
-                          theme="vs-dark"
-                          value={slide.code}
-                          onChange={(value) => {
-                            const code = value ?? "";
+                      Add code feature
+                    </button>
+                  ) : (
+                    <div className="lesson-code-editor">
+                      <div className="lesson-code-header">
+                        <button
+                          type="button"
+                          className="lesson-code-remove"
+                          onClick={() => {
                             setLessonSlides((slides) =>
                               slides.map((currentSlide, slideIndex) =>
                                 slideIndex === index
-                                  ? { ...currentSlide, code }
+                                  ? { text: currentSlide.text }
                                   : currentSlide,
                               ),
                             );
                           }}
-                          options={{
-                            automaticLayout: true,
-                            fontSize: 13,
-                            minimap: { enabled: false },
-                            scrollBeyondLastLine: false,
-                            wordWrap: "on",
-                            ariaLabel: `HTML code for slide ${index + 1}`,
-                          }}
-                        />
-                      ) : (
-                        <iframe
-                          className="lesson-code-result"
-                          title={`Slide ${index + 1} code result`}
-                          sandbox=""
-                          srcDoc={slide.code}
-                        />
-                      )}
+                        >
+                          Remove code
+                        </button>
+                        <div
+                          className="lesson-code-tabs"
+                          role="tablist"
+                          aria-label={`Slide ${index + 1} code and result`}
+                        >
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={lessonEditorView === "code"}
+                            className={`lesson-code-tab${lessonEditorView === "code" ? " active" : ""}`}
+                            onClick={() => setLessonEditorView("code")}
+                          >
+                            Code
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={lessonEditorView === "result"}
+                            className={`lesson-code-tab${lessonEditorView === "result" ? " active" : ""}`}
+                            onClick={() => setLessonEditorView("result")}
+                          >
+                            Result
+                          </button>
+                        </div>
+                      </div>
+                      <div className="lesson-code-panel">
+                        {lessonEditorView === "code" ? (
+                          <Editor
+                            height="250px"
+                            language="html"
+                            theme="vs-dark"
+                            value={slide.code}
+                            onChange={(value) => {
+                              const code = value ?? "";
+                              setLessonSlides((slides) =>
+                                slides.map((currentSlide, slideIndex) =>
+                                  slideIndex === index
+                                    ? { ...currentSlide, code }
+                                    : currentSlide,
+                                ),
+                              );
+                            }}
+                            options={{
+                              automaticLayout: true,
+                              fontSize: 13,
+                              minimap: { enabled: false },
+                              scrollBeyondLastLine: false,
+                              wordWrap: "on",
+                              ariaLabel: `HTML code for slide ${index + 1}`,
+                            }}
+                          />
+                        ) : (
+                          <iframe
+                            className="lesson-code-result"
+                            title={`Slide ${index + 1} code result`}
+                            sandbox=""
+                            srcDoc={slide.code}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="form-group">
                     <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
                     <textarea
@@ -2712,7 +2752,7 @@ export default function QuizInputForm({
               title={unitTitle}
               slides={lessonSlides.map((slide) => ({
                 lesson_text: slide.text,
-                lesson_code: slide.code,
+                ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
               }))}
               className="lesson-preview-surface"
             />

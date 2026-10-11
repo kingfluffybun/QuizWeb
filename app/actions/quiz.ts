@@ -345,7 +345,13 @@ export async function saveUnit(_state: unknown, formData: FormData) {
       const lessonText = getText(`lesson_text_${index}`);
       return {
         lesson_text: lessonText,
-        lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
+        ...(formData.has(`lesson_code_${index}`)
+          ? {
+              lesson_code: String(
+                formData.get(`lesson_code_${index}`) ?? "",
+              ),
+            }
+          : {}),
       };
     });
   const assessmentSteps = getAssessmentStepsFromForm(formData);
@@ -1543,7 +1549,13 @@ export async function updatePendingUnitFromForm(
       const lessonText = String(formData.get(`lesson_text_${index}`) ?? "").trim();
       return {
         lesson_text: lessonText,
-        lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
+        ...(formData.has(`lesson_code_${index}`)
+          ? {
+              lesson_code: String(
+                formData.get(`lesson_code_${index}`) ?? "",
+              ),
+            }
+          : {}),
       };
     });
   const assessmentSteps = getAssessmentStepsFromForm(formData);
