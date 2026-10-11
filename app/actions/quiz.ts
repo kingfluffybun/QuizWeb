@@ -470,6 +470,114 @@ export interface AvailableUnit {
   quiz_count: number;
 }
 
+export interface CodeProblemStep {
+  prompt: string;
+  template: string;
+  expected: string;
+}
+
+export interface CodeProblem {
+  unit_id: number;
+  unit_title: string;
+  quiz_id?: number;
+  question_text: string;
+  instructions: string[];
+  steps: CodeProblemStep[];
+}
+
+export async function getCodeProblems(unitId?: number): Promise<CodeProblem[]> {
+  try {
+    const params: number[] = [];
+    const unitFilter = unitId ? "AND u.unit_id = ?" : "";
+    if (unitId) params.push(unitId);
+
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT u.unit_id, u.unit_title, u.unit_quiz_json,
+              u.unit_assessment_json
+       FROM unit_approved_tbl a
+       JOIN pending_tbl p ON p.pending_id = a.pending_id
+       JOIN unit_tbl u ON u.unit_id = a.unit_id
+       WHERE p.pending_status = 'approved' ${unitFilter}
+       ORDER BY u.unit_id DESC`,
+      params,
+    );
+
+    const problems: CodeProblem[] = [];
+    for (const row of rows) {
+      const quizzes = parseJsonColumn(row.unit_quiz_json);
+      const assessment = parseJsonColumn(row.unit_assessment_json);
+      const quizList = Array.isArray(quizzes) ? quizzes : [];
+      const codeQuiz = quizList.find((quiz) => {
+        const typeName = typeof quiz?.type_name === "string"
+          ? quiz.type_name
+          : typeof quiz?.type === "string"
+            ? quiz.type
+            : "";
+        const payload = quiz?.quiz_payload;
+        return typeName.toLowerCase() === "cp"
+          || (payload && typeof payload === "object" && (
+            Array.isArray(payload.steps)
+            || payload.template !== undefined
+            || payload.expected !== undefined
+          ));
+      });
+      const payload = codeQuiz?.quiz_payload && typeof codeQuiz.quiz_payload === "object"
+        ? codeQuiz.quiz_payload
+        : {};
+      const rawSteps: unknown[] = Array.isArray(payload.steps) ? payload.steps : [];
+      const steps = rawSteps
+        .map((step: unknown) => {
+          if (!step || typeof step !== "object") return null;
+          const value = step as Record<string, unknown>;
+          return {
+            prompt: typeof value.prompt === "string" ? value.prompt.trim() : "",
+            template: typeof value.template === "string" ? value.template : "",
+            expected: typeof value.expected === "string" ? value.expected : "",
+          };
+        })
+        .filter((step): step is CodeProblemStep => Boolean(step?.prompt));
+      const assessmentRecord = assessment && typeof assessment === "object"
+        ? assessment as Record<string, unknown>
+        : null;
+      const rawAssessmentSteps: unknown[] = assessmentRecord
+        && Array.isArray(assessmentRecord.steps)
+        ? assessmentRecord.steps
+        : [];
+      const assessmentSteps = rawAssessmentSteps.length > 0
+        ? rawAssessmentSteps.filter(
+            (step: unknown): step is string =>
+              typeof step === "string" && step.trim().length > 0,
+          )
+        : [];
+      const instructions = assessmentSteps.length > 0
+        ? assessmentSteps
+        : steps.map((step) => step.prompt);
+
+      if (instructions.length === 0 && steps.length === 0) continue;
+
+      const fallbackStep = {
+        prompt: typeof codeQuiz?.question_text === "string" ? codeQuiz.question_text : "",
+        template: typeof payload.template === "string" ? payload.template : "",
+        expected: typeof payload.expected === "string" ? payload.expected : "",
+      };
+
+      problems.push({
+        unit_id: Number(row.unit_id),
+        unit_title: String(row.unit_title),
+        quiz_id: typeof codeQuiz?.quiz_id === "number" ? codeQuiz.quiz_id : undefined,
+        question_text: fallbackStep.prompt,
+        instructions,
+        steps: steps.length > 0 ? steps : fallbackStep.prompt ? [fallbackStep] : [],
+      });
+    }
+
+    return problems;
+  } catch (error) {
+    console.error("Failed to fetch code problems:", error);
+    return [];
+  }
+}
+
 export async function getAvailableUnits(): Promise<AvailableUnit[]> {
   try {
     const [rows] = await db.query<RowDataPacket[]>(
