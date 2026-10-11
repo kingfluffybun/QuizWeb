@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
-import LessonCard from "@/app/components/LessonCard";
+import LessonCard, { LessonCodeFrame } from "@/app/components/LessonCard";
 import {
   createQuiz,
   getPaginatedRecentQuizzes,
@@ -163,7 +163,7 @@ export default function QuizInputForm({
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
   const [lessonSlides, setLessonSlides] = useState<
-    { text: string; code?: string }[]
+    { text: string; title?: string; code?: string }[]
   >([{ text: "" }]);
   const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
   const [lessonEditorView, setLessonEditorView] = useState<"code" | "result">(
@@ -818,6 +818,7 @@ export default function QuizInputForm({
     formData.set("sec_id", selectedSecId);
     lessonSlides.forEach((slide, index) => {
       formData.set(`lesson_text_${index}`, slide.text);
+      formData.set(`lesson_title_${index}`, slide.title ?? "");
       if (slide.code !== undefined) {
         formData.set(`lesson_code_${index}`, slide.code);
       }
@@ -923,12 +924,18 @@ export default function QuizInputForm({
         savedSlides.length > 0
           ? savedSlides.map((slide: any) => ({
               text: slide.lesson_text ?? slide.text ?? "",
+              ...((slide.lesson_title ?? slide.title) !== undefined
+                ? { title: slide.lesson_title ?? slide.title }
+                : {}),
               ...((slide.lesson_code ?? slide.code) !== undefined
                 ? { code: slide.lesson_code ?? slide.code }
                 : {}),
             }))
           : [{
               text: lessonDocument.lesson_text ?? "",
+              ...(lessonDocument.lesson_title !== undefined
+                ? { title: lessonDocument.lesson_title }
+                : {}),
               ...(lessonDocument.lesson_code !== undefined
                 ? { code: lessonDocument.lesson_code }
                 : {}),
@@ -1819,16 +1826,35 @@ export default function QuizInputForm({
                             }}
                           />
                         ) : (
-                          <iframe
+                          <LessonCodeFrame
                             className="lesson-code-result"
                             title={`Slide ${index + 1} code result`}
-                            sandbox=""
-                            srcDoc={slide.code}
+                            source={slide.code}
                           />
                         )}
                       </div>
                     </div>
                   )}
+                  <div className="form-group">
+                    <label htmlFor={`lesson_title_${index}`}>Slide Title</label>
+                    <input
+                      id={`lesson_title_${index}`}
+                      name={`lesson_title_${index}`}
+                      className="form-input"
+                      placeholder="Enter a title for this slide..."
+                      value={slide.title ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, title: value }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
+                    />
+                  </div>
                   <div className="form-group">
                     <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
                     <textarea
@@ -2751,6 +2777,7 @@ export default function QuizInputForm({
             <LessonCard
               title={unitTitle}
               slides={lessonSlides.map((slide) => ({
+                ...(slide.title !== undefined ? { lesson_title: slide.title } : {}),
                 lesson_text: slide.text,
                 ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
               }))}

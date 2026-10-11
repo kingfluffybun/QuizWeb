@@ -137,8 +137,8 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
     const hasLesson = Boolean(
         unitTitle ||
         lessonSlides.some(
-            (slide: { lesson_text?: string; lesson_code?: string }) =>
-                slide.lesson_text || slide.lesson_code,
+            (slide: { lesson_title?: string; lesson_text?: string; lesson_code?: string }) =>
+                slide.lesson_title || slide.lesson_text || slide.lesson_code,
         ),
     );
 

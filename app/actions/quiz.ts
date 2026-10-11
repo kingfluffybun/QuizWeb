@@ -343,7 +343,9 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     .map(([name]) => {
       const index = name.slice("lesson_text_".length);
       const lessonText = getText(`lesson_text_${index}`);
+      const lessonTitle = getText(`lesson_title_${index}`);
       return {
+        ...(lessonTitle ? { lesson_title: lessonTitle } : {}),
         lesson_text: lessonText,
         ...(formData.has(`lesson_code_${index}`)
           ? {
@@ -1547,7 +1549,11 @@ export async function updatePendingUnitFromForm(
     .map(([name]) => {
       const index = name.slice("lesson_text_".length);
       const lessonText = String(formData.get(`lesson_text_${index}`) ?? "").trim();
+      const lessonTitle = String(
+        formData.get(`lesson_title_${index}`) ?? "",
+      ).trim();
       return {
+        ...(lessonTitle ? { lesson_title: lessonTitle } : {}),
         lesson_text: lessonText,
         ...(formData.has(`lesson_code_${index}`)
           ? {

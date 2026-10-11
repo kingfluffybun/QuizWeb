@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export type LessonSlide = {
+  lesson_title?: string;
   lesson_text?: string;
   lesson_code?: string;
 };
@@ -14,34 +15,51 @@ type LessonCardProps = {
   interactive?: boolean;
 };
 
-function centeredLessonDocument(source: string) {
-  const centeringStyles = `
-    <style>
-      html, body {
-        min-height: 100%;
-        overflow: hidden !important;
-      }
-      body {
-        min-height: 180px;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        max-width: 100%;
-        overflow-x: hidden;
-      }
-      *, *::before, *::after {
-        box-sizing: border-box;
-        max-width: 100%;
-      }
-    </style>
-  `;
+type LessonCodeFrameProps = {
+  className: string;
+  title: string;
+  source: string;
+};
 
-  if (/<\/head\s*>/i.test(source)) {
-    return source.replace(/<\/head\s*>/i, `${centeringStyles}</head>`);
-  }
+export function LessonCodeFrame({
+  className,
+  title,
+  source,
+}: LessonCodeFrameProps) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
 
-  return `${centeringStyles}${source}`;
+  const resizeFrame = () => {
+    const frame = frameRef.current;
+    const frameWindow = frame?.contentWindow;
+    const document = frameWindow?.document;
+    if (!frame || !frameWindow || !document) {
+      return;
+    }
+
+    const body = document.body;
+    const lastContent = body?.lastElementChild;
+    const bodyStyle = body ? frameWindow.getComputedStyle(body) : null;
+    const contentHeight = Math.max(
+      180,
+      lastContent && bodyStyle
+        ? lastContent.getBoundingClientRect().bottom +
+            frameWindow.scrollY +
+            parseFloat(bodyStyle.marginBottom || "0")
+        : document.documentElement.scrollHeight,
+    );
+    frame.style.height = `${contentHeight}px`;
+  };
+
+  return (
+    <iframe
+      ref={frameRef}
+      className={className}
+      title={title}
+      sandbox="allow-same-origin"
+      srcDoc={source}
+      onLoad={resizeFrame}
+    />
+  );
 }
 
 export default function LessonCard({
@@ -55,7 +73,9 @@ export default function LessonCard({
 
   const safeSlideIndex = Math.min(slideIndex, visibleSlides.length - 1);
   const slide = visibleSlides[safeSlideIndex] ?? visibleSlides[0];
-  const hasContent = Boolean(title || slide.lesson_text || slide.lesson_code);
+  const hasContent = Boolean(
+    title || slide.lesson_title || slide.lesson_text || slide.lesson_code,
+  );
 
   if (!hasContent) {
     return (
@@ -68,13 +88,12 @@ export default function LessonCard({
   return (
     <div className={`lesson-card ${className}`.trim()}>
       {title && <h2>{title}</h2>}
+      {slide.lesson_title && <h3 className="lesson-slide-title">{slide.lesson_title}</h3>}
       {slide.lesson_code && (
-        <iframe
+        <LessonCodeFrame
           className="lesson-code-preview"
           title={`Lesson code result, slide ${safeSlideIndex + 1}`}
-          sandbox=""
-          scrolling="no"
-          srcDoc={centeredLessonDocument(slide.lesson_code)}
+          source={slide.lesson_code}
         />
       )}
       {slide.lesson_text && <div className="lesson-card-text">{slide.lesson_text}</div>}
