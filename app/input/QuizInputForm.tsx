@@ -1830,6 +1830,7 @@ export default function QuizInputForm({
                             className="lesson-code-result"
                             title={`Slide ${index + 1} code result`}
                             source={slide.code}
+                            toggleable={false}
                           />
                         )}
                       </div>

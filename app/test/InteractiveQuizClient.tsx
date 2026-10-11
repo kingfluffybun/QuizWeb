@@ -93,7 +93,13 @@ function getCPSteps(quiz: QuizData | undefined) {
     ];
 }
 
-export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
+export default function InteractiveQuizClient({
+    quizzes,
+    completionDestination = "input",
+}: {
+    quizzes: QuizData[];
+    completionDestination?: "home" | "input";
+}) {
     const [isMounted, setIsMounted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
@@ -277,6 +283,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                         lives={lives}
                         score={score}
                         totalQuizzes={quizzes.length}
+                        completionDestination={completionDestination}
                     />
                 </main>
             </div>

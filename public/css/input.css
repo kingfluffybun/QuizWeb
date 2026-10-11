@@ -216,12 +216,53 @@ textarea {
   display: block;
   width: 100%;
   min-height: 180px;
-  margin: 16px 0 8px;
+  margin: 0;
   border: 0;
   max-width: 100%;
   overflow: hidden;
   overflow-x: hidden;
   overflow-y: hidden;
+}
+.lesson-code-frame {
+  width: 100%;
+  margin: 16px 0 8px;
+}
+.lesson-code-frame-controls {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px;
+  border: 1px solid var(--border-main);
+  border-radius: 8px 8px 0 0;
+  background: var(--bg-card);
+}
+.lesson-code-frame-tab {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+}
+.lesson-code-frame-tab.active {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+}
+.lesson-code-source {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 180px;
+  max-height: 480px;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--border-main);
+  border-radius: 0 8px 8px 8px;
+  background: #1e1e1e;
+  color: #f8fafc;
+  text-align: left;
+  white-space: pre;
 }
 .lesson-card .lesson-slide-controls {
   justify-content: center;

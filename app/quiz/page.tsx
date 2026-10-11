@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import "#css/quiz.css";
 import "#css/sidebar.css"
@@ -73,7 +74,7 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
 export default function QuizPage() {
     // limit ko lang muna saglit to 10 ques para makita .progress-container - clarence
     // const {quizzes} = useQuizData();
-    const {quizzes: allQuizzes} = useQuizData();
+    const {quizzes: allQuizzes, units} = useQuizData();
     const quizzes = allQuizzes.slice(0, 10);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
@@ -160,6 +161,37 @@ export default function QuizPage() {
                         ))}
                     </div>
                 </div>
+
+                <section className="available-units" aria-labelledby="available-units-title">
+                    <div className="available-units-heading">
+                        <div>
+                            <h2 id="available-units-title">Available Units</h2>
+                            <p>Choose a unit to study its lesson and take its quiz.</p>
+                        </div>
+                    </div>
+                    {units === null ? (
+                        <p className="available-units-empty">Loading units...</p>
+                    ) : units.length > 0 ? (
+                        <div className="available-units-list">
+                            {units.map((unit) => (
+                                <article className="available-unit-card" key={unit.unit_id}>
+                                    <div>
+                                        <h3>{unit.unit_title}</h3>
+                                        <p>
+                                            {unit.sec_num ? `Section ${unit.sec_num} · ` : ""}
+                                            {unit.quiz_count} {unit.quiz_count === 1 ? "question" : "questions"}
+                                        </p>
+                                    </div>
+                                    <Link href={`/test?unitId=${unit.pending_id}&source=quiz`} className="available-unit-link">
+                                        Start unit
+                                    </Link>
+                                </article>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="available-units-empty">No approved units are available yet.</p>
+                    )}
+                </section>
 
                 <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
                     <div className="quiz-container" key={quiz?.quiz_id} onKeyDown={handleQuestionKeyDown}>

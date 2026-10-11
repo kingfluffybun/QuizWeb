@@ -19,14 +19,17 @@ type LessonCodeFrameProps = {
   className: string;
   title: string;
   source: string;
+  toggleable?: boolean;
 };
 
 export function LessonCodeFrame({
   className,
   title,
   source,
+  toggleable = true,
 }: LessonCodeFrameProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const [view, setView] = useState<"code" | "result">("result");
 
   const resizeFrame = () => {
     const frame = frameRef.current;
@@ -51,14 +54,42 @@ export function LessonCodeFrame({
   };
 
   return (
-    <iframe
-      ref={frameRef}
-      className={className}
-      title={title}
-      sandbox="allow-same-origin"
-      srcDoc={source}
-      onLoad={resizeFrame}
-    />
+    <div className="lesson-code-frame">
+      {toggleable && (
+        <div className="lesson-code-frame-controls" aria-label="Code preview view">
+          <button
+            type="button"
+            className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`}
+            aria-pressed={view === "code"}
+            onClick={() => setView("code")}
+          >
+            Code
+          </button>
+          <button
+            type="button"
+            className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`}
+            aria-pressed={view === "result"}
+            onClick={() => setView("result")}
+          >
+            Result
+          </button>
+        </div>
+      )}
+      {toggleable && view === "code" ? (
+        <pre className="lesson-code-source">
+          <code>{source}</code>
+        </pre>
+      ) : (
+        <iframe
+          ref={frameRef}
+          className={className}
+          title={title}
+          sandbox="allow-same-origin"
+          srcDoc={source}
+          onLoad={resizeFrame}
+        />
+      )}
+    </div>
   );
 }
 

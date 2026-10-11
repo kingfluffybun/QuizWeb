@@ -75,6 +75,58 @@
     }
 }
 
+.quiz-page .available-units {
+    width: 100%;
+    max-width: 1080px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.available-units-heading h2,
+.available-unit-card h3 {
+    margin: 0;
+    color: var(--text-main);
+}
+
+.available-units-heading p,
+.available-unit-card p,
+.available-units-empty {
+    margin: 4px 0 0;
+    color: var(--text-main);
+}
+
+.available-units-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.available-unit-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 2px solid var(--border-main);
+    border-radius: 12px;
+}
+
+.available-unit-link {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.available-unit-link:hover {
+    filter: brightness(0.92);
+}
+
 .quiz-page .quiz-container {
     display: flex;
     flex-direction: column;
@@ -107,12 +159,58 @@
 .lesson-card .lesson-code-preview {
     display: block;
     width: 100%;
-    margin: 16px 0 8px;
+    margin: 0;
     border: 0;
     max-width: 100%;
     overflow: hidden;
     overflow-x: hidden;
     overflow-y: hidden;
+}
+
+.lesson-code-frame {
+    width: 100%;
+    margin: 16px 0 8px;
+}
+
+.lesson-code-frame-controls {
+    display: flex;
+    gap: 4px;
+    width: fit-content;
+    padding: 4px;
+    border: 1px solid var(--border-main);
+    border-radius: 8px 8px 0 0;
+    background: var(--bg-card);
+}
+
+.lesson-code-frame-tab {
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-main);
+    font: inherit;
+    cursor: pointer;
+}
+
+.lesson-code-frame-tab.active {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+}
+
+.lesson-code-source {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 180px;
+    max-height: 480px;
+    margin: 0;
+    padding: 16px;
+    overflow: auto;
+    border: 1px solid var(--border-main);
+    border-radius: 0 8px 8px 8px;
+    background: #1e1e1e;
+    color: #f8fafc;
+    text-align: left;
+    white-space: pre;
 }
 
 .lesson-card .lesson-slide-controls {
