@@ -33,6 +33,8 @@ export interface QuizPayload {
     prompts?: string[];
     prompt?: string;
     assessment?: {
+        title?: string;
+        description?: string;
         assessment?: string;
         steps?: string[];
         expected_outcome?: string;

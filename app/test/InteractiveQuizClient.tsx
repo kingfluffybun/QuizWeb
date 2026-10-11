@@ -114,8 +114,26 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         ? unitLessonCard.lesson_slide
         : [{ lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "" }];
     const assessmentText = typeof unitAssessment === "object"
-        ? unitAssessment.assessment ?? ""
+        ? (typeof unitAssessment.assessment === "string" ? unitAssessment.assessment : "")
         : String(unitAssessment ?? "");
+    const assessmentTitle = typeof unitAssessment === "object"
+        ? (typeof unitAssessment.title === "string" ? unitAssessment.title : "")
+        : "";
+    const assessmentDescription = typeof unitAssessment === "object"
+        ? (typeof unitAssessment.description === "string" ? unitAssessment.description : "")
+        : "";
+    const savedAssessmentSteps = typeof unitAssessment === "object" && Array.isArray(unitAssessment.steps)
+        ? unitAssessment.steps.filter((step: unknown): step is string => typeof step === "string" && step.trim().length > 0)
+        : [];
+    const assessmentSteps = savedAssessmentSteps.length > 0
+        ? savedAssessmentSteps
+        : assessmentText.split(/\n\s*\n/).filter((step: string) => step.trim().length > 0);
+    const expectedOutcome = typeof unitAssessment === "object" && typeof unitAssessment.expected_outcome === "string"
+        ? unitAssessment.expected_outcome
+        : "";
+    const hasAssessment = Boolean(
+        assessmentTitle || assessmentDescription || assessmentSteps.length > 0 || expectedOutcome,
+    );
     const hasLesson = Boolean(
         unitTitle ||
         lessonSlides.some(
@@ -193,7 +211,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         if (currentIndex < quizzes.length - 1 && lives > 0) {
             setCurrentIndex((prev) => prev + 1);
             setStatus("idle");
-        } else if (assessmentText) {
+        } else if (hasAssessment) {
             setStatus("assessment");
         } else {
             setStatus("finished");
@@ -211,9 +229,28 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                     <div className="main-content">
                         <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
                         <div className="unit-meta anim-enter" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
-                            <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                                <strong>Assessment:</strong> {assessmentText}
-                            </div>
+                            <h2 style={{ marginTop: 0 }}>
+                                {assessmentTitle || "Assessment"}
+                            </h2>
+                            {assessmentDescription && (
+                                <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                    {assessmentDescription}
+                                </p>
+                            )}
+                            {assessmentSteps.length > 0 && (
+                                <ol style={{ paddingLeft: "24px", lineHeight: 1.6 }}>
+                                    {assessmentSteps.map((step: string, index: number) => (
+                                        <li key={index} style={{ whiteSpace: "pre-wrap", marginBottom: "10px" }}>
+                                            {step}
+                                        </li>
+                                    ))}
+                                </ol>
+                            )}
+                            {expectedOutcome && (
+                                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                    <strong>Expected outcome:</strong> {expectedOutcome}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </main>
