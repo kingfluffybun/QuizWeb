@@ -37,6 +37,29 @@ interface QuizInputFormProps {
   initialEditingQuiz?: any;
 }
 
+const getAssessmentSteps = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    const steps = value.filter((step): step is string => typeof step === "string");
+    return steps.length > 0 ? steps : [""];
+  }
+
+  if (value && typeof value === "object") {
+    const assessment = value as { steps?: unknown; assessment?: unknown };
+    if (Array.isArray(assessment.steps)) {
+      return getAssessmentSteps(assessment.steps);
+    }
+    return getAssessmentSteps(assessment.assessment);
+  }
+
+  return [typeof value === "string" ? value : ""];
+};
+
+const getExpectedOutcome = (value: unknown): string => {
+  if (!value || typeof value !== "object") return "";
+  const expectedOutcome = (value as { expected_outcome?: unknown }).expected_outcome;
+  return typeof expectedOutcome === "string" ? expectedOutcome : "";
+};
+
 export default function QuizInputForm({
   categories,
   difficulties,
@@ -145,7 +168,12 @@ export default function QuizInputForm({
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
   const [fitbAnswer, setFitbAnswer] = useState<string>("");
-  const [assessment, setAssessment] = useState<string>("");
+  const [assessmentSteps, setAssessmentSteps] = useState<string[]>([""]);
+  const [expectedOutcome, setExpectedOutcome] = useState("");
+  const assessment = assessmentSteps
+    .map((step) => step.trim())
+    .filter(Boolean)
+    .join("\n\n");
   const hasInitializedType = useRef(false);
 
   const handleCopyId = (quizId: number) => {
@@ -444,6 +472,10 @@ export default function QuizInputForm({
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
+  const handleAddAssessmentStep = () => {
+    setAssessmentSteps((steps) => [...steps, ""]);
+  };
+
   const handlePreviousLessonSlide = () => {
     setCurrentLessonSlide((slideIndex) => Math.max(0, slideIndex - 1));
   };
@@ -506,7 +538,16 @@ export default function QuizInputForm({
       setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
       setSelectedUnit(editingQuiz.unit?.toString() ?? "");
       setQuestionText(editingQuiz.question_text ?? "");
-      setAssessment(editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "");
+      setAssessmentSteps(
+        getAssessmentSteps(
+          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "",
+        ),
+      );
+      setExpectedOutcome(
+        getExpectedOutcome(
+          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
+        ),
+      );
       setFitbAnswer(editingQuiz.quiz_payload?.answer ?? "");
       setOrderItems(
         editingQuiz.type_name === "Order" &&
@@ -571,7 +612,8 @@ export default function QuizInputForm({
         { left: "", right: "" },
         { left: "", right: "" },
       ]);
-      setAssessment("");
+      setAssessmentSteps([""]);
+      setExpectedOutcome("");
     }
   }, [editingQuiz, categories, difficulties]);
 
@@ -794,7 +836,8 @@ export default function QuizInputForm({
         { left: "", right: "" },
         { left: "", right: "" },
       ]);
-      setAssessment("");
+      setAssessmentSteps([""]);
+      setExpectedOutcome("");
       setOptionCount(4);
       setCpPromptCount(1);
 
@@ -852,13 +895,15 @@ export default function QuizInputForm({
       );
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
-      setAssessment(quiz.quiz_payload?.assessment?.assessment ?? "");
+      const assessmentValue = quiz.quiz_payload?.assessment ?? "";
+      setAssessmentSteps(getAssessmentSteps(assessmentValue));
+      setExpectedOutcome(getExpectedOutcome(assessmentValue));
       setEditingQuiz({
         ...firstQuiz,
         type_name: firstQuizTypeName,
         pending_id: quiz.quiz_id,
         _pendingUnit: true,
-        unit_assessment: quiz.quiz_payload?.assessment?.assessment ?? "",
+        unit_assessment: assessmentValue,
       });
       return;
     }
@@ -936,7 +981,11 @@ export default function QuizInputForm({
       type_name: nextQuizTypeName,
       pending_id: editingQuiz.pending_id,
       _pendingUnit: true,
-      unit_assessment: assessment,
+      unit_assessment: {
+        assessment,
+        steps: assessmentSteps,
+        expected_outcome: expectedOutcome,
+      },
     });
     setMessage(null);
   };
@@ -970,7 +1019,11 @@ export default function QuizInputForm({
       type_name: previousQuizTypeName,
       pending_id: editingQuiz.pending_id,
       _pendingUnit: true,
-      unit_assessment: assessment,
+      unit_assessment: {
+        assessment,
+        steps: assessmentSteps,
+        expected_outcome: expectedOutcome,
+      },
     });
     setMessage(null);
   };
@@ -2430,16 +2483,63 @@ export default function QuizInputForm({
             </div>
           )}
 
-          <div className="form-group" style={{ marginTop: "18px" }}>
-            <label htmlFor="assessment">Assessment</label>
+          <section className="form-group assessment-editor" aria-labelledby="assessment-heading">
+            <div className="assessment-heading">
+              <h3 id="assessment-heading">Assessment</h3>
+              <button
+                type="button"
+                className="assessment-add"
+                onClick={handleAddAssessmentStep}
+                title="Add assessment step"
+                aria-label="Add assessment step"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
+            <div className="assessment-step-list">
+              {assessmentSteps.map((step, index) => (
+                <div className="assessment-step" key={index}>
+                  <label htmlFor={`assessment-step-${index}`}>
+                    Step {index + 1}
+                  </label>
+                  <textarea
+                    id={`assessment-step-${index}`}
+                    aria-label={`Assessment step ${index + 1}`}
+                    className="assessment-step-input"
+                    rows={4}
+                    placeholder="Enter instructions here."
+                    value={step}
+                    onChange={(event) => {
+                      const text = event.target.value;
+                      setAssessmentSteps((steps) =>
+                        steps.map((currentStep, stepIndex) =>
+                          stepIndex === index ? text : currentStep,
+                        ),
+                      );
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <input type="hidden" name="assessment" value={assessment} />
+            <input
+              type="hidden"
+              name="assessment_steps"
+              value={JSON.stringify(assessmentSteps)}
+            />
+          </section>
+          <div className="form-group assessment-outcome">
+            <label htmlFor="expected-outcome">Expected Outcome</label>
             <textarea
-              id="assessment"
-              name="assessment"
-              className="form-textarea"
-              rows={4}
-              placeholder="Complete this after finishing the unit."
-              value={assessment}
-              onChange={(event) => setAssessment(event.target.value)}
+              id="expected-outcome"
+              name="expected_outcome"
+              className="assessment-step-input"
+              rows={3}
+              placeholder="Enter the expected outcome here."
+              value={expectedOutcome}
+              onChange={(event) => setExpectedOutcome(event.target.value)}
             />
           </div>
 

@@ -32,7 +32,11 @@ export interface QuizPayload {
     expected?: string;
     prompts?: string[];
     prompt?: string;
-    assessment?: { assessment?: string } | string;
+    assessment?: {
+        assessment?: string;
+        steps?: string[];
+        expected_outcome?: string;
+    } | string;
     lesson_card?: Record<string, unknown>;
     quizzes?: QuizData[];
 }

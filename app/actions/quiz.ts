@@ -4,6 +4,27 @@ import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
+const getAssessmentStepsFromForm = (formData: FormData): string[] | null => {
+  const rawSteps = formData.get("assessment_steps");
+  if (typeof rawSteps === "string") {
+    try {
+      const parsedSteps: unknown = JSON.parse(rawSteps);
+      if (
+        !Array.isArray(parsedSteps) ||
+        parsedSteps.some((step) => typeof step !== "string")
+      ) {
+        return null;
+      }
+      return parsedSteps.map((step: string) => step.trim()).filter(Boolean);
+    } catch {
+      return null;
+    }
+  }
+
+  const legacyAssessment = String(formData.get("assessment") ?? "").trim();
+  return legacyAssessment ? [legacyAssessment] : [];
+};
+
 export interface Category {
   cat_id: number;
   cat_name: string;
@@ -327,7 +348,11 @@ export async function saveUnit(_state: unknown, formData: FormData) {
         lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
       };
     });
-  const unitAssessment = getText("assessment");
+  const assessmentSteps = getAssessmentStepsFromForm(formData);
+  if (!assessmentSteps) {
+    return { error: "Assessment steps are invalid." };
+  }
+  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
   if (
     !lessonTitle ||
     lessonSlides.length === 0 ||
@@ -360,7 +385,9 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   });
   const quizDocument = JSON.stringify(parsedQuizJson);
   const assessmentDocument = JSON.stringify({
-    assessment: unitAssessment,
+    assessment: assessmentSteps.join("\n\n"),
+    steps: assessmentSteps,
+    expected_outcome: expectedOutcome,
   });
   const session = await auth();
   const pendingName = (
@@ -1469,7 +1496,11 @@ export async function updatePendingUnitFromForm(
         lesson_code: String(formData.get(`lesson_code_${index}`) ?? ""),
       };
     });
-  const assessment = String(formData.get("assessment") ?? "").trim();
+  const assessmentSteps = getAssessmentStepsFromForm(formData);
+  if (!assessmentSteps) {
+    return { error: "Assessment steps are invalid." };
+  }
+  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
   const rawQuizJson = formData.get("quiz_json");
 
   if (
@@ -1503,7 +1534,11 @@ export async function updatePendingUnitFromForm(
         sectionId,
         JSON.stringify({ lesson_slide: lessonSlides }),
         JSON.stringify(quizzes),
-        JSON.stringify({ assessment }),
+        JSON.stringify({
+          assessment: assessmentSteps.join("\n\n"),
+          steps: assessmentSteps,
+          expected_outcome: expectedOutcome,
+        }),
         pendingId,
       ],
     );
