@@ -163,7 +163,7 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
   };
 
   const viewQuiz = () => {
-    router.push("/quiz");
+    window.location.href = "http://localhost:3000/test";
   };
 
   return (
