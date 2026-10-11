@@ -91,7 +91,13 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
     };
 }
 
-export default function QuizLandingClient({ initialQuizzes }: { initialQuizzes?: QuizData[] }) {
+export default function QuizLandingClient({
+    initialQuizzes,
+    completionDestination = "input",
+}: {
+    initialQuizzes?: QuizData[];
+    completionDestination?: "home" | "input";
+}) {
     const router = useRouter();
     const {quizzes: allQuizzes, units} = useQuizData();
     const quizzes = (initialQuizzes ?? allQuizzes).slice(0, 10);
@@ -101,6 +107,8 @@ export default function QuizLandingClient({ initialQuizzes }: { initialQuizzes?:
     const [value, setValue] = useState<AnswerValue>(undefined);
     const [result, setResult] = useState<AnswerResult | null>(null);
     const [lives, setLives] = useState(5);
+    const [score, setScore] = useState(0);
+    const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
 
     const quiz = quizzes[currentIndex];
@@ -125,7 +133,12 @@ export default function QuizLandingClient({ initialQuizzes }: { initialQuizzes?:
     };
 
     const nextQuiz = () => {
-        setCurrentIndex((index) => Math.min(index + 1, quizzes.length - 1));
+        if (lives <= 0 || currentIndex >= quizzes.length - 1) {
+            setIsFinished(true);
+            return;
+        }
+
+        setCurrentIndex((index) => index + 1);
         resetState();
     };
 
@@ -137,7 +150,9 @@ export default function QuizLandingClient({ initialQuizzes }: { initialQuizzes?:
         if (!quiz) return;
         const nextResult = evaluate(quiz, value);
         setResult(nextResult);
-        if (!nextResult.correct) {
+        if (nextResult.correct) {
+            setScore((currentScore) => currentScore + 1);
+        } else {
             setLives((currentLives) => Math.max(0, currentLives - 1));
         }
     };
@@ -149,7 +164,9 @@ export default function QuizLandingClient({ initialQuizzes }: { initialQuizzes?:
         if (quiz?.type_name === "Pair" && nextValue === pairCount) {
             const nextResult = evaluate(quiz, nextValue);
             setResult(nextResult);
-            if (!nextResult.correct) {
+            if (nextResult.correct) {
+                setScore((currentScore) => currentScore + 1);
+            } else {
                 setLives((currentLives) => Math.max(0, currentLives - 1));
             }
         }
@@ -183,6 +200,39 @@ export default function QuizLandingClient({ initialQuizzes }: { initialQuizzes?:
                 return false;
         }
     })();
+
+    if (isFinished) {
+        const backHref = completionDestination === "home" ? "/home" : "/input";
+        const backLabel = completionDestination === "home" ? "Back to Home" : "Back to Quiz Input";
+
+        return (
+            <div className="quiz-page">
+                <Sidebar />
+                <main className="quiz-completion-main">
+                    <div className="quiz-complete-card">
+                        <h1>{lives === 0 ? "Game Over" : "Quiz Complete!"}</h1>
+                        <h2>Score: {score} / {quizzes.length}</h2>
+                        <p className="quiz-completion-message">
+                            {lives === 0
+                                ? "You ran out of lives. Try again to sharpen your skills!"
+                                : "Outstanding performance!"}
+                        </p>
+                        <button
+                            className="options"
+                            id="submit"
+                            type="button"
+                            onClick={() => window.location.reload()}
+                        >
+                            Play Again
+                        </button>
+                        <Link href={backHref} className="options back-to-input-btn">
+                            {backLabel}
+                        </Link>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="quiz-page">

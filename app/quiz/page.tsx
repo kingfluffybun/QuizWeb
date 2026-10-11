@@ -55,7 +55,7 @@ export default async function QuizPage({
 }: {
     searchParams: Promise<{ quizId?: string; unitId?: string; source?: string }>;
 }) {
-    const { quizId, unitId } = await searchParams;
+    const { quizId, unitId, source } = await searchParams;
     const selectedUnitId = unitId ? Number(unitId) : null;
     const selectedQuizId = quizId ? Number(quizId) : null;
     const selectedUnit = selectedUnitId
@@ -78,7 +78,13 @@ export default async function QuizPage({
             );
         }
 
-        return <QuizLandingClient key={unitId ?? quizId} initialQuizzes={quizzesToDisplay} />;
+        return (
+            <QuizLandingClient
+                key={unitId ?? quizId}
+                initialQuizzes={quizzesToDisplay}
+                completionDestination={source === "quiz" ? "home" : "input"}
+            />
+        );
     }
 
     return <QuizLandingClient key="landing" />;
