@@ -468,17 +468,29 @@ export async function deleteUnit(unitId: number) {
     return { error: "A valid Unit ID is required." };
   }
 
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query<ResultSetHeader>(
+    await connection.beginTransaction();
+    await connection.query(
+      "DELETE FROM unit_approved_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    const [result] = await connection.query<ResultSetHeader>(
       "DELETE FROM unit_tbl WHERE unit_id = ?",
       [unitId],
     );
-    return result.affectedRows === 0
-      ? { error: "Unit was not found." }
-      : { success: true };
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return { error: "Unit was not found." };
+    }
+    await connection.commit();
+    return { success: true };
   } catch (error) {
+    await connection.rollback();
     console.error("Failed to delete unit:", error);
     return { error: "An error occurred while deleting the unit." };
+  } finally {
+    connection.release();
   }
 }
 
@@ -673,25 +685,52 @@ export async function getPaginatedRecentQuizzes(
       const search = filters.search?.trim() ?? "";
       const idSearch = filters.id?.replace(/^[#\s]+/, "").trim() ?? "";
       const section = filters.section?.trim() ?? "";
+      const where = [
+        "(? = '' OR CAST(p.pending_id AS CHAR) LIKE ?)",
+        "(? = '' OR p.unit_title LIKE ? OR p.pending_name LIKE ?)",
+        "(? = '' OR s.sec_num = ?)",
+        "(? = '' OR 'Unit' = ?)",
+        "(? = '' OR p.pending_status = ?)",
+        "(? = '' OR 'Unit' = ?)",
+      ];
+      const params = [
+        idSearch,
+        `%${idSearch}%`,
+        search,
+        `%${search}%`,
+        `%${search}%`,
+        section,
+        section,
+        filters.category ?? "",
+        filters.category ?? "",
+        filters.difficulty ?? "",
+        filters.difficulty ?? "",
+        filters.type ?? "",
+        filters.type ?? "",
+      ];
+      const joins = `
+        FROM unit_approved_tbl a
+        JOIN pending_tbl p ON p.pending_id = a.pending_id
+        JOIN unit_tbl u ON u.unit_id = a.unit_id
+        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
+        WHERE ${where.join(" AND ")}
+      `;
+      const [countRows] = await db.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS total ${joins}`,
+        params,
+      );
+      const totalCount = Number(countRows[0]?.total ?? 0);
+      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
+      const offset = (currentPage - 1) * safePageSize;
       const [rows] = await db.query<RowDataPacket[]>(
         `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
-                p.unit_lesson_card_json, p.unit_quiz_json,
-                p.unit_assessment_json, p.pending_status, p.pending_name
-         FROM pending_tbl p
-         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
-         WHERE (? = '' OR CAST(p.pending_id AS CHAR) LIKE ?)
-           AND (? = '' OR p.unit_title LIKE ? OR p.pending_name LIKE ?)
-           AND (? = '' OR s.sec_num = ?)
-         ORDER BY p.pending_id DESC`,
-        [
-          idSearch,
-          `%${idSearch}%`,
-          search,
-          `%${search}%`,
-          `%${search}%`,
-          section,
-          section,
-        ],
+                u.unit_id, u.unit_lesson_card_json, u.unit_quiz_json,
+                u.unit_assessment_json, p.pending_status, p.pending_name
+         ${joins}
+         ORDER BY u.unit_id DESC
+         LIMIT ? OFFSET ?`,
+        [...params, safePageSize, offset],
       );
       const units = rows.map((row) => {
         const lessonCard = parseJsonColumn(row.unit_lesson_card_json);
@@ -700,6 +739,7 @@ export async function getPaginatedRecentQuizzes(
         const unitNumber = Array.isArray(quizzes) ? quizzes[0]?.unit : null;
         return {
           quiz_id: row.pending_id,
+          unit_id: row.unit_id,
           cat_id: 0,
           sec_id: row.sec_id,
           difficulty_id: 0,
@@ -719,12 +759,8 @@ export async function getPaginatedRecentQuizzes(
           },
         };
       });
-      const totalCount = units.length;
-      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
-      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
-      const offset = (currentPage - 1) * safePageSize;
       return {
-        quizzes: units.slice(offset, offset + safePageSize),
+        quizzes: units,
         currentPage,
         totalPages,
         totalCount,
