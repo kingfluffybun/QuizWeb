@@ -45,6 +45,21 @@
         width: 100%;
         color: var(--text-main);
 
+        > .quiz-settings-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font-size: 30px;
+            line-height: 1;
+        }
+
         > .quiz-close-button {
             display: inline-flex;
             align-items: center;
@@ -76,6 +91,7 @@
                 opacity: 0.45;
             }
         }
+
     }
 }
 
@@ -94,6 +110,34 @@
     > .active {
         background-color: var(--primary-color);
     }
+}
+
+.quiz-page .quiz-navigation > .lucide-settings-icon {
+    display: none;
+}
+
+.quiz-page .accessibility-dialog-card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    max-height: calc(100dvh - 3rem);
+    transform: translate(-50%, -50%);
+    animation-name: quiz-accessibility-panel-rise;
+}
+
+.quiz-page .accessibility-dialog.is-closing .accessibility-dialog-card {
+    animation-name: quiz-accessibility-panel-fall;
+}
+
+@keyframes quiz-accessibility-panel-rise {
+    from { opacity: 0; transform: translate(-50%, calc(100% + 2rem)); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@keyframes quiz-accessibility-panel-fall {
+    from { opacity: 1; transform: translate(-50%, -50%); }
+    to { opacity: 0; transform: translate(-50%, calc(100% + 2rem)); }
 }
 
 .quiz-completion-main {
@@ -859,7 +903,21 @@
     justify-content: center;
     padding: 36px clamp(24px, 10vw, 200px);
     > div {
+        align-items: center;
+        gap: 24px;
         > .answer-message {display: none;}
+        > .lesson-footer-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+            gap: 24px;
+        }
+        > .lesson-footer-controls .lesson-slide-button {
+            width: auto;
+            min-width: 96px;
+            margin: 0;
+        }
         > button.options {
             justify-content: center;
             min-height: clamp(56px, 6vh, 80px);

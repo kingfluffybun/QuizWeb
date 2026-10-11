@@ -13,6 +13,9 @@ type LessonCardProps = {
   slides?: LessonSlide[];
   className?: string;
   interactive?: boolean;
+  slideIndex?: number;
+  onSlideIndexChange?: (index: number) => void;
+  showControls?: boolean;
 };
 
 type LessonCodeFrameProps = {
@@ -98,11 +101,22 @@ export default function LessonCard({
   slides = [],
   className = "",
   interactive = true,
+  slideIndex,
+  onSlideIndexChange,
+  showControls = true,
 }: LessonCardProps) {
   const visibleSlides = slides.length > 0 ? slides : [{ lesson_text: "", lesson_code: "" }];
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [internalSlideIndex, setInternalSlideIndex] = useState(0);
+  const activeSlideIndex = slideIndex ?? internalSlideIndex;
+  const setSlideIndex = (nextIndex: number) => {
+    if (onSlideIndexChange) {
+      onSlideIndexChange(nextIndex);
+    } else {
+      setInternalSlideIndex(nextIndex);
+    }
+  };
 
-  const safeSlideIndex = Math.min(slideIndex, visibleSlides.length - 1);
+  const safeSlideIndex = Math.min(activeSlideIndex, visibleSlides.length - 1);
   const slide = visibleSlides[safeSlideIndex] ?? visibleSlides[0];
   const hasContent = Boolean(
     title || slide.lesson_title || slide.lesson_text || slide.lesson_code,
@@ -128,12 +142,12 @@ export default function LessonCard({
         />
       )}
       {slide.lesson_text && <div className="lesson-card-text">{slide.lesson_text}</div>}
-      {visibleSlides.length > 1 && (
+      {showControls && visibleSlides.length > 1 && (
         <div className="lesson-slide-controls">
           <button
             type="button"
             className="lesson-slide-button"
-            onClick={() => setSlideIndex((index) => Math.max(0, index - 1))}
+            onClick={() => setSlideIndex(Math.max(0, safeSlideIndex - 1))}
             disabled={!interactive || safeSlideIndex === 0}
             aria-label="Previous lesson slide"
           >
@@ -145,9 +159,7 @@ export default function LessonCard({
           <button
             type="button"
             className="lesson-slide-button"
-            onClick={() =>
-              setSlideIndex((index) => Math.min(visibleSlides.length - 1, index + 1))
-            }
+            onClick={() => setSlideIndex(Math.min(visibleSlides.length - 1, safeSlideIndex + 1))}
             disabled={!interactive || safeSlideIndex === visibleSlides.length - 1}
             aria-label="Next lesson slide"
           >

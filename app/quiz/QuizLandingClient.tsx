@@ -10,6 +10,7 @@ import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import QuizRender from "@/app/components/quiz/quizRender";
 import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
+import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 
 type AnswerResult = {
     correct: boolean;
@@ -110,6 +111,21 @@ export default function QuizLandingClient({
     const [score, setScore] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
+    const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
+    const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+    const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+
+    const openAccessibility = () => {
+        setAccessibilityClosing(false);
+        setAccessibilityOpen(true);
+    };
+
+    const closeAccessibility = () => setAccessibilityClosing(true);
+
+    const finishClosingAccessibility = () => {
+        setAccessibilityOpen(false);
+        setAccessibilityClosing(false);
+    };
 
     const quiz = quizzes[currentIndex];
     const selectedQuiz = selectedQuizzes[currentIndex];
@@ -138,6 +154,7 @@ export default function QuizLandingClient({
             return;
         }
 
+        setLessonSlideIndex(0);
         setCurrentIndex((index) => index + 1);
         resetState();
     };
@@ -240,6 +257,12 @@ export default function QuizLandingClient({
             <main>
                 <div className="quiz-header">
                     <div className="quiz-navigation">
+                        <button type="button" className="quiz-settings-button" data-accessibility-trigger aria-label={accessibilityOpen ? "Close accessibility options" : "Open accessibility options"} onClick={accessibilityOpen ? closeAccessibility : openAccessibility}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
                         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings-icon lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /><circle cx="12" cy="12" r="3" /></svg>
                         <button
                             type="button"
@@ -262,6 +285,13 @@ export default function QuizLandingClient({
                             <div key={index} className={index <= currentIndex ? "active" : ""} />
                         ))}
                     </div>
+                    {accessibilityOpen && (
+                        <AccessibilityPanel
+                            isClosing={accessibilityClosing}
+                            onClose={closeAccessibility}
+                            onClosed={finishClosingAccessibility}
+                        />
+                    )}
                 </div>
 
                 {showAvailableUnits && <section className="available-units" aria-labelledby="available-units-title">
@@ -302,6 +332,9 @@ export default function QuizLandingClient({
                             title={selectedQuiz?.unit_title}
                             slides={lessonSlides}
                             className="unit-meta"
+                            slideIndex={lessonSlideIndex}
+                            onSlideIndexChange={setLessonSlideIndex}
+                            showControls={false}
                         />
                     ) : (
                         <div className="quiz-container" key={quiz?.quiz_id} onKeyDown={handleQuestionKeyDown}>
@@ -318,13 +351,36 @@ export default function QuizLandingClient({
                 <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
                     {/* dito sa div yung message */}
                     {hasLesson && !hasStartedQuiz ? (
-                        <button
-                            className="options"
-                            id="submit"
-                            onClick={() => setHasStartedQuiz(true)}
-                        >
-                            Start Quiz
-                        </button>
+                        <>
+                            {lessonSlides.length > 1 && <div className="lesson-footer-controls">
+                                <button
+                                    type="button"
+                                    className="lesson-slide-button"
+                                    onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
+                                    disabled={lessonSlideIndex === 0}
+                                    aria-label="Previous lesson slide"
+                                >
+                                    Previous
+                                </button>
+                                <span aria-live="polite">{lessonSlideIndex + 1} / {lessonSlides.length}</span>
+                                <button
+                                    type="button"
+                                    className="lesson-slide-button"
+                                    onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
+                                    disabled={lessonSlideIndex === lessonSlides.length - 1}
+                                    aria-label="Next lesson slide"
+                                >
+                                    Next
+                                </button>
+                            </div>}
+                            <button
+                                className="options"
+                                id="submit"
+                                onClick={() => setHasStartedQuiz(true)}
+                            >
+                                Start Quiz
+                            </button>
+                        </>
                     ) : <><div className="answer-message row">
                         <div className="answer-message-icon col">
                             <svg xmlns="http://www.w3.org/2000/svg" id="wrong" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
