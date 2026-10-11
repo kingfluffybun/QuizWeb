@@ -355,7 +355,8 @@ export default function QuizLandingClient({
                             {lessonSlides.length > 1 && <div className="lesson-footer-controls">
                                 <button
                                     type="button"
-                                    className="lesson-slide-button"
+                                    className="options"
+                                    id="skip"
                                     onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
                                     disabled={lessonSlideIndex === 0}
                                     aria-label="Previous lesson slide"
@@ -363,23 +364,27 @@ export default function QuizLandingClient({
                                     Previous
                                 </button>
                                 <span aria-live="polite">{lessonSlideIndex + 1} / {lessonSlides.length}</span>
-                                <button
-                                    type="button"
-                                    className="lesson-slide-button"
-                                    onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
-                                    disabled={lessonSlideIndex === lessonSlides.length - 1}
-                                    aria-label="Next lesson slide"
-                                >
-                                    Next
-                                </button>
+                                {lessonSlideIndex === lessonSlides.length - 1 ? (
+                                    <button
+                                        type="button"
+                                        className="options"
+                                        id="submit"
+                                        onClick={() => setHasStartedQuiz(true)}
+                                    >
+                                        Start Quiz
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="options"
+                                        id="submit"
+                                        onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
+                                        aria-label="Next lesson slide"
+                                    >
+                                        Next
+                                    </button>
+                                )}
                             </div>}
-                            <button
-                                className="options"
-                                id="submit"
-                                onClick={() => setHasStartedQuiz(true)}
-                            >
-                                Start Quiz
-                            </button>
                         </>
                     ) : <><div className="answer-message row">
                         <div className="answer-message-icon col">

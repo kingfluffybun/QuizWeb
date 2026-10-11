@@ -913,10 +913,32 @@
             flex: 1;
             gap: 24px;
         }
-        > .lesson-footer-controls .lesson-slide-button {
-            width: auto;
-            min-width: 96px;
+        > .lesson-footer-controls > button.options {
+            justify-content: center;
+            width: 320px;
+            min-height: clamp(56px, 6vh, 80px);
             margin: 0;
+        }
+        > .lesson-footer-controls > button.options#submit {
+            position: relative;
+            background-color: var(--selected-color);
+            border: none;
+            border-bottom: 6px solid #6b36da;
+            color: var(--text-inverse);
+        }
+        > .lesson-footer-controls > button.options#submit::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-color: transparent;
+            transition: background-color 200ms ease;
+        }
+        > .lesson-footer-controls > button.options#submit:hover::after {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        > .lesson-footer-controls > button.options#skip {
+            color: #AFAFAF;
+            background-color: var(--bg-card);
         }
         > button.options {
             justify-content: center;
