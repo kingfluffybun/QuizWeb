@@ -435,7 +435,8 @@ export async function getUnits() {
   try {
     const [rows] = await db.query<UnitRow[]>(
       `SELECT u.unit_id, u.unit_title, u.sec_id, s.sec_num,
-              u.unit_lesson_card_json, u.quiz_json, u.assessment_json
+              u.unit_lesson_card_json, u.unit_quiz_json AS quiz_json,
+              u.unit_assessment_json AS assessment_json
        FROM unit_tbl u
        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
        ORDER BY u.unit_id DESC`,
@@ -1351,7 +1352,8 @@ export async function reviewPendingQuiz(
 
     const [unitResult] = await connection.query<ResultSetHeader>(
       `INSERT INTO unit_tbl
-       (unit_title, sec_id, unit_lesson_card_json, quiz_json, assessment_json)
+       (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
+        unit_assessment_json)
        VALUES (?, ?, ?, ?, ?)`,
       [
         pendingUnit.unit_title,
@@ -1366,6 +1368,12 @@ export async function reviewPendingQuiz(
           ? JSON.stringify(pendingUnit.unit_assessment_json)
           : pendingUnit.unit_assessment_json,
       ],
+    );
+
+    await connection.query(
+      `INSERT INTO unit_approved_tbl (pending_id, unit_id)
+       VALUES (?, ?)`,
+      [pendingId, unitResult.insertId],
     );
 
     await connection.query(
