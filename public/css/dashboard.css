@@ -300,18 +300,27 @@
 }
 
 .daily-prograss-graph {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-rows: 180px auto;
+    position: relative;
     p {font-weight: 600;}
 }
 
 .graph-x-axis-container {
+    grid-column: 1 / -1;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-height: 0;
 }
 
 .graph-x-axis {
     display: flex;
     align-items: center;
+    flex: 1;
+    min-height: 0;
     p {width: 40px; text-align: right; padding: 4px 8px;}
 }
 
@@ -322,10 +331,30 @@
 }
 
 .graph-y-axis {
-    margin-left: 40px;
-    padding: 8px;
+    grid-column: 2;
+    grid-row: 2;
     display: flex;
     justify-content: space-between;
+    align-items: stretch;
+    div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 8px;
+        position: relative;
+        flex: 1;
+        > .graph-y-bar {
+            position: absolute;
+            width: 20px;
+            height: 148px;
+            bottom: calc(100% + 16px);
+            margin: 0 auto;
+            left: 0;
+            right: 0;
+            background-color: var(--primary-color);
+        }
+    }
 }
 
 /* Leaderboard */
@@ -424,4 +453,15 @@
     border-radius: 999px;
     background-color: var(--border-main);
     border: 2px solid var(--primary-color);
+}
+
+.unit-progress-bar, .daily-progress-bar, .lesson-progress-bar {
+    position: relative;
+    > .progress-bar-fill {
+        position: absolute;
+        height: 16px;
+        left: 0;
+        border-radius: 999px;
+        background-color: var(--primary-color);
+    }
 }

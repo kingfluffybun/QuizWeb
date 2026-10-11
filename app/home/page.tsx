@@ -113,7 +113,7 @@ export default async function DashboardPage(
                                     <h2>Lesson Progress</h2>
                                     <h2 className="quick-action">View All</h2>
                                 </div>
-                                <div className="lesson-progress col">
+                                <div className="lesson-progress col">   
                                     <div className="lesson-progress-header">
                                         <div className="lesson-progress-details">
                                             <div className="current-lesson">
@@ -132,7 +132,9 @@ export default async function DashboardPage(
                                             </div>
                                             <div className="row"><h1>0%</h1></div>
                                         </div>
-                                        <div className="lesson-progress-bar"></div>
+                                        <div className="lesson-progress-bar">
+                                            <div className="progress-bar-fill"></div>
+                                        </div>
                                     </div>
                                     <hr></hr>
                                     <div className="unit-list">
@@ -143,7 +145,9 @@ export default async function DashboardPage(
                                                     <p id="unit-title">Document Structure</p>
                                                     <p>0/6</p>
                                                 </div>
-                                                <div className="unit-progress-bar"></div>
+                                                <div className="unit-progress-bar">
+                                                    <div className="progress-bar-fill"></div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="unit row">
@@ -153,7 +157,9 @@ export default async function DashboardPage(
                                                     <p id="unit-title">Text Content</p>
                                                     <p>0/7</p>
                                                 </div>
-                                                <div className="unit-progress-bar"></div>
+                                                <div className="unit-progress-bar">
+                                                    <div className="progress-bar-fill"></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -179,7 +185,9 @@ export default async function DashboardPage(
                                 <div className="daily-goal-xp">
                                     <p>XP Progress</p>
                                     <div className="daily-progress-bar-container row">
-                                        <div className="daily-progress-bar"></div>
+                                        <div className="daily-progress-bar">
+                                            <div className="progress-bar-fill" style={{width: "50%"}}></div>
+                                        </div>
                                         <div><p>15/30</p></div>
                                     </div>
                                     <div className="daily-prograss-graph">
@@ -206,13 +214,34 @@ export default async function DashboardPage(
                                             </div>
                                         </div>
                                         <div className="graph-y-axis">
-                                            <div><p>Su</p></div>
-                                            <div><p>Mo</p></div>
-                                            <div><p>Tu</p></div>
-                                            <div><p>We</p></div>
-                                            <div><p>Th</p></div>
-                                            <div><p>Fr</p></div>
-                                            <div><p>Sa</p></div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>Su</p>
+                                            </div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>Mo</p>
+                                            </div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>Tu</p>
+                                            </div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>We</p>
+                                            </div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>Th</p>
+                                            </div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>Fr</p>
+                                            </div>
+                                            <div>
+                                                <div className="graph-y-bar"></div>
+                                                <p>Sa</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
