@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import "#css/quiz.css";
 import "#css/sidebar.css"
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
@@ -112,7 +113,7 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
     };
 }
 
-export default function QuizPage() {
+function QuizPageContent() {
     // These hooks are also initialized for the selected-quiz view to preserve hook order.
     const {quizzes: allQuizzes, units} = useQuizData();
     const quizzes = allQuizzes.slice(0, 10);
@@ -311,4 +312,12 @@ export default function QuizPage() {
             </footer>
         </div>
     )
+}
+
+export default function QuizPage() {
+    return (
+        <Suspense fallback={<main style={{ display: "flex", justifyContent: "center", padding: "50px" }}>Loading quiz...</main>}>
+            <QuizPageContent />
+        </Suspense>
+    );
 }
