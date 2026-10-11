@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import "#css/test_quiz.css";
+import "#css/nav.css";
 import { QuizData, QuizStatus } from "./types";
 import QuizHeader from "./components/QuizHeader";
 import QuizFooter from "./components/QuizFooter";

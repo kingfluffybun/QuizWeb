@@ -83,6 +83,54 @@
     cursor: pointer;
 }
 
+.quiz-settings-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+
+.quiz-header .accessibility-dialog.settings-main {
+    justify-items: center !important;
+}
+
+.quiz-header .accessibility-dialog-card {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    animation-name: quiz-accessibility-panel-rise;
+}
+
+@keyframes quiz-accessibility-panel-rise {
+    from {
+        opacity: 0;
+        transform: translate(-50%, calc(100% + 2rem));
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.quiz-header .accessibility-dialog.is-closing .accessibility-dialog-card {
+    animation-name: quiz-accessibility-panel-fall;
+}
+
+@keyframes quiz-accessibility-panel-fall {
+    from {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, calc(100% + 2rem));
+    }
+}
+
 .heart-container {
     display: flex;
     margin-left: auto;
