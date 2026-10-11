@@ -32,9 +32,9 @@ function unwrapUnitQuizzes(quizzes: any[]) {
 export default async function InteractiveQuizPage({
     searchParams,
 }: {
-    searchParams: Promise<{ quizId?: string; unitId?: string }>;
+    searchParams: Promise<{ quizId?: string; unitId?: string; source?: string }>;
 }) {
-    const { quizId, unitId } = await searchParams;
+    const { quizId, unitId, source } = await searchParams;
     const selectedUnitId = unitId ? Number(unitId) : null;
     const selectedQuizId = quizId ? Number(quizId) : null;
     const selectedUnit = selectedUnitId
@@ -56,5 +56,10 @@ export default async function InteractiveQuizPage({
         );
     }
 
-    return <InteractiveQuizClient quizzes={quizzesToDisplay} />;
+    return (
+        <InteractiveQuizClient
+            quizzes={quizzesToDisplay}
+            completionDestination={source === "quiz" ? "home" : "input"}
+        />
+    );
 }

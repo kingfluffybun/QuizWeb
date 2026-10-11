@@ -72,6 +72,65 @@
     color: var(--text-main);
 }
 
+.quiz-close-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+
+.quiz-settings-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+
+.quiz-header .accessibility-dialog.settings-main {
+    justify-items: center !important;
+}
+
+.quiz-header .accessibility-dialog-card {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    animation-name: quiz-accessibility-panel-rise;
+}
+
+@keyframes quiz-accessibility-panel-rise {
+    from {
+        opacity: 0;
+        transform: translate(-50%, calc(100% + 2rem));
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.quiz-header .accessibility-dialog.is-closing .accessibility-dialog-card {
+    animation-name: quiz-accessibility-panel-fall;
+}
+
+@keyframes quiz-accessibility-panel-fall {
+    from {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, calc(100% + 2rem));
+    }
+}
+
 .heart-container {
     display: flex;
     margin-left: auto;
@@ -126,9 +185,9 @@
     background: rgba(255, 255, 255, 0.04);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    align-items: stretch;
+    justify-content: flex-start;
+    text-align: left;
 }
 
 .lesson-card h2 {
@@ -136,11 +195,16 @@
     font-size: 1.5rem;
 }
 
+.lesson-card .lesson-slide-title {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+}
+
 .lesson-card-text {
     width: 100%;
     white-space: pre-wrap;
     line-height: 1.6;
-    text-align: center;
+    text-align: left;
 }
 
 .lesson-card-empty {
@@ -149,13 +213,60 @@
 }
 
 .lesson-card .lesson-code-preview {
-    width: min(100%, 640px);
-    margin: 16px auto 0;
+    display: block;
+    width: 100%;
+    margin: 0;
     border: 0;
     max-width: 100%;
     overflow: hidden;
     overflow-x: hidden;
     overflow-y: hidden;
+}
+
+.lesson-code-frame {
+    width: 100%;
+    margin: 16px 0 8px;
+}
+
+.lesson-code-frame-controls {
+    display: flex;
+    gap: 4px;
+    width: fit-content;
+    padding: 4px;
+    border: 1px solid var(--border-main);
+    border-radius: 8px 8px 0 0;
+    background: var(--bg-card);
+}
+
+.lesson-code-frame-tab {
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-main);
+    font: inherit;
+    cursor: pointer;
+}
+
+.lesson-code-frame-tab.active {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+}
+
+.lesson-code-source {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 180px;
+    max-height: 480px;
+    margin: 0;
+    padding: 16px;
+    overflow: auto;
+    border: 1px solid var(--border-main);
+    border-radius: 0 8px 8px 8px;
+    background: #1e1e1e;
+    color: #f8fafc;
+    text-align: left;
+    white-space: pre;
 }
 
 .lesson-card .lesson-slide-controls {

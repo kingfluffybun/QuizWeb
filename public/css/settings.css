@@ -220,15 +220,25 @@ html[data-motion="reduce"] .settings-main *::after {
         flex: 1;
         width: 100%;
         height: 6px;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
         background: var(--settings-border);
         border-radius: 4px;
         outline: none;
         transition: background 0.2s ease;
 
+        &::-webkit-slider-runnable-track {
+          height: 6px;
+          border-radius: 4px;
+        }
+
         &::-webkit-slider-thumb {
           appearance: none;
+          -webkit-appearance: none;
           width: 22px;
           height: 22px;
+          margin-top: -8px;
           border-radius: 50%;
           background: var(--settings-primary);
           cursor: pointer;
@@ -253,6 +263,11 @@ html[data-motion="reduce"] .settings-main *::after {
           &:hover, &:active {
             transform: scale(1.15);
           }
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--settings-primary);
+          outline-offset: 4px;
         }
       }
     }

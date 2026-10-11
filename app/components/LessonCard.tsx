@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export type LessonSlide = {
+  lesson_title?: string;
   lesson_text?: string;
   lesson_code?: string;
 };
@@ -12,36 +13,87 @@ type LessonCardProps = {
   slides?: LessonSlide[];
   className?: string;
   interactive?: boolean;
+  slideIndex?: number;
+  onSlideIndexChange?: (index: number) => void;
+  showControls?: boolean;
 };
 
-function centeredLessonDocument(source: string) {
-  const centeringStyles = `
-    <style>
-      html, body {
-        min-height: 100%;
-        overflow: hidden !important;
-      }
-      body {
-        min-height: 180px;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        max-width: 100%;
-        overflow-x: hidden;
-      }
-      *, *::before, *::after {
-        box-sizing: border-box;
-        max-width: 100%;
-      }
-    </style>
-  `;
+type LessonCodeFrameProps = {
+  className: string;
+  title: string;
+  source: string;
+  toggleable?: boolean;
+};
 
-  if (/<\/head\s*>/i.test(source)) {
-    return source.replace(/<\/head\s*>/i, `${centeringStyles}</head>`);
-  }
+export function LessonCodeFrame({
+  className,
+  title,
+  source,
+  toggleable = true,
+}: LessonCodeFrameProps) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const [view, setView] = useState<"code" | "result">("result");
 
-  return `${centeringStyles}${source}`;
+  const resizeFrame = () => {
+    const frame = frameRef.current;
+    const frameWindow = frame?.contentWindow;
+    const document = frameWindow?.document;
+    if (!frame || !frameWindow || !document) {
+      return;
+    }
+
+    const body = document.body;
+    const lastContent = body?.lastElementChild;
+    const bodyStyle = body ? frameWindow.getComputedStyle(body) : null;
+    const contentHeight = Math.max(
+      180,
+      lastContent && bodyStyle
+        ? lastContent.getBoundingClientRect().bottom +
+            frameWindow.scrollY +
+            parseFloat(bodyStyle.marginBottom || "0")
+        : document.documentElement.scrollHeight,
+    );
+    frame.style.height = `${contentHeight}px`;
+  };
+
+  return (
+    <div className="lesson-code-frame">
+      {toggleable && (
+        <div className="lesson-code-frame-controls" aria-label="Code preview view">
+          <button
+            type="button"
+            className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`}
+            aria-pressed={view === "code"}
+            onClick={() => setView("code")}
+          >
+            Code
+          </button>
+          <button
+            type="button"
+            className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`}
+            aria-pressed={view === "result"}
+            onClick={() => setView("result")}
+          >
+            Result
+          </button>
+        </div>
+      )}
+      {toggleable && view === "code" ? (
+        <pre className="lesson-code-source">
+          <code>{source}</code>
+        </pre>
+      ) : (
+        <iframe
+          ref={frameRef}
+          className={className}
+          title={title}
+          sandbox="allow-same-origin"
+          srcDoc={source}
+          onLoad={resizeFrame}
+        />
+      )}
+    </div>
+  );
 }
 
 export default function LessonCard({
@@ -49,13 +101,26 @@ export default function LessonCard({
   slides = [],
   className = "",
   interactive = true,
+  slideIndex,
+  onSlideIndexChange,
+  showControls = true,
 }: LessonCardProps) {
   const visibleSlides = slides.length > 0 ? slides : [{ lesson_text: "", lesson_code: "" }];
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [internalSlideIndex, setInternalSlideIndex] = useState(0);
+  const activeSlideIndex = slideIndex ?? internalSlideIndex;
+  const setSlideIndex = (nextIndex: number) => {
+    if (onSlideIndexChange) {
+      onSlideIndexChange(nextIndex);
+    } else {
+      setInternalSlideIndex(nextIndex);
+    }
+  };
 
-  const safeSlideIndex = Math.min(slideIndex, visibleSlides.length - 1);
+  const safeSlideIndex = Math.min(activeSlideIndex, visibleSlides.length - 1);
   const slide = visibleSlides[safeSlideIndex] ?? visibleSlides[0];
-  const hasContent = Boolean(title || slide.lesson_text || slide.lesson_code);
+  const hasContent = Boolean(
+    title || slide.lesson_title || slide.lesson_text || slide.lesson_code,
+  );
 
   if (!hasContent) {
     return (
@@ -68,22 +133,21 @@ export default function LessonCard({
   return (
     <div className={`lesson-card ${className}`.trim()}>
       {title && <h2>{title}</h2>}
+      {slide.lesson_title && <h3 className="lesson-slide-title">{slide.lesson_title}</h3>}
       {slide.lesson_code && (
-        <iframe
+        <LessonCodeFrame
           className="lesson-code-preview"
           title={`Lesson code result, slide ${safeSlideIndex + 1}`}
-          sandbox=""
-          scrolling="no"
-          srcDoc={centeredLessonDocument(slide.lesson_code)}
+          source={slide.lesson_code}
         />
       )}
       {slide.lesson_text && <div className="lesson-card-text">{slide.lesson_text}</div>}
-      {visibleSlides.length > 1 && (
+      {showControls && visibleSlides.length > 1 && (
         <div className="lesson-slide-controls">
           <button
             type="button"
             className="lesson-slide-button"
-            onClick={() => setSlideIndex((index) => Math.max(0, index - 1))}
+            onClick={() => setSlideIndex(Math.max(0, safeSlideIndex - 1))}
             disabled={!interactive || safeSlideIndex === 0}
             aria-label="Previous lesson slide"
           >
@@ -95,9 +159,7 @@ export default function LessonCard({
           <button
             type="button"
             className="lesson-slide-button"
-            onClick={() =>
-              setSlideIndex((index) => Math.min(visibleSlides.length - 1, index + 1))
-            }
+            onClick={() => setSlideIndex(Math.min(visibleSlides.length - 1, safeSlideIndex + 1))}
             disabled={!interactive || safeSlideIndex === visibleSlides.length - 1}
             aria-label="Next lesson slide"
           >

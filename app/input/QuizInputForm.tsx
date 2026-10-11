@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
-import LessonCard from "@/app/components/LessonCard";
+import LessonCard, { LessonCodeFrame } from "@/app/components/LessonCard";
 import {
   createQuiz,
   getPaginatedRecentQuizzes,
@@ -37,6 +37,16 @@ interface QuizInputFormProps {
   initialEditingQuiz?: any;
 }
 
+type QueuedQuizEntry = {
+  cat_id?: number;
+  sec_id?: number;
+  unit?: number;
+  difficulty_id?: number;
+  quiz_type_id?: number | string;
+  question_text?: string;
+  quiz_payload?: Record<string, unknown>;
+};
+
 const getAssessmentSteps = (value: unknown): string[] => {
   if (Array.isArray(value)) {
     const steps = value.filter((step): step is string => typeof step === "string");
@@ -58,6 +68,18 @@ const getExpectedOutcome = (value: unknown): string => {
   if (!value || typeof value !== "object") return "";
   const expectedOutcome = (value as { expected_outcome?: unknown }).expected_outcome;
   return typeof expectedOutcome === "string" ? expectedOutcome : "";
+};
+
+const getAssessmentTitle = (value: unknown): string => {
+  if (!value || typeof value !== "object") return "";
+  const title = (value as { title?: unknown }).title;
+  return typeof title === "string" ? title : "";
+};
+
+const getAssessmentDescription = (value: unknown): string => {
+  if (!value || typeof value !== "object") return "";
+  const description = (value as { description?: unknown }).description;
+  return typeof description === "string" ? description : "";
 };
 
 export default function QuizInputForm({
@@ -151,10 +173,8 @@ export default function QuizInputForm({
   const [questionText, setQuestionText] = useState<string>("");
   const [unitTitle, setUnitTitle] = useState<string>("");
   const [lessonSlides, setLessonSlides] = useState<
-    { text: string; code: string }[]
-  >([
-    { text: "", code: "" },
-  ]);
+    { text: string; title?: string; code?: string }[]
+  >([{ text: "" }]);
   const [currentLessonSlide, setCurrentLessonSlide] = useState(0);
   const [lessonEditorView, setLessonEditorView] = useState<"code" | "result">(
     "code",
@@ -168,8 +188,12 @@ export default function QuizInputForm({
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
   const [fitbAnswer, setFitbAnswer] = useState<string>("");
+  const [assessmentTitle, setAssessmentTitle] = useState("");
+  const [assessmentDescription, setAssessmentDescription] = useState("");
   const [assessmentSteps, setAssessmentSteps] = useState<string[]>([""]);
   const [expectedOutcome, setExpectedOutcome] = useState("");
+  const [previewTab, setPreviewTab] = useState<"lesson" | "assessment">("lesson");
+  const [unitInputTab, setUnitInputTab] = useState<"lesson" | "assessment">("lesson");
   const assessment = assessmentSteps
     .map((step) => step.trim())
     .filter(Boolean)
@@ -402,6 +426,21 @@ export default function QuizInputForm({
     return null;
   };
 
+  const buildQuizBatch = (
+    currentEntry: ReturnType<typeof buildCurrentQuizEntry>,
+  ) => {
+    if (!currentEntry) return queuedQuizzes;
+
+    const quizCount = queuedQuizzes.length + 1;
+    const activeQuizIndex = currentPendingQuizIndex % quizCount;
+    const insertionIndex = queuedQuizzes.length - activeQuizIndex;
+    return [
+      ...queuedQuizzes.slice(insertionIndex),
+      currentEntry,
+      ...queuedQuizzes.slice(0, insertionIndex),
+    ];
+  };
+
   const handleAddToUnitQueue = () => {
     const nextEntry = buildCurrentQuizEntry();
     if (!nextEntry) {
@@ -434,6 +473,7 @@ export default function QuizInputForm({
     ]);
     setOptionCount(4);
     setCpPromptCount(1);
+    setCurrentPendingQuizIndex(queuedQuizzes.length + 1);
     const queueMessage = {
       type: "success",
       text: `Quiz added to unit queue (${queuedQuizzes.length + 1}/10).`,
@@ -468,12 +508,18 @@ export default function QuizInputForm({
   };
 
   const handleAddLessonSlide = () => {
-    setLessonSlides((slides) => [...slides, { text: "", code: "" }]);
+    setLessonSlides((slides) => [...slides, { text: "" }]);
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
   const handleAddAssessmentStep = () => {
     setAssessmentSteps((steps) => [...steps, ""]);
+  };
+
+  const handleRemoveAssessmentStep = (stepIndex: number) => {
+    setAssessmentSteps((steps) =>
+      steps.length > 1 ? steps.filter((_, index) => index !== stepIndex) : steps,
+    );
   };
 
   const handlePreviousLessonSlide = () => {
@@ -543,6 +589,16 @@ export default function QuizInputForm({
           editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "",
         ),
       );
+      setAssessmentTitle(
+        getAssessmentTitle(
+          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
+        ),
+      );
+      setAssessmentDescription(
+        getAssessmentDescription(
+          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
+        ),
+      );
       setExpectedOutcome(
         getExpectedOutcome(
           editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
@@ -599,7 +655,7 @@ export default function QuizInputForm({
       setSelectedUnit("");
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ text: "", code: "" }]);
+      setLessonSlides([{ text: "" }]);
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
@@ -613,6 +669,8 @@ export default function QuizInputForm({
         { left: "", right: "" },
       ]);
       setAssessmentSteps([""]);
+      setAssessmentTitle("");
+      setAssessmentDescription("");
       setExpectedOutcome("");
     }
   }, [editingQuiz, categories, difficulties]);
@@ -786,16 +844,13 @@ export default function QuizInputForm({
     formData.set("sec_id", selectedSecId);
     lessonSlides.forEach((slide, index) => {
       formData.set(`lesson_text_${index}`, slide.text);
-      formData.set(`lesson_code_${index}`, slide.code);
+      formData.set(`lesson_title_${index}`, slide.title ?? "");
+      if (slide.code !== undefined) {
+        formData.set(`lesson_code_${index}`, slide.code);
+      }
     });
     const currentEntry = buildCurrentQuizEntry();
-    const unitQuizBatch = editingQuiz?._pendingUnit
-      ? (currentEntry ? [currentEntry, ...queuedQuizzes] : queuedQuizzes)
-      : queuedQuizzes.length > 0
-        ? queuedQuizzes
-        : currentEntry
-          ? [currentEntry]
-          : [];
+    const unitQuizBatch = buildQuizBatch(currentEntry);
 
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
@@ -823,7 +878,7 @@ export default function QuizInputForm({
       setEditingQuiz(null);
       setQuestionText("");
       setUnitTitle("");
-      setLessonSlides([{ text: "", code: "" }]);
+      setLessonSlides([{ text: "" }]);
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
       setMcqOptions(["", "", "", ""]);
@@ -837,9 +892,14 @@ export default function QuizInputForm({
         { left: "", right: "" },
       ]);
       setAssessmentSteps([""]);
+      setAssessmentTitle("");
+      setAssessmentDescription("");
       setExpectedOutcome("");
+      setPreviewTab("lesson");
       setOptionCount(4);
       setCpPromptCount(1);
+      setQueuedQuizzes([]);
+      setCurrentPendingQuizIndex(0);
 
       // Refresh list and metrics
       await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
@@ -886,17 +946,29 @@ export default function QuizInputForm({
         savedSlides.length > 0
           ? savedSlides.map((slide: any) => ({
               text: slide.lesson_text ?? slide.text ?? "",
-              code: slide.lesson_code ?? slide.code ?? "",
+              ...((slide.lesson_title ?? slide.title) !== undefined
+                ? { title: slide.lesson_title ?? slide.title }
+                : {}),
+              ...((slide.lesson_code ?? slide.code) !== undefined
+                ? { code: slide.lesson_code ?? slide.code }
+                : {}),
             }))
           : [{
               text: lessonDocument.lesson_text ?? "",
-              code: lessonDocument.lesson_code ?? "",
+              ...(lessonDocument.lesson_title !== undefined
+                ? { title: lessonDocument.lesson_title }
+                : {}),
+              ...(lessonDocument.lesson_code !== undefined
+                ? { code: lessonDocument.lesson_code }
+                : {}),
             }],
       );
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
       const assessmentValue = quiz.quiz_payload?.assessment ?? "";
       setAssessmentSteps(getAssessmentSteps(assessmentValue));
+      setAssessmentTitle(getAssessmentTitle(assessmentValue));
+      setAssessmentDescription(getAssessmentDescription(assessmentValue));
       setExpectedOutcome(getExpectedOutcome(assessmentValue));
       setEditingQuiz({
         ...firstQuiz,
@@ -954,77 +1026,82 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
-  const handleNextPendingQuiz = () => {
-    if (!editingQuiz?._pendingUnit || queuedQuizzes.length === 0) return;
+  const loadQueuedQuiz = (quiz: QueuedQuizEntry) => {
+    const typeName =
+      types.find(
+        (type) =>
+          type.quiz_type_id.toString() === quiz.quiz_type_id?.toString(),
+      )?.type_name ?? "";
 
-    const currentEntry = buildCurrentQuizEntry();
-    if (!currentEntry) {
-      setMessage({
-        type: "error",
-        text: "Please complete the current quiz before moving to the next one.",
+    if (editingQuiz?._pendingUnit) {
+      setEditingQuiz({
+        ...quiz,
+        type_name: typeName,
+        pending_id: editingQuiz.pending_id,
+        _pendingUnit: true,
+        unit_assessment: {
+          title: assessmentTitle,
+          description: assessmentDescription,
+          assessment,
+          steps: assessmentSteps,
+          expected_outcome: expectedOutcome,
+        },
       });
       return;
     }
 
-    const nextQuiz = queuedQuizzes[0];
-    const nextQuizTypeName =
-      types.find(
-        (type) =>
-          type.quiz_type_id.toString() === nextQuiz.quiz_type_id?.toString(),
-      )?.type_name ?? "";
-    setQueuedQuizzes([...queuedQuizzes.slice(1), currentEntry]);
-    setCurrentPendingQuizIndex(
-      (quizIndex) => (quizIndex + 1) % (queuedQuizzes.length + 1),
-    );
     setEditingQuiz({
-      ...nextQuiz,
-      type_name: nextQuizTypeName,
-      pending_id: editingQuiz.pending_id,
-      _pendingUnit: true,
+      ...quiz,
+      type_name: typeName,
+      _queuedUnitQuiz: true,
       unit_assessment: {
+        title: assessmentTitle,
+        description: assessmentDescription,
         assessment,
         steps: assessmentSteps,
         expected_outcome: expectedOutcome,
       },
     });
+  };
+
+  const handleNextPendingQuiz = () => {
+    if (queuedQuizzes.length === 0) return;
+
+    const currentEntry = buildCurrentQuizEntry();
+    const nextQuiz = queuedQuizzes[0];
+    if (currentEntry) {
+      setQueuedQuizzes([...queuedQuizzes.slice(1), currentEntry]);
+      setCurrentPendingQuizIndex(
+        (quizIndex) => (quizIndex + 1) % (queuedQuizzes.length + 1),
+      );
+    } else {
+      setQueuedQuizzes(queuedQuizzes.slice(1));
+      setCurrentPendingQuizIndex(
+        (quizIndex) => quizIndex % queuedQuizzes.length,
+      );
+    }
+    loadQueuedQuiz(nextQuiz);
     setMessage(null);
   };
 
   const handlePreviousPendingQuiz = () => {
-    if (!editingQuiz?._pendingUnit || queuedQuizzes.length === 0) return;
-
+    if (queuedQuizzes.length === 0) return;
     const currentEntry = buildCurrentQuizEntry();
-    if (!currentEntry) {
-      setMessage({
-        type: "error",
-        text: "Please complete the current quiz before moving to the previous one.",
-      });
-      return;
-    }
-
     const previousQuiz = queuedQuizzes[queuedQuizzes.length - 1];
-    const previousQuizTypeName =
-      types.find(
-        (type) =>
-          type.quiz_type_id.toString() === previousQuiz.quiz_type_id?.toString(),
-      )?.type_name ?? "";
-    setQueuedQuizzes([currentEntry, ...queuedQuizzes.slice(0, -1)]);
-    setCurrentPendingQuizIndex(
-      (quizIndex) =>
-        (quizIndex - 1 + queuedQuizzes.length + 1) %
-        (queuedQuizzes.length + 1),
-    );
-    setEditingQuiz({
-      ...previousQuiz,
-      type_name: previousQuizTypeName,
-      pending_id: editingQuiz.pending_id,
-      _pendingUnit: true,
-      unit_assessment: {
-        assessment,
-        steps: assessmentSteps,
-        expected_outcome: expectedOutcome,
-      },
-    });
+    if (currentEntry) {
+      setQueuedQuizzes([currentEntry, ...queuedQuizzes.slice(0, -1)]);
+      setCurrentPendingQuizIndex(
+        (quizIndex) =>
+          (quizIndex - 1 + queuedQuizzes.length + 1) %
+          (queuedQuizzes.length + 1),
+      );
+    } else {
+      setQueuedQuizzes(queuedQuizzes.slice(0, -1));
+      setCurrentPendingQuizIndex((quizIndex) =>
+        quizIndex > 0 ? quizIndex - 1 : queuedQuizzes.length - 1,
+      );
+    }
+    loadQueuedQuiz(previousQuiz);
     setMessage(null);
   };
 
@@ -1036,7 +1113,7 @@ export default function QuizInputForm({
     setSelectedSecId("");
     setQuestionText("");
     setUnitTitle("");
-    setLessonSlides([{ text: "", code: "" }]);
+    setLessonSlides([{ text: "" }]);
     setCurrentLessonSlide(0);
     setLessonEditorView("code");
     setMcqOptions(["", "", "", ""]);
@@ -1586,16 +1663,41 @@ export default function QuizInputForm({
           {editingQuiz
             ? editingQuiz._pendingUnit
               ? `Edit Pending Unit (ID: #${editingQuiz.pending_id})`
-              : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
+              : editingQuiz._queuedUnitQuiz
+                ? `Unit Quiz ${currentPendingQuizIndex + 1} of ${queuedQuizzes.length + 1}`
+                : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
             : "Create New Unit"}
         </h2>
         <form
           id="unit-form"
-          key={editingQuiz?.quiz_id ?? "new"}
+          key={
+            editingQuiz?._pendingUnit || editingQuiz?._queuedUnitQuiz
+              ? `unit-quiz-${currentPendingQuizIndex}`
+              : editingQuiz?.quiz_id ?? "new"
+          }
           onSubmit={handleSubmit}
           noValidate={queuedQuizzes.length > 0}
         >
           <input type="hidden" name="quiz_json" value={JSON.stringify(queuedQuizzes)} />
+          <div className="preview-tabs unit-input-tabs" role="group" aria-label="Unit input section">
+            <button
+              type="button"
+              className={`preview-tab${unitInputTab === "lesson" ? " active" : ""}`}
+              aria-pressed={unitInputTab === "lesson"}
+              onClick={() => setUnitInputTab("lesson")}
+            >
+              Lesson
+            </button>
+            <button
+              type="button"
+              className={`preview-tab${unitInputTab === "assessment" ? " active" : ""}`}
+              aria-pressed={unitInputTab === "assessment"}
+              onClick={() => setUnitInputTab("assessment")}
+            >
+              Assessment
+            </button>
+          </div>
+          <div hidden={unitInputTab !== "lesson"}>
           <div className="form-group">
             <label htmlFor="unit_title">Lesson Title</label>
             <input
@@ -1666,66 +1768,122 @@ export default function QuizInputForm({
                 index === currentLessonSlide ? (
                 <div className="lesson-slide-fields" key={index}>
                   <div className="lesson-slide-number">Slide {index + 1}</div>
-                  <div className="lesson-code-editor">
-                    <div
-                      className="lesson-code-tabs"
-                      role="tablist"
-                      aria-label={`Slide ${index + 1} code and result`}
+                  {slide.code === undefined ? (
+                    <button
+                      type="button"
+                      className="lesson-code-toggle"
+                      onClick={() => {
+                        setLessonEditorView("code");
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, code: "" }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
                     >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={lessonEditorView === "code"}
-                        className={`lesson-code-tab${lessonEditorView === "code" ? " active" : ""}`}
-                        onClick={() => setLessonEditorView("code")}
-                      >
-                        Code
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={lessonEditorView === "result"}
-                        className={`lesson-code-tab${lessonEditorView === "result" ? " active" : ""}`}
-                        onClick={() => setLessonEditorView("result")}
-                      >
-                        Result
-                      </button>
-                    </div>
-                    <div className="lesson-code-panel">
-                      {lessonEditorView === "code" ? (
-                        <Editor
-                          height="250px"
-                          language="html"
-                          theme="vs-dark"
-                          value={slide.code}
-                          onChange={(value) => {
-                            const code = value ?? "";
+                      Add code feature
+                    </button>
+                  ) : (
+                    <div className="lesson-code-editor">
+                      <div className="lesson-code-header">
+                        <button
+                          type="button"
+                          className="lesson-code-remove"
+                          onClick={() => {
                             setLessonSlides((slides) =>
                               slides.map((currentSlide, slideIndex) =>
                                 slideIndex === index
-                                  ? { ...currentSlide, code }
+                                  ? { text: currentSlide.text }
                                   : currentSlide,
                               ),
                             );
                           }}
-                          options={{
-                            automaticLayout: true,
-                            fontSize: 13,
-                            minimap: { enabled: false },
-                            scrollBeyondLastLine: false,
-                            wordWrap: "on",
-                            ariaLabel: `HTML code for slide ${index + 1}`,
-                          }}
-                        />
-                      ) : (
-                        <iframe
-                          className="lesson-code-result"
-                          title={`Slide ${index + 1} code result`}
-                          sandbox=""
-                          srcDoc={slide.code}
-                        />
-                      )}
+                        >
+                          Remove code
+                        </button>
+                        <div
+                          className="lesson-code-tabs"
+                          role="tablist"
+                          aria-label={`Slide ${index + 1} code and result`}
+                        >
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={lessonEditorView === "code"}
+                            className={`lesson-code-tab${lessonEditorView === "code" ? " active" : ""}`}
+                            onClick={() => setLessonEditorView("code")}
+                          >
+                            Code
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={lessonEditorView === "result"}
+                            className={`lesson-code-tab${lessonEditorView === "result" ? " active" : ""}`}
+                            onClick={() => setLessonEditorView("result")}
+                          >
+                            Result
+                          </button>
+                        </div>
+                      </div>
+                      <div className="lesson-code-panel">
+                        {lessonEditorView === "code" ? (
+                          <Editor
+                            height="250px"
+                            language="html"
+                            theme="vs-dark"
+                            value={slide.code}
+                            onChange={(value) => {
+                              const code = value ?? "";
+                              setLessonSlides((slides) =>
+                                slides.map((currentSlide, slideIndex) =>
+                                  slideIndex === index
+                                    ? { ...currentSlide, code }
+                                    : currentSlide,
+                                ),
+                              );
+                            }}
+                            options={{
+                              automaticLayout: true,
+                              fontSize: 13,
+                              minimap: { enabled: false },
+                              scrollBeyondLastLine: false,
+                              wordWrap: "on",
+                              ariaLabel: `HTML code for slide ${index + 1}`,
+                            }}
+                          />
+                        ) : (
+                          <LessonCodeFrame
+                            className="lesson-code-result"
+                            title={`Slide ${index + 1} code result`}
+                            source={slide.code}
+                            toggleable={false}
+                          />
+                        )}
+                      </div>
                     </div>
+                  )}
+                  <div className="form-group">
+                    <label htmlFor={`lesson_title_${index}`}>Slide Title</label>
+                    <input
+                      id={`lesson_title_${index}`}
+                      name={`lesson_title_${index}`}
+                      className="form-input"
+                      placeholder="Enter a title for this slide..."
+                      value={slide.title ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setLessonSlides((slides) =>
+                          slides.map((currentSlide, slideIndex) =>
+                            slideIndex === index
+                              ? { ...currentSlide, title: value }
+                              : currentSlide,
+                          ),
+                        );
+                      }}
+                    />
                   </div>
                   <div className="form-group">
                     <label htmlFor={`lesson_text_${index}`}>Lesson Text</label>
@@ -2420,18 +2578,45 @@ export default function QuizInputForm({
           <div
             style={{
               display: "flex",
-              alignItems: "center",
-              justifyContent: editingQuiz?._pendingUnit
-                ? "space-between"
-                : "flex-start",
-              gap: "16px",
-              flexWrap: "wrap",
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: "12px",
               marginTop: "0",
               marginBottom: "18px",
             }}
           >
+            {(queuedQuizzes.length > 0 || editingQuiz?._queuedUnitQuiz) && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn-primary queue-button pending-quiz-nav-button"
+                  onClick={handlePreviousPendingQuiz}
+                  disabled={isPending || queuedQuizzes.length === 0}
+                >
+                  Previous
+                </button>
+                <span className="pending-quiz-counter">
+                  Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
+                </span>
+                <button
+                  type="button"
+                  className="btn-primary queue-button pending-quiz-nav-button"
+                  onClick={handleNextPendingQuiz}
+                  disabled={isPending || queuedQuizzes.length === 0}
+                >
+                  Next
+                </button>
+              </div>
+            )}
             {!editingQuiz?._pendingUnit && (
-              <>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button
                   type="button"
                   className="btn-primary queue-button queue-add-button"
@@ -2450,60 +2635,66 @@ export default function QuizInputForm({
                     {message.text}
                   </div>
                 )}
-              </>
-            )}
-            {editingQuiz?._pendingUnit && queuedQuizzes.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  className="btn-primary queue-button pending-quiz-nav-button"
-                  onClick={handlePreviousPendingQuiz}
-                  disabled={isPending}
-                >
-                  Previous
-                </button>
-                <span className="pending-quiz-counter">
-                  Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
-                </span>
-                <button
-                  type="button"
-                  className="btn-primary queue-button pending-quiz-nav-button"
-                  onClick={handleNextPendingQuiz}
-                  disabled={isPending}
-                >
-                  Next
-                </button>
-              </>
+              </div>
             )}
           </div>
 
-          {message && editingQuiz?._pendingUnit && (
+          {message && (editingQuiz?._pendingUnit || editingQuiz?._queuedUnitQuiz) && (
             <div className={`status-message status-${message.type}`}>
               {message.text}
             </div>
           )}
+          </div>
 
+          <div hidden={unitInputTab !== "assessment"}>
           <section className="form-group assessment-editor" aria-labelledby="assessment-heading">
             <div className="assessment-heading">
               <h3 id="assessment-heading">Assessment</h3>
-              <button
-                type="button"
-                className="assessment-add"
-                onClick={handleAddAssessmentStep}
-                title="Add assessment step"
-                aria-label="Add assessment step"
-              >
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </button>
+            </div>
+            <div className="assessment-details">
+              <div className="form-group">
+                <label htmlFor="assessment-title">Assessment Title</label>
+                <input
+                  id="assessment-title"
+                  name="assessment_title"
+                  className="form-input"
+                  placeholder="Enter an assessment title."
+                  value={assessmentTitle}
+                  onChange={(event) => setAssessmentTitle(event.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="assessment-description">Assessment Description</label>
+                <textarea
+                  id="assessment-description"
+                  name="assessment_description"
+                  className="assessment-step-input"
+                  rows={3}
+                  placeholder="Describe what learners will do in this assessment."
+                  value={assessmentDescription}
+                  onChange={(event) => setAssessmentDescription(event.target.value)}
+                />
+              </div>
             </div>
             <div className="assessment-step-list">
               {assessmentSteps.map((step, index) => (
                 <div className="assessment-step" key={index}>
-                  <label htmlFor={`assessment-step-${index}`}>
-                    Step {index + 1}
-                  </label>
+                  <div className="assessment-step-heading">
+                    <label htmlFor={`assessment-step-${index}`}>
+                      Step {index + 1}
+                    </label>
+                    {assessmentSteps.length > 1 && (
+                      <button
+                        type="button"
+                        className="assessment-remove"
+                        onClick={() => handleRemoveAssessmentStep(index)}
+                        title={`Remove step ${index + 1}`}
+                        aria-label={`Remove assessment step ${index + 1}`}
+                      >
+                        -
+                      </button>
+                    )}
+                  </div>
                   <textarea
                     id={`assessment-step-${index}`}
                     aria-label={`Assessment step ${index + 1}`}
@@ -2522,6 +2713,15 @@ export default function QuizInputForm({
                   />
                 </div>
               ))}
+              <button
+                type="button"
+                className="assessment-add"
+                onClick={handleAddAssessmentStep}
+                title="Add assessment step"
+                aria-label="Add assessment step"
+              >
+                +
+              </button>
             </div>
             <input type="hidden" name="assessment" value={assessment} />
             <input
@@ -2542,10 +2742,11 @@ export default function QuizInputForm({
               onChange={(event) => setExpectedOutcome(event.target.value)}
             />
           </div>
+          </div>
 
           <div
             style={{
-              display: "flex",
+              display: unitInputTab === "lesson" ? "flex" : "none",
               alignItems: "center",
               gap: "10px",
               flexWrap: "wrap",
@@ -2562,11 +2763,13 @@ export default function QuizInputForm({
                   ? "Saving Quiz..."
                   : "Adding Quiz..."
                 : editingQuiz
-                  ? "Save Changes"
+                  ? editingQuiz._queuedUnitQuiz
+                    ? "Add New Unit"
+                    : "Save Changes"
                   : "Add New Unit"}
             </button>
           </div>
-          {editingQuiz && (
+          {editingQuiz && !editingQuiz._queuedUnitQuiz && (
             <button
               type="button"
               className="btn-delete"
@@ -2584,18 +2787,70 @@ export default function QuizInputForm({
         <div className="lesson-preview-heading">
           <div>
             <p className="lesson-preview-kicker">Live preview</p>
-            <h2>Lesson Card</h2>
+            <h2>{previewTab === "lesson" ? "Lesson Card" : "Assessment"}</h2>
           </div>
-          <span>Matches quiz output</span>
+          <div className="preview-tabs" role="group" aria-label="Live preview view">
+            <button
+              type="button"
+              className={`preview-tab${previewTab === "lesson" ? " active" : ""}`}
+              aria-pressed={previewTab === "lesson"}
+              onClick={() => setPreviewTab("lesson")}
+            >
+              Lesson
+            </button>
+            <button
+              type="button"
+              className={`preview-tab${previewTab === "assessment" ? " active" : ""}`}
+              aria-pressed={previewTab === "assessment"}
+              onClick={() => setPreviewTab("assessment")}
+            >
+              Assessment
+            </button>
+          </div>
         </div>
-        <LessonCard
-          title={unitTitle}
-          slides={lessonSlides.map((slide) => ({
-            lesson_text: slide.text,
-            lesson_code: slide.code,
-          }))}
-          className="lesson-preview-surface"
-        />
+        {previewTab === "lesson" ? (
+          <div>
+            <LessonCard
+              title={unitTitle}
+              slides={lessonSlides.map((slide) => ({
+                ...(slide.title !== undefined ? { lesson_title: slide.title } : {}),
+                lesson_text: slide.text,
+                ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
+              }))}
+              className="lesson-preview-surface"
+            />
+          </div>
+        ) : (
+          <div
+            className="assessment-preview lesson-preview-surface"
+          >
+            {assessmentTitle.trim() ? (
+              <h2>{assessmentTitle}</h2>
+            ) : (
+              <p className="assessment-preview-placeholder">Assessment title</p>
+            )}
+            {assessmentDescription.trim() && (
+              <p className="assessment-preview-description">{assessmentDescription}</p>
+            )}
+            {assessmentSteps.some((step) => step.trim()) ? (
+              <ol className="assessment-preview-steps">
+                {assessmentSteps
+                  .filter((step) => step.trim())
+                  .map((step, index) => <li key={index}>{step}</li>)}
+              </ol>
+            ) : (
+              <p className="assessment-preview-placeholder">
+                Assessment instructions will appear here.
+              </p>
+            )}
+            {expectedOutcome.trim() && (
+              <div className="assessment-preview-outcome">
+                <strong>Expected outcome</strong>
+                <p>{expectedOutcome}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* List Section */}

@@ -34,7 +34,10 @@ export default function PendingReview({
   const [quizzes, setQuizzes] = useState(initialQuizzes);
   const [filter, setFilter] = useState("pending");
   const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
   const [noteQuiz, setNoteQuiz] = useState<PendingQuiz | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
 
@@ -60,7 +63,13 @@ export default function PendingReview({
         decision,
         rejectionNotes ?? "",
       );
-      setMessage(result.error ?? result.message ?? null);
+      setMessage(
+        result.error
+          ? { text: result.error, type: "error" }
+          : result.message
+            ? { text: result.message, type: "success" }
+            : null,
+      );
       if (result.success) {
         setQuizzes(await getPendingQuizzes(filter));
         window.dispatchEvent(new Event("quizweb-pending-updated"));
@@ -77,7 +86,11 @@ export default function PendingReview({
     if (!noteQuiz || !noteDraft.trim()) return;
     startTransition(async () => {
       const result = await updatePendingNote(noteQuiz.pending_id, noteDraft);
-      setMessage(result.error ?? "Note saved.");
+      setMessage(
+        result.error
+          ? { text: result.error, type: "error" }
+          : { text: "Note saved.", type: "success" },
+      );
       if (result.success) {
         setQuizzes(await getPendingQuizzes(filter));
         setNoteQuiz(null);
@@ -119,7 +132,12 @@ export default function PendingReview({
       </div>
 
       {message && (
-        <div className="status-message status-success">{message}</div>
+        <div
+          className={`status-message status-${message.type}`}
+          role={message.type === "error" ? "alert" : "status"}
+        >
+          {message.text}
+        </div>
       )}
       {quizzes.length === 0 ? (
         <div className="pending-empty">

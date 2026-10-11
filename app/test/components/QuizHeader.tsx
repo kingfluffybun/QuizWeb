@@ -1,4 +1,8 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import AccessibilityPanel from "../../settings/AccessibilityPanel";
 
 interface QuizHeaderProps {
     lives: number;
@@ -7,11 +11,42 @@ interface QuizHeaderProps {
 }
 
 export default function QuizHeader({ lives, totalQuizzes, currentIndex }: QuizHeaderProps) {
+    const router = useRouter();
+    const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+    const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+
+    const openAccessibility = () => {
+        setAccessibilityClosing(false);
+        setAccessibilityOpen(true);
+    };
+
+    const closeAccessibility = () => setAccessibilityClosing(true);
+
+    const finishClosingAccessibility = () => {
+        setAccessibilityOpen(false);
+        setAccessibilityClosing(false);
+    };
+
     return (
         <div className="quiz-header">
             <div className="quiz-navigation">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <button
+                    type="button"
+                    className="quiz-settings-button"
+                    data-accessibility-trigger
+                    aria-label={accessibilityOpen ? "Close accessibility options" : "Open accessibility options"}
+                    onClick={accessibilityOpen ? closeAccessibility : openAccessibility}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button
+                    type="button"
+                    className="quiz-close-button"
+                    aria-label="Close quiz"
+                    onClick={() => router.push("/home")}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
                 
                 <div className="heart-container">
                     {[...Array(5)].map((_, i) => (
@@ -39,6 +74,7 @@ export default function QuizHeader({ lives, totalQuizzes, currentIndex }: QuizHe
                     />
                 ))}
             </div>
+            {accessibilityOpen && <AccessibilityPanel isClosing={accessibilityClosing} onClose={closeAccessibility} onClosed={finishClosingAccessibility} />}
         </div>
     );
 }

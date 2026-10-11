@@ -5,9 +5,18 @@ interface GameOverCardProps {
     lives: number;
     score: number;
     totalQuizzes: number;
+    completionDestination?: "home" | "input";
 }
 
-export default function GameOverCard({ lives, score, totalQuizzes }: GameOverCardProps) {
+export default function GameOverCard({
+    lives,
+    score,
+    totalQuizzes,
+    completionDestination = "input",
+}: GameOverCardProps) {
+    const backHref = completionDestination === "home" ? "/home" : "/input";
+    const backLabel = completionDestination === "home" ? "Back to Home" : "Back to Quiz Input";
+
     return (
         <div className="quiz-complete-card anim-enter">
             <h1>{lives === 0 ? "Game Over" : "Quiz Complete!"}</h1>
@@ -25,10 +34,10 @@ export default function GameOverCard({ lives, score, totalQuizzes }: GameOverCar
                 Play Again
             </button>
             <Link
-                href="/input"
+                href={backHref}
                 className="options footer-btn back-to-input-btn"
             >
-                Back to Quiz Input
+                {backLabel}
             </Link>
         </div>
     );

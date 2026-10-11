@@ -79,6 +79,7 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   border-bottom: 2px solid var(--input-border);
   padding-bottom: 14px;
@@ -94,6 +95,33 @@ textarea {
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
+}
+.preview-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.unit-input-tabs {
+  margin-bottom: 20px;
+}
+.preview-tab {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--input-surface);
+  color: var(--input-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.preview-tab.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+.preview-tab:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 .lesson-preview-kicker {
   color: var(--primary-color);
@@ -111,20 +139,67 @@ textarea {
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
 }
 .lesson-card h2 {
   margin: 0 0 12px;
   color: inherit;
   font-size: 1.35rem;
 }
+.lesson-card .lesson-slide-title {
+  margin: 0 0 12px;
+  color: inherit;
+  font-size: 1.1rem;
+}
 .lesson-card-text {
   width: 100%;
   white-space: pre-wrap;
   line-height: 1.6;
-  text-align: center;
+  text-align: left;
+}
+.assessment-preview {
+  align-items: stretch;
+  gap: 12px;
+  min-height: 180px;
+  text-align: left;
+}
+.assessment-preview h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 1.35rem;
+}
+.assessment-preview-description,
+.assessment-preview-placeholder {
+  margin: 0;
+  color: inherit;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.assessment-preview-placeholder {
+  color: rgba(248, 250, 252, 0.7);
+  font-style: italic;
+}
+.assessment-preview-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 24px;
+  line-height: 1.6;
+}
+.assessment-preview-steps li {
+  padding-left: 4px;
+  white-space: pre-wrap;
+}
+.assessment-preview-outcome {
+  padding-top: 12px;
+  border-top: 1px solid rgba(248, 250, 252, 0.2);
+}
+.assessment-preview-outcome p {
+  margin: 6px 0 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 .lesson-card-empty {
   background: #f8fafc;
@@ -138,13 +213,56 @@ textarea {
   margin: 0;
 }
 .lesson-card .lesson-code-preview {
-  width: min(100%, 640px);
-  margin: 16px auto 0;
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  margin: 0;
   border: 0;
   max-width: 100%;
   overflow: hidden;
   overflow-x: hidden;
   overflow-y: hidden;
+}
+.lesson-code-frame {
+  width: 100%;
+  margin: 16px 0 8px;
+}
+.lesson-code-frame-controls {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px;
+  border: 1px solid var(--border-main);
+  border-radius: 8px 8px 0 0;
+  background: var(--bg-card);
+}
+.lesson-code-frame-tab {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+}
+.lesson-code-frame-tab.active {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+}
+.lesson-code-source {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 180px;
+  max-height: 480px;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--border-main);
+  border-radius: 0 8px 8px 8px;
+  background: #1e1e1e;
+  color: #f8fafc;
+  text-align: left;
+  white-space: pre;
 }
 .lesson-card .lesson-slide-controls {
   justify-content: center;
@@ -738,6 +856,9 @@ textarea {
 .assessment-editor {
   margin-top: 18px;
 }
+.assessment-details .form-group:last-child {
+  margin-bottom: 16px;
+}
 .assessment-heading {
   display: flex;
   align-items: center;
@@ -755,18 +876,20 @@ textarea {
   display: grid;
   width: 34px;
   height: 34px;
-  padding: 5px;
+  margin: 12px 0 0 auto;
+  padding: 0;
   place-items: center;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   color: #28a745;
+  font-family: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
   cursor: pointer;
 }
-.assessment-add svg {
-  width: 22px;
-  height: 22px;
-  stroke: currentColor;
-  stroke-width: 1.8;
+.assessment-add:hover {
+  background: #e8f5eb;
 }
 .assessment-add:focus-visible {
   outline: 2px solid var(--primary-color);
@@ -784,6 +907,11 @@ textarea {
 .assessment-step + .assessment-step {
   margin-top: 12px;
 }
+.assessment-step-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .assessment-step label {
   display: block;
   margin: 0 0 8px;
@@ -791,6 +919,29 @@ textarea {
   font-family: "Poppins", sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
+}
+.assessment-remove {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  margin: -4px 0 4px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #b91c1c;
+  font-family: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.assessment-remove:hover {
+  background: #fef2f2;
+}
+.assessment-remove:focus-visible {
+  outline: 2px solid var(--input-danger);
+  outline-offset: 2px;
 }
 .assessment-step-input {
   display: block;
@@ -925,6 +1076,27 @@ textarea {
   font-size: 1rem;
   font-weight: 700;
 }
+.lesson-code-toggle {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.lesson-code-toggle:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.lesson-code-toggle:focus-visible,
+.lesson-code-remove:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
 .lesson-code-editor {
   margin: 0 0 16px;
   overflow: hidden;
@@ -932,12 +1104,29 @@ textarea {
   border-radius: 10px;
   background: #1e1e1e;
 }
-.lesson-code-tabs {
+.lesson-code-header {
   display: flex;
-  justify-content: flex-end;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
   padding: 6px 8px;
   background: #252526;
+}
+.lesson-code-remove {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+.lesson-code-remove:hover {
+  background: #3f3f46;
+  color: #ffffff;
+}
+.lesson-code-tabs {
+  display: flex;
+  gap: 4px;
 }
 .lesson-code-tab {
   min-width: 54px;
@@ -962,12 +1151,12 @@ textarea {
   outline-offset: 2px;
 }
 .lesson-code-panel {
-  height: 250px;
+  min-height: 250px;
 }
 .lesson-code-result {
   display: block;
   width: 100%;
-  height: 100%;
+  min-height: 180px;
   border: 0;
   background: #ffffff;
 }
