@@ -1,19 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-<<<<<<< HEAD
-import { useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-=======
->>>>>>> parent of c78f2f9 (quiz)
 import "#css/quiz.css";
 import "#css/sidebar.css"
+import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import { useQuizData } from "@/app/quiz/useQuizData";
 import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import QuizRender from "@/app/components/quiz/quizRender";
 import Sidebar from "@/app/components/Sidebar";
+import InteractiveQuizClient from "@/app/test/InteractiveQuizClient";
 
 type AnswerResult = {
     correct: boolean;
@@ -23,6 +20,43 @@ type AnswerResult = {
 
 const correctMessages = ["That's correct!", "Excellent job!", "Well done!"];
 const incorrectMessages = ["Hard luck!", "That’s incorrect.", "Not quite right."];
+
+function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
+    return quizzes.flatMap((quiz) => {
+        const record = quiz as Partial<QuizData>;
+        const payload = record.quiz_payload ?? {};
+        const nested = payload.quizzes;
+        const unitTitle = typeof payload.title === "string"
+            ? payload.title
+            : record.question_text ?? "";
+
+        if (Array.isArray(nested) && nested.length > 0) {
+            return nested.map((entry, index) => {
+                const nestedRecord = entry as Partial<QuizData>;
+                return {
+                    ...nestedRecord,
+                    unit_title: unitTitle,
+                    unit_lesson_card: payload.lesson_card ?? {},
+                    unit_assessment: payload.assessment ?? {},
+                    quiz_id: nestedRecord.quiz_id ?? record.quiz_id ?? index,
+                    question_text: nestedRecord.question_text ?? `Question ${index + 1}`,
+                    type_name: nestedRecord.type_name ?? "",
+                    quiz_payload: nestedRecord.quiz_payload ?? {},
+                };
+            });
+        }
+
+        return [{
+            ...record,
+            unit_title: unitTitle,
+            unit_lesson_card: payload.lesson_card ?? {},
+            unit_assessment: payload.assessment ?? {},
+            question_text: record.question_text ?? "Quiz",
+            type_name: record.type_name ?? "",
+            quiz_payload: record.quiz_payload ?? {},
+        }];
+    });
+}
 
 function getAnswer(quiz: QuizData) {
     const payload = quiz.quiz_payload;
@@ -77,19 +111,55 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
     };
 }
 
-<<<<<<< HEAD
 function QuizPageContent() {
     // These hooks are also initialized for the selected-quiz view to preserve hook order.
-=======
-export default function QuizPage() {
-    // limit ko lang muna saglit to 10 ques para makita .progress-container - clarence
-    // const {quizzes} = useQuizData();
->>>>>>> parent of c78f2f9 (quiz)
     const {quizzes: allQuizzes, units} = useQuizData();
     const quizzes = allQuizzes.slice(0, 10);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
     const [result, setResult] = useState<AnswerResult | null>(null);
+    const [selectedQuizzes, setSelectedQuizzes] = useState<QuizData[] | null>(null);
+    const searchParams = useSearchParams();
+    const unitIdParam = searchParams.get("unitId");
+    const quizIdParam = searchParams.get("quizId");
+    const sourceParam = searchParams.get("source");
+
+    useEffect(() => {
+        if (!unitIdParam && !quizIdParam) return;
+
+        let cancelled = false;
+        const loadSelectedQuiz = async () => {
+            const unitId = unitIdParam ? Number(unitIdParam) : null;
+            const quizId = quizIdParam ? Number(quizIdParam) : null;
+            const selectedUnit = unitId ? await getUnitById(unitId) : null;
+            const selectedQuiz = !selectedUnit && quizId
+                ? await getQuizOrUnitById(quizId)
+                : null;
+            const selectedPayload = selectedUnit ?? selectedQuiz;
+
+            if (!cancelled) {
+                setSelectedQuizzes(selectedPayload ? unwrapUnitQuizzes([selectedPayload]) : []);
+            }
+        };
+
+        void loadSelectedQuiz();
+        return () => {
+            cancelled = true;
+        };
+    }, [quizIdParam, unitIdParam]);
+
+    if (unitIdParam || quizIdParam) {
+        if (selectedQuizzes === null) {
+            return <main style={{ display: "flex", justifyContent: "center", padding: "50px" }}>Loading quiz...</main>;
+        }
+
+        return (
+            <InteractiveQuizClient
+                quizzes={selectedQuizzes}
+                completionDestination={sourceParam === "quiz" ? "home" : "input"}
+            />
+        );
+    }
 
     const quiz = quizzes[currentIndex];
 
