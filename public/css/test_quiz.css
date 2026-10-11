@@ -72,6 +72,17 @@
     color: var(--text-main);
 }
 
+.quiz-close-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+
 .heart-container {
     display: flex;
     margin-left: auto;
