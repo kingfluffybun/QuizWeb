@@ -37,6 +37,16 @@ interface QuizInputFormProps {
   initialEditingQuiz?: any;
 }
 
+type QueuedQuizEntry = {
+  cat_id?: number;
+  sec_id?: number;
+  unit?: number;
+  difficulty_id?: number;
+  quiz_type_id?: number | string;
+  question_text?: string;
+  quiz_payload?: Record<string, unknown>;
+};
+
 const getAssessmentSteps = (value: unknown): string[] => {
   if (Array.isArray(value)) {
     const steps = value.filter((step): step is string => typeof step === "string");
@@ -416,6 +426,21 @@ export default function QuizInputForm({
     return null;
   };
 
+  const buildQuizBatch = (
+    currentEntry: ReturnType<typeof buildCurrentQuizEntry>,
+  ) => {
+    if (!currentEntry) return queuedQuizzes;
+
+    const quizCount = queuedQuizzes.length + 1;
+    const activeQuizIndex = currentPendingQuizIndex % quizCount;
+    const insertionIndex = queuedQuizzes.length - activeQuizIndex;
+    return [
+      ...queuedQuizzes.slice(insertionIndex),
+      currentEntry,
+      ...queuedQuizzes.slice(0, insertionIndex),
+    ];
+  };
+
   const handleAddToUnitQueue = () => {
     const nextEntry = buildCurrentQuizEntry();
     if (!nextEntry) {
@@ -448,6 +473,7 @@ export default function QuizInputForm({
     ]);
     setOptionCount(4);
     setCpPromptCount(1);
+    setCurrentPendingQuizIndex(queuedQuizzes.length + 1);
     const queueMessage = {
       type: "success",
       text: `Quiz added to unit queue (${queuedQuizzes.length + 1}/10).`,
@@ -824,13 +850,7 @@ export default function QuizInputForm({
       }
     });
     const currentEntry = buildCurrentQuizEntry();
-    const unitQuizBatch = editingQuiz?._pendingUnit
-      ? (currentEntry ? [currentEntry, ...queuedQuizzes] : queuedQuizzes)
-      : queuedQuizzes.length > 0
-        ? queuedQuizzes
-        : currentEntry
-          ? [currentEntry]
-          : [];
+    const unitQuizBatch = buildQuizBatch(currentEntry);
 
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
@@ -878,6 +898,8 @@ export default function QuizInputForm({
       setPreviewTab("lesson");
       setOptionCount(4);
       setCpPromptCount(1);
+      setQueuedQuizzes([]);
+      setCurrentPendingQuizIndex(0);
 
       // Refresh list and metrics
       await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
@@ -1004,33 +1026,34 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
-  const handleNextPendingQuiz = () => {
-    if (!editingQuiz?._pendingUnit || queuedQuizzes.length === 0) return;
+  const loadQueuedQuiz = (quiz: QueuedQuizEntry) => {
+    const typeName =
+      types.find(
+        (type) =>
+          type.quiz_type_id.toString() === quiz.quiz_type_id?.toString(),
+      )?.type_name ?? "";
 
-    const currentEntry = buildCurrentQuizEntry();
-    if (!currentEntry) {
-      setMessage({
-        type: "error",
-        text: "Please complete the current quiz before moving to the next one.",
+    if (editingQuiz?._pendingUnit) {
+      setEditingQuiz({
+        ...quiz,
+        type_name: typeName,
+        pending_id: editingQuiz.pending_id,
+        _pendingUnit: true,
+        unit_assessment: {
+          title: assessmentTitle,
+          description: assessmentDescription,
+          assessment,
+          steps: assessmentSteps,
+          expected_outcome: expectedOutcome,
+        },
       });
       return;
     }
 
-    const nextQuiz = queuedQuizzes[0];
-    const nextQuizTypeName =
-      types.find(
-        (type) =>
-          type.quiz_type_id.toString() === nextQuiz.quiz_type_id?.toString(),
-      )?.type_name ?? "";
-    setQueuedQuizzes([...queuedQuizzes.slice(1), currentEntry]);
-    setCurrentPendingQuizIndex(
-      (quizIndex) => (quizIndex + 1) % (queuedQuizzes.length + 1),
-    );
     setEditingQuiz({
-      ...nextQuiz,
-      type_name: nextQuizTypeName,
-      pending_id: editingQuiz.pending_id,
-      _pendingUnit: true,
+      ...quiz,
+      type_name: typeName,
+      _queuedUnitQuiz: true,
       unit_assessment: {
         title: assessmentTitle,
         description: assessmentDescription,
@@ -1039,46 +1062,46 @@ export default function QuizInputForm({
         expected_outcome: expectedOutcome,
       },
     });
+  };
+
+  const handleNextPendingQuiz = () => {
+    if (queuedQuizzes.length === 0) return;
+
+    const currentEntry = buildCurrentQuizEntry();
+    const nextQuiz = queuedQuizzes[0];
+    if (currentEntry) {
+      setQueuedQuizzes([...queuedQuizzes.slice(1), currentEntry]);
+      setCurrentPendingQuizIndex(
+        (quizIndex) => (quizIndex + 1) % (queuedQuizzes.length + 1),
+      );
+    } else {
+      setQueuedQuizzes(queuedQuizzes.slice(1));
+      setCurrentPendingQuizIndex(
+        (quizIndex) => quizIndex % queuedQuizzes.length,
+      );
+    }
+    loadQueuedQuiz(nextQuiz);
     setMessage(null);
   };
 
   const handlePreviousPendingQuiz = () => {
-    if (!editingQuiz?._pendingUnit || queuedQuizzes.length === 0) return;
-
+    if (queuedQuizzes.length === 0) return;
     const currentEntry = buildCurrentQuizEntry();
-    if (!currentEntry) {
-      setMessage({
-        type: "error",
-        text: "Please complete the current quiz before moving to the previous one.",
-      });
-      return;
-    }
-
     const previousQuiz = queuedQuizzes[queuedQuizzes.length - 1];
-    const previousQuizTypeName =
-      types.find(
-        (type) =>
-          type.quiz_type_id.toString() === previousQuiz.quiz_type_id?.toString(),
-      )?.type_name ?? "";
-    setQueuedQuizzes([currentEntry, ...queuedQuizzes.slice(0, -1)]);
-    setCurrentPendingQuizIndex(
-      (quizIndex) =>
-        (quizIndex - 1 + queuedQuizzes.length + 1) %
-        (queuedQuizzes.length + 1),
-    );
-    setEditingQuiz({
-      ...previousQuiz,
-      type_name: previousQuizTypeName,
-      pending_id: editingQuiz.pending_id,
-      _pendingUnit: true,
-      unit_assessment: {
-        title: assessmentTitle,
-        description: assessmentDescription,
-        assessment,
-        steps: assessmentSteps,
-        expected_outcome: expectedOutcome,
-      },
-    });
+    if (currentEntry) {
+      setQueuedQuizzes([currentEntry, ...queuedQuizzes.slice(0, -1)]);
+      setCurrentPendingQuizIndex(
+        (quizIndex) =>
+          (quizIndex - 1 + queuedQuizzes.length + 1) %
+          (queuedQuizzes.length + 1),
+      );
+    } else {
+      setQueuedQuizzes(queuedQuizzes.slice(0, -1));
+      setCurrentPendingQuizIndex((quizIndex) =>
+        quizIndex > 0 ? quizIndex - 1 : queuedQuizzes.length - 1,
+      );
+    }
+    loadQueuedQuiz(previousQuiz);
     setMessage(null);
   };
 
@@ -1640,12 +1663,18 @@ export default function QuizInputForm({
           {editingQuiz
             ? editingQuiz._pendingUnit
               ? `Edit Pending Unit (ID: #${editingQuiz.pending_id})`
-              : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
+              : editingQuiz._queuedUnitQuiz
+                ? `Unit Quiz ${currentPendingQuizIndex + 1} of ${queuedQuizzes.length + 1}`
+                : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
             : "Create New Unit"}
         </h2>
         <form
           id="unit-form"
-          key={editingQuiz?.quiz_id ?? "new"}
+          key={
+            editingQuiz?._pendingUnit || editingQuiz?._queuedUnitQuiz
+              ? `unit-quiz-${currentPendingQuizIndex}`
+              : editingQuiz?.quiz_id ?? "new"
+          }
           onSubmit={handleSubmit}
           noValidate={queuedQuizzes.length > 0}
         >
@@ -2549,18 +2578,45 @@ export default function QuizInputForm({
           <div
             style={{
               display: "flex",
-              alignItems: "center",
-              justifyContent: editingQuiz?._pendingUnit
-                ? "space-between"
-                : "flex-start",
-              gap: "16px",
-              flexWrap: "wrap",
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: "12px",
               marginTop: "0",
               marginBottom: "18px",
             }}
           >
+            {(queuedQuizzes.length > 0 || editingQuiz?._queuedUnitQuiz) && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn-primary queue-button pending-quiz-nav-button"
+                  onClick={handlePreviousPendingQuiz}
+                  disabled={isPending || queuedQuizzes.length === 0}
+                >
+                  Previous
+                </button>
+                <span className="pending-quiz-counter">
+                  Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
+                </span>
+                <button
+                  type="button"
+                  className="btn-primary queue-button pending-quiz-nav-button"
+                  onClick={handleNextPendingQuiz}
+                  disabled={isPending || queuedQuizzes.length === 0}
+                >
+                  Next
+                </button>
+              </div>
+            )}
             {!editingQuiz?._pendingUnit && (
-              <>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button
                   type="button"
                   className="btn-primary queue-button queue-add-button"
@@ -2579,34 +2635,11 @@ export default function QuizInputForm({
                     {message.text}
                   </div>
                 )}
-              </>
-            )}
-            {editingQuiz?._pendingUnit && queuedQuizzes.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  className="btn-primary queue-button pending-quiz-nav-button"
-                  onClick={handlePreviousPendingQuiz}
-                  disabled={isPending}
-                >
-                  Previous
-                </button>
-                <span className="pending-quiz-counter">
-                  Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
-                </span>
-                <button
-                  type="button"
-                  className="btn-primary queue-button pending-quiz-nav-button"
-                  onClick={handleNextPendingQuiz}
-                  disabled={isPending}
-                >
-                  Next
-                </button>
-              </>
+              </div>
             )}
           </div>
 
-          {message && editingQuiz?._pendingUnit && (
+          {message && (editingQuiz?._pendingUnit || editingQuiz?._queuedUnitQuiz) && (
             <div className={`status-message status-${message.type}`}>
               {message.text}
             </div>
@@ -2730,11 +2763,13 @@ export default function QuizInputForm({
                   ? "Saving Quiz..."
                   : "Adding Quiz..."
                 : editingQuiz
-                  ? "Save Changes"
+                  ? editingQuiz._queuedUnitQuiz
+                    ? "Add New Unit"
+                    : "Save Changes"
                   : "Add New Unit"}
             </button>
           </div>
-          {editingQuiz && (
+          {editingQuiz && !editingQuiz._queuedUnitQuiz && (
             <button
               type="button"
               className="btn-delete"
