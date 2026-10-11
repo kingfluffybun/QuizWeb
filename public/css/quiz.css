@@ -45,6 +45,17 @@
         width: 100%;
         color: var(--text-main);
 
+        > .quiz-close-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+        }
+
         > .heart-container {
             display: flex;
             margin-left: auto;
@@ -53,6 +64,16 @@
             > svg {
                 margin-left: -12px;
                 color: var(--text-inverse);
+            }
+
+            &[data-lives="4"] > svg:nth-child(n+5),
+            &[data-lives="3"] > svg:nth-child(n+4),
+            &[data-lives="2"] > svg:nth-child(n+3),
+            &[data-lives="1"] > svg:nth-child(n+2),
+            &[data-lives="0"] > svg {
+                fill: none;
+                stroke: currentColor;
+                opacity: 0.45;
             }
         }
     }

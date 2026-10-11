@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import AccessibilityPanel from "../../settings/AccessibilityPanel";
 
 interface QuizHeaderProps {
@@ -10,6 +11,7 @@ interface QuizHeaderProps {
 }
 
 export default function QuizHeader({ lives, totalQuizzes, currentIndex }: QuizHeaderProps) {
+    const router = useRouter();
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
 
@@ -41,7 +43,7 @@ export default function QuizHeader({ lives, totalQuizzes, currentIndex }: QuizHe
                     type="button"
                     className="quiz-close-button"
                     aria-label="Close quiz"
-                    onClick={() => window.location.assign("https://www.quizweb.dev/home")}
+                    onClick={() => router.push("/home")}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>

@@ -78,8 +78,8 @@ export default async function QuizPage({
             );
         }
 
-        return <QuizLandingClient initialQuizzes={quizzesToDisplay} />;
+        return <QuizLandingClient key={unitId ?? quizId} initialQuizzes={quizzesToDisplay} />;
     }
 
-    return <QuizLandingClient />;
+    return <QuizLandingClient key="landing" />;
 }
