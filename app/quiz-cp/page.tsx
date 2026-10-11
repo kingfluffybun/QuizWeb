@@ -3,6 +3,8 @@
 import Editor from "@monaco-editor/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "#css/quiz.css";
+import "#css/sidebar.css";
+import Sidebar from "@/app/components/Sidebar";
 
 const defaultFiles = {
   html: "",
@@ -105,8 +107,7 @@ export default function QuizPage() {
 
   return (
     <div className="quiz-page" id="code-problem">
-      <nav></nav>
-      {/* <div className="sidebar"></div> */}
+      <Sidebar />
       <main>
         {/* <div className="quiz-header">
             <div className="quiz-navigation">
@@ -134,7 +135,7 @@ export default function QuizPage() {
             </div>
             
         </div> */}
-        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0"}}>
+        <div style={{ width: "100%", display: "flex", alignItems: "center" , flexDirection: "column", gap: "20px", flex: "1", minHeight: "0"}}>
             <div className="code-problem-layout">
                 <div id="instructions">
                     <div className="header">
@@ -254,6 +255,13 @@ export default function QuizPage() {
                                 wordWrap: "off",
                             }}
                         />
+                        <div className="code-options">
+                            <button type="button" className="run-code-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play preview-icon"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+                                <p>Run Code</p>
+                            </button>
+                            <button type="submit" className="submit-btn"><p>Submit</p></button>
+                        </div>
                     </div>
                 </div>
                 <div id="preview">
