@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAvailableUnits, getQuizzes } from "@/app/actions/quiz";
-import type { AvailableUnit } from "@/app/actions/quiz";
+import { getQuizzes } from "@/app/actions/quiz";
 import type { QuizData } from "@/app/quiz/types";
 
 function shuffleQuizOptions(quiz: QuizData): QuizData {
@@ -36,14 +35,12 @@ function shuffleQuizOptions(quiz: QuizData): QuizData {
 
 export function useQuizData() {
     const [quizzes, setQuizzes] = useState<QuizData[]>([]);
-    const [units, setUnits] = useState<AvailableUnit[] | null>(null);
 
     useEffect(() => {
-        Promise.all([getQuizzes(), getAvailableUnits()]).then(([rows, availableUnits]) => {
+        getQuizzes().then((rows) => {
             setQuizzes((rows as QuizData[]).map(shuffleQuizOptions));
-            setUnits(availableUnits);
         });
     }, []);
 
-    return { quizzes, units };
+    return { quizzes };
 }

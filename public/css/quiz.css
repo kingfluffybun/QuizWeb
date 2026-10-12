@@ -95,6 +95,14 @@
     }
 }
 
+.quiz-page .quiz-unit-title {
+    width: 100%;
+    max-width: 1080px;
+    margin: auto 0;
+    color: var(--text-main);
+    text-align: center;
+}
+
 .progress-container {
     display: flex;
     width: 100%;
@@ -229,17 +237,32 @@
 }
 
 .available-unit-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background: var(--primary-color);
+    min-width: 180px;
+    min-height: 56px;
+    padding: 0 24px;
+    border: none;
+    border-bottom: 6px solid #6b36da;
+    border-radius: 16px;
+    background: var(--selected-color);
     color: var(--text-inverse);
+    font-family: "Poppins", sans-serif;
     font-weight: 600;
     text-decoration: none;
+    transition: transform 0.15s ease, filter 0.2s ease;
 }
 
 .available-unit-link:hover {
+    transform: translateY(-2px);
     filter: brightness(0.92);
+}
+
+.available-unit-link:active {
+    border-bottom-width: 3px;
+    transform: translateY(2px);
 }
 
 .quiz-page .quiz-container {
@@ -254,21 +277,30 @@
 
 .lesson-card {
     display: flex;
-    flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    text-align: left;
+    gap: 48px;
+    height: 100%;
+    padding-top: 8px;
+}
+
+.lesson-text-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1;
 }
 
 .lesson-card-text {
     width: 100%;
     text-align: left;
     white-space: pre-wrap;
+    line-height: 1.5;
+    font-size: clamp(1rem, 2vw, 1.5rem);
 }
 
 .lesson-card .lesson-slide-title {
-    margin: 0 0 12px;
-    font-size: 1.1rem;
+    font-size: clamp(1.5rem, 3.5vw, 2.25rem);
 }
 
 .lesson-card .lesson-code-preview {
@@ -282,9 +314,11 @@
     overflow-y: hidden;
 }
 
+
 .lesson-code-frame {
+    flex: 1;
     width: 100%;
-    margin: 16px 0 8px;
+    /* margin: 16px 0 8px; */
 }
 
 .lesson-code-frame-controls {
@@ -326,6 +360,21 @@
     color: #f8fafc;
     text-align: left;
     white-space: pre;
+}
+
+.lesson-code-editor {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 0 8px 8px 8px;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.lesson-code-editor * {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .lesson-card .lesson-slide-controls {
@@ -960,7 +1009,9 @@
             justify-content: center;
             width: 320px;
             min-height: clamp(56px, 6vh, 80px);
+            font-size: clamp(1rem, 1vw, 2rem);
             margin: 0;
+            transition: all 200ms ease;
         }
         > .lesson-footer-controls > button.options#submit {
             position: relative;
@@ -982,6 +1033,22 @@
         > .lesson-footer-controls > button.options#skip {
             color: #AFAFAF;
             background-color: var(--bg-card);
+        }
+        > .lesson-footer-controls > button.options#skip:disabled {
+            background-color: #AFAFAF;
+            border: none;
+            color: var(--text-inverse);
+            pointer-events: none;
+        }
+        > .lesson-footer-controls > button.options#skip:hover {
+            filter: brightness(0.9);
+            border-color: var(--border-main);
+        }
+        > .lesson-footer-controls > button.options#skip:active {
+            border-bottom-width: 3px;
+        }
+        > .lesson-footer-controls > button.options#submit:active {
+            border-bottom-width: 0;
         }
         > button.options {
             justify-content: center;

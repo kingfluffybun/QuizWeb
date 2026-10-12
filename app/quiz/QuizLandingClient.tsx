@@ -19,6 +19,11 @@ type AnswerResult = {
     correctAnswer: string;
 };
 
+type SavedQuestionProgress = {
+    value: AnswerValue;
+    result: AnswerResult;
+};
+
 type UnitQuizData = QuizData & {
     unit_title?: string;
     unit_lesson_card?: {
@@ -101,9 +106,8 @@ export default function QuizLandingClient({
     completionDestination?: "home" | "input";
 }) {
     const router = useRouter();
-    const {quizzes: allQuizzes, units} = useQuizData();
-    const quizzes = (initialQuizzes ?? allQuizzes).slice(0, 10);
-    const showAvailableUnits = initialQuizzes === undefined;
+    const { quizzes: allQuizzes } = useQuizData();
+    const quizzes = initialQuizzes ?? allQuizzes.slice(0, 10);
     const selectedQuizzes = quizzes as UnitQuizData[];
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
@@ -113,6 +117,7 @@ export default function QuizLandingClient({
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
+    const [questionProgress, setQuestionProgress] = useState<Record<number, SavedQuestionProgress>>({});
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
 
@@ -130,6 +135,11 @@ export default function QuizLandingClient({
 
     const quiz = quizzes[currentIndex];
     const selectedQuiz = selectedQuizzes[currentIndex];
+    const isLessonOnlyUnit = Boolean(
+        initialQuizzes &&
+        initialQuizzes.length === 1 &&
+        selectedQuiz?.type_name === "Unit",
+    );
     const unitLessonCard = selectedQuiz?.unit_lesson_card ?? {};
     const lessonSlides = Array.isArray(unitLessonCard.lesson_slide)
         ? unitLessonCard.lesson_slide
@@ -138,11 +148,15 @@ export default function QuizLandingClient({
         : [{
             lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "",
             }];
-    const hasLesson = Boolean(
-        !showAvailableUnits &&
-        (selectedQuiz?.unit_title ||
-            lessonSlides.some((slide) => slide.lesson_title || slide.lesson_text || slide.lesson_code)),
+    const hasLesson = lessonSlides.some(
+        (slide) => slide.lesson_title || slide.lesson_text || slide.lesson_code,
     );
+    const isShowingLesson = hasLesson && !hasStartedQuiz;
+    const totalProgressItems = (hasLesson ? lessonSlides.length : 0)
+        + (isLessonOnlyUnit ? 0 : quizzes.length);
+    const activeProgressIndex = isShowingLesson
+        ? lessonSlideIndex
+        : (hasLesson ? lessonSlides.length : 0) + currentIndex;
 
     const resetState = () => {
         setValue(undefined);
@@ -160,13 +174,37 @@ export default function QuizLandingClient({
         resetState();
     };
 
+    const previousQuiz = () => {
+        if (currentIndex > 0) {
+            const previousIndex = currentIndex - 1;
+            const savedProgress = questionProgress[previousIndex];
+            setCurrentIndex(previousIndex);
+            setValue(savedProgress?.value);
+            setResult(savedProgress?.result ?? null);
+            setLessonSlideIndex(0);
+            return;
+        }
+
+        if (hasLesson && hasStartedQuiz) {
+            setHasStartedQuiz(false);
+            setLessonSlideIndex(lessonSlides.length - 1);
+            const savedProgress = questionProgress[0];
+            setValue(savedProgress?.value);
+            setResult(savedProgress?.result ?? null);
+        }
+    };
+
     const continueQuiz = () => {
         nextQuiz();
     };
 
     const submitAnswer = () => {
-        if (!quiz) return;
+        if (!quiz || questionProgress[currentIndex]) return;
         const nextResult = evaluate(quiz, value);
+        setQuestionProgress((progress) => ({
+            ...progress,
+            [currentIndex]: { value, result: nextResult },
+        }));
         setResult(nextResult);
         if (nextResult.correct) {
             setScore((currentScore) => currentScore + 1);
@@ -179,8 +217,12 @@ export default function QuizLandingClient({
         setValue(nextValue);
 
         const pairCount = quiz?.quiz_payload.pairs?.length ?? 0;
-        if (quiz?.type_name === "Pair" && nextValue === pairCount) {
+        if (quiz?.type_name === "Pair" && nextValue === pairCount && !questionProgress[currentIndex]) {
             const nextResult = evaluate(quiz, nextValue);
+            setQuestionProgress((progress) => ({
+                ...progress,
+                [currentIndex]: { value: nextValue, result: nextResult },
+            }));
             setResult(nextResult);
             if (nextResult.correct) {
                 setScore((currentScore) => currentScore + 1);
@@ -273,6 +315,9 @@ export default function QuizLandingClient({
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                         </button>
+                        {hasLesson && selectedQuiz?.unit_title && (
+                        <h1 className="quiz-unit-title">{selectedQuiz.unit_title}</h1>
+                        )}
                         <div className="heart-container" data-lives={lives}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#EE5555" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart-icon lucide-heart"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#EE5555" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart-icon lucide-heart"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>
@@ -282,8 +327,8 @@ export default function QuizLandingClient({
                         </div>
                     </div>
                     <div className="progress-container">
-                        {quizzes.map((_, index) => (
-                            <div key={index} className={index <= currentIndex ? "active" : ""} />
+                        {Array.from({ length: totalProgressItems }, (_, index) => (
+                            <div key={index} className={index <= activeProgressIndex ? "active" : ""} />
                         ))}
                     </div>
                     {accessibilityOpen && (
@@ -295,42 +340,10 @@ export default function QuizLandingClient({
                     )}
                 </div>
 
-                {showAvailableUnits && <section className="available-units" aria-labelledby="available-units-title">
-                    <div className="available-units-heading">
-                        <div>
-                            <h2 id="available-units-title">Available Units</h2>
-                            <p>Choose a unit to study its lesson and take its quiz.</p>
-                        </div>
-                    </div>
-                    {units === null ? (
-                        <p className="available-units-empty">Loading units...</p>
-                    ) : units.length > 0 ? (
-                        <div className="available-units-list">
-                            {units.map((unit) => (
-                                <article className="available-unit-card" key={unit.unit_id}>
-                                    <div>
-                                        <h3>{unit.unit_title}</h3>
-                                        <p>
-                                            {unit.sec_num ? `Section ${unit.sec_num} · ` : ""}
-                                            {unit.quiz_count} {unit.quiz_count === 1 ? "question" : "questions"}
-                                        </p>
-                                    </div>
-                                    <Link href={`/quiz?unitId=${unit.pending_id}&source=quiz`} className="available-unit-link">
-                                        Start unit
-                                    </Link>
-                                </article>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="available-units-empty">No approved units are available yet.</p>
-                    )}
-                </section>}
-
                 <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
                     {hasLesson && !hasStartedQuiz ? (
                         <LessonCard
                             key={selectedQuiz?.quiz_id ?? currentIndex}
-                            title={selectedQuiz?.unit_title}
                             slides={lessonSlides}
                             className="unit-meta"
                             slideIndex={lessonSlideIndex}
@@ -352,40 +365,44 @@ export default function QuizLandingClient({
                 <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
                     {/* dito sa div yung message */}
                     {hasLesson && !hasStartedQuiz ? (
-                        <>
-                            {lessonSlides.length > 1 && <div className="lesson-footer-controls">
+                        <div className="lesson-footer-controls">
+                            <button
+                                type="button"
+                                className="options"
+                                id="skip"
+                                onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
+                                disabled={lessonSlideIndex === 0}
+                                aria-label="Previous lesson slide"
+                            >
+                                Previous
+                            </button>
+                            {lessonSlideIndex === lessonSlides.length - 1 ? (
                                 <button
                                     type="button"
                                     className="options"
-                                    id="skip"
-                                    onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
-                                    disabled={lessonSlideIndex === 0}
-                                    aria-label="Previous lesson slide"
+                                    id="submit"
+                                    onClick={() => {
+                                        if (isLessonOnlyUnit) {
+                                            router.push("/learn");
+                                        } else {
+                                            setHasStartedQuiz(true);
+                                        }
+                                    }}
                                 >
-                                    Previous
+                                    {isLessonOnlyUnit ? "Finish Lesson" : "Start Quiz"}
                                 </button>
-                                {lessonSlideIndex === lessonSlides.length - 1 ? (
-                                    <button
-                                        type="button"
-                                        className="options"
-                                        id="submit"
-                                        onClick={() => setHasStartedQuiz(true)}
-                                    >
-                                        Start Quiz
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        className="options"
-                                        id="submit"
-                                        onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
-                                        aria-label="Next lesson slide"
-                                    >
-                                        Next
-                                    </button>
-                                )}
-                            </div>}
-                        </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="options"
+                                    id="submit"
+                                    onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
+                                    aria-label="Next lesson slide"
+                                >
+                                    Next
+                                </button>
+                            )}
+                        </div>
                     ) : <><div className="answer-message row">
                         <div className="answer-message-icon col">
                             <svg xmlns="http://www.w3.org/2000/svg" id="wrong" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -396,7 +413,14 @@ export default function QuizLandingClient({
                             {!result?.correct && result && <p><b>Correct Answer:</b> {result.correctAnswer}</p>}
                         </div>
                     </div>
-                    <button className="options" id="skip" onClick={nextQuiz} disabled={!quiz}>Skip</button>
+                    <button
+                        className="options"
+                        id="skip"
+                        onClick={previousQuiz}
+                        disabled={!quiz || (currentIndex === 0 && !hasLesson)}
+                    >
+                        Previous
+                    </button>
                     <button
                         className="options"
                         id="submit"

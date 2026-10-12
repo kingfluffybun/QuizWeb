@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Editor from "@monaco-editor/react";
 
 export type LessonSlide = {
   lesson_title?: string;
@@ -32,7 +33,17 @@ export function LessonCodeFrame({
   toggleable = true,
 }: LessonCodeFrameProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const cleanupFrameObservers = useRef<(() => void) | null>(null);
+  const editorResizeFrame = useRef<number | null>(null);
   const [view, setView] = useState<"code" | "result">("result");
+  const [editorHeight, setEditorHeight] = useState(180);
+
+  const cancelEditorResize = () => {
+    if (editorResizeFrame.current !== null) {
+      window.cancelAnimationFrame(editorResizeFrame.current);
+      editorResizeFrame.current = null;
+    }
+  };
 
   const resizeFrame = () => {
     const frame = frameRef.current;
@@ -42,19 +53,45 @@ export function LessonCodeFrame({
       return;
     }
 
-    const body = document.body;
-    const lastContent = body?.lastElementChild;
-    const bodyStyle = body ? frameWindow.getComputedStyle(body) : null;
-    const contentHeight = Math.max(
-      180,
-      lastContent && bodyStyle
-        ? lastContent.getBoundingClientRect().bottom +
-            frameWindow.scrollY +
-            parseFloat(bodyStyle.marginBottom || "0")
-        : document.documentElement.scrollHeight,
-    );
-    frame.style.height = `${contentHeight}px`;
+    cleanupFrameObservers.current?.();
+
+    const updateHeight = () => {
+      if (frame.contentDocument !== document) return;
+
+      const contentHeight = Math.max(
+        180,
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+      );
+      if (frame.offsetHeight !== contentHeight) {
+        frame.style.height = `${contentHeight}px`;
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(document.body);
+    const mutationObserver = new MutationObserver(updateHeight);
+    mutationObserver.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    frameWindow.addEventListener("resize", updateHeight);
+    cleanupFrameObservers.current = () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      frameWindow.removeEventListener("resize", updateHeight);
+    };
+
+    updateHeight();
+    void document.fonts?.ready.then(updateHeight);
   };
+
+  useEffect(() => () => {
+    cleanupFrameObservers.current?.();
+    cancelEditorResize();
+  }, []);
 
   return (
     <div className="lesson-code-frame">
@@ -64,7 +101,10 @@ export function LessonCodeFrame({
             type="button"
             className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`}
             aria-pressed={view === "code"}
-            onClick={() => setView("code")}
+            onClick={() => {
+              cancelEditorResize();
+              setView("code");
+            }}
           >
             Code
           </button>
@@ -72,16 +112,48 @@ export function LessonCodeFrame({
             type="button"
             className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`}
             aria-pressed={view === "result"}
-            onClick={() => setView("result")}
+            onClick={() => {
+              cancelEditorResize();
+              setView("result");
+            }}
           >
             Result
           </button>
         </div>
       )}
       {toggleable && view === "code" ? (
-        <pre className="lesson-code-source">
-          <code>{source}</code>
-        </pre>
+        <Editor
+          className="lesson-code-editor"
+          height={`${editorHeight}px`}
+          width="100%"
+          language="html"
+          value={source}
+          theme="vs"
+          onMount={(editor) => {
+            const updateHeight = () => {
+              cancelEditorResize();
+              editorResizeFrame.current = window.requestAnimationFrame(() => {
+                editorResizeFrame.current = window.requestAnimationFrame(() => {
+                  editorResizeFrame.current = null;
+                  if (!editor.getDomNode()?.isConnected || editor.getLayoutInfo().width === 0) return;
+                  setEditorHeight(Math.max(0, editor.getContentHeight()));
+                });
+              });
+            };
+
+            updateHeight();
+            editor.onDidContentSizeChange(updateHeight);
+          }}
+          options={{
+            readOnly: true,
+            fontSize: 18,
+            padding: { top: 16, bottom: 16 },
+            minimap: { enabled: false },
+            lineNumbers: "on",
+            scrollBeyondLastLine: false,
+            wordWrap: "on",
+          }}
+        />
       ) : (
         <iframe
           ref={frameRef}
@@ -132,8 +204,7 @@ export default function LessonCard({
 
   return (
     <div className={`lesson-card ${className}`.trim()}>
-      {title && <h2>{title}</h2>}
-      {slide.lesson_title && <h3 className="lesson-slide-title">{slide.lesson_title}</h3>}
+      {title && <h1>{title}</h1>}
       {slide.lesson_code && (
         <LessonCodeFrame
           className="lesson-code-preview"
@@ -141,7 +212,10 @@ export default function LessonCard({
           source={slide.lesson_code}
         />
       )}
-      {slide.lesson_text && <div className="lesson-card-text">{slide.lesson_text}</div>}
+      <div className="lesson-text-container">
+        {slide.lesson_title && <h1 className="lesson-slide-title">{slide.lesson_title}</h1>}
+        {slide.lesson_text && <p className="lesson-card-text">{slide.lesson_text}</p>}
+      </div>
       {showControls && visibleSlides.length > 1 && (
         <div className="lesson-slide-controls">
           <button
