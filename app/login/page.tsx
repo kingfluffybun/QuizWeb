@@ -1,7 +1,7 @@
 "use client";
 
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
-import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin, clearLoginRateLimit } from "@/app/actions/auth";
+import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin } from "@/app/actions/auth";
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -45,6 +45,7 @@ function AuthPage() {
     // ReCaptcha
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
     const [recaptchaLoading, setRecaptchaLoading] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState("");
 
     // Forgot pass states
     const [forgotEmail, setForgotEmail] = useState("");
@@ -96,7 +97,6 @@ function AuthPage() {
             return;
         }
 
-        await clearLoginRateLimit(email);
         router.push("/");
     }
 
@@ -126,6 +126,16 @@ function AuthPage() {
             setError("Please verify that you are not a robot.");
             return;
         }
+
+        let token = recaptchaToken;
+        if (executeRecaptcha) {
+            try {
+                token = await executeRecaptcha("signup");
+            } catch {
+                // fallback to state token
+            }
+        }
+        formData.set("recaptchaToken", token || "");
 
         setIsLoading(true);
 
@@ -167,17 +177,8 @@ function AuthPage() {
 
         try {
             const token = await executeRecaptcha("signup");
-
-            // Verify token
-            const res = await fetch("/api/recaptcha", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token }),
-            });
-
-            const data = await res.json();
-
-            if (data.success && data.score >= 0.5) {
+            if (token) {
+                setRecaptchaToken(token);
                 setRecaptchaVerified(true);
             } else {
                 setError("ReCaptcha failed to verify. Please try again.");
@@ -585,7 +586,7 @@ function AuthPage() {
                                             ) : (
                                                 <>
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                                    <span>I'm not a robot</span>
+                                                    <span>I&apos;m not a robot</span>
                                                 </>
                                             )}
                                         </button>

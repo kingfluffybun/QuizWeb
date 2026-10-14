@@ -1,0 +1,94 @@
+--- a/tests/test-m5.ts	2026-10-14 19:01:06.897465162 +0800
++++ b/tests/test-m5.ts	2026-10-14 19:01:06.897465162 +0800
+@@ -957,7 +957,90 @@
+     console.log("\n\x1b[1m[Suite 7: OWASP ASVS v4.0.3 Chapter 3, 4, 11 Compliance Audit]\x1b[0m");
+ 
+     await runTest("V3.1.1 & V3.4.2: Session & token management controls securely verified", async () => {
+-        assert.ok(true, "Token storage uses SHA-256 digests and server-side verification");
++        // 1. Empirical & Behavioral Cryptographic Verification (OWASP ASVS V3.4.2)
++        const rawTokenSample = "asvs_v3_4_2_verification_token_sample_test_value";
++        const expectedHash = crypto.createHash("sha256").update(rawTokenSample).digest("hex");
++        const computedHash = hashToken(rawTokenSample);
++
++        assert.strictEqual(computedHash, expectedHash, "hashToken must compute authentic standard SHA-256 digest");
++        assert.strictEqual(computedHash.length, 64, "SHA-256 digest must be exactly 64 hexadecimal characters");
++        assert.ok(/^[0-9a-f]{64}$/.test(computedHash), "SHA-256 digest must conform to lowercase hexadecimal formatting");
++
++        // Collision-resistance / non-triviality: modification of input changes digest
++        const modifiedHash = hashToken(rawTokenSample + "_modified");
++        assert.notStrictEqual(computedHash, modifiedHash, "SHA-256 digest must vary with input modification");
++
++        // 2. Behavioral Verification: Server-side token verification with hashed lookup (ASVS V3.4.2 & V3.1.1)
++        await resetMockDb();
++        const testActivationToken = "secure_activation_token_for_asvs_behavioral_audit_98765";
++        const testHashedToken = hashToken(testActivationToken);
++
++        mockDb.vrfy.push({
++            verify_id: mockDb.nextVrfyId++,
++            username: "asvs_v3_test_user",
++            email: "asvs_test@quizweb.dev",
++            password_hash: await argon2.hash("P@ssword1234!"),
++            verification_token: testHashedToken,
++            expires_at: new Date(Date.now() + 15 * 60 * 1000),
++            attempts: 0,
++            locked_until: null,
++        });
++
++        // Verification call with raw token successfully matches hashed database record
++        const verifyResult = await verifyEmail(testActivationToken);
++        assert.strictEqual(verifyResult.success, true, "verifyEmail must verify user via server-side SHA-256 lookup");
++        assert.strictEqual(verifyResult.message, "Email verified successfully. You may now close this tab.");
++
++        // Verification record is consumed from DB
++        assert.strictEqual(mockDb.vrfy.length, 0, "Verification record must be consumed after activation");
++        const activatedUser = mockDb.users.find((u) => u.email === "asvs_test@quizweb.dev");
++        assert.ok(activatedUser, "Activated user must be committed to user_auth_tbl");
++
++        // Consumed token cannot be reused (V3.1.1 Replay Prevention)
++        const replayResult = await verifyEmail(testActivationToken);
++        assert.strictEqual(replayResult.success, false, "Re-verification of consumed token must fail closed");
++
++        // 3. Structural AST / Static Inspection: app/actions/auth.ts (ASVS V3.4.2 & V3.1.1)
++        const authSrc = fs.readFileSync(path.join(projectRoot, "app/actions/auth.ts"), "utf8");
++        assert.ok(
++            authSrc.includes(`crypto.createHash("sha256").update(raw).digest("hex")`),
++            "app/actions/auth.ts must define SHA-256 hashToken helper"
++        );
++        assert.ok(
++            authSrc.includes("timingSafeEqual"),
++            "app/actions/auth.ts must employ crypto.timingSafeEqual for constant-time comparisons"
++        );
++        assert.ok(
++            authSrc.includes("const hashedVerificationToken = hashToken(rawVerificationToken)"),
++            "signUp must hash verification tokens prior to user_vrfy_tbl storage"
++        );
++        assert.ok(
++            authSrc.includes("const hashedToken = hashToken(token.trim())"),
++            "verifyEmail must hash incoming tokens prior to database verification"
++        );
++        assert.ok(
++            authSrc.includes("const hashedOtp = hashToken(rawOtp)"),
++            "reqPassReset must hash OTP codes prior to user_otp_tbl storage"
++        );
++        assert.ok(
++            authSrc.includes("const hashedInputOtp = hashToken(otpCode.trim())"),
++            "verifyOTP and resetPass must hash input OTP codes prior to verification"
++        );
++
++        // 4. Structural Schema Inspection: migrations/002_security_hardening.sql (V3.4.2 & V3.1.1)
++        const migrationSrc = fs.readFileSync(path.join(projectRoot, "migrations/002_security_hardening.sql"), "utf8");
++        assert.ok(
++            migrationSrc.includes("`verification_token` VARCHAR(255) NOT NULL"),
++            "user_vrfy_tbl must allocate VARCHAR(255) for SHA-256 token digests"
++        );
++        assert.ok(
++            migrationSrc.includes("`otp_code` VARCHAR(255) NOT NULL"),
++            "user_otp_tbl must allocate VARCHAR(255) for SHA-256 OTP digests"
++        );
++        assert.ok(
++            migrationSrc.includes("`token_version` INT NOT NULL DEFAULT 1"),
++            "user_auth_tbl must define token_version for server-side session revocation"
++        );
+     });
+ 
+     await runTest("V4.1.5: Transaction isolation & pessimistic row locking (SELECT ... FOR UPDATE) eliminates TOCTOU races (SEC-13)", async () => {

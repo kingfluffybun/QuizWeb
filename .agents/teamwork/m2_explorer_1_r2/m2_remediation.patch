@@ -1,0 +1,42 @@
+--- a/app/actions/auth.ts
++++ b/app/actions/auth.ts
+@@ -31,8 +31,10 @@ async function verifyRecaptchaToken(token: string | null | undefined): Promise<{
+     const trimmed = token.trim();
+ 
+-    // 1. Support test environments: bypass tokens
+-    const testBypass = process.env.RECAPTCHA_BYPASS_TOKEN || "test-bypass-recaptcha-token";
+-    if (trimmed === testBypass || trimmed === "test-bypass-token") {
+-        return { success: true, score: 1.0 };
++    // 1. Support non-production / test environments: bypass tokens strictly prohibited in production
++    if (process.env.NODE_ENV !== "production") {
++        const testBypass = process.env.RECAPTCHA_BYPASS_TOKEN || "test-bypass-recaptcha-token";
++        if (trimmed === testBypass || trimmed === "test-bypass-token") {
++            return { success: true, score: 1.0 };
++        }
+     }
+ 
+--- a/app/actions/quiz.ts
++++ b/app/actions/quiz.ts
+@@ -138,19 +138,8 @@ export async function requireAdmin() {
+       return false;
+     }
++    // SEC-03: User record not found in user_auth_tbl (e.g. deleted or purged account) - fail closed
++    return false;
+   } catch {
+-    // If DB error, check session claims
+-    const sessionRole = session?.user?.role || session?.user?.user_role;
+-    if (sessionRole === "admin") {
+-      return { id: String(userId), role: "admin" };
+-    }
+-    return false;
+-  }
+-
+-  // Fallback to session claims if no DB rows returned
+-  const sessionRole = session?.user?.role || session?.user?.user_role;
+-  if (sessionRole === "admin") {
+-    return { id: String(userId), role: "admin" };
+-  }
+-
++    // SEC-03: Fail closed on database errors
+     return false;
+   }
