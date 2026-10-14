@@ -14,26 +14,33 @@ export const middleware = auth(async function middleware(req) {
   }
 
   const session = req.auth;
+  let user = session?.user as { role?: string; user_role?: string; id?: string } | undefined;
+  let role = user?.role || user?.user_role;
+
+  // Extract role/user from session with JWT token fallback (e.g. standard cookie test harnesses)
+  if (!user || !role) {
+    const token = await getToken({
+      req,
+      secret: process.env.AUTH_SECRET,
+    });
+    if (token) {
+      role = (token.role as string) || (token.user_role as string);
+      user = {
+        id: (token.id || token.sub) as string,
+        role,
+        user_role: role,
+      };
+    }
+  }
 
   // 1. Unauthenticated: redirect to /login with callbackUrl
-  if (!session?.user) {
+  if (!user) {
     const loginUrl = new URL("/login", nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname + nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2. Extract role from session with JWT token fallback
-  const user = session.user as { role?: string; user_role?: string };
-  let role = user?.role || user?.user_role;
-  if (!role) {
-    const token = await getToken({
-      req,
-      secret: process.env.AUTH_SECRET,
-    });
-    role = (token?.role as string) || (token?.user_role as string);
-  }
-
-  // 3. Non-admin: reject with 403 or redirect to /home
+  // 2. Non-admin: reject with 403 or redirect to /home
   if (role !== "admin") {
     if (req.headers.get("accept")?.includes("application/json")) {
       return new NextResponse(

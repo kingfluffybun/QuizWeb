@@ -4,7 +4,7 @@ import Github from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import argon2 from "argon2";
 import { db } from "@/lib/db";
-import { checkRateLimit, clearRateLimit as resetLoginRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
 export interface ExtendedUser {
@@ -171,8 +171,8 @@ export const authConfig: NextAuthConfig = {
                     return null;
                 }
 
-                const clearRateLimit = resetLoginRateLimit;
-                clearRateLimit(`login:${email.toLowerCase().trim()}`);
+                const { clearRateLimit } = await import("@/lib/rate-limit");
+                await clearRateLimit(`login:${email.toLowerCase().trim()}`);
                 return {
                     id: String(user.user_id),
                     email: user.email,
@@ -187,7 +187,7 @@ export const authConfig: NextAuthConfig = {
     ],
 
     events: {
-        async signOut(message: { token?: ExtendedToken | null; session?: ExtendedSession | null }) {
+        async signOut(message: { token?: any; session?: any }) {
             try {
                 const userId = message.token?.id || message.token?.sub || message.session?.user?.id;
                 if (userId) {
@@ -207,8 +207,8 @@ export const authConfig: NextAuthConfig = {
             user,
             account,
         }: {
-            user: ExtendedUser;
-            account?: { provider?: string; providerAccountId?: string } | null;
+            user: any;
+            account?: any;
         }) {
             // Handle database syncing for new OAuth Logins
             if ((account?.provider === "google" || account?.provider === "github") && user.email) {
@@ -300,10 +300,10 @@ export const authConfig: NextAuthConfig = {
             return true;
         },
 
-        async jwt({ token, user }: { token: ExtendedToken; user?: ExtendedUser }) {
+        async jwt({ token, user }: { token: any; user?: any }) {
             if (user) {
                 token.id = user.id;
-                const u = user;
+                const u = user as ExtendedUser;
                 token.role = u.role || u.user_role || "user";
                 token.user_role = u.user_role || u.role || "user";
                 token.tokenVersion = u.token_version || u.tokenVersion || 1;
@@ -312,7 +312,7 @@ export const authConfig: NextAuthConfig = {
             return token;
         },
 
-        async session({ session, token }: { session: ExtendedSession; token: ExtendedToken }) {
+        async session({ session, token }: { session: any; token: any }) {
             const extSession = session as ExtendedSession | undefined;
             const extToken = token as ExtendedToken | undefined;
 

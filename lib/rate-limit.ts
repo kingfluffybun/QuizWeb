@@ -25,7 +25,7 @@ export async function checkRateLimit(key: string, increment: boolean = false) {
             "SELECT attempts, reset_at, blocked FROM rate_limit_tbl WHERE limit_key = ?",
             [dbkey]
         );
-        let entry = rows[0];
+        let entry: RateLimitRow | undefined = rows[0];
 
         if (entry && now > entry.reset_at && !entry.blocked) {
             await db.query("DELETE FROM rate_limit_tbl WHERE limit_key = ?", [dbkey]);

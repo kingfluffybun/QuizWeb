@@ -280,6 +280,31 @@ export async function verifyEmail(token: string) {
     try {
         await connection.beginTransaction();
 
+        // Check token existence and lockout before row locking to handle consumed tokens and locked accounts cleanly
+        const [preCheck] = await connection.query<RowDataPacket[]>(
+            `SELECT verify_id, username, email, password_hash, expires_at, attempts, locked_until FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1`,
+            [hashedToken]
+        );
+
+        if (Array.isArray(preCheck)) {
+            if (preCheck.length === 0) {
+                await connection.rollback();
+                return {
+                    success: false,
+                    message: "This verification link is invalid or has already been used.",
+                };
+            }
+
+            const initialCheck = preCheck[0];
+            if (initialCheck && ((initialCheck.locked_until && new Date() < new Date(initialCheck.locked_until)) || initialCheck.attempts >= 5)) {
+                await connection.rollback();
+                return {
+                    success: false,
+                    message: "This verification link has been locked due to too many failed attempts.",
+                };
+            }
+        }
+
         // Find pending verification with pessimistic row lock (SEC-13)
         const [rows] = await connection.query<RowDataPacket[]>(
             `SELECT verify_id, username, email, password_hash, expires_at, attempts, locked_until FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1 FOR UPDATE`,
