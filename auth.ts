@@ -15,6 +15,7 @@ export interface ExtendedUser {
     user_role?: string;
     token_version?: number;
     tokenVersion?: number;
+    [key: string]: unknown;
 }
 
 export interface ExtendedToken {
@@ -24,11 +25,13 @@ export interface ExtendedToken {
     user_role?: string;
     token_version?: number;
     tokenVersion?: number;
+    [key: string]: unknown;
 }
 
 export interface ExtendedSession {
     user?: ExtendedUser;
     expires?: string;
+    [key: string]: unknown;
 }
 
 /**
@@ -184,7 +187,7 @@ export const authConfig: NextAuthConfig = {
     ],
 
     events: {
-        async signOut(message: any) {
+        async signOut(message: { token?: ExtendedToken | null; session?: ExtendedSession | null }) {
             try {
                 const userId = message.token?.id || message.token?.sub || message.session?.user?.id;
                 if (userId) {
@@ -200,7 +203,13 @@ export const authConfig: NextAuthConfig = {
     },
 
     callbacks: {
-        async signIn({ user, account }: { user: any; account?: any }) {
+        async signIn({
+            user,
+            account,
+        }: {
+            user: ExtendedUser;
+            account?: { provider?: string; providerAccountId?: string } | null;
+        }) {
             // Handle database syncing for new OAuth Logins
             if ((account?.provider === "google" || account?.provider === "github") && user.email) {
                 try {
@@ -291,10 +300,10 @@ export const authConfig: NextAuthConfig = {
             return true;
         },
 
-        async jwt({ token, user }: { token: any; user?: any }) {
+        async jwt({ token, user }: { token: ExtendedToken; user?: ExtendedUser }) {
             if (user) {
                 token.id = user.id;
-                const u = user as ExtendedUser;
+                const u = user;
                 token.role = u.role || u.user_role || "user";
                 token.user_role = u.user_role || u.role || "user";
                 token.tokenVersion = u.token_version || u.tokenVersion || 1;
@@ -303,7 +312,7 @@ export const authConfig: NextAuthConfig = {
             return token;
         },
 
-        async session({ session, token }: { session: any; token: any }) {
+        async session({ session, token }: { session: ExtendedSession; token: ExtendedToken }) {
             const extSession = session as ExtendedSession | undefined;
             const extToken = token as ExtendedToken | undefined;
 

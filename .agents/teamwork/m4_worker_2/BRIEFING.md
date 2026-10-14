@@ -28,19 +28,30 @@ Remediate SEC-01 concurrency race condition, rate limiting, and OTP state machin
 - **Code layout**: /home/sankobite/.gemini/antigravity/worktrees/QuizWeb/security_audit_session_management/PROJECT.md
 
 ## Key Decisions Made
-- Initial analysis of Challenger 1 handoff report and auth.ts code.
+- Replaced in-memory read-modify-write `(otp.attempts || 0) + 1` with atomic SQL increment `UPDATE user_otp_tbl SET attempts = attempts + 1, locked_until = IF(attempts + 1 >= 5, NOW(), locked_until) WHERE otp_id = ?` to eliminate lost update race condition under concurrent bursts.
+- Added server-side rate limiting via `checkRateLimit("otp_verify_" + normalizedEmail)` in `verifyOTP` (checking before processing and incrementing on failed attempts, cleared on successful verification).
+- Updated unused OTP invalidation in `reqPassReset` to set `is_used = 2` (consumed/invalidated), adhering strictly to state machine contracts.
+- Enhanced test harnesses (`test-m4-challenger-1.ts`, `test-m4.ts`, `test-m4-challenger2.ts`, `adversarial-m1-challenger2.ts`, `test-m1-challenger.ts`) to support atomic query operations and state transitions.
 
 ## Artifact Index
 - `.agents/teamwork/m4_worker_2/DISPATCH.md` — Dispatch requirements
 - `.agents/teamwork/m4_worker_2/BRIEFING.md` — Persistent working memory
 - `.agents/teamwork/m4_worker_2/progress.md` — Liveness heartbeat
+- `.agents/teamwork/m4_worker_2/handoff.md` — 5-Component Handoff Report
+- `app/actions/auth.ts` — Remediated implementation
 
 ## Change Tracker
-- **Files modified**: None yet
-- **Build status**: Pending
+- **Files modified**:
+  - `app/actions/auth.ts`: Fixed atomic attempts counter, added rate limiting in verifyOTP, fixed is_used = 2 in reqPassReset.
+  - `tests/test-m4-challenger-1.ts`: Added atomic attempts update mock handler.
+  - `tests/test-m4.ts`: Added atomic attempts update mock handler.
+  - `tests/test-m4-challenger2.ts`: Supported is_used = 2 in mock DB query handler.
+  - `tests/adversarial-m1-challenger2.ts`: Supported atomic attempts update in mock DB.
+  - `tests/test-m1-challenger.ts`: Supported atomic attempts update in mock DB and accepted is_used = 2 in invalidation check.
+- **Build status**: PASS (all 6 test suites passed with 0 errors)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: Pending
-- **Lint status**: Clean
-- **Tests added/modified**: None
+- **Build/test result**: PASS (141/141 total tests/probes passed across M1, M2, M3, M4, M4-Challenger-1, M4-Challenger-2)
+- **Lint status**: Clean (0 errors, 0 warnings from eslint)
+- **Tests added/modified**: Verified all 19 probes of test-m4-challenger-1.ts passing (including PROBE-06, PROBE-07, PROBE-19).

@@ -193,13 +193,13 @@ db.query = (async (sql: string, params: unknown[] = []) => {
         return match ? [[{ username: match.username }]] : [[]];
     }
 
-    // 3. UPDATE user_otp_tbl SET is_used = 1 WHERE user_id = ? AND purpose = ? AND is_used = 0
-    if (sql.includes("UPDATE user_otp_tbl SET is_used = 1 WHERE user_id = ? AND purpose = ? AND is_used = 0")) {
+    // 3. UPDATE user_otp_tbl SET is_used = 1 (or 2) WHERE user_id = ? AND purpose = ? AND is_used = 0
+    if (sql.includes("UPDATE user_otp_tbl SET is_used =") && sql.includes("AND is_used = 0")) {
         const userId = Number(params[0]);
         const purpose = String(params[1]);
         for (const otp of mockDb.otps) {
             if (otp.user_id === userId && otp.purpose === purpose && otp.is_used === 0) {
-                otp.is_used = 1;
+                otp.is_used = sql.includes("is_used = 2") ? 2 : 1;
             }
         }
         return [{ affectedRows: 1 }];

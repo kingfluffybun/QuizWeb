@@ -3,7 +3,7 @@
 import argon2 from "argon2";
 import crypto from "crypto";
 import { db } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import { auth, signOut } from "@/auth";
@@ -278,13 +278,16 @@ export async function verifyEmail(token: string) {
     const connection = await db.getConnection();
 
     try {
-        // Find pending verification
+        await connection.beginTransaction();
+
+        // Find pending verification with pessimistic row lock (SEC-13)
         const [rows] = await connection.query<RowDataPacket[]>(
-            `SELECT verify_id, username, email, password_hash, expires_at, attempts, locked_until FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1`,
+            `SELECT verify_id, username, email, password_hash, expires_at, attempts, locked_until FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1 FOR UPDATE`,
             [hashedToken]
         );
 
         if (rows.length === 0) {
+            await connection.rollback();
             return {
                 success: false,
                 message: "This verification link is invalid or has already been used.",
@@ -294,13 +297,8 @@ export async function verifyEmail(token: string) {
         const pendingUser = rows[0];
 
         // Check lockout status
-        if (pendingUser.locked_until && new Date() < new Date(pendingUser.locked_until)) {
-            return {
-                success: false,
-                message: "This verification link has been locked due to too many failed attempts.",
-            };
-        }
-        if (pendingUser.attempts >= 5) {
+        if ((pendingUser.locked_until && new Date() < new Date(pendingUser.locked_until)) || pendingUser.attempts >= 5) {
+            await connection.rollback();
             return {
                 success: false,
                 message: "This verification link has been locked due to too many failed attempts.",
@@ -315,6 +313,7 @@ export async function verifyEmail(token: string) {
                 `DELETE FROM user_vrfy_tbl WHERE verify_id = ?`,
                 [pendingUser.verify_id]
             );
+            await connection.commit();
 
             return {
                 success: false,
@@ -322,11 +321,9 @@ export async function verifyEmail(token: string) {
             };
         }
 
-        await connection.beginTransaction();
-
         // Check if email already exists
         const [existingEmail] = await connection.query<RowDataPacket[]>(
-            `SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1`,
+            `SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1 FOR UPDATE`,
             [pendingUser.email]
         );
 
@@ -342,7 +339,7 @@ export async function verifyEmail(token: string) {
         // Check if username already exists
         const [existingUsername] =
             await connection.query<RowDataPacket[]>(
-                `SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1`,
+                `SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1 FOR UPDATE`,
                 [pendingUser.username]
             );
         
@@ -376,7 +373,7 @@ export async function verifyEmail(token: string) {
             [pendingUser.verify_id]
         );
 
-        // lala
+        // Commit transaction
         await connection.commit();
 
         return {
@@ -385,7 +382,11 @@ export async function verifyEmail(token: string) {
         };
     } catch (error) {
         console.error(error);
-        await connection.rollback();
+        try {
+            await connection.rollback();
+        } catch {
+            // ignore rollback failure on closed connection
+        }
         return {
             success: false,
             message: "An internal error occurred. Please try again later.",
@@ -440,7 +441,7 @@ export async function reqPassReset(email: string) {
 
         // Invalidate any existing unused OTPs for this user
         await db.query(
-            "UPDATE user_otp_tbl SET is_used = 1 WHERE user_id = ? AND purpose = ? AND is_used = 0",
+            "UPDATE user_otp_tbl SET is_used = 2 WHERE user_id = ? AND purpose = ? AND is_used = 0",
             [userId, "password_reset"]
         );
 
@@ -584,10 +585,12 @@ export async function verifyOTP(email: string, otpCode: string) {
         return { error: "Email and OTP code are required." };
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email.trim().toLowerCase()]
+            [normalizedEmail]
         );
 
         if (users.length === 0) {
@@ -615,6 +618,12 @@ export async function verifyOTP(email: string, otpCode: string) {
             return { error: "Too many failed attempts. This OTP has been locked. Please request a new one." };
         }
 
+        // Server-side rate limiting (SEC-01 / ASVS 2.2.1, 3.7.1)
+        const rateLimit = await checkRateLimit(`otp_verify_${normalizedEmail}`, false);
+        if (!rateLimit.allowed) {
+            return { error: "Too many OTP verification attempts. Please try again later." };
+        }
+
         // Check if expired
         if (new Date(otp.expires_at) < new Date()) {
             return { error: "OTP has expired. Please request a new one." };
@@ -623,21 +632,23 @@ export async function verifyOTP(email: string, otpCode: string) {
         // Check if matches
         const isMatch = timingSafeEqualStr(otp.otp_code, hashedInputOtp);
         if (!isMatch) {
-            const newAttempts = (otp.attempts || 0) + 1;
-            if (newAttempts >= 5) {
-                await db.query(
-                    "UPDATE user_otp_tbl SET attempts = 5, locked_until = NOW() WHERE otp_id = ?",
-                    [otp.otp_id]
-                );
+            const rlResult = await checkRateLimit(`otp_verify_${normalizedEmail}`, true);
+            await db.query(
+                "UPDATE user_otp_tbl SET attempts = attempts + 1, locked_until = IF(attempts + 1 >= 5, NOW(), locked_until) WHERE otp_id = ?",
+                [otp.otp_id]
+            );
+
+            if ((otp.attempts || 0) + 1 >= 5) {
                 return { error: "Too many failed attempts. This OTP has been locked. Please request a new one." };
-            } else {
-                await db.query(
-                    "UPDATE user_otp_tbl SET attempts = ? WHERE otp_id = ?",
-                    [newAttempts, otp.otp_id]
-                );
-                return { error: "Invalid OTP. Please try again." };
             }
+            if (!rlResult.allowed) {
+                return { error: "Too many OTP verification attempts. Please try again later." };
+            }
+            return { error: "Invalid OTP. Please try again." };
         }
+
+        // Clear rate limit on successful verification
+        await clearRateLimit(`otp_verify_${normalizedEmail}`);
 
         // Mark OTP as used
         await db.query(

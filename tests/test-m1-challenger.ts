@@ -655,6 +655,13 @@ async function runAllChallengerSuites() {
                     locked_until: storedLockedUntil,
                 }]];
             }
+            if (sql.includes("UPDATE user_otp_tbl") && sql.includes("attempts = attempts + 1")) {
+                storedAttempts += 1;
+                if (storedAttempts >= 5) {
+                    storedLockedUntil = new Date(Date.now() + 900000);
+                }
+                return [{ affectedRows: 1 }];
+            }
             if (sql.includes("UPDATE user_otp_tbl SET attempts = ?, locked_until = NOW()")) {
                 storedAttempts = Number(params[0]);
                 storedLockedUntil = new Date(Date.now() + 900000); // simulate lockout timestamp
@@ -788,7 +795,7 @@ async function runAllChallengerSuites() {
         assert.strictEqual(res.success, true, "reqPassReset must return success");
         assert.strictEqual(capturedEmails.length, 1, "Password reset email must be sent");
 
-        const updateQuery = queries.find(q => q.sql.includes("UPDATE user_otp_tbl SET is_used = 1"));
+        const updateQuery = queries.find(q => q.sql.includes("UPDATE user_otp_tbl SET is_used = 2") || q.sql.includes("UPDATE user_otp_tbl SET is_used = 1"));
         assert.ok(updateQuery, "Must invalidate prior active OTPs");
 
         const insertQuery = queries.find(q => q.sql.includes("INSERT INTO user_otp_tbl"));

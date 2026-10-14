@@ -132,6 +132,14 @@ async function main() {
             if (sql.includes("SELECT otp_id, otp_code")) {
                 return [[{ ...otpRecord }]];
             }
+            if (sql.includes("UPDATE user_otp_tbl") && sql.includes("attempts = attempts + 1")) {
+                updateLog.push({ sql, params });
+                otpRecord.attempts += 1;
+                if (otpRecord.attempts >= 5) {
+                    otpRecord.locked_until = new Date();
+                }
+                return [{ affectedRows: 1 }];
+            }
             if (sql.includes("UPDATE user_otp_tbl SET attempts = ?, locked_until = NOW()")) {
                 updateLog.push({ sql, params });
                 otpRecord.attempts = Number(params[0]);

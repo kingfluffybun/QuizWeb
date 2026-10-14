@@ -248,7 +248,21 @@ db.query = (async (sql: string, params: unknown[] = []) => {
         }]];
     }
 
-    // 5. UPDATE user_otp_tbl SET attempts = 5, locked_until = NOW() WHERE otp_id = ?
+    // 5. UPDATE user_otp_tbl SET attempts = attempts + 1
+    if (sql.includes("UPDATE user_otp_tbl") && sql.includes("attempts = attempts + 1")) {
+        const otpId = Number(params[0]);
+        const otp = mockDb.otps.find((o) => o.otp_id === otpId);
+        if (otp) {
+            otp.attempts += 1;
+            if (otp.attempts >= 5) {
+                otp.locked_until = new Date();
+            }
+            return [{ affectedRows: 1 }];
+        }
+        return [{ affectedRows: 0 }];
+    }
+
+    // 5b. UPDATE user_otp_tbl SET attempts = 5, locked_until = NOW() WHERE otp_id = ?
     if (sql.includes("UPDATE user_otp_tbl SET attempts = 5, locked_until = NOW()")) {
         const otpId = Number(params[0]);
         const otp = mockDb.otps.find((o) => o.otp_id === otpId);

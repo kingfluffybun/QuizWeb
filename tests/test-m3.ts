@@ -472,7 +472,7 @@ async function main() {
     console.log("\n\x1b[1m[Suite 3: Dynamic Session Revocation via DB token_version (SEC-05)]\x1b[0m");
 
     await resetMockDb();
-    const sessionCallback = authConfig.callbacks!.session! as any;
+    const sessionCallback = authConfig.callbacks!.session! as unknown as (params: { session: unknown; token: unknown }) => Promise<unknown>;
 
     await runTest("T3.1: Valid session succeeds when token.tokenVersion matches DB token_version", async () => {
         const token = { id: "2", sub: "2", role: "user", tokenVersion: 1 };
@@ -641,7 +641,7 @@ async function main() {
     console.log("\n\x1b[1m[Suite 6: OAuth Account Linking Protection (SEC-04 / ASVS 3.2.1, 3.6.1)]\x1b[0m");
 
     await resetMockDb();
-    const signInCallback = authConfig.callbacks!.signIn! as any;
+    const signInCallback = authConfig.callbacks!.signIn! as unknown as (params: { user: unknown; account?: unknown }) => Promise<boolean | string>;
 
     await runTest("T6.1: OAuth sign-in with brand new email creates user and links provider", async () => {
         const brandNewEmail = "newbie@quizweb.dev";
