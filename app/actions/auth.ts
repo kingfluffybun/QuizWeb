@@ -144,7 +144,8 @@ export async function signUp(formData: FormData) {
             [trimmedUsername, normalizedEmail, hashed, hashedVerificationToken, verificationExpires]
         );
 
-        const verificationLink = `https://quizweb.dev/verify-email/${rawVerificationToken}`;
+        const baseUrl = process.env.NODE_ENV === "production" ? "https://quizweb.dev" : "http://localhost:3000";
+        const verificationLink = `${baseUrl}/verify-email/${rawVerificationToken}`;
 
         // Send email for verification
         await sendEmail({
@@ -258,7 +259,8 @@ export async function signUp(formData: FormData) {
             success: true,
             message: "Check your email to verify your email address.",
         };
-    } catch {
+    } catch (err) {
+        console.error("SignUp error:", err);
         return {
             error: "An internal error occurred. Please try again later.",
         };

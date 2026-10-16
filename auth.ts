@@ -120,6 +120,7 @@ async function getActiveSessionUser(): Promise<{ id: string; email?: string } | 
 }
 
 export const authConfig: NextAuthConfig = {
+    trustHost: true,
     secret: process.env.AUTH_SECRET,
     session: { strategy: "jwt" as const },
     providers: [
