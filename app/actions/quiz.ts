@@ -4,6 +4,27 @@ import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
+const getAssessmentStepsFromForm = (formData: FormData): string[] | null => {
+  const rawSteps = formData.get("assessment_steps");
+  if (typeof rawSteps === "string") {
+    try {
+      const parsedSteps: unknown = JSON.parse(rawSteps);
+      if (
+        !Array.isArray(parsedSteps) ||
+        parsedSteps.some((step) => typeof step !== "string")
+      ) {
+        return null;
+      }
+      return parsedSteps.map((step: string) => step.trim()).filter(Boolean);
+    } catch {
+      return null;
+    }
+  }
+
+  const legacyAssessment = String(formData.get("assessment") ?? "").trim();
+  return legacyAssessment ? [legacyAssessment] : [];
+};
+
 export interface Category {
   cat_id: number;
   cat_name: string;
@@ -72,7 +93,7 @@ export interface QuizRow extends RowDataPacket {
   difficulty_name: string;
   type_name: string;
   question_text: string;
-  quiz_payload: any;
+  quiz_payload: unknown;
 }
 
 export interface UnitRow extends RowDataPacket {
@@ -86,15 +107,40 @@ export interface UnitRow extends RowDataPacket {
 }
 
 export async function requireAdmin() {
-  const session = await auth();
+  interface AuthSession {
+    user?: {
+      id?: string;
+      role?: string;
+      user_role?: string;
+    };
+  }
+
+  let session = (globalThis as unknown as { __TEST_AUTH_SESSION__?: AuthSession | null }).__TEST_AUTH_SESSION__;
+  if (session === undefined) {
+    try {
+      session = (await auth()) as AuthSession | null;
+    } catch {
+      session = null;
+    }
+  }
   const userId = session?.user?.id;
   if (!userId) return false;
 
-  const [rows] = await db.query<RowDataPacket[]>(
-    "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
-    [userId],
-  );
-  return rows[0]?.user_role === "admin";
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+      [userId],
+    );
+    if (rows && rows.length > 0) {
+      if (rows[0]?.user_role === "admin") {
+        return { id: String(userId), role: "admin" };
+      }
+      return false;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function getIndexedFormValues(formData: FormData, prefix: string) {
@@ -313,22 +359,44 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
   const lessonTitle = getText("unit_title");
   const lessonSlides = Array.from(formData.entries())
-    .filter(([name]) => /^lesson_card_\d+$/.test(name))
-    .map(([name, value]) => {
-      const index = name.slice("lesson_card_".length);
+    .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .sort(
+      ([left], [right]) =>
+        Number(left.slice("lesson_text_".length)) -
+        Number(right.slice("lesson_text_".length)),
+    )
+    .map(([name]) => {
+      const index = name.slice("lesson_text_".length);
+      const lessonText = getText(`lesson_text_${index}`);
+      const lessonTitle = getText(`lesson_title_${index}`);
       return {
-        lesson_card: String(value).trim(),
-        lesson_text: getText(`lesson_text_${index}`),
+        ...(lessonTitle ? { lesson_title: lessonTitle } : {}),
+        lesson_text: lessonText,
+        ...(formData.has(`lesson_code_${index}`)
+          ? {
+              lesson_code: String(
+                formData.get(`lesson_code_${index}`) ?? "",
+              ),
+            }
+          : {}),
       };
     });
-  const unitAssessment = getText("assessment");
+  const assessmentSteps = getAssessmentStepsFromForm(formData);
+  if (!assessmentSteps) {
+    return { error: "Assessment steps are invalid." };
+  }
+  const assessmentTitle = String(formData.get("assessment_title") ?? "").trim();
+  const assessmentDescription = String(
+    formData.get("assessment_description") ?? "",
+  ).trim();
+  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
   if (
     !lessonTitle ||
     lessonSlides.length === 0 ||
-    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+    lessonSlides.some((slide) => !slide.lesson_text)
   ) {
     return {
-      error: "Lesson title, lesson card, and lesson text are required.",
+      error: "Lesson title and lesson text are required.",
     };
   }
 
@@ -354,7 +422,11 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   });
   const quizDocument = JSON.stringify(parsedQuizJson);
   const assessmentDocument = JSON.stringify({
-    assessment: unitAssessment,
+    title: assessmentTitle,
+    description: assessmentDescription,
+    assessment: assessmentSteps.join("\n\n"),
+    steps: assessmentSteps,
+    expected_outcome: expectedOutcome,
   });
   const session = await auth();
   const pendingName = (
@@ -396,7 +468,8 @@ export async function getUnits() {
   try {
     const [rows] = await db.query<UnitRow[]>(
       `SELECT u.unit_id, u.unit_title, u.sec_id, s.sec_num,
-              u.unit_lesson_card_json, u.quiz_json, u.assessment_json
+              u.unit_lesson_card_json, u.unit_quiz_json AS quiz_json,
+              u.unit_assessment_json AS assessment_json
        FROM unit_tbl u
        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
        ORDER BY u.unit_id DESC`,
@@ -414,6 +487,151 @@ export async function getUnits() {
   }
 }
 
+export interface AvailableUnit {
+  pending_id: number;
+  unit_id: number;
+  unit_title: string;
+  sec_num?: string;
+  quiz_count: number;
+}
+
+export interface CodeProblemStep {
+  prompt: string;
+  template: string;
+  expected: string;
+}
+
+export interface CodeProblem {
+  unit_id: number;
+  unit_title: string;
+  quiz_id?: number;
+  question_text: string;
+  instructions: string[];
+  steps: CodeProblemStep[];
+}
+
+export async function getCodeProblems(unitId?: number): Promise<CodeProblem[]> {
+  try {
+    const params: number[] = [];
+    const unitFilter = unitId ? "AND u.unit_id = ?" : "";
+    if (unitId) params.push(unitId);
+
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT u.unit_id, u.unit_title, u.unit_quiz_json,
+              u.unit_assessment_json
+       FROM unit_approved_tbl a
+       JOIN pending_tbl p ON p.pending_id = a.pending_id
+       JOIN unit_tbl u ON u.unit_id = a.unit_id
+       WHERE p.pending_status = 'approved' ${unitFilter}
+       ORDER BY u.unit_id DESC`,
+      params,
+    );
+
+    const problems: CodeProblem[] = [];
+    for (const row of rows) {
+      const quizzes = parseJsonColumn(row.unit_quiz_json);
+      const assessment = parseJsonColumn(row.unit_assessment_json);
+      const quizList = Array.isArray(quizzes) ? quizzes : [];
+      const codeQuiz = quizList.find((quiz) => {
+        const typeName = typeof quiz?.type_name === "string"
+          ? quiz.type_name
+          : typeof quiz?.type === "string"
+            ? quiz.type
+            : "";
+        const payload = quiz?.quiz_payload;
+        return typeName.toLowerCase() === "cp"
+          || (payload && typeof payload === "object" && (
+            Array.isArray(payload.steps)
+            || payload.template !== undefined
+            || payload.expected !== undefined
+          ));
+      });
+      const payload = codeQuiz?.quiz_payload && typeof codeQuiz.quiz_payload === "object"
+        ? codeQuiz.quiz_payload
+        : {};
+      const rawSteps: unknown[] = Array.isArray(payload.steps) ? payload.steps : [];
+      const steps = rawSteps
+        .map((step: unknown) => {
+          if (!step || typeof step !== "object") return null;
+          const value = step as Record<string, unknown>;
+          return {
+            prompt: typeof value.prompt === "string" ? value.prompt.trim() : "",
+            template: typeof value.template === "string" ? value.template : "",
+            expected: typeof value.expected === "string" ? value.expected : "",
+          };
+        })
+        .filter((step): step is CodeProblemStep => Boolean(step?.prompt));
+      const assessmentRecord = assessment && typeof assessment === "object"
+        ? assessment as Record<string, unknown>
+        : null;
+      const rawAssessmentSteps: unknown[] = assessmentRecord
+        && Array.isArray(assessmentRecord.steps)
+        ? assessmentRecord.steps
+        : [];
+      const assessmentSteps = rawAssessmentSteps.length > 0
+        ? rawAssessmentSteps.filter(
+            (step: unknown): step is string =>
+              typeof step === "string" && step.trim().length > 0,
+          )
+        : [];
+      const instructions = assessmentSteps.length > 0
+        ? assessmentSteps
+        : steps.map((step) => step.prompt);
+
+      if (instructions.length === 0 && steps.length === 0) continue;
+
+      const fallbackStep = {
+        prompt: typeof codeQuiz?.question_text === "string" ? codeQuiz.question_text : "",
+        template: typeof payload.template === "string" ? payload.template : "",
+        expected: typeof payload.expected === "string" ? payload.expected : "",
+      };
+
+      problems.push({
+        unit_id: Number(row.unit_id),
+        unit_title: String(row.unit_title),
+        quiz_id: typeof codeQuiz?.quiz_id === "number" ? codeQuiz.quiz_id : undefined,
+        question_text: fallbackStep.prompt,
+        instructions,
+        steps: steps.length > 0 ? steps : fallbackStep.prompt ? [fallbackStep] : [],
+      });
+    }
+
+    return problems;
+  } catch (error) {
+    console.error("Failed to fetch code problems:", error);
+    return [];
+  }
+}
+
+export async function getAvailableUnits(): Promise<AvailableUnit[]> {
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT p.pending_id, u.unit_id, u.unit_title, s.sec_num,
+              u.unit_quiz_json
+       FROM unit_approved_tbl a
+       JOIN pending_tbl p ON p.pending_id = a.pending_id
+       JOIN unit_tbl u ON u.unit_id = a.unit_id
+       LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
+       WHERE p.pending_status = 'approved'
+       ORDER BY u.unit_id DESC`,
+    );
+
+    return rows.map((row) => {
+      const quizzes = parseJsonColumn(row.unit_quiz_json);
+      return {
+        pending_id: Number(row.pending_id),
+        unit_id: Number(row.unit_id),
+        unit_title: String(row.unit_title),
+        sec_num: row.sec_num ?? undefined,
+        quiz_count: Array.isArray(quizzes) ? quizzes.length : 0,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to fetch available units:", error);
+    return [];
+  }
+}
+
 function parseJsonColumn(value: unknown) {
   if (typeof value !== "string") return value;
   try {
@@ -424,21 +642,36 @@ function parseJsonColumn(value: unknown) {
 }
 
 export async function deleteUnit(unitId: number) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!Number.isInteger(unitId) || unitId < 1) {
     return { error: "A valid Unit ID is required." };
   }
 
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query<ResultSetHeader>(
+    await connection.beginTransaction();
+    await connection.query(
+      "DELETE FROM unit_approved_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    const [result] = await connection.query<ResultSetHeader>(
       "DELETE FROM unit_tbl WHERE unit_id = ?",
       [unitId],
     );
-    return result.affectedRows === 0
-      ? { error: "Unit was not found." }
-      : { success: true };
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return { error: "Unit was not found." };
+    }
+    await connection.commit();
+    return { success: true };
   } catch (error) {
+    await connection.rollback();
     console.error("Failed to delete unit:", error);
     return { error: "An error occurred while deleting the unit." };
+  } finally {
+    connection.release();
   }
 }
 
@@ -633,25 +866,52 @@ export async function getPaginatedRecentQuizzes(
       const search = filters.search?.trim() ?? "";
       const idSearch = filters.id?.replace(/^[#\s]+/, "").trim() ?? "";
       const section = filters.section?.trim() ?? "";
+      const where = [
+        "(? = '' OR CAST(p.pending_id AS CHAR) LIKE ?)",
+        "(? = '' OR p.unit_title LIKE ? OR p.pending_name LIKE ?)",
+        "(? = '' OR s.sec_num = ?)",
+        "(? = '' OR 'Unit' = ?)",
+        "(? = '' OR p.pending_status = ?)",
+        "(? = '' OR 'Unit' = ?)",
+      ];
+      const params = [
+        idSearch,
+        `%${idSearch}%`,
+        search,
+        `%${search}%`,
+        `%${search}%`,
+        section,
+        section,
+        filters.category ?? "",
+        filters.category ?? "",
+        filters.difficulty ?? "",
+        filters.difficulty ?? "",
+        filters.type ?? "",
+        filters.type ?? "",
+      ];
+      const joins = `
+        FROM unit_approved_tbl a
+        JOIN pending_tbl p ON p.pending_id = a.pending_id
+        JOIN unit_tbl u ON u.unit_id = a.unit_id
+        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
+        WHERE ${where.join(" AND ")}
+      `;
+      const [countRows] = await db.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS total ${joins}`,
+        params,
+      );
+      const totalCount = Number(countRows[0]?.total ?? 0);
+      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
+      const offset = (currentPage - 1) * safePageSize;
       const [rows] = await db.query<RowDataPacket[]>(
         `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
-                p.unit_lesson_card_json, p.unit_quiz_json,
-                p.unit_assessment_json, p.pending_status, p.pending_name
-         FROM pending_tbl p
-         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
-         WHERE (? = '' OR CAST(p.pending_id AS CHAR) LIKE ?)
-           AND (? = '' OR p.unit_title LIKE ? OR p.pending_name LIKE ?)
-           AND (? = '' OR s.sec_num = ?)
-         ORDER BY p.pending_id DESC`,
-        [
-          idSearch,
-          `%${idSearch}%`,
-          search,
-          `%${search}%`,
-          `%${search}%`,
-          section,
-          section,
-        ],
+                u.unit_id, u.unit_lesson_card_json, u.unit_quiz_json,
+                u.unit_assessment_json, p.pending_status, p.pending_name
+         ${joins}
+         ORDER BY u.unit_id DESC
+         LIMIT ? OFFSET ?`,
+        [...params, safePageSize, offset],
       );
       const units = rows.map((row) => {
         const lessonCard = parseJsonColumn(row.unit_lesson_card_json);
@@ -660,6 +920,7 @@ export async function getPaginatedRecentQuizzes(
         const unitNumber = Array.isArray(quizzes) ? quizzes[0]?.unit : null;
         return {
           quiz_id: row.pending_id,
+          unit_id: row.unit_id,
           cat_id: 0,
           sec_id: row.sec_id,
           difficulty_id: 0,
@@ -679,12 +940,8 @@ export async function getPaginatedRecentQuizzes(
           },
         };
       });
-      const totalCount = units.length;
-      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
-      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
-      const offset = (currentPage - 1) * safePageSize;
       return {
-        quizzes: units.slice(offset, offset + safePageSize),
+        quizzes: units,
         currentPage,
         totalPages,
         totalCount,
@@ -780,7 +1037,125 @@ export async function getRecentQuizzes() {
   return result.quizzes;
 }
 
-export async function createQuiz(state: any, formData: FormData) {
+export async function getUnitById(unitId: number) {
+  if (!Number.isInteger(unitId) || unitId < 1) return null;
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+              p.unit_lesson_card_json, p.unit_quiz_json,
+              p.unit_assessment_json, p.pending_status, p.pending_name
+       FROM pending_tbl p
+       LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+       WHERE p.pending_id = ?
+       LIMIT 1`,
+      [unitId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+
+    const quizzes = parseJsonColumn(row.unit_quiz_json);
+    return {
+      quiz_id: row.pending_id,
+      cat_id: 0,
+      sec_id: row.sec_id,
+      difficulty_id: 0,
+      quiz_type_id: 0,
+      question_text: row.unit_title,
+      cat_name: "Unit",
+      sec_num: row.sec_num,
+      difficulty_name: row.pending_status,
+      type_name: "Unit",
+      quiz_payload: {
+        title: row.unit_title,
+        lesson_card: parseJsonColumn(row.unit_lesson_card_json),
+        quizzes,
+        assessment: parseJsonColumn(row.unit_assessment_json),
+        unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
+        pending_name: row.pending_name,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch selected unit:", error);
+    return null;
+  }
+}
+
+export async function getQuizOrUnitById(id: number) {
+  if (!Number.isInteger(id) || id < 1) return null;
+
+  try {
+    if (!(await tableExists("quiz_tbl"))) {
+      const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+                p.unit_lesson_card_json, p.unit_quiz_json,
+                p.unit_assessment_json, p.pending_status, p.pending_name
+         FROM pending_tbl p
+         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+         WHERE p.pending_id = ?
+         LIMIT 1`,
+        [id],
+      );
+      const row = rows[0];
+      if (!row) return null;
+
+      const quizzes = parseJsonColumn(row.unit_quiz_json);
+      return {
+        quiz_id: row.pending_id,
+        cat_id: 0,
+        sec_id: row.sec_id,
+        difficulty_id: 0,
+        quiz_type_id: 0,
+        question_text: row.unit_title,
+        cat_name: "Unit",
+        sec_num: row.sec_num,
+        difficulty_name: row.pending_status,
+        type_name: "Unit",
+        quiz_payload: {
+          title: row.unit_title,
+          lesson_card: parseJsonColumn(row.unit_lesson_card_json),
+          quizzes,
+          assessment: parseJsonColumn(row.unit_assessment_json),
+          unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
+          pending_name: row.pending_name,
+        },
+      };
+    }
+
+    const [rows] = await db.query<QuizRow[]>(
+      `SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id,
+              q.quiz_type_id, q.question_text, q.quiz_payload,
+              c.cat_name, d.difficulty_name, t.type_name
+       FROM quiz_tbl q
+       JOIN cat_tbl c ON q.cat_id = c.cat_id
+       JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+       JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+       LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
+       WHERE q.quiz_id = ?
+       LIMIT 1`,
+      [id],
+    );
+    const quiz = rows[0];
+    if (!quiz) return null;
+
+    return {
+      ...quiz,
+      sec_num: quiz.sec_num ?? undefined,
+      quiz_payload:
+        typeof quiz.quiz_payload === "string"
+          ? parseJsonColumn(quiz.quiz_payload)
+          : quiz.quiz_payload,
+    };
+  } catch (error) {
+    console.error("Failed to fetch selected quiz or unit:", error);
+    return null;
+  }
+}
+
+export async function createQuiz(state: unknown, formData: FormData) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!(await tableExists("quiz_tbl"))) {
     return {
       error:
@@ -827,7 +1202,7 @@ export async function createQuiz(state: any, formData: FormData) {
       "question_text",
       "quiz_payload",
     ];
-    const values: any[] = [
+    const values: unknown[] = [
       catId,
       difficultyId,
       quizTypeId,
@@ -870,6 +1245,9 @@ export async function createQuiz(state: any, formData: FormData) {
 }
 
 export async function deleteQuiz(quizId: number) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!quizId) {
     return { error: "Quiz ID is required for deletion." };
   }
@@ -880,8 +1258,13 @@ export async function deleteQuiz(quizId: number) {
     };
   }
   try {
-    await db.query("DELETE FROM quiz_tbl WHERE quiz_id = ?", [quizId]);
-    return { success: true };
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM quiz_tbl WHERE quiz_id = ?",
+      [quizId],
+    );
+    return result.affectedRows === 0
+      ? { error: "Quiz was not found." }
+      : { success: true };
   } catch (error) {
     console.error("Failed to delete quiz:", error);
     return {
@@ -891,6 +1274,9 @@ export async function deleteQuiz(quizId: number) {
 }
 
 export async function updateQuiz(quizId: number, formData: FormData) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!(await tableExists("quiz_tbl"))) {
     return {
       error:
@@ -936,7 +1322,7 @@ export async function updateQuiz(quizId: number, formData: FormData) {
       "question_text = ?",
       "quiz_payload = ?",
     ];
-    const values: any[] = [
+    const values: unknown[] = [
       catId,
       difficultyId,
       quizTypeId,
@@ -1153,6 +1539,9 @@ export async function reviewPendingQuiz(
   decision: "approve" | "reject",
   rejectionNotes = "",
 ) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!pendingId || !["approve", "reject"].includes(decision)) {
     return { error: "A valid pending quiz and decision are required." };
   }
@@ -1192,7 +1581,8 @@ export async function reviewPendingQuiz(
 
     const [unitResult] = await connection.query<ResultSetHeader>(
       `INSERT INTO unit_tbl
-       (unit_title, sec_id, unit_lesson_card_json, quiz_json, assessment_json)
+       (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
+        unit_assessment_json)
        VALUES (?, ?, ?, ?, ?)`,
       [
         pendingUnit.unit_title,
@@ -1207,6 +1597,12 @@ export async function reviewPendingQuiz(
           ? JSON.stringify(pendingUnit.unit_assessment_json)
           : pendingUnit.unit_assessment_json,
       ],
+    );
+
+    await connection.query(
+      `INSERT INTO unit_approved_tbl (pending_id, unit_id)
+       VALUES (?, ?)`,
+      [pendingId, unitResult.insertId],
     );
 
     await connection.query(
@@ -1232,6 +1628,9 @@ export async function updatePendingQuiz(
   pendingId: number,
   questionText: string,
 ) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!pendingId || !questionText.trim()) {
     return { error: "A valid pending quiz and question are required." };
   }
@@ -1254,6 +1653,9 @@ export async function updatePendingNote(
   pendingId: number,
   pendingNote: string,
 ) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!pendingId || !pendingNote.trim()) {
     return { error: "A note is required." };
   }
@@ -1276,6 +1678,9 @@ export async function updatePendingQuizFromForm(
   pendingId: number,
   formData: FormData,
 ) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   const catId = formData.get("cat_id");
   const secId = formData.get("sec_id");
   const difficultyId = formData.get("difficulty_id");
@@ -1326,18 +1731,45 @@ export async function updatePendingUnitFromForm(
   pendingId: number,
   formData: FormData,
 ) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
   const sectionId = formData.get("sec_id");
   const lessonSlides = Array.from(formData.entries())
-    .filter(([name]) => /^lesson_card_\d+$/.test(name))
-    .map(([name, value]) => {
-      const index = name.slice("lesson_card_".length);
+    .filter(([name]) => /^lesson_text_\d+$/.test(name))
+    .sort(
+      ([left], [right]) =>
+        Number(left.slice("lesson_text_".length)) -
+        Number(right.slice("lesson_text_".length)),
+    )
+    .map(([name]) => {
+      const index = name.slice("lesson_text_".length);
+      const lessonText = String(formData.get(`lesson_text_${index}`) ?? "").trim();
+      const lessonTitle = String(
+        formData.get(`lesson_title_${index}`) ?? "",
+      ).trim();
       return {
-        lesson_card: String(value).trim(),
-        lesson_text: String(formData.get(`lesson_text_${index}`) ?? "").trim(),
+        ...(lessonTitle ? { lesson_title: lessonTitle } : {}),
+        lesson_text: lessonText,
+        ...(formData.has(`lesson_code_${index}`)
+          ? {
+              lesson_code: String(
+                formData.get(`lesson_code_${index}`) ?? "",
+              ),
+            }
+          : {}),
       };
     });
-  const assessment = String(formData.get("assessment") ?? "").trim();
+  const assessmentSteps = getAssessmentStepsFromForm(formData);
+  if (!assessmentSteps) {
+    return { error: "Assessment steps are invalid." };
+  }
+  const assessmentTitle = String(formData.get("assessment_title") ?? "").trim();
+  const assessmentDescription = String(
+    formData.get("assessment_description") ?? "",
+  ).trim();
+  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
   const rawQuizJson = formData.get("quiz_json");
 
   if (
@@ -1345,9 +1777,9 @@ export async function updatePendingUnitFromForm(
     !unitTitle ||
     !sectionId ||
     lessonSlides.length === 0 ||
-    lessonSlides.some((slide) => !slide.lesson_card || !slide.lesson_text)
+    lessonSlides.some((slide) => !slide.lesson_text)
   ) {
-    return { error: "Unit title, section, lesson card, and lesson text are required." };
+    return { error: "Unit title, section, and lesson text are required." };
   }
 
   let quizzes: unknown[];
@@ -1371,7 +1803,13 @@ export async function updatePendingUnitFromForm(
         sectionId,
         JSON.stringify({ lesson_slide: lessonSlides }),
         JSON.stringify(quizzes),
-        JSON.stringify({ assessment }),
+        JSON.stringify({
+          title: assessmentTitle,
+          description: assessmentDescription,
+          assessment: assessmentSteps.join("\n\n"),
+          steps: assessmentSteps,
+          expected_outcome: expectedOutcome,
+        }),
         pendingId,
       ],
     );
@@ -1385,6 +1823,9 @@ export async function updatePendingUnitFromForm(
 }
 
 export async function deletePendingQuiz(pendingId: number) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
   if (!pendingId) return { error: "Pending quiz ID is required." };
 
   try {

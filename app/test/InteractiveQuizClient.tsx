@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import "#css/test_quiz.css";
+import "#css/nav.css";
 import { QuizData, QuizStatus } from "./types";
 import QuizHeader from "./components/QuizHeader";
 import QuizFooter from "./components/QuizFooter";
@@ -11,32 +12,56 @@ import QuizFITB from "./components/questions/QuizFITB";
 import QuizOrder from "./components/questions/QuizOrder";
 import QuizPair from "./components/questions/QuizPair";
 import QuizCP from "./components/questions/QuizCP";
+import LessonCard from "@/app/components/LessonCard";
+
+function normalizeQuizType(typeName?: string) {
+    return (typeName ?? "").trim().toLowerCase();
+}
+
+function resolveQuizType(quiz: QuizData | undefined): string {
+    if (!quiz) return "";
+
+    const key = normalizeQuizType(quiz.type_name);
+    if (["mcq", "fitb", "order", "pair", "cp"].includes(key)) {
+        return key.toUpperCase();
+    }
+
+    const payload = quiz.quiz_payload ?? {};
+    if (Array.isArray(payload.options)) return "MCQ";
+    if (Array.isArray(payload.items)) return "Order";
+    if (Array.isArray(payload.pairs)) return "Pair";
+    if (Array.isArray(payload.steps) || Array.isArray(payload.prompts) || payload.template !== undefined || payload.expected !== undefined) return "CP";
+    if (payload.answer !== undefined) return "FITB";
+
+    return "";
+}
 
 function getInitialQuizState(quiz: QuizData | undefined) {
     if (!quiz) return { answer: null, state: null };
     const payload = quiz.quiz_payload;
+    const typeName = resolveQuizType(quiz);
 
     let answer: any = null;
     let state: any = null;
 
-    if (quiz.type_name === "MCQ" && payload?.options) {
+    if (typeName === "MCQ" && payload?.options) {
         const opts = payload.options.map((text, id) => ({ id, text }));
         state = {
             options: opts.sort(() => Math.random() - 0.5),
             correctId: payload.correct_index ?? 0
         };
         answer = null;
-    } else if (quiz.type_name === "Order" && payload?.items) {
+    } else if (typeName === "Order" && payload?.items) {
         answer = [...payload.items].sort(() => Math.random() - 0.5);
-    } else if (quiz.type_name === "Pair" && payload?.pairs) {
+    } else if (typeName === "Pair" && payload?.pairs) {
         answer = {
             left: payload.pairs.map((p) => p.left).sort(() => Math.random() - 0.5),
             right: payload.pairs.map((p) => p.right).sort(() => Math.random() - 0.5)
         };
-    } else if (quiz.type_name === "CP") {
+    } else if (typeName === "CP") {
         const steps = getCPSteps(quiz);
         answer = steps[0]?.template || payload?.template || "";
-    } else if (quiz.type_name === "FITB") {
+    } else if (typeName === "FITB") {
         answer = "";
     }
 
@@ -44,7 +69,7 @@ function getInitialQuizState(quiz: QuizData | undefined) {
 }
 
 function getCPSteps(quiz: QuizData | undefined) {
-    if (!quiz || quiz.type_name !== "CP") return [];
+    if (!quiz || resolveQuizType(quiz) !== "CP") return [];
     const payload = quiz.quiz_payload;
     if (payload?.steps && payload.steps.length > 0) {
         return payload.steps.map((s) => ({
@@ -69,9 +94,16 @@ function getCPSteps(quiz: QuizData | undefined) {
     ];
 }
 
-export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[] }) {
+export default function InteractiveQuizClient({
+    quizzes,
+    completionDestination = "input",
+}: {
+    quizzes: QuizData[];
+    completionDestination?: "home" | "input";
+}) {
     const [isMounted, setIsMounted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
@@ -81,6 +113,41 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
 
     const activeQuiz = quizzes[currentIndex];
     const payload = activeQuiz?.quiz_payload;
+    const activeQuizType = resolveQuizType(activeQuiz);
+    const unitTitle = (activeQuiz as any)?.unit_title ?? "";
+    const unitLessonCard = (activeQuiz as any)?.unit_lesson_card ?? {};
+    const unitAssessment = (activeQuiz as any)?.unit_assessment ?? {};
+    const lessonSlides = typeof unitLessonCard === "object" && Array.isArray(unitLessonCard.lesson_slide)
+        ? unitLessonCard.lesson_slide
+        : [{ lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "" }];
+    const assessmentText = typeof unitAssessment === "object"
+        ? (typeof unitAssessment.assessment === "string" ? unitAssessment.assessment : "")
+        : String(unitAssessment ?? "");
+    const assessmentTitle = typeof unitAssessment === "object"
+        ? (typeof unitAssessment.title === "string" ? unitAssessment.title : "")
+        : "";
+    const assessmentDescription = typeof unitAssessment === "object"
+        ? (typeof unitAssessment.description === "string" ? unitAssessment.description : "")
+        : "";
+    const savedAssessmentSteps = typeof unitAssessment === "object" && Array.isArray(unitAssessment.steps)
+        ? unitAssessment.steps.filter((step: unknown): step is string => typeof step === "string" && step.trim().length > 0)
+        : [];
+    const assessmentSteps = savedAssessmentSteps.length > 0
+        ? savedAssessmentSteps
+        : assessmentText.split(/\n\s*\n/).filter((step: string) => step.trim().length > 0);
+    const expectedOutcome = typeof unitAssessment === "object" && typeof unitAssessment.expected_outcome === "string"
+        ? unitAssessment.expected_outcome
+        : "";
+    const hasAssessment = Boolean(
+        assessmentTitle || assessmentDescription || assessmentSteps.length > 0 || expectedOutcome,
+    );
+    const hasLesson = Boolean(
+        unitTitle ||
+        lessonSlides.some(
+            (slide: { lesson_title?: string; lesson_text?: string; lesson_code?: string }) =>
+                slide.lesson_title || slide.lesson_text || slide.lesson_code,
+        ),
+    );
 
     const [currentAnswer, setCurrentAnswer] = useState<any>(null);
     const [quizState, setQuizState] = useState<any>(null);
@@ -105,7 +172,7 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         if (status !== "idle" || !activeQuiz || !payload) return;
         let isCorrect = false;
 
-        switch (activeQuiz.type_name) {
+        switch (activeQuizType) {
             case "MCQ":
                 isCorrect = currentAnswer === quizState?.correctId;
                 break;
@@ -151,6 +218,8 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
         if (currentIndex < quizzes.length - 1 && lives > 0) {
             setCurrentIndex((prev) => prev + 1);
             setStatus("idle");
+        } else if (hasAssessment) {
+            setStatus("assessment");
         } else {
             setStatus("finished");
         }
@@ -158,10 +227,97 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
 
     if (!isMounted || !activeQuiz) return null;
 
+    if (status === "assessment") {
+        return (
+            <div className="test-page">
+                <nav />
+                <div className="sidebar" />
+                <main>
+                    <div className="main-content">
+                        <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
+                        <div className="unit-meta anim-enter" style={{ marginBottom: "24px", padding: "16px 20px", borderRadius: "12px", background: "rgba(255,255,255,0.04)" }}>
+                            <h2 style={{ marginTop: 0 }}>
+                                {assessmentTitle || "Assessment"}
+                            </h2>
+                            {assessmentDescription && (
+                                <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                    {assessmentDescription}
+                                </p>
+                            )}
+                            {assessmentSteps.length > 0 && (
+                                <ol style={{ paddingLeft: "24px", lineHeight: 1.6 }}>
+                                    {assessmentSteps.map((step: string, index: number) => (
+                                        <li key={index} style={{ whiteSpace: "pre-wrap", marginBottom: "10px" }}>
+                                            {step}
+                                        </li>
+                                    ))}
+                                </ol>
+                            )}
+                            {expectedOutcome && (
+                                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                    <strong>Expected outcome:</strong> {expectedOutcome}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </main>
+                <footer>
+                    <div className="footer-content" style={{ justifyContent: "flex-end" }}>
+                        <button
+                            className="options footer-btn anim-pop"
+                            id="submit"
+                            onClick={() => setStatus("finished")}
+                        >
+                            Continue
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        );
+    }
+
     if (status === "finished") {
         return (
             <div className="test-page">
-                <main><GameOverCard lives={lives} score={score} totalQuizzes={quizzes.length} /></main>
+                <main>
+                    <GameOverCard
+                        lives={lives}
+                        score={score}
+                        totalQuizzes={quizzes.length}
+                        completionDestination={completionDestination}
+                    />
+                </main>
+            </div>
+        );
+    }
+
+    if (hasLesson && !hasStartedQuiz) {
+        return (
+            <div className="test-page">
+                <nav />
+                <div className="sidebar" />
+                <main>
+                    <div className="main-content">
+                        <QuizHeader lives={lives} totalQuizzes={quizzes.length} currentIndex={currentIndex} />
+                        <LessonCard
+                            key={activeQuiz?.quiz_id ?? currentIndex}
+                            title={unitTitle}
+                            slides={lessonSlides}
+                            className="unit-meta"
+                        />
+                    </div>
+                </main>
+                <footer>
+                    <div className="footer-content lesson-footer-content">
+                        <button
+                            className="options footer-btn"
+                            id="submit"
+                            onClick={() => setHasStartedQuiz(true)}
+                        >
+                            Start Quiz
+                        </button>
+                    </div>
+                </footer>
             </div>
         );
     }
@@ -178,19 +334,19 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                         <h1 className="quiz-question-title">{activeQuiz.question_text}</h1>
 
                         <div className="options-container">
-                            {activeQuiz.type_name === "MCQ" && quizState?.options && (
+                            {activeQuizType === "MCQ" && quizState?.options && (
                                 <QuizMCQ options={quizState.options} correctId={quizState.correctId} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "FITB" && (
+                            {activeQuizType === "FITB" && (
                                 <QuizFITB payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "Order" && currentAnswer && (
+                            {activeQuizType === "Order" && currentAnswer && (
                                 <QuizOrder payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "Pair" && currentAnswer && (
+                            {activeQuizType === "Pair" && currentAnswer && (
                                 <QuizPair payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
                             )}
-                            {activeQuiz.type_name === "CP" && (
+                            {activeQuizType === "CP" && (
                                 <QuizCP
                                     payload={payload}
                                     currentStepIndex={cpStepIndex}
@@ -202,6 +358,15 @@ export default function InteractiveQuizClient({ quizzes }: { quizzes: QuizData[]
                                     status={status}
                                     stepMessage={stepMessage}
                                 />
+                            )}
+
+                            {!activeQuizType && (
+                                <div className="options" style={{ padding: "16px 24px" }}>
+                                    <strong>Raw payload</strong>
+                                    <pre style={{ whiteSpace: "pre-wrap", marginTop: "12px" }}>
+                                        {JSON.stringify(payload ?? {}, null, 2)}
+                                    </pre>
+                                </div>
                             )}
 
                             {status === "correct" && <div className="feedback-msg feedback-correct anim-enter">Correct! Excellent work.</div>}

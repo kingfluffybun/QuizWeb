@@ -2,7 +2,10 @@
 
 import Editor from "@monaco-editor/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getCodeProblems, type CodeProblem } from "@/app/actions/quiz";
 import "#css/quiz.css";
+import "#css/sidebar.css";
+import Sidebar from "@/app/components/Sidebar";
 
 const defaultFiles = {
   html: "",
@@ -19,11 +22,42 @@ type ConsoleMessage = {
 };
 
 export default function QuizPage() {
+  const [problem, setProblem] = useState<CodeProblem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeFile, setActiveFile] = useState<FileKey>("html");
   const [code, setCode] = useState<Record<FileKey, string>>(defaultFiles);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getCodeProblems()
+      .then((problems) => {
+        if (!isActive) return;
+        const nextProblem = problems[0] ?? null;
+        setProblem(nextProblem);
+        setCode((current) => ({
+          ...current,
+          html: nextProblem?.steps[0]?.template ?? "",
+        }));
+        if (!nextProblem) {
+          setLoadError("No approved coding problem is available.");
+        }
+      })
+      .catch(() => {
+        if (isActive) setLoadError("Unable to load the coding problem.");
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const previewDoc = useMemo(() => {
     const safeJs = code.js.replace(/<\/script>/gi, "<\\/script>");
@@ -105,8 +139,7 @@ export default function QuizPage() {
 
   return (
     <div className="quiz-page" id="code-problem">
-      <nav></nav>
-      {/* <div className="sidebar"></div> */}
+      <Sidebar />
       <main>
         {/* <div className="quiz-header">
             <div className="quiz-navigation">
@@ -134,7 +167,7 @@ export default function QuizPage() {
             </div>
             
         </div> */}
-        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0"}}>
+        <div style={{ width: "100%", display: "flex", alignItems: "center" , flexDirection: "column", gap: "20px", flex: "1", minHeight: "0"}}>
             <div className="code-problem-layout">
                 <div id="instructions">
                     <div className="header">
@@ -144,30 +177,18 @@ export default function QuizPage() {
                         </div>
                     </div>
                     <div className="instruction-container col">
-                        <div className="instruction disabled">
-                            <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Initialize a top-level section identifier heading using the text "Baking Recipe</p>
-                        </div>
-                        <div className="instruction correct">
-                            <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Below the title, add a smaller sub-section identifier heading using the text "Ingredients List".</p>
-                        </div>
-                        <div className="instruction">
-                            <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Directly beneath that heading, initialize an unordered list containing exactly three nested list entries: "Flour", "Sugar", and "Eggs".</p>
-                        </div>
-                        <div className="instruction">
-                            <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Draw a clean horizontal divider line straight beneath the unordered list container block to mark a thematic shift.</p>
-                        </div>
-                        <div className="instruction">
-                            <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Below the divider line, initialize a numbered ordered list containing exactly two sequential entries: "Mix ingredients together." and "Bake in the oven.".</p>
-                        </div>
-                        <div className="instruction">
-                            <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
-                            <p>Add a final sub-item paragraph below the recipe.</p>
-                        </div>
+                        {isLoading ? (
+                          <p>Loading instructions...</p>
+                        ) : loadError ? (
+                          <p>{loadError}</p>
+                        ) : (
+                          problem?.instructions.map((instruction, index) => (
+                            <div className="instruction" key={`${problem.unit_id}-${index}`}>
+                              <div className="check-circle row"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg></div>
+                              <p>{instruction}</p>
+                            </div>
+                          ))
+                        )}
                     </div>
                 </div>
                 <div id="tab">
@@ -254,6 +275,13 @@ export default function QuizPage() {
                                 wordWrap: "off",
                             }}
                         />
+                        <div className="code-options">
+                            <button type="button" className="run-code-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play preview-icon"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+                                <p>Run Code</p>
+                            </button>
+                            <button type="submit" className="submit-btn"><p>Submit</p></button>
+                        </div>
                     </div>
                 </div>
                 <div id="preview">

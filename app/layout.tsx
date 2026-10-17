@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { JetBrains_Mono, Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
 import "@/public/css/settings.css";
@@ -60,11 +61,13 @@ export default function RootLayout({
             <head>
                 <meta charSet="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
             </head>
             <body className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
                 <AccessibilityInit />
                 {children}
+                <Script id="theme-init" strategy="beforeInteractive">
+                    {themeInitScript}
+                </Script>
             </body>
         </html>
     )

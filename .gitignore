@@ -29,6 +29,8 @@
 # misc
 .DS_Store
 *.pem
+.agents/
+tests/
 
 # debug
 npm-debug.log*
@@ -38,6 +40,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

@@ -467,6 +467,12 @@ body {
   font-weight: 600;
 }
 
+.status-message.status-error {
+  border-color: #f5c6cb;
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
 .pending-list {
   flex: 1;
   display: grid;
@@ -673,4 +679,3 @@ body {
     justify-content: flex-start;
   }
 }
-

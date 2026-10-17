@@ -1,7 +1,7 @@
 "use client";
 
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
-import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin, clearLoginRateLimit } from "@/app/actions/auth";
+import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin } from "@/app/actions/auth";
 import { useState, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -36,6 +36,7 @@ function AuthPage() {
     const [error, setError] = useState("");
 
     // Signup password validation
+    const [signupSuccess, setSignupSuccess] = useState(false);
     const [signupUsername, setSignupUsername] = useState("");
     const [signupEmail, setSignupEmail] = useState("");
     const [signupPassword, setSignupPassword] = useState("");
@@ -45,6 +46,7 @@ function AuthPage() {
     // ReCaptcha
     const [recaptchaVerified, setRecaptchaVerified] = useState(false);
     const [recaptchaLoading, setRecaptchaLoading] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState("");
 
     // Forgot pass states
     const [forgotEmail, setForgotEmail] = useState("");
@@ -88,15 +90,16 @@ function AuthPage() {
 
         if (res?.error) {
             await recordFailedLogin(email);
-            // setError(`Invalid email or password. ${Math.max(0, rateCheck.remaining - 1)} attempts remaining.`);
-            if (rateCheck.remaining <= 3) {
-                setError(`Invalid email or password. ${rateCheck.remaining} attempts remaining.`);
+            const remaining = Math.max(0, rateCheck.remaining - 1);
+            if (remaining <= 3) {
+                setError(`Invalid email or password. ${remaining} attempts remaining.`);
+            } else {
+                setError("Invalid email or password.");
             }
             setIsLoading(false);
             return;
         }
 
-        await clearLoginRateLimit(email);
         router.push("/");
     }
 
@@ -127,6 +130,16 @@ function AuthPage() {
             return;
         }
 
+        let token = recaptchaToken;
+        if (executeRecaptcha) {
+            try {
+                token = await executeRecaptcha("signup");
+            } catch {
+                // fallback to state token
+            }
+        }
+        formData.set("recaptchaToken", token || "");
+
         setIsLoading(true);
 
         // Create account
@@ -138,22 +151,12 @@ function AuthPage() {
             return;
         }
 
-        // Automatically login user
-        const res = await signIn("credentials", {
-            email: formData.get("email") as string,
-            password,
-            redirect: false,
-        });
-
-        // Catch autologin failures
-        if (res?.error) {
-            setError("Account created successfully, but auto-login failed. Please sign in manually.");
-            setIsLoading(false);
-            switchMode('login');
-            return;
-        }
-
-        router.push("/");
+        setIsLoading(false);
+        setSignupSuccess(true);
+        setSignupPassword("");
+        setConfirmPassword("");
+        setRecaptchaVerified(false);
+        setRecaptchaToken("");
     }
 
     // === ReCaptcha ===
@@ -167,17 +170,8 @@ function AuthPage() {
 
         try {
             const token = await executeRecaptcha("signup");
-
-            // Verify token
-            const res = await fetch("/api/recaptcha", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token }),
-            });
-
-            const data = await res.json();
-
-            if (data.success && data.score >= 0.5) {
+            if (token) {
+                setRecaptchaToken(token);
                 setRecaptchaVerified(true);
             } else {
                 setError("ReCaptcha failed to verify. Please try again.");
@@ -278,6 +272,7 @@ function AuthPage() {
 
     // === Switching ===
     const switchMode = (newMode: 'login' | 'signup') => {
+        setSignupSuccess(false);
         if (newMode === mode || isFading) return;
         setIsFading(true);
         setMode(newMode);
@@ -338,9 +333,9 @@ function AuthPage() {
     const panelText = isSignupContent ? 'Start learning with QuizWeb in minutes.' : 'Pick up your WebDev quizzes where you left off.';
     const toggleText = isSignupContent ? 'Already have an account? Sign in' : 'New here? Create account';
 
-    const formLabelText = isSignupContent ? 'Get started' : 'Access your account';
-    const formTitleText = isSignupContent ? 'Create account' : 'Sign in';
-    const formTextText = isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
+    const formLabelText = signupSuccess ? 'Verification' : isSignupContent ? 'Get started' : 'Access your account';
+    const formTitleText = signupSuccess ? 'Verify your email' : isSignupContent ? 'Create account' : 'Sign in';
+    const formTextText = signupSuccess ? 'Check your inbox to activate your account.' : isSignupContent ? "A few details and you're ready to go." : 'Use your email and password to continue.';
 
     // HTML
     return (
@@ -363,6 +358,7 @@ function AuthPage() {
                             href="#" 
                             onClick={(e) => {
                                 e.preventDefault();
+                                setSignupSuccess(false);
                                 switchMode(isSignup ? 'login' : 'signup');
                             }}
                         >
@@ -407,8 +403,40 @@ function AuthPage() {
                         </header>
 
                         <div className="stack">
-                            {/* Login Form */}
-                            <form className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate onSubmit={handleLogin}>
+                            {signupSuccess ? (
+                                <div className="formView active verification-sent-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "1.25rem 0" }}>
+                                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(153, 102, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.25rem", color: "#9966FF" }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect width="20" height="16" x="2" y="4" rx="2" />
+                                            <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                                        </svg>
+                                    </div>
+                                    <h3 style={{ fontSize: "1.35rem", fontWeight: 700, margin: "0 0 0.5rem" }}>Check your inbox</h3>
+                                    <p style={{ color: "#a1a1aa", fontSize: "0.95rem", lineHeight: "1.5", margin: "0 0 0.5rem" }}>
+                                        We sent an activation link to:
+                                    </p>
+                                    <p style={{ color: "#9966FF", fontWeight: 600, fontSize: "1.05rem", margin: "0 0 1.25rem", wordBreak: "break-all" }}>
+                                        {signupEmail}
+                                    </p>
+                                    <p style={{ color: "#71717a", fontSize: "0.85rem", lineHeight: "1.4", margin: "0 0 1.75rem" }}>
+                                        Click the link in your email to activate your account. If you don&apos;t see it, check your spam folder.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className="submit-btn"
+                                        style={{ width: "100%" }}
+                                        onClick={() => {
+                                            setSignupSuccess(false);
+                                            switchMode("login");
+                                        }}
+                                    >
+                                        Back to Sign In
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Login Form */}
+                                    <form className={`formView ${!isSignupContent ? 'active' : ''}`} noValidate onSubmit={handleLogin}>
                                 <label className="input-group">
                                     <span className="field-icon" aria-hidden="true">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
@@ -568,7 +596,7 @@ function AuthPage() {
                                     <div className="recaptcha-container">
                                         <button
                                             type="button"
-                                            className={`recaptcha-btn ${isLoading ? "Verified" : ""}`}
+                                            className={`recaptcha-btn ${recaptchaVerified ? "verified" : ""}`}
                                             onClick={handleReCaptchaVerify}
                                             disabled={recaptchaLoading || recaptchaVerified}
                                         >
@@ -579,13 +607,13 @@ function AuthPage() {
                                                 </>
                                             ) : recaptchaLoading ? (
                                                 <>
-                                                    <span className="loader" />
+                                                    <span className="spinner" />
                                                     <span>Verifying...</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                                    <span>I'm not a robot</span>
+                                                    <span>I&apos;m not a robot</span>
                                                 </>
                                             )}
                                         </button>
@@ -602,7 +630,9 @@ function AuthPage() {
                                     {isLoading ? "Creating account..." : "Create account"}
                                 </button>
                             </form>
-                        </div>
+                        </>
+                    )}
+                </div>
                     </div>
                     <Link href="/" className="back-landing" aria-label="Back to Landing Page" title="Back to Landing Page">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

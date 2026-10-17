@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteQuiz,
+  deleteUnit,
   getPaginatedRecentQuizzes,
   updateQuiz,
 } from "@/app/actions/quiz";
@@ -12,6 +13,7 @@ import type { Category, Difficulty, QuizType } from "@/app/actions/quiz";
 
 type Quiz = {
   quiz_id: number;
+  unit_id?: number;
   question_text: string;
   cat_name: string;
   sec_num?: string;
@@ -198,10 +200,14 @@ export default function RecentQuizzesCard({
   };
 
   const deleteQuestion = async (quizId: number) => {
-    if (!window.confirm("Are you sure you want to delete this quiz question?")) return;
+    if (!window.confirm("Are you sure you want to delete this quiz bank record?")) return;
     setIsPending(true);
     try {
-      const result = await deleteQuiz(quizId);
+      const quiz = quizzes.find((item) => item.quiz_id === quizId);
+      const result =
+        quiz?.type_name === "Unit" && quiz.unit_id
+          ? await deleteUnit(quiz.unit_id)
+          : await deleteQuiz(quizId);
       if (result.error) window.alert(result.error);
       else await loadPage(page);
     } finally {
@@ -295,7 +301,7 @@ export default function RecentQuizzesCard({
           return <div key={quiz.quiz_id} className="quiz-list-item">
             <div className="recent-quiz-title-row"><div className="quiz-list-question">{quiz.type_name === "CP" && payload.title ? payload.title : quiz.question_text}</div><div className="recent-quiz-actions">
               <button type="button" className="btn-preview" onClick={() => router.push(`/test?quizId=${quiz.quiz_id}`)} title={`Preview Question (ID: #${quiz.quiz_id})`} aria-label={`Preview Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></>)}</button>
-              <button type="button" className="btn-edit" onClick={() => void editQuestion(quiz)} title={`Edit Question (ID: #${quiz.quiz_id})`} aria-label={`Edit Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></>)}</button>
+              {quiz.type_name !== "Unit" && <button type="button" className="btn-edit" onClick={() => void editQuestion(quiz)} title={`Edit Question (ID: #${quiz.quiz_id})`} aria-label={`Edit Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></>)}</button>}
               <button type="button" className="btn-delete" onClick={() => void deleteQuestion(quiz.quiz_id)} disabled={isPending} title={`Delete Question (ID: #${quiz.quiz_id})`} aria-label={`Delete Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 2 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></>)}</button>
             </div></div>
             <div className="quiz-badge-row"><div className="badge-id-container"><button type="button" className={`badge badge-id ${copiedId === quiz.quiz_id ? "copied" : ""}`} onClick={() => copyId(quiz.quiz_id)} title="Click to copy Question ID">{copiedId === quiz.quiz_id ? "Copied!" : `ID: #${quiz.quiz_id}`}</button><button type="button" className="badge-id-filter-btn" onClick={() => toggleIdFilter(quiz.quiz_id)} title="Filter by this Question ID" aria-label="Filter by this Question ID">{icon(<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>)}</button></div><span className="badge badge-cat">{quiz.cat_name}</span>{quiz.sec_num && <span className="badge badge-type">Section {quiz.sec_num}</span>}<span className="badge badge-diff">{quiz.difficulty_name}</span><span className="badge badge-type">{quiz.type_name}</span>{quiz.type_name === "CP" && <span className="badge badge-metric-tag">{payload.steps?.length ?? 0} steps</span>}</div>

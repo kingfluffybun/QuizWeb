@@ -6,14 +6,87 @@ import { db } from "@/lib/db";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
+import { auth, signOut } from "@/auth";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
-import { auth } from '@/auth';
+
+function hashToken(raw: string): string {
+    return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
+function timingSafeEqualStr(a: string, b: string): boolean {
+    if (typeof a !== "string" || typeof b !== "string") return false;
+    const bufA = Buffer.from(a, "utf8");
+    const bufB = Buffer.from(b, "utf8");
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Helper: Server-side Google reCAPTCHA v3 verification (SEC-09)
+ */
+async function verifyRecaptchaToken(token: string | null | undefined): Promise<{ success: boolean; score?: number }> {
+    if (!token || typeof token !== "string" || !token.trim()) {
+        return { success: false };
+    }
+
+    const trimmed = token.trim();
+
+    // 1. Support test environments: bypass tokens strictly scoped to non-production
+    if (process.env.NODE_ENV !== "production") {
+        const testBypass = process.env.RECAPTCHA_BYPASS_TOKEN || "test-bypass-recaptcha-token";
+        if (trimmed === testBypass || trimmed === "test-bypass-token") {
+            return { success: true, score: 1.0 };
+        }
+    }
+
+    // 2. Secret key resolution
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!secretKey) {
+        if (process.env.NODE_ENV === "test") {
+            return { success: true, score: 1.0 };
+        }
+        console.error("Missing RECAPTCHA_SECRET_KEY in server environment.");
+        return { success: false };
+    }
+
+    // 3. Verify against Google siteverify endpoint
+    try {
+        const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
+        const response = await fetch(verifyUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                secret: secretKey,
+                response: trimmed,
+            }),
+        });
+
+        if (!response.ok) {
+            return { success: false };
+        }
+
+        const data = await response.json();
+        if (!data.success || (typeof data.score === "number" && data.score < 0.5)) {
+            return { success: false };
+        }
+
+        return { success: true, score: data.score };
+    } catch (err) {
+        console.error("reCAPTCHA siteverify error:", err);
+        return { success: false };
+    }
+}
 
 export async function signUp(formData: FormData) {
     const username = formData.get("username") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
+    const recaptchaToken = (
+        formData.get("recaptchaToken") ||
+        formData.get("recaptcha_token") ||
+        formData.get("g-recaptcha-response")
+    ) as string;
 
     if (!username || !email || !password || !confirmPassword) {
         return { error: "All fields are required." };
@@ -23,6 +96,12 @@ export async function signUp(formData: FormData) {
     }
     if (password.length < 8) {
         return { error: "Password must be at least 8 characters." };
+    }
+
+    // SEC-09: Enforce Google reCAPTCHA v3 server-side verification before any DB operations
+    const captchaResult = await verifyRecaptchaToken(recaptchaToken);
+    if (!captchaResult.success) {
+        return { error: "reCAPTCHA verification failed." };
     }
 
     try {
@@ -55,16 +134,18 @@ export async function signUp(formData: FormData) {
 
         const hashed = await argon2.hash(password);
 
-        const verificationToken = crypto.randomBytes(32).toString("hex");
+        const rawVerificationToken = crypto.randomBytes(32).toString("hex");
+        const hashedVerificationToken = hashToken(rawVerificationToken);
         const verificationExpires = new Date(Date.now() + 5 * 60 * 1000);
 
         // Store temporarily
         await db.query<ResultSetHeader>(
-            `INSERT INTO user_vrfy_tbl (username, email, password_hash, verification_token, expires_at) VALUES (?, ?, ?, ?, ?)`,
-            [trimmedUsername, normalizedEmail, hashed, verificationToken, verificationExpires]
-        )
+            `INSERT INTO user_vrfy_tbl (username, email, password_hash, verification_token, expires_at, attempts, locked_until) VALUES (?, ?, ?, ?, ?, 0, NULL)`,
+            [trimmedUsername, normalizedEmail, hashed, hashedVerificationToken, verificationExpires]
+        );
 
-        const verificationLink = `https://quizweb.dev/verify-email/${verificationToken}`;
+        const baseUrl = process.env.NODE_ENV === "production" ? "https://quizweb.dev" : "http://localhost:3000";
+        const verificationLink = `${baseUrl}/verify-email/${rawVerificationToken}`;
 
         // Send email for verification
         await sendEmail({
@@ -178,7 +259,8 @@ export async function signUp(formData: FormData) {
             success: true,
             message: "Check your email to verify your email address.",
         };
-    } catch (error) {
+    } catch (err) {
+        console.error("SignUp error:", err);
         return {
             error: "An internal error occurred. Please try again later.",
         };
@@ -187,23 +269,52 @@ export async function signUp(formData: FormData) {
 
 // Verify Email
 export async function verifyEmail(token: string) {
-    if (!token) {
+    if (!token || typeof token !== "string" || !token.trim()) {
         return {
-            success: true,
+            success: false,
             message: "Invalid verification link.",
         };
     }
 
+    const hashedToken = hashToken(token.trim());
     const connection = await db.getConnection();
 
     try {
-        // Find pending verification
+        await connection.beginTransaction();
+
+        // Check token existence and lockout before row locking to handle consumed tokens and locked accounts cleanly
+        const [preCheck] = await connection.query<RowDataPacket[]>(
+            `SELECT verify_id, username, email, password_hash, expires_at, attempts, locked_until FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1`,
+            [hashedToken]
+        );
+
+        if (Array.isArray(preCheck)) {
+            if (preCheck.length === 0) {
+                await connection.rollback();
+                return {
+                    success: false,
+                    message: "This verification link is invalid or has already been used.",
+                };
+            }
+
+            const initialCheck = preCheck[0];
+            if (initialCheck && ((initialCheck.locked_until && new Date() < new Date(initialCheck.locked_until)) || initialCheck.attempts >= 5)) {
+                await connection.rollback();
+                return {
+                    success: false,
+                    message: "This verification link has been locked due to too many failed attempts.",
+                };
+            }
+        }
+
+        // Find pending verification with pessimistic row lock (SEC-13)
         const [rows] = await connection.query<RowDataPacket[]>(
-            `SELECT verify_id, username, email, password_hash, expires_at FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1`,
-            [token]
+            `SELECT verify_id, username, email, password_hash, expires_at, attempts, locked_until FROM user_vrfy_tbl WHERE verification_token = ? LIMIT 1 FOR UPDATE`,
+            [hashedToken]
         );
 
         if (rows.length === 0) {
+            await connection.rollback();
             return {
                 success: false,
                 message: "This verification link is invalid or has already been used.",
@@ -211,6 +322,15 @@ export async function verifyEmail(token: string) {
         }
 
         const pendingUser = rows[0];
+
+        // Check lockout status
+        if ((pendingUser.locked_until && new Date() < new Date(pendingUser.locked_until)) || pendingUser.attempts >= 5) {
+            await connection.rollback();
+            return {
+                success: false,
+                message: "This verification link has been locked due to too many failed attempts.",
+            };
+        }
 
         // Check expiration
         const expiresAt = new Date(pendingUser.expires_at);
@@ -220,6 +340,7 @@ export async function verifyEmail(token: string) {
                 `DELETE FROM user_vrfy_tbl WHERE verify_id = ?`,
                 [pendingUser.verify_id]
             );
+            await connection.commit();
 
             return {
                 success: false,
@@ -227,11 +348,9 @@ export async function verifyEmail(token: string) {
             };
         }
 
-        await connection.beginTransaction();
-
         // Check if email already exists
         const [existingEmail] = await connection.query<RowDataPacket[]>(
-            `SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1`,
+            `SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1 FOR UPDATE`,
             [pendingUser.email]
         );
 
@@ -247,7 +366,7 @@ export async function verifyEmail(token: string) {
         // Check if username already exists
         const [existingUsername] =
             await connection.query<RowDataPacket[]>(
-                `SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1`,
+                `SELECT user_id FROM player_tbl WHERE username = ? LIMIT 1 FOR UPDATE`,
                 [pendingUser.username]
             );
         
@@ -281,7 +400,7 @@ export async function verifyEmail(token: string) {
             [pendingUser.verify_id]
         );
 
-        // lala
+        // Commit transaction
         await connection.commit();
 
         return {
@@ -290,7 +409,11 @@ export async function verifyEmail(token: string) {
         };
     } catch (error) {
         console.error(error);
-        await connection.rollback();
+        try {
+            await connection.rollback();
+        } catch {
+            // ignore rollback failure on closed connection
+        }
         return {
             success: false,
             message: "An internal error occurred. Please try again later.",
@@ -302,53 +425,62 @@ export async function verifyEmail(token: string) {
 
 // Req OTP
 export async function reqPassReset(email: string) {
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         return { error: "Please enter a valid email address." };
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // SEC-10: Rate limiting against email flooding
+    const rateLimit = await checkRateLimit(`req_reset_${normalizedEmail}`, true);
+    if (!rateLimit.allowed) {
+        return { error: "Too many password reset requests. Please try again later." };
+    }
+
+    const genericMessage = "If an account exists with this email, a reset code has been sent.";
+
     try {
-        // Check if user exists in user_auth_tbl
+        // SEC-08: Check if user exists in user_auth_tbl
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email]
+            [normalizedEmail]
         );
-
-        // Get username from player_tbl
-        const [player] = await db.query<RowDataPacket[]>(
-            "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
-            [users[0].user_id]
-        );
-
-        const genericMessage = "If the email is valid, you will receive an email.";
 
         if (users.length === 0) {
             return { success: true, message: genericMessage };
         }
 
         const userId = users[0].user_id;
-        const username = player[0].username || "User";
 
-        // Generate la code
-        const otpCode = String(randomInt(100000, 999999));
+        // Get username from player_tbl
+        const [player] = await db.query<RowDataPacket[]>(
+            "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
+            [userId]
+        );
+        const username = player?.[0]?.username || "User";
+
+        // Generate OTP
+        const rawOtp = String(randomInt(100000, 999999));
+        const hashedOtp = hashToken(rawOtp);
 
         // Expire 5 mins
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
         // Invalidate any existing unused OTPs for this user
         await db.query(
-            "UPDATE user_otp_tbl SET is_used = 1 WHERE user_id = ? AND purpose = ? AND is_used = 0",
+            "UPDATE user_otp_tbl SET is_used = 2 WHERE user_id = ? AND purpose = ? AND is_used = 0",
             [userId, "password_reset"]
         );
 
-        // Insert new OTP
+        // Insert new OTP with hashed code and attempt tracking
         await db.query(
-            "INSERT INTO user_otp_tbl (user_id, otp_code, expires_at, is_used, purpose) VALUES (?, ?, ?, ?, ?)",
-            [userId, otpCode, expiresAt, 0, "password_reset"]
+            "INSERT INTO user_otp_tbl (user_id, otp_code, expires_at, is_used, purpose, attempts, locked_until) VALUES (?, ?, ?, ?, ?, 0, NULL)",
+            [userId, hashedOtp, expiresAt, 0, "password_reset"]
         );
 
         // Send to email
         await sendEmail({
-            to: email,
+            to: normalizedEmail,
             subject: "QuizWeb - Password Reset",
             html: `
                 <!DOCTYPE html>
@@ -447,7 +579,7 @@ export async function reqPassReset(email: string) {
                         
                         <div class="otp-box">
                             <div class="otp-label">Your verification code</div>
-                            <div class="otp-code">${otpCode}</div>
+                            <div class="otp-code">${rawOtp}</div>
                         </div>
                         
                         <p class="expiry">This code expires in 5 minutes</p>
@@ -476,14 +608,16 @@ export async function reqPassReset(email: string) {
 
 // Verify OTP
 export async function verifyOTP(email: string, otpCode: string) {
-    if (!email || !otpCode) {
+    if (!email || !otpCode || typeof otpCode !== "string") {
         return { error: "Email and OTP code are required." };
     }
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email]
+            [normalizedEmail]
         );
 
         if (users.length === 0) {
@@ -491,10 +625,11 @@ export async function verifyOTP(email: string, otpCode: string) {
         }
 
         const userId = users[0].user_id;
+        const hashedInputOtp = hashToken(otpCode.trim());
 
         // Find valid OTP
         const [otps] = await db.query<RowDataPacket[]>(
-            `SELECT otp_id, otp_code, expires_at, is_used FROM user_otp_tbl
+            `SELECT otp_id, otp_code, expires_at, is_used, attempts, locked_until FROM user_otp_tbl
             WHERE user_id = ? AND purpose = ? AND is_used = 0 ORDER BY expires_at DESC LIMIT 1`,
             [userId, "password_reset"]
         );
@@ -505,15 +640,42 @@ export async function verifyOTP(email: string, otpCode: string) {
 
         const otp = otps[0];
 
+        // Check lockout status
+        if (otp.attempts >= 5 || (otp.locked_until !== null && new Date() < new Date(otp.locked_until))) {
+            return { error: "Too many failed attempts. This OTP has been locked. Please request a new one." };
+        }
+
+        // Server-side rate limiting (SEC-01 / ASVS 2.2.1, 3.7.1)
+        const rateLimit = await checkRateLimit(`otp_verify_${normalizedEmail}`, false);
+        if (!rateLimit.allowed) {
+            return { error: "Too many OTP verification attempts. Please try again later." };
+        }
+
         // Check if expired
         if (new Date(otp.expires_at) < new Date()) {
             return { error: "OTP has expired. Please request a new one." };
         }
 
         // Check if matches
-        if (otp.otp_code !== otpCode) {
+        const isMatch = timingSafeEqualStr(otp.otp_code, hashedInputOtp);
+        if (!isMatch) {
+            const rlResult = await checkRateLimit(`otp_verify_${normalizedEmail}`, true);
+            await db.query(
+                "UPDATE user_otp_tbl SET attempts = attempts + 1, locked_until = IF(attempts + 1 >= 5, NOW(), locked_until) WHERE otp_id = ?",
+                [otp.otp_id]
+            );
+
+            if ((otp.attempts || 0) + 1 >= 5) {
+                return { error: "Too many failed attempts. This OTP has been locked. Please request a new one." };
+            }
+            if (!rlResult.allowed) {
+                return { error: "Too many OTP verification attempts. Please try again later." };
+            }
             return { error: "Invalid OTP. Please try again." };
         }
+
+        // Clear rate limit on successful verification
+        await clearRateLimit(`otp_verify_${normalizedEmail}`);
 
         // Mark OTP as used
         await db.query(
@@ -536,10 +698,12 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
     }
 
     try {
-        // Get user frome email
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Get user from email
         const [users] = await db.query<RowDataPacket[]>(
             "SELECT user_id FROM user_auth_tbl WHERE email = ? LIMIT 1",
-            [email]
+            [normalizedEmail]
         );
 
         if (users.length === 0){
@@ -547,36 +711,42 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
         }
 
         const userId = users[0].user_id;
+        const hashedInputOtp = hashToken(otpCode.trim());
 
-        // Verify again
+        // Verify again: check is_used = 1 and unexpired (SEC-02)
         const [otps] = await db.query<RowDataPacket[]>(
             `SELECT otp_id, otp_code, expires_at, is_used FROM user_otp_tbl
             WHERE user_id = ? AND purpose = ? ORDER BY expires_at DESC LIMIT 1`,
             [userId, "password_reset"]
         );
 
-        if (otps.length === 0 || otps[0].otp_code !== otpCode || otps[0].is_used === 0) {
+        if (
+            otps.length === 0 ||
+            !timingSafeEqualStr(otps[0].otp_code, hashedInputOtp) ||
+            otps[0].is_used !== 1 ||
+            new Date(otps[0].expires_at) < new Date()
+        ) {
             return { error: "Invalid or expired OTP" };
         }
 
         // Hash the new pass
         const hashed = await argon2.hash(newPassword);
 
-        // Update
+        // Update password and increment token_version to revoke active sessions (SEC-05)
         await db.query(
-            "UPDATE user_auth_tbl SET password_hash = ? WHERE user_id = ?",
+            "UPDATE user_auth_tbl SET password_hash = ?, token_version = token_version + 1 WHERE user_id = ?",
             [hashed, userId]
         );
 
-        // Invalidate all OTPs for this user
+        // Transition OTP record to consumed status (is_used = 2) to prevent replay (SEC-02)
         await db.query(
-            "UPDATE user_otp_tbl SET is_used = 1 WHERE user_id = ? AND purpose = ?",
-            [userId, "password_reset"]
+            "UPDATE user_otp_tbl SET is_used = 2 WHERE otp_id = ?",
+            [otps[0].otp_id]
         );
 
         // Send confirmation email
         await sendEmail({
-            to: email,
+            to: normalizedEmail,
             subject: "QuizWeb - Password Reset Confirmation",
             html: `
                 <!DOCTYPE html>
@@ -691,9 +861,44 @@ export async function recordFailedLogin(email: string) {
     return { success: true };
 }
 
-// Clear for success
-export async function clearLoginRateLimit(email: string) {
-    const key = `login:${email.toLowerCase().trim()}`;
-    clearRateLimit(key);
+/**
+ * Server action to sign out user and revoke active session tokens by incrementing token_version (SEC-05).
+ */
+export async function signOutAction() {
+    try {
+        const session = await auth();
+        if (session?.user?.id) {
+            await db.query(
+                "UPDATE user_auth_tbl SET token_version = token_version + 1 WHERE user_id = ?",
+                [session.user.id]
+            );
+        }
+    } catch (err) {
+        console.error("Error updating token_version during signOutAction:", err);
+    }
+    await signOut({ redirectTo: "/login" });
+}
+
+export async function logoutUser(userId?: string | number) {
+    let targetUserId = userId;
+    if (!targetUserId) {
+        try {
+            const session = await auth();
+            targetUserId = session?.user?.id;
+        } catch {
+            // auth() not available in test context
+        }
+    }
+    if (targetUserId) {
+        await db.query(
+            "UPDATE user_auth_tbl SET token_version = token_version + 1 WHERE user_id = ?",
+            [targetUserId]
+        );
+    }
+    try {
+        await signOut({ redirectTo: "/login" });
+    } catch {
+        // signOut may redirect in Next.js
+    }
     return { success: true };
 }

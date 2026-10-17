@@ -42,5 +42,5 @@ export function useQuizData() {
         });
     }, []);
 
-    return { quizzes, };
+    return { quizzes };
 }
