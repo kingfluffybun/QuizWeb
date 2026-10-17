@@ -35,7 +35,7 @@ export function LessonCodeFrame({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const cleanupFrameObservers = useRef<(() => void) | null>(null);
   const editorResizeFrame = useRef<number | null>(null);
-  const [view, setView] = useState<"code" | "result">("result");
+  const [view, setView] = useState<"code" | "result">("code");
   const [editorHeight, setEditorHeight] = useState(180);
 
   const cancelEditorResize = () => {
@@ -97,28 +97,15 @@ export function LessonCodeFrame({
     <div className="lesson-code-frame">
       {toggleable && (
         <div className="lesson-code-frame-controls" aria-label="Code preview view">
-          <button
-            type="button"
-            className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`}
-            aria-pressed={view === "code"}
-            onClick={() => {
-              cancelEditorResize();
-              setView("code");
-            }}
-          >
-            Code
-          </button>
-          <button
-            type="button"
-            className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`}
-            aria-pressed={view === "result"}
-            onClick={() => {
-              cancelEditorResize();
-              setView("result");
-            }}
-          >
-            Result
-          </button>
+            <div className="window-controls">
+                <div className="circle"></div>
+                <div className="circle"></div>
+                <div className="circle"></div>
+            </div>
+            <div className="lesson-code-frame-controls-pill">
+                <button type="button" className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`} aria-pressed={view === "code"} onClick={() => { cancelEditorResize(); setView("code"); }} > <p>Code</p> </button>
+                <button type="button" className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`} aria-pressed={view === "result"} onClick={() => { cancelEditorResize(); setView("result"); }} > <p>Result</p> </button>
+            </div>
         </div>
       )}
       {toggleable && view === "code" ? (
@@ -128,7 +115,7 @@ export function LessonCodeFrame({
           width="100%"
           language="html"
           value={source}
-          theme="vs"
+          theme="vs-dark"
           onMount={(editor) => {
             const updateHeight = () => {
               cancelEditorResize();

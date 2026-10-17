@@ -63,4 +63,5 @@ export interface QuestionProps {
     quiz: QuizData;
     value: AnswerValue;
     onChange: (value: AnswerValue) => void;
+    disabled?: boolean;
 }
