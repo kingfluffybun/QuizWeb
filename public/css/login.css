@@ -1357,11 +1357,11 @@ button:focus-visible, a:focus-visible {
     justify-content: center;
     gap: 10px;
     width: 100%;
-    padding: 14px 20px;
-    border: 2px solid #e0e0e0;
+    padding: 12px 20px;
+    border: 1px solid #e0e0e0;
     border-radius: 12px;
-    background: #fafafa;
-    color: #555;
+    background: var(--primary-color);
+    color: var(--text-inverse);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -1369,8 +1369,10 @@ button:focus-visible, a:focus-visible {
 }
 
 .recaptcha-btn:hover:not(:disabled) {
-    border-color: #c0c0c0;
-    background: #f0f0f0;
+    /* border-color: #c0c0c0;
+    background: #f0f0f0; */
+    transform: translateY(-1px);
+    background: var(--selected-color);
 }
 
 .recaptcha-btn:disabled {
@@ -1380,7 +1382,7 @@ button:focus-visible, a:focus-visible {
 
 .recaptcha-btn.verified {
     border-color: #34c759;
-    background: #f0fff4;
+    background: #9efeb7;
     color: #34c759;
 }
 
