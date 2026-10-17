@@ -214,6 +214,8 @@ export default function QuizLandingClient({
     };
 
     const handleAnswerChange = (nextValue: AnswerValue) => {
+        if (result) return;
+
         setValue(nextValue);
 
         const pairCount = quiz?.quiz_payload.pairs?.length ?? 0;
@@ -260,6 +262,7 @@ export default function QuizLandingClient({
                 return false;
         }
     })();
+    const areChoicesLocked = Boolean(result);
 
     if (isFinished) {
         const backHref = completionDestination === "home" ? "/home" : "/input";
@@ -354,7 +357,12 @@ export default function QuizLandingClient({
                         <div className="quiz-container" key={quiz?.quiz_id} onKeyDown={handleQuestionKeyDown}>
                             <h1>{quiz?.question_text ?? "Loading question..."}</h1>
                             {quiz && (
-                                <QuizRender quiz={quiz} value={value} onChange={handleAnswerChange} />
+                                <QuizRender
+                                    quiz={quiz}
+                                    value={value}
+                                    onChange={handleAnswerChange}
+                                    disabled={areChoicesLocked}
+                                />
                             )}
                         </div>
                     )}

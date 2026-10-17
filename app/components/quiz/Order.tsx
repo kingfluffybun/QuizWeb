@@ -22,7 +22,7 @@ function shuffleItems(items: string[]) {
     return shuffled;
 }
 
-export default function Order ({ quiz, value, onChange }: QuestionProps) {
+export default function Order ({ quiz, value, onChange, disabled = false }: QuestionProps) {
     const correct = quiz.quiz_payload.items ?? [];
     const [initialItems] = useState(() => shuffleItems(correct));
     const items: string[] = Array.isArray(value) ? value : initialItems;
@@ -31,14 +31,18 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
     const [swapAnimation, setSwapAnimation] = useState<SwapAnimation>(null);
 
-    const handleDragStart = (index: number) => setDraggedIdx(index);
+    const handleDragStart = (index: number) => {
+        if (!disabled) setDraggedIdx(index);
+    };
 
     const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        if (disabled) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
     };
 
     const handleDrop = (targetIndex: number) => {
+        if (disabled) return;
         if (draggedIdx === null || draggedIdx === targetIndex) {
             setDraggedIdx(null);
             setDragOverIdx(null);
@@ -69,7 +73,7 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
     };
 
     return (
-        <div className="options-container row" id="order">
+        <div className={`options-container row${disabled ? " is-locked" : ""}`} id="order">
             <div className="order-number col">
                 {items.map((_, i) => (
                     <div className="col" key={i}><h2>{i + 1}.</h2></div>
@@ -92,7 +96,7 @@ export default function Order ({ quiz, value, onChange }: QuestionProps) {
                             key={`order-${item}-${index}`}
                             style={swapStyle}
                             className={`options draggable-item ${draggedIdx === index ? "is-dragging" : ""} ${dragOverIdx === index ? "is-over" : ""} ${swapAnimation?.phase === "start" ? "swap-animation-start" : ""} ${swapAnimation?.phase === "settle" ? "swap-animation-settle" : ""} ${isMoved ? `swap-moved-${swapAnimation.direction}` : ""} ${isShifted ? `swap-shifted-${swapAnimation.direction}` : ""}`}
-                            draggable="true"
+                            draggable={!disabled}
                             onDragStart={() => handleDragStart(index)}
                             onDragOver={handleDragOver}
                             onDragEnter={() => setDragOverIdx(index)}

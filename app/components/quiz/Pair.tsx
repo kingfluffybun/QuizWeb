@@ -14,7 +14,7 @@ function shuffleItems(items: string[]) {
     return shuffled;
 }
 
-export default function PairQuestion({ quiz, onChange }: QuestionProps) {
+export default function PairQuestion({ quiz, onChange, disabled = false }: QuestionProps) {
     const pairs = quiz.quiz_payload.pairs ?? [];
     const [leftItems] = useState(() => shuffleItems(pairs.map((p) => p.left)));
     const [rightItems] = useState(() => shuffleItems(pairs.map((p) => p.right)));
@@ -55,7 +55,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     };
 
     const handleLeftClick = (item: string) => {
-        if (matchedLeft.includes(item) || incorrectPair) return;
+        if (disabled || matchedLeft.includes(item) || incorrectPair) return;
 
         if (selectedRight === null) {
             setSelectedLeft(item);
@@ -66,7 +66,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     };
 
     const handleRightClick = (item: string) => {
-        if (matchedRight.includes(item) || incorrectPair) return;
+        if (disabled || matchedRight.includes(item) || incorrectPair) return;
 
         if (selectedLeft === null) {
             setSelectedRight(item);
@@ -91,7 +91,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     };
 
     return (
-        <div className="options-container row" id="pair">
+        <div className={`options-container row${disabled ? " is-locked" : ""}`} id="pair">
             <div className="pair-left-column col">
                 {leftItems.map((item) => (
                     <label
@@ -104,7 +104,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
                             type="radio"
                             name="pair-left"
                             checked={selectedLeft === item}
-                            disabled={matchedLeft.includes(item)}
+                            disabled={disabled || matchedLeft.includes(item)}
                             onChange={() => handleLeftClick(item)}
                         />
                         <div className={`options ${getButtonClassName("left", item)}`}>
@@ -125,7 +125,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
                             type="radio"
                             name="pair-right"
                             checked={selectedRight === item}
-                            disabled={matchedRight.includes(item)}
+                            disabled={disabled || matchedRight.includes(item)}
                             onChange={() => handleRightClick(item)}
                         />
                         <div className={`options ${getButtonClassName("right", item)}`}>
