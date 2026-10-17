@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { verifyEmail } from "@/app/actions/auth";
@@ -13,7 +12,6 @@ interface VerifyEmailClientProps {
 export default function VerifyEmailClient({ token }: VerifyEmailClientProps) {
     const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
     const [message, setMessage] = useState<string>("");
-    const router = useRouter();
 
     async function handleActivate(e: React.FormEvent) {
         e.preventDefault();
@@ -33,10 +31,6 @@ export default function VerifyEmailClient({ token }: VerifyEmailClientProps) {
         } catch {
             setStatus("error");
             setMessage("An error occurred during verification. Please try again.");
-        }
-
-        if (status === "success") {
-            router.push("/login");
         }
     }
 
