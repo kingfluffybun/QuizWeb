@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import "#css/test_quiz.css";
 import "#css/nav.css";
-import { QuizData, QuizStatus } from "./types";
+import {
+    QuizAnswer,
+    QuizCustomState,
+    QuizData,
+    QuizStatus,
+    PairAnswer,
+    McqOption,
+} from "./types";
+
+const emptySubscribe = () => () => {};
 import QuizHeader from "./components/QuizHeader";
 import QuizFooter from "./components/QuizFooter";
 import GameOverCard from "./components/GameOverCard";
@@ -38,16 +47,16 @@ function resolveQuizType(quiz: QuizData | undefined): string {
     return "";
 }
 
-function getInitialQuizState(quiz: QuizData | undefined) {
+function getInitialQuizState(quiz: QuizData | undefined): { answer: QuizAnswer; state: QuizCustomState } {
     if (!quiz) return { answer: null, state: null };
     const payload = quiz.quiz_payload;
     const typeName = resolveQuizType(quiz);
 
-    let answer: any = null;
-    let state: any = null;
+    let answer: QuizAnswer = null;
+    let state: QuizCustomState = null;
 
     if (typeName === "MCQ" && payload?.options) {
-        const opts = payload.options.map((text, id) => ({ id, text }));
+        const opts: McqOption[] = payload.options.map((text, id) => ({ id, text }));
         state = {
             options: shuffleItems(opts),
             correctId: payload.correct_index ?? 0
@@ -62,7 +71,7 @@ function getInitialQuizState(quiz: QuizData | undefined) {
         };
     } else if (typeName === "CP") {
         const steps = getCPSteps(quiz);
-        answer = steps[0]?.template || payload?.template || "";
+        answer = steps[0]?.template || (typeof payload?.template === "string" ? payload.template : "");
     } else if (typeName === "FITB") {
         answer = "";
     }
@@ -104,7 +113,11 @@ export default function InteractiveQuizClient({
     completionDestination?: "home" | "input";
 }) {
     const playQuizSound = useQuizSounds();
-    const [isMounted, setIsMounted] = useState(false);
+    const isMounted = useSyncExternalStore(
+        emptySubscribe,
+        () => true,
+        () => false,
+    );
     const [currentIndex, setCurrentIndex] = useState(0);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
     const [lives, setLives] = useState(5);
@@ -117,9 +130,9 @@ export default function InteractiveQuizClient({
     const activeQuiz = quizzes[currentIndex];
     const payload = activeQuiz?.quiz_payload;
     const activeQuizType = resolveQuizType(activeQuiz);
-    const unitTitle = (activeQuiz as any)?.unit_title ?? "";
-    const unitLessonCard = (activeQuiz as any)?.unit_lesson_card ?? {};
-    const unitAssessment = (activeQuiz as any)?.unit_assessment ?? {};
+    const unitTitle = activeQuiz?.unit_title ?? "";
+    const unitLessonCard = activeQuiz?.unit_lesson_card ?? {};
+    const unitAssessment = activeQuiz?.unit_assessment ?? {};
     const lessonSlides = typeof unitLessonCard === "object" && Array.isArray(unitLessonCard.lesson_slide)
         ? unitLessonCard.lesson_slide
         : [{ lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "" }];
@@ -152,21 +165,18 @@ export default function InteractiveQuizClient({
         ),
     );
 
-    const [currentAnswer, setCurrentAnswer] = useState<any>(null);
-    const [quizState, setQuizState] = useState<any>(null);
+    const [prevActiveQuiz, setPrevActiveQuiz] = useState<QuizData | undefined>(activeQuiz);
+    const [currentAnswer, setCurrentAnswer] = useState<QuizAnswer>(() => getInitialQuizState(quizzes[0]).answer);
+    const [quizState, setQuizState] = useState<QuizCustomState>(() => getInitialQuizState(quizzes[0]).state);
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (!activeQuiz) return;
+    if (prevActiveQuiz !== activeQuiz) {
+        setPrevActiveQuiz(activeQuiz);
         const initial = getInitialQuizState(activeQuiz);
         setCurrentAnswer(initial.answer);
         setQuizState(initial.state);
         setCpStepIndex(0);
         setStepMessage(null);
-    }, [currentIndex, activeQuiz]);
+    }
 
     const cpSteps = getCPSteps(activeQuiz);
     const currentStep = cpSteps[cpStepIndex] || cpSteps[0];
@@ -179,20 +189,28 @@ export default function InteractiveQuizClient({
             case "MCQ":
                 isCorrect = currentAnswer === quizState?.correctId;
                 break;
-            case "FITB":
-                isCorrect = currentAnswer?.toString().trim().toLowerCase() === payload.answer?.trim().toLowerCase();
+            case "FITB": {
+                const ansStr = currentAnswer !== null && currentAnswer !== undefined ? String(currentAnswer).trim().toLowerCase() : "";
+                const expectedStr = typeof payload.answer === "string" ? payload.answer.trim().toLowerCase() : "";
+                isCorrect = ansStr === expectedStr;
                 break;
+            }
             case "Order":
                 isCorrect = JSON.stringify(currentAnswer) === JSON.stringify(payload.items);
                 break;
-            case "Pair":
-                isCorrect = currentAnswer?.left?.every((leftVal: string, i: number) =>
-                    payload.pairs?.some((p) => p.left === leftVal && p.right === currentAnswer.right[i])
-                );
+            case "Pair": {
+                const pairAns = currentAnswer && typeof currentAnswer === "object" && !Array.isArray(currentAnswer) && "left" in currentAnswer && "right" in currentAnswer
+                    ? (currentAnswer as PairAnswer)
+                    : null;
+                isCorrect = Boolean(pairAns?.left?.every((leftVal: string, i: number) =>
+                    payload.pairs?.some((p) => p.left === leftVal && p.right === pairAns.right[i])
+                ));
                 break;
+            }
             case "CP": {
-                const targetExpected = currentStep?.expected || payload.expected || "";
-                isCorrect = currentAnswer?.replace(/\s+/g, "") === targetExpected.replace(/\s+/g, "");
+                const targetExpected = currentStep?.expected || (typeof payload.expected === "string" ? payload.expected : "");
+                const ansStr = typeof currentAnswer === "string" ? currentAnswer : "";
+                isCorrect = ansStr.replace(/\s+/g, "") === targetExpected.replace(/\s+/g, "");
 
                 if (isCorrect) {
                     if (cpStepIndex < cpSteps.length - 1) {
@@ -358,16 +376,37 @@ export default function InteractiveQuizClient({
 
                         <div className="options-container">
                             {activeQuizType === "MCQ" && quizState?.options && (
-                                <QuizMCQ options={quizState.options} correctId={quizState.correctId} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
+                                <QuizMCQ
+                                    options={quizState.options}
+                                    correctId={quizState.correctId}
+                                    currentAnswer={typeof currentAnswer === "number" ? currentAnswer : null}
+                                    onChange={(ans) => setCurrentAnswer(ans)}
+                                    status={status}
+                                />
                             )}
                             {activeQuizType === "FITB" && (
-                                <QuizFITB payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
+                                <QuizFITB
+                                    payload={payload}
+                                    currentAnswer={typeof currentAnswer === "string" ? currentAnswer : ""}
+                                    onChange={(ans) => setCurrentAnswer(ans)}
+                                    status={status}
+                                />
                             )}
-                            {activeQuizType === "Order" && currentAnswer && (
-                                <QuizOrder payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
+                            {activeQuizType === "Order" && Array.isArray(currentAnswer) && (
+                                <QuizOrder
+                                    payload={payload}
+                                    currentAnswer={currentAnswer}
+                                    onChange={(ans) => setCurrentAnswer(ans)}
+                                    status={status}
+                                />
                             )}
-                            {activeQuizType === "Pair" && currentAnswer && (
-                                <QuizPair payload={payload} currentAnswer={currentAnswer} onChange={setCurrentAnswer} status={status} />
+                            {activeQuizType === "Pair" && currentAnswer && typeof currentAnswer === "object" && !Array.isArray(currentAnswer) && (
+                                <QuizPair
+                                    payload={payload}
+                                    currentAnswer={currentAnswer as PairAnswer}
+                                    onChange={(ans) => setCurrentAnswer(ans)}
+                                    status={status}
+                                />
                             )}
                             {activeQuizType === "CP" && (
                                 <QuizCP
@@ -375,9 +414,9 @@ export default function InteractiveQuizClient({
                                     currentStepIndex={cpStepIndex}
                                     totalSteps={cpSteps.length}
                                     stepPrompt={currentStep?.prompt || activeQuiz.question_text}
-                                    stepExpected={currentStep?.expected || payload.expected || ""}
-                                    currentAnswer={currentAnswer}
-                                    onChange={setCurrentAnswer}
+                                    stepExpected={currentStep?.expected || (typeof payload.expected === "string" ? payload.expected : "")}
+                                    currentAnswer={typeof currentAnswer === "string" ? currentAnswer : ""}
+                                    onChange={(ans) => setCurrentAnswer(ans)}
                                     status={status}
                                     stepMessage={stepMessage}
                                 />

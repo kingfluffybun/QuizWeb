@@ -21,6 +21,7 @@ export interface ExtendedUser {
 export interface ExtendedToken {
     id?: string;
     sub?: string;
+    name?: string | null;
     role?: string;
     user_role?: string;
     token_version?: number;
@@ -31,6 +32,13 @@ export interface ExtendedToken {
 export interface ExtendedSession {
     user?: ExtendedUser;
     expires?: string;
+    [key: string]: unknown;
+}
+
+export interface ExtendedAccount {
+    provider?: string;
+    providerAccountId?: string;
+    type?: string;
     [key: string]: unknown;
 }
 
@@ -188,9 +196,10 @@ export const authConfig: NextAuthConfig = {
     ],
 
     events: {
-        async signOut(message: { token?: any; session?: any }) {
+        async signOut(message) {
             try {
-                const userId = message.token?.id || message.token?.sub || message.session?.user?.id;
+                const msg = message as { token?: ExtendedToken | null; session?: ExtendedSession | null };
+                const userId = msg.token?.id || msg.token?.sub || msg.session?.user?.id;
                 if (userId) {
                     await db.query(
                         "UPDATE user_auth_tbl SET token_version = token_version + 1 WHERE user_id = ?",
@@ -204,20 +213,16 @@ export const authConfig: NextAuthConfig = {
     },
 
     callbacks: {
-        async signIn({
-            user,
-            account,
-        }: {
-            user: any;
-            account?: any;
-        }) {
+        async signIn({ user, account }) {
+            const extUser = user as ExtendedUser;
+            const extAccount = account as ExtendedAccount | null | undefined;
             // Handle database syncing for new OAuth Logins
-            if ((account?.provider === "google" || account?.provider === "github") && user.email) {
+            if ((extAccount?.provider === "google" || extAccount?.provider === "github") && extUser.email) {
                 try {
                     // 1. Check if an account with user.email exists in user_auth_tbl
                     const [existingUser] = await db.query<RowDataPacket[]>(
                         "SELECT user_id, user_role, token_version FROM user_auth_tbl WHERE email = ? LIMIT 1",
-                        [user.email]
+                        [extUser.email]
                     );
 
                     if (existingUser.length > 0) {
@@ -226,7 +231,7 @@ export const authConfig: NextAuthConfig = {
                         // Check if user_oauth_tbl already has a row for this provider + providerAccountId
                         const [existingOAuth] = await db.query<RowDataPacket[]>(
                             "SELECT oauth_id, user_id FROM user_oauth_tbl WHERE provider_name = ? AND provider_account_id = ? LIMIT 1",
-                            [account.provider, account.providerAccountId]
+                            [extAccount.provider, extAccount.providerAccountId]
                         );
 
                         if (existingOAuth.length > 0) {
@@ -237,60 +242,57 @@ export const authConfig: NextAuthConfig = {
                             }
 
                             // Already linked to this user -> allow sign-in
-                            user.id = String(userId);
-                            const userWithRole = user as { role?: string; user_role?: string; token_version?: number; tokenVersion?: number };
-                            userWithRole.role = existingUser[0].user_role || "user";
-                            userWithRole.user_role = existingUser[0].user_role || "user";
-                            userWithRole.token_version = existingUser[0].token_version ?? 1;
-                            userWithRole.tokenVersion = existingUser[0].token_version ?? 1;
+                            extUser.id = String(userId);
+                            extUser.role = existingUser[0].user_role || "user";
+                            extUser.user_role = existingUser[0].user_role || "user";
+                            extUser.token_version = existingUser[0].token_version ?? 1;
+                            extUser.tokenVersion = existingUser[0].token_version ?? 1;
                             return true;
                         }
 
                         // NOT already linked -> verify whether an active authenticated session exists (SEC-04)
                         const activeSession = await getActiveSessionUser();
                         if (!activeSession || String(activeSession.id) !== String(userId)) {
-                            console.warn(`[SEC-04] Blocked unauthenticated OAuth account linking attempt for email: ${user.email}`);
+                            console.warn(`[SEC-04] Blocked unauthenticated OAuth account linking attempt for email: ${extUser.email}`);
                             return false;
                         }
 
                         // Active authenticated session exists -> link account in user_oauth_tbl and allow
                         await db.query(
                             "INSERT INTO user_oauth_tbl (user_id, provider_name, provider_account_id) VALUES (?, ?, ?)",
-                            [userId, account.provider, account.providerAccountId]
+                            [userId, extAccount.provider, extAccount.providerAccountId]
                         );
 
-                        user.id = String(userId);
-                        const userWithRole = user as { role?: string; user_role?: string; token_version?: number; tokenVersion?: number };
-                        userWithRole.role = existingUser[0].user_role || "user";
-                        userWithRole.user_role = existingUser[0].user_role || "user";
-                        userWithRole.token_version = existingUser[0].token_version ?? 1;
-                        userWithRole.tokenVersion = existingUser[0].token_version ?? 1;
+                        extUser.id = String(userId);
+                        extUser.role = existingUser[0].user_role || "user";
+                        extUser.user_role = existingUser[0].user_role || "user";
+                        extUser.token_version = existingUser[0].token_version ?? 1;
+                        extUser.tokenVersion = existingUser[0].token_version ?? 1;
                         return true;
                     }
 
                     // No existing account exists in user_auth_tbl -> allow new account creation
                     const [authResult] = await db.query<ResultSetHeader>(
                         "INSERT INTO user_auth_tbl (email, is_email_verified, token_version) VALUES (?, 1, 1)",
-                        [user.email]
+                        [extUser.email]
                     );
                     const userId = authResult.insertId;
 
                     await db.query(
                         "INSERT INTO player_tbl (user_id, username) VALUES (?, ?)",
-                        [userId, user.name || `player_${userId}`]
+                        [userId, extUser.name || `player_${userId}`]
                     );
 
                     await db.query(
                         "INSERT INTO user_oauth_tbl (user_id, provider_name, provider_account_id) VALUES (?, ?, ?)",
-                        [userId, account.provider, account.providerAccountId]
+                        [userId, extAccount.provider, extAccount.providerAccountId]
                     );
 
-                    user.id = String(userId);
-                    const userWithRole = user as { role?: string; user_role?: string; token_version?: number; tokenVersion?: number };
-                    userWithRole.role = "user";
-                    userWithRole.user_role = "user";
-                    userWithRole.token_version = 1;
-                    userWithRole.tokenVersion = 1;
+                    extUser.id = String(userId);
+                    extUser.role = "user";
+                    extUser.user_role = "user";
+                    extUser.token_version = 1;
+                    extUser.tokenVersion = 1;
                     return true;
                 } catch (error) {
                     console.error("Database error during OAuth sign-in:", error);
@@ -301,21 +303,64 @@ export const authConfig: NextAuthConfig = {
             return true;
         },
 
-        async jwt({ token, user }: { token: any; user?: any }) {
-            if (user) {
-                token.id = user.id;
-                const u = user as ExtendedUser;
-                token.role = u.role || u.user_role || "user";
-                token.user_role = u.user_role || u.role || "user";
-                token.tokenVersion = u.token_version || u.tokenVersion || 1;
-                return token;
+        async jwt({ token, user, trigger, session }) {
+            const extToken = token as ExtendedToken;
+            const extUser = user as ExtendedUser | undefined;
+            if (extUser) {
+                extToken.id = extUser.id;
+                extToken.role = extUser.role || extUser.user_role || "user";
+                extToken.user_role = extUser.user_role || extUser.role || "user";
+                extToken.tokenVersion = extUser.token_version || extUser.tokenVersion || 1;
+                return extToken;
             }
-            return token;
+
+            // Handle client or server-side explicit update trigger
+            if (trigger === "update" && session && typeof session === "object") {
+                const sess = session as Record<string, unknown>;
+                const updatedRole = (sess.role as string) || (sess.user_role as string) ||
+                    ((sess.user as Record<string, unknown>)?.role as string) ||
+                    ((sess.user as Record<string, unknown>)?.user_role as string);
+                if (updatedRole) {
+                    extToken.role = updatedRole;
+                    extToken.user_role = updatedRole;
+                }
+                const updatedName = (sess.name as string) ||
+                    ((sess.user as Record<string, unknown>)?.name as string);
+                if (updatedName) {
+                    extToken.name = updatedName;
+                }
+            }
+
+            // Refresh token role from database in Node runtime to ensure re-encrypted cookie is up to date
+            const userId = (extToken.id || extToken.sub) as string | undefined;
+            if (userId && typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge") {
+                try {
+                    const [rows] = await db.query<RowDataPacket[]>(
+                        "SELECT user_role, token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+                        [userId]
+                    );
+                    if (Array.isArray(rows) && rows.length > 0 && rows[0]?.user_role) {
+                        extToken.role = rows[0].user_role;
+                        extToken.user_role = rows[0].user_role;
+                    }
+                    const [playerRows] = await db.query<RowDataPacket[]>(
+                        "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
+                        [userId]
+                    );
+                    if (Array.isArray(playerRows) && playerRows.length > 0 && playerRows[0]?.username) {
+                        extToken.name = playerRows[0].username as string;
+                    }
+                } catch {
+                    // Gracefully retain existing token payload if DB query fails or in offline tests
+                }
+            }
+
+            return extToken;
         },
 
-        async session({ session, token }: { session: any; token: any }) {
-            const extSession = session as ExtendedSession | undefined;
-            const extToken = token as ExtendedToken | undefined;
+        async session({ session, token }) {
+            const extSession = session as unknown as ExtendedSession;
+            const extToken = token as unknown as ExtendedToken;
 
             if (!extToken) {
                 if (extSession) extSession.user = undefined;
@@ -334,6 +379,9 @@ export const authConfig: NextAuthConfig = {
                     extSession.user.id = userId;
                     extSession.user.role = extToken.role || extToken.user_role || "user";
                     extSession.user.user_role = extToken.user_role || extToken.role || "user";
+                    if (extToken.name) {
+                        extSession.user.name = extToken.name;
+                    }
                     if (extToken.tokenVersion !== undefined) {
                         extSession.user.tokenVersion = extToken.tokenVersion;
                     }
@@ -343,7 +391,7 @@ export const authConfig: NextAuthConfig = {
 
             try {
                 const [rows] = await db.query<RowDataPacket[]>(
-                    "SELECT token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+                    "SELECT user_role, token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
                     [userId]
                 );
 
@@ -355,6 +403,9 @@ export const authConfig: NextAuthConfig = {
                         extSession.user.id = String(userId);
                         extSession.user.role = extToken.role || extToken.user_role || "user";
                         extSession.user.user_role = extToken.user_role || extToken.role || "user";
+                        if (extToken.name) {
+                            extSession.user.name = extToken.name;
+                        }
                         if (extToken.tokenVersion !== undefined) {
                             extSession.user.tokenVersion = extToken.tokenVersion;
                         }
@@ -369,11 +420,30 @@ export const authConfig: NextAuthConfig = {
                     return null as unknown as typeof session;
                 }
 
+                let dbUsername: string | undefined;
+                try {
+                    const [playerRows] = await db.query<RowDataPacket[]>(
+                        "SELECT p.username FROM player_tbl p WHERE p.user_id = ? LIMIT 1",
+                        [userId]
+                    );
+                    if (Array.isArray(playerRows) && playerRows.length > 0 && playerRows[0]?.username) {
+                        dbUsername = playerRows[0].username as string;
+                    }
+                } catch {
+                    // Gracefully retain existing username if player query fails
+                }
+
                 if (extSession && extSession.user) {
+                    const dbRole = (rows[0]?.user_role as string) || extToken.role || extToken.user_role || "user";
                     extSession.user.id = String(userId);
-                    extSession.user.role = extToken.role || extToken.user_role || "user";
-                    extSession.user.user_role = extToken.user_role || extToken.role || "user";
+                    extSession.user.role = dbRole;
+                    extSession.user.user_role = dbRole;
                     extSession.user.tokenVersion = tokenVersion;
+                    if (dbUsername) {
+                        extSession.user.name = dbUsername;
+                    } else if (extToken.name) {
+                        extSession.user.name = extToken.name;
+                    }
                 }
                 return session;
             } catch (err: unknown) {
@@ -385,6 +455,9 @@ export const authConfig: NextAuthConfig = {
                         extSession.user.id = String(userId);
                         extSession.user.role = extToken.role || extToken.user_role || "user";
                         extSession.user.user_role = extToken.user_role || extToken.role || "user";
+                        if (extToken.name) {
+                            extSession.user.name = extToken.name;
+                        }
                         if (extToken.tokenVersion !== undefined) {
                             extSession.user.tokenVersion = extToken.tokenVersion;
                         }

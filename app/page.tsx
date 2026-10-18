@@ -9,7 +9,7 @@ import PublicNav from "@/app/components/publicNav";
 import * as Assets from "@/app/actions/animation/svg_assets";
 
 export default function Home() {
-    const [menuOpen, setMenuOpen] = useState(false);
+    const [menuOpen] = useState(false);
 
     useEffect(() => {
         const bodyOverflow = document.body.style.overflow;

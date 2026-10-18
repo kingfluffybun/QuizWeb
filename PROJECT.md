@@ -1,96 +1,143 @@
-# Project: QuizWeb Security Audit Remediation & ASVS v4.0.3 Chapter 3 Compliance
+# Project: QuizWeb Multi-Tier RBAC & Dashboard System
 
 ## Architecture
-- **Framework**: Next.js 16 (App Router) with React 19 and React Compiler
-- **Authentication**: Next-Auth (Auth.js) v5 beta (`next-auth@5.0.0-beta.32`) with JWT session strategy
-- **Database**: MySQL via `mysql2/promise` connection pool (`lib/db.ts`)
-- **Password Hashing**: `argon2` / `argon2id`
-- **Security Standard**: OWASP ASVS v4.0.3 Chapter 3 (Session Management) and related chapters (V2, V4, V11, V13)
-- **Verification Harness**: Standalone TypeScript test scripts in `tests/` (`tests/test-m1.ts` through `tests/test-m5.ts`) runnable via `node` / `npx --yes tsx`.
+QuizWeb is a Next.js (App Router, Node/Edge runtime) web application backed by MySQL (Azure Database for MySQL) and Next-Auth v5 (JWT session strategy). The system implements a three-tier Role-Based Access Control hierarchy: `admin`, `maintainer`, and `user` (default player).
 
----
+```
+                      [ Client Navigation / Browser ]
+                                     │
+                                     ▼
+                        [ middleware.ts (Edge) ]
+                 /admin, /pending  ──► admin only
+                 /maintainer, /input ──► admin & maintainer
+                 unauthenticated   ──► /login?callbackUrl=...
+                 unauthorized      ──► /home (or 403 JSON)
+                                     │
+                     ┌───────────────┼───────────────┐
+                     ▼               ▼               ▼
+               /admin          /maintainer       /home, /settings
+           [Admin Dashboard] [Maintainer Studio] [User Experience]
+             - User/Role Mgmt  - Question Studio  - Username update
+             - Review Queue    - My Submissions   - Password mgmt
+             - Platform Stats  - Author Stats     - Dynamic Sidebar
+                     │               │               │
+                     └───────────────┼───────────────┘
+                                     ▼
+                     [ Server Actions (Node Runtime) ]
+                       - app/actions/auth.ts (Next-Auth, Session)
+                       - app/actions/credentials.ts (Username & Password)
+                       - app/actions/admin.ts (Roles, Secret Key, Review)
+                       - app/actions/maintainer.ts (Submissions, Stats)
+                       - app/actions/quiz.ts (Quiz authoring, units)
+                                     │
+                                     ▼
+                        [ MySQL (Azure Database) ]
+             - user_auth_tbl (roles, password hashes, token_version)
+             - player_tbl (usernames, player profiles)
+             - pending_tbl (author_id, unit data, status, text notes)
+             - unit_tbl, unit_approved_tbl (approved curriculum)
+             - rate_limit_tbl (atomic lockout & brute-force defense)
+```
 
 ## Feature Inventory
-| # | Feature ID | Vulnerability | Description | Milestone | Source |
-|---|------------|---------------|-------------|-----------|--------|
-| 1 | F-01 | SEC-12 | Database Schema Migration (`token_version`, `attempts`, `locked_until`) and Idempotent Scripts | M1 | ORIGINAL_REQUEST R1, ASVS 3.3.1, 3.4.2 |
-| 2 | F-02 | SEC-12 | Token Storage Hardening: SHA-256 hashed storage for `user_otp_tbl` and `user_vrfy_tbl` | M1 | ORIGINAL_REQUEST R1, ASVS 2.7.5, 3.4.2 |
-| 3 | F-03 | SEC-12 | Milestone 1 Test Verification Script (`tests/test-m1.ts`) | M1 | ORIGINAL_REQUEST AC-M1 |
-| 4 | F-04 | SEC-03 | Next.js Route Middleware (`middleware.ts`) guarding `/pending/*` and `/input/*` for `admin` role | M2 | ORIGINAL_REQUEST R2, ASVS 4.1.1, 4.1.3 |
-| 5 | F-05 | SEC-03 | Authorization guards: wrap all 10 mutation actions in `app/actions/quiz.ts` with `requireAdmin()` | M2 | ORIGINAL_REQUEST R2, ASVS 4.1.1, 4.2.1 |
-| 6 | F-06 | SEC-06 | Remove public export of `clearLoginRateLimit` in `app/actions/auth.ts` to prevent unauthenticated RPC | M2 | ORIGINAL_REQUEST R2, ASVS 4.1.2, 13.1.4 |
-| 7 | F-07 | SEC-09 | Server-side Google reCAPTCHA v3 verification enforcement in `signUp` | M2 | ORIGINAL_REQUEST R2, ASVS 2.2.1, 11.1.4 |
-| 8 | F-08 | SEC-11 | Convert `/verify-email/[token]` from automatic GET mutation into explicit user-initiated POST | M2 | ORIGINAL_REQUEST R2, ASVS 3.1.1, 13.2.1 |
-| 9 | F-09 | SEC-03/06/09/11 | Milestone 2 Test Verification Script (`tests/test-m2.ts`) | M2 | ORIGINAL_REQUEST AC-M2 |
-| 10 | F-10 | SEC-05 | Next-Auth Session Revocation: validate `token.tokenVersion` against `user_auth_tbl` on session callback | M3 | ORIGINAL_REQUEST R3, ASVS 3.1.1, 3.3.1 |
-| 11 | F-11 | SEC-05 | Automatic `token_version` increment on password resets (`resetPass`) and logouts | M3 | ORIGINAL_REQUEST R3, ASVS 3.3.3, 3.5.3 |
-| 12 | F-12 | SEC-04 | Prevent automatic OAuth account linking in `signIn` callback unless active authenticated session exists | M3 | ORIGINAL_REQUEST R3, ASVS 3.2.1, 3.6.1 |
-| 13 | F-13 | SEC-04/05 | Milestone 3 Test Verification Script (`tests/test-m3.ts`) | M3 | ORIGINAL_REQUEST AC-M3 |
-| 14 | F-14 | SEC-01 | OTP Lifecycle: Server-side rate limiting and 5-attempt counter with permanent lockout in `verifyOTP` | M4 | ORIGINAL_REQUEST R4, ASVS 2.2.1, 3.7.1 |
-| 15 | F-15 | SEC-02 | OTP Replay Prevention & State Transition: enforce `expires_at` check and transition consumed OTP to `is_used = 2` | M4 | ORIGINAL_REQUEST R4, ASVS 2.8.4, 3.7.2 |
-| 16 | F-16 | SEC-08 | Anti-Enumeration: uniform timing and identical response messages in `reqPassReset` regardless of user existence | M4 | ORIGINAL_REQUEST R4, ASVS 2.1.8, 2.5.3 |
-| 17 | F-17 | SEC-10 | Email Flooding Prevention: rate limiting requests on `reqPassReset` | M4 | ORIGINAL_REQUEST R4, ASVS 2.2.1, 11.1.3 |
-| 18 | F-18 | SEC-01/02/08/10 | Milestone 4 Test Verification Script (`tests/test-m4.ts`) | M4 | ORIGINAL_REQUEST AC-M4 |
-| 19 | F-19 | SEC-07 | Concurrency: refactor `checkRateLimit` in `lib/rate-limit.ts` to atomic `INSERT ... ON DUPLICATE KEY UPDATE` | M5 | ORIGINAL_REQUEST R5, ASVS 11.1.6 |
-| 20 | F-20 | SEC-13 | Transaction Isolation: wrap `verifyEmail` in database transaction with pessimistic `SELECT ... FOR UPDATE` | M5 | ORIGINAL_REQUEST R5, ASVS 4.1.5, 11.1.6 |
-| 21 | F-21 | SEC-07/13 | Milestone 5 Test Verification Script (`tests/test-m5.ts`) | M5 | ORIGINAL_REQUEST AC-M5 |
+Every feature from ORIGINAL_REQUEST.md (2026-10-17T14:53:26Z) is mapped to its assigned milestone:
 
----
+| # | Feature | Description | Milestone | Source |
+|---|---------|-------------|-----------|--------|
+| 1 | Database Schema Hardening | Migrate `user_role` to VARCHAR(50), `pending_note` to TEXT, add `author_id` to `pending_tbl` with idempotent SQL scripts | M1 | Survey 1 & 3 |
+| 2 | Live Session Role Sync | Query `user_role` in `auth.ts` session callback for immediate role reflection without re-login | M1 | Survey 1 & 2 |
+| 3 | Staff Authorization Helpers | Provide `requireAdmin()` and `requireStaff()` / `requireMaintainerOrAdmin()` server utilities | M1 | Survey 2 |
+| 4 | Username Change | Allow users to update username in settings with format validation (3-30 chars) and uniqueness check against `player_tbl` | M2 | R1 |
+| 5 | Password Change (Local Accounts) | Allow users with passwords to change password after verifying current password, enforcing complexity | M2 | R1 |
+| 6 | Password Set (OAuth Accounts) | Allow OAuth-only accounts (`password_hash IS NULL`) to set an initial password without current password | M2 | R1 |
+| 7 | Admin Secret Key Elevation | Claim admin role using `ADMIN_SECRET_KEY` with constant-time comparison, atomic rate limiting, and password check | M2 | R3 |
+| 8 | Multi-Tier Route Protection | Update `middleware.ts` to guard `/admin/*`, `/pending/*` (admin) and `/maintainer/*`, `/input/*` (maintainer+admin) | M3 | R6 |
+| 9 | Dynamic Role-Aware Sidebar | Adapt `Sidebar.tsx` to display "Admin Panel", "Question Studio", and role badges (`Admin`, `Maintainer`) | M3 | R6 |
+| 10 | Post-Login Workspace Redirection | Direct users to role primary workspace upon login: admin -> `/admin`, maintainer -> `/maintainer`, user -> `/home` | M3 | R6 |
+| 11 | Maintainer Submission Attribution | Authoring questions/units attaches authenticated user `author_id` in `pending_tbl` | M3 | R5 |
+| 12 | Admin User & Role Management Table | Search by email/username, filter by role and password status (`Password Set`, `OAuth-Only`), promote/demote | M4 | R4 |
+| 13 | OAuth Password Gating Guard | Prevent promoting OAuth accounts without password to Maintainer/Admin, display "Password Required" notice | M4 | R2 |
+| 14 | Admin Secret Key Elevation in UI | Require `ADMIN_SECRET_KEY` when promoting a user to Admin in the dashboard | M4 | R4 |
+| 15 | Admin Review Queue Overview | Live count & list of pending submissions with inline/modal actions to approve or reject with feedback notes | M4 | R4 |
+| 16 | Platform Analytics Overview | Total quizzes, category breakdown, difficulty breakdown, contributor metrics across units and quizzes | M4 | R4 |
+| 17 | Maintainer Question Creation Studio | Link/embed quiz input tools to compose questions (MCQ, FITB, Pair, Order, CP steps) and lesson units | M5 | R5 |
+| 18 | Maintainer "My Submissions" Tracker | Filterable table of submissions authored by current maintainer with status badges, feedback notes, edit/resubmit | M5 | R5 |
+| 19 | Maintainer Personal Author Stats | Display personal counts of approved, pending, and total submissions on maintainer dashboard | M5 | R5 |
+| 20 | E2E Acceptance Verification | Pass 100% of E2E test suite (Tiers 1-4), adversarial test hardening (Tier 5), zero TS errors (`tsc --noEmit`) | M6 | Acceptance |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | Milestone 1: Database Schema & Token Storage Hardening | F-01, F-02, F-03 (SEC-12, schema migrations, SHA-256 token hashing, `tests/test-m1.ts`) | none | DONE |
-| 2 | Milestone 2: Route Protection & Access Control | F-04, F-05, F-06, F-07, F-08, F-09 (SEC-03, SEC-06, SEC-09, SEC-11, `tests/test-m2.ts`) | M1 | IN_PROGRESS |
-| 3 | Milestone 3: Authentication & Session Revocation | F-10, F-11, F-12, F-13 (SEC-04, SEC-05, `tests/test-m3.ts`) | M1, M2 | PLANNED |
-| 4 | Milestone 4: OTP Lifecycle, Anti-Abuse & Rate Limiting | F-14, F-15, F-16, F-17, F-18 (SEC-01, SEC-02, SEC-08, SEC-10, `tests/test-m4.ts`) | M1, M3 | PLANNED |
-| 5 | Milestone 5: Concurrency & Transaction Isolation | F-19, F-20, F-21 (SEC-07, SEC-13, `tests/test-m5.ts`) | M1, M2, M4 | PLANNED |
-
----
+| 1 | Database & Session Foundation | SQL migrations (003), `auth.ts` session live role sync, staff authorization helpers, env config | none | DONE (Verified: 003_rbac_roles.sql live applied, lib/rbac.ts fail-closed, auth.ts SEC-05 invariant, 342/342 tests pass) |
+| 2 | Credential Management & Elevation | Change username, change/set password, secret key admin elevation with rate limiting, Settings UI | M1 | DONE (Verified: app/actions/credentials.ts, app/actions/admin.ts, app/settings/SettingsClient.tsx, 78/78 Ch1, 44/44 Ch2, 137/137 E2E pass) |
+| 3 | Routing Guards & Dynamic Navigation | Middleware update (`/admin`, `/maintainer`, `/pending`, `/input`), Sidebar role badges & links, post-login routing | M1, M2 | DONE (Verified: middleware.ts multi-tier, Sidebar.tsx badges & tokens, lib/rbac.ts post-login, app/actions/quiz.ts author_id & pending_tbl schema, 18/18 Ch3, 143/143 Ch1, 137/137 E2E pass) |
+| 4 | Dedicated Admin Dashboard | `/admin` page: User table (search/filter/promote), password guard, review queue overview, platform analytics | M1, M2, M3 | DONE (Verified: app/admin/*, app/actions/admin.ts, 0 Tailwind tokens, 72/72 Ch1, 26/26 Ch2, 30/30 Rev1, Rev2 APPROVE, Auditor CLEAN) |
+| 5 | Dedicated Maintainer Studio | `/maintainer` page: Studio launcher, "My Submissions" filterable tracker, feedback viewer, author stats | M1, M3 | DONE (Verified: app/maintainer/*, app/actions/maintainer.ts, 100% vanilla CSS, 19/19 Rev1, Rev2 APPROVE, 25/25 Ch1, 23/23 Ch2, Auditor CLEAN) |
+| 6 | E2E Testing, Adversarial Hardening & Victory Audit | Run 100% of E2E test suite (Tiers 1-4), Tier 5 adversarial tests, clean-room audit, `tsc --noEmit` clean | M1, M2, M3, M4, M5 | DONE (Verified: 137/137 E2E pass, 40/40 Auth stress pass, 23/23 Studio stress pass, 0 TS errors, 0 ESLint errors/warnings, Auditor CLEAN) |
 
 ## Interface Contracts
 
-### 1. Database Schema Contracts (`migrations/`)
-- `user_auth_tbl`: `token_version INT NOT NULL DEFAULT 1`
-- `user_otp_tbl`: `otp_code VARCHAR(255)` (storing 64-char hex SHA-256 hash), `attempts INT NOT NULL DEFAULT 0`, `locked_until DATETIME NULL`, `is_used INT NOT NULL DEFAULT 0` (0=unused, 1=verified, 2=consumed)
-- `user_vrfy_tbl`: `verification_token VARCHAR(255)` (storing 64-char hex SHA-256 hash), `attempts INT NOT NULL DEFAULT 0`, `locked_until DATETIME NULL`
-- `rate_limit_tbl`: `limit_key VARCHAR(255) PRIMARY KEY`, `attempts INT NOT NULL DEFAULT 0`, `reset_at BIGINT NOT NULL`, `blocked TINYINT(1) NOT NULL DEFAULT 0`
+### Server Action Contracts (`app/actions/credentials.ts`)
+- `updateUsername(newUsername: string): Promise<{ success: boolean; error?: string }>`
+  - Validates format: `/^[a-zA-Z0-9_.\- ]{3,30}$/`.
+  - Enforces uniqueness in `player_tbl` for `user_id != currentUser.id`.
+- `changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ success: boolean; error?: string }>`
+  - Requires user has existing `password_hash`.
+  - Verifies `currentPassword` with `argon2.verify`.
+  - Validates `newPassword` against security rules (8-24 chars, upper, lower, number, symbol).
+  - Updates `user_auth_tbl` with `argon2.hash(newPassword)`.
+- `setPasswordForOAuth(newPassword: string, confirmPassword: string): Promise<{ success: boolean; error?: string }>`
+  - Validates user has `password_hash IS NULL`.
+  - Validates complexity and updates `user_auth_tbl` with new hash.
 
-### 2. Route Protection & Authorization (`middleware.ts`, `app/actions/quiz.ts`)
-- `middleware.ts`: Intercepts `/pending/:path*` and `/input/:path*`. Requires authenticated session with `user_role === 'admin'`. Unauthenticated redirects to `/login`. Non-admin redirects or returns 403.
-- `requireAdmin()`: Returns `Promise<{ id: string, role: string }>` if admin, throws `Error("Unauthorized: Admin role required")` or returns `{ error: "Unauthorized" }` if not.
-- 10 mutation functions in `app/actions/quiz.ts` call `await requireAdmin()` before performing any DB operations.
+### Server Action Contracts (`app/actions/admin.ts`)
+- `claimAdminWithSecretKey(secretKey: string): Promise<{ success: boolean; error?: string }>`
+  - Checks user has `password_hash IS NOT NULL`.
+  - Rate limits with `checkRateLimit('admin_elevation:' + userId, true)`.
+  - Constant-time comparison `crypto.timingSafeEqual` over SHA-256 digests against `process.env.ADMIN_SECRET_KEY`.
+  - Updates `user_role = 'admin'` in `user_auth_tbl`.
+- `promoteUser(targetUserId: number, targetRole: 'maintainer' | 'admin', adminSecretKey?: string): Promise<{ success: boolean; error?: string }>`
+  - Caller must be `admin`.
+  - Verifies target user has `password_hash IS NOT NULL` (rejects with "Password Required" if null).
+  - If elevating to `admin`, verifies `adminSecretKey`.
+  - Updates `user_role` in `user_auth_tbl`.
+- `demoteUser(targetUserId: number): Promise<{ success: boolean; error?: string }>`
+  - Caller must be `admin`. Cannot demote oneself.
+  - Updates `user_role = 'user'`.
+- `getAdminUsers(query?: string, roleFilter?: string, passwordFilter?: string): Promise<{ users: AdminUserRecord[] }>`
+- `getAdminAnalytics(): Promise<PlatformAnalytics>`
+- `getAdminReviewQueue(): Promise<PendingReviewItem[]>`
 
-### 3. Session Revocation & OAuth Linking (`auth.ts`)
-- `callbacks.session`: Queries `user_auth_tbl.token_version` by `token.id`. If `dbUser.token_version !== token.tokenVersion`, terminates session / returns null.
-- `callbacks.signIn`: For OAuth providers (`google`, `github`), if an existing account exists for the email, linking is rejected unless an active session is currently authenticated.
+### Server Action Contracts (`app/actions/maintainer.ts`)
+- `getMaintainerSubmissions(): Promise<{ submissions: MaintainerSubmission[] }>`
+  - Filters by current maintainer's `user_id` (or fallback to `pending_name`).
+- `getMaintainerStats(): Promise<{ approved: number; pending: number; rejected: number; total: number }>`
 
-### 4. OTP & Reset Password Contracts (`app/actions/auth.ts`)
-- `reqPassReset(email: string)`: Returns `{ success: true, message: "If an account exists with this email, a reset code has been sent." }` for both existing and nonexistent users. Rate limited to 5 attempts per 15 minutes.
-- `verifyOTP(email: string, otp: string)`: Hashes `otp` with SHA-256 before lookup. Checks `attempts < 5` and `locked_until === null`. Increments `attempts` on invalid code. Sets `attempts = 5` and locks on 5th failure. Transitions to `is_used = 1` on success.
-- `resetPass(email: string, otp: string, newPassword: string)`: Checks `is_used === 1` and `NOW() < expires_at`. Updates password, transitions OTP to `is_used = 2`, increments `token_version = token_version + 1` in `user_auth_tbl`.
-
-### 5. Rate Limiting & Transaction Contracts (`lib/rate-limit.ts`, `app/actions/auth.ts`)
-- `checkRateLimit(key: string, isIncrement: boolean)`: Executes single atomic query:
-  `INSERT INTO rate_limit_tbl (limit_key, attempts, reset_at, blocked) VALUES (?, 1, ?, 0) ON DUPLICATE KEY UPDATE attempts = IF(reset_at < ?, 1, attempts + ?), reset_at = IF(reset_at < ?, ?, reset_at), blocked = IF(attempts >= ?, 1, 0)`
-- `verifyEmail(token: string)`: Opens `await db.getConnection()`, executes `await connection.beginTransaction()`. Executes `SELECT ... FROM user_vrfy_tbl WHERE verification_token = ? FOR UPDATE`. Inserts into `user_auth_tbl` and `player_tbl`, deletes from `user_vrfy_tbl`, and commits transaction.
-
----
+### Middleware & Navigation Contracts
+- `middleware.ts`:
+  - `adminPaths = ["/admin", "/pending"]`: requires `role === "admin"`.
+  - `staffPaths = ["/maintainer", "/input"]`: requires `role === "admin" || role === "maintainer"`.
+  - Redirection: unauthenticated -> `/login?callbackUrl=...`, unauthorized -> `/home`.
+- `Sidebar.tsx`:
+  - Accepts `role?: string` and `username?: string`.
+  - Displays "Admin Panel" (`/admin`) for `admin`.
+  - Displays "Question Studio" (`/maintainer`) for `admin` and `maintainer`.
+  - Displays badge (`Admin` or `Maintainer`) beside profile.
 
 ## Code Layout
-- `migrations/`:
-  - `001_initial_schema.sql` (baseline idempotent table DDLs)
-  - `002_security_hardening.sql` (idempotent schema modifications for M1)
-  - `002_security_hardening_rollback.sql` (rollback script for M1)
-- `middleware.ts`: Next.js root route middleware for route protection (M2)
-- `app/actions/quiz.ts`: Admin mutation actions with `requireAdmin()` (M2)
-- `app/actions/auth.ts`: Authentication, signup, OTP, resetPass, verifyEmail actions (M1, M2, M3, M4, M5)
-- `app/verify-email/[token]/`: User-initiated POST email verification (M2)
-- `auth.ts`: Next-Auth configuration with session revocation & OAuth linking (M3)
-- `lib/rate-limit.ts`: Atomic rate limiting implementation (M5)
-- `tests/`:
-  - `tests/test-m1.ts`: Milestone 1 verification script
-  - `tests/test-m2.ts`: Milestone 2 verification script
-  - `tests/test-m3.ts`: Milestone 3 verification script
-  - `tests/test-m4.ts`: Milestone 4 verification script
-  - `tests/test-m5.ts`: Milestone 5 verification script
+- `migrations/003_rbac_roles.sql`: Idempotent schema modifications.
+- `migrations/003_rbac_roles_rollback.sql`: Rollback script.
+- `auth.ts`: Next-Auth configuration with live role synchronization in `session()` callback.
+- `middleware.ts`: Multi-tier route protection.
+- `lib/rbac.ts`: Shared RBAC type definitions, role constants, and permission assertion helpers.
+- `app/actions/credentials.ts`: Username and password server actions.
+- `app/actions/admin.ts`: Administrative management server actions.
+- `app/actions/maintainer.ts`: Maintainer studio server actions.
+- `app/components/Sidebar.tsx`: Dynamic role-aware navigation component.
+- `app/settings/page.tsx`: Settings UI with username and password management.
+- `app/admin/`: Dedicated Admin Dashboard (`page.tsx`, `AdminUserTable.tsx`, `AdminReviewQueue.tsx`, `AdminAnalytics.tsx`).
+- `app/maintainer/`: Dedicated Maintainer Studio (`page.tsx`, `MaintainerSubmissions.tsx`, `MaintainerStats.tsx`).
+- `app/post-login/`: Server redirection resolver for post-login routing.
+- `public/css/admin.css`: Admin dashboard styles using design tokens (no Tailwind).
+- `public/css/maintainer.css`: Maintainer studio styles using design tokens (no Tailwind).
+- `tests/test-rbac-e2e.ts`: Standalone E2E verification test harness.

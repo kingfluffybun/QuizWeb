@@ -1,6 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+const DEFAULT_SETTINGS = {
+  theme: "light",
+  uiScale: "100",
+  reduceMotion: false,
+};
+
+function readStoredSettings() {
+  if (typeof window === "undefined") return DEFAULT_SETTINGS;
+  try {
+    const saved = localStorage.getItem("app-accessibility-settings");
+    if (!saved) return DEFAULT_SETTINGS;
+    const parsed = JSON.parse(saved);
+    return {
+      theme: parsed.theme || "light",
+      uiScale: parsed.uiScale || "100",
+      reduceMotion: parsed.reduceMotion !== undefined ? Boolean(parsed.reduceMotion) : false,
+    };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+const emptySubscribe = () => () => {};
 
 type AccessibilityPanelProps = {
   isClosing?: boolean;
@@ -9,24 +33,11 @@ type AccessibilityPanelProps = {
 };
 
 export default function AccessibilityPanel({ isClosing = false, onClose, onClosed }: AccessibilityPanelProps) {
-  const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useState("light");
-  const [uiScale, setUiScale] = useState("100");
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const [theme, setTheme] = useState<string>(() => readStoredSettings().theme);
+  const [uiScale, setUiScale] = useState<string>(() => readStoredSettings().uiScale);
+  const [reduceMotion, setReduceMotion] = useState<boolean>(() => readStoredSettings().reduceMotion);
   const panelRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-    const saved = localStorage.getItem("app-accessibility-settings");
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed.theme) setTheme(parsed.theme);
-      if (parsed.uiScale) setUiScale(parsed.uiScale);
-      if (parsed.reduceMotion !== undefined) setReduceMotion(parsed.reduceMotion);
-    } catch {}
-  }, []);
 
   useEffect(() => {
     if (!isMounted) return;

@@ -2,14 +2,23 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+const adminRoutes = ["/admin", "/pending"];
+const staffRoutes = ["/maintainer", "/input"];
+
 export const middleware = auth(async function middleware(req) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
 
-  // Only protect /pending/* and /input/* routes
-  const isProtected =
-    pathname.startsWith("/pending") || pathname.startsWith("/input");
-  if (!isProtected) {
+  // 1. Programmatic route categorization (exact boundary matching)
+  const isAdminPath = adminRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+  const isStaffPath = staffRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+
+  // Pass through any public routes or static assets
+  if (!isAdminPath && !isStaffPath) {
     return NextResponse.next();
   }
 
@@ -17,7 +26,7 @@ export const middleware = auth(async function middleware(req) {
   let user = session?.user as { role?: string; user_role?: string; id?: string } | undefined;
   let role = user?.role || user?.user_role;
 
-  // Extract role/user from session with JWT token fallback (e.g. standard cookie test harnesses)
+  // Extract role/user from session with JWT token fallback (for test harness/direct invocations)
   if (!user || !role) {
     const token = await getToken({
       req,
@@ -33,22 +42,41 @@ export const middleware = auth(async function middleware(req) {
     }
   }
 
-  // 1. Unauthenticated: redirect to /login with callbackUrl
+  // 2. Unauthenticated check: redirect to /login preserving full pathname and query params
   if (!user) {
     const loginUrl = new URL("/login", nextUrl.origin);
-    loginUrl.searchParams.set("callbackUrl", pathname + nextUrl.search);
+    const fullPath = nextUrl.search ? `${pathname}${nextUrl.search}` : pathname;
+    loginUrl.searchParams.set("callbackUrl", fullPath);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2. Non-admin: reject with 403 or redirect to /home
-  if (role !== "admin") {
-    if (req.headers.get("accept")?.includes("application/json")) {
-      return new NextResponse(
-        JSON.stringify({ error: "Forbidden: Admin role required" }),
-        { status: 403, headers: { "content-type": "application/json" } }
-      );
+  // 3. Multi-Tier Authorization Checks
+  // Tier 1: Admin-only paths (/admin, /pending) strictly require role === 'admin'
+  if (isAdminPath) {
+    if (role !== "admin") {
+      if (req.headers.get("accept")?.includes("application/json")) {
+        return new NextResponse(
+          JSON.stringify({ error: "Forbidden: Admin role required" }),
+          { status: 403, headers: { "content-type": "application/json" } }
+        );
+      }
+      return NextResponse.redirect(new URL("/home", nextUrl.origin));
     }
-    return NextResponse.redirect(new URL("/home", nextUrl.origin));
+    return NextResponse.next();
+  }
+
+  // Tier 2: Staff paths (/maintainer, /input) require role === 'admin' || role === 'maintainer'
+  if (isStaffPath) {
+    if (role !== "admin" && role !== "maintainer") {
+      if (req.headers.get("accept")?.includes("application/json")) {
+        return new NextResponse(
+          JSON.stringify({ error: "Forbidden: Maintainer or Admin role required" }),
+          { status: 403, headers: { "content-type": "application/json" } }
+        );
+      }
+      return NextResponse.redirect(new URL("/home", nextUrl.origin));
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();
@@ -57,5 +85,10 @@ export const middleware = auth(async function middleware(req) {
 export default middleware;
 
 export const config = {
-  matcher: ["/pending/:path*", "/input/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/pending/:path*",
+    "/maintainer/:path*",
+    "/input/:path*",
+  ],
 };

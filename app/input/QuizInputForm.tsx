@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, startTransition } from "react";
 import Editor from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
 import LessonCard, { LessonCodeFrame } from "@/app/components/LessonCard";
 import {
-  createQuiz,
   getPaginatedRecentQuizzes,
-  updateQuiz,
-  updatePendingQuizFromForm,
   updatePendingUnitFromForm,
   getPendingQuizById,
   deleteQuiz,
@@ -23,18 +20,83 @@ import type {
   QuizMetricsData,
 } from "../actions/quiz";
 
+export interface SavedLessonSlide {
+  lesson_text?: string;
+  text?: string;
+  lesson_title?: string;
+  title?: string;
+  lesson_code?: string;
+  code?: string;
+}
+
+export interface QuizPayload {
+  title?: string;
+  options?: string[];
+  correct_index?: number;
+  answer?: string;
+  items?: string[];
+  pairs?: { left: string; right: string }[];
+  steps?: { prompt?: string; template?: string; expected?: string }[];
+  prompts?: string[];
+  template?: string;
+  expected?: string;
+  quizzes?: QueuedQuizEntry[];
+  lesson_card?: {
+    lesson_slide?: SavedLessonSlide[];
+    lesson_slides?: SavedLessonSlide[];
+    lesson_text?: string;
+    lesson_title?: string;
+    lesson_code?: string;
+    lesson_card?: { lesson_text?: string };
+    [key: string]: unknown;
+  };
+  lesson_text?: string;
+  assessment?: {
+    assessment?: string;
+    title?: string;
+    description?: string;
+    steps?: string[];
+    expected_outcome?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface RecentQuizItem {
+  quiz_id: number;
+  cat_id?: number;
+  sec_id?: number;
+  difficulty_id?: number;
+  quiz_type_id?: number | string;
+  cat_name?: string;
+  sec_num?: string | number;
+  difficulty_name?: string;
+  type_name?: string;
+  question_text?: string;
+  quiz_payload?: QuizPayload | null;
+}
+
+export interface EditingQuizItem extends Omit<RecentQuizItem, "quiz_id"> {
+  quiz_id?: number;
+  pending_id?: number;
+  unit?: number;
+  unit_assessment?: unknown;
+  _pendingUnit?: boolean;
+  _queuedUnitQuiz?: boolean;
+}
+
 interface QuizInputFormProps {
   categories: Category[];
   difficulties: Difficulty[];
   types: QuizType[];
   sections?: { sec_id: number; sec_num: string }[];
-  initialRecentQuizzes: any[];
+  initialRecentQuizzes: RecentQuizItem[];
   initialPage: number;
   initialTotalPages: number;
   initialTotalCount: number;
   initialMetrics?: QuizMetricsData;
   showRecentQuizzes?: boolean;
-  initialEditingQuiz?: any;
+  initialEditingQuiz?: EditingQuizItem | null;
 }
 
 type QueuedQuizEntry = {
@@ -98,12 +160,12 @@ export default function QuizInputForm({
   const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
   const [recentQuizzes, setRecentQuizzes] =
-    useState<any[]>(initialRecentQuizzes);
+    useState<RecentQuizItem[]>(initialRecentQuizzes);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [isPending, setIsPending] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<any | null>(
+  const [editingQuiz, setEditingQuiz] = useState<EditingQuizItem | null>(
     initialEditingQuiz ?? null,
   );
 
@@ -114,7 +176,7 @@ export default function QuizInputForm({
       if (!pendingId) return;
       window.sessionStorage.removeItem("quizweb-edit-pending-id");
       void getPendingQuizById(Number(pendingId)).then((quiz) => {
-        if (quiz) setEditingQuiz(quiz);
+        if (quiz) setEditingQuiz(quiz as unknown as EditingQuizItem);
       });
     };
     const handleEditRequest = (event: Event) => {
@@ -184,7 +246,7 @@ export default function QuizInputForm({
   const [selectedDiffId, setSelectedDiffId] = useState<string>("");
   const [selectedSecId, setSelectedSecId] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
-  const [queuedQuizzes, setQueuedQuizzes] = useState<any[]>([]);
+  const [queuedQuizzes, setQueuedQuizzes] = useState<QueuedQuizEntry[]>([]);
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
   const [fitbAnswer, setFitbAnswer] = useState<string>("");
@@ -308,7 +370,7 @@ export default function QuizInputForm({
             Advanced: 3,
           };
           return (
-            (rank[a.difficulty_name] || 99) - (rank[b.difficulty_name] || 99)
+            (rank[a.difficulty_name || ""] || 99) - (rank[b.difficulty_name || ""] || 99)
           );
         }
         case "diff_desc": {
@@ -318,11 +380,11 @@ export default function QuizInputForm({
             Advanced: 3,
           };
           return (
-            (rank[b.difficulty_name] || 99) - (rank[a.difficulty_name] || 99)
+            (rank[b.difficulty_name || ""] || 99) - (rank[a.difficulty_name || ""] || 99)
           );
         }
         default:
-          return b.quiz_id - a.quiz_id;
+          return (b.quiz_id ?? 0) - (a.quiz_id ?? 0);
       }
     });
 
@@ -402,7 +464,7 @@ export default function QuizInputForm({
     if (typeName === "CP") {
       const title = (formData.get("cp_title") as string | null)?.trim() ?? "";
       const promptCount = Number(formData.get("cp_prompt_count") ?? cpPromptCount);
-      const steps: any[] = [];
+      const steps: { prompt: string; template: string; expected: string }[] = [];
       for (let idx = 0; idx < promptCount; idx++) {
         const prompt = (formData.get(`cp_prompt_${idx}`) as string | null)?.trim() ?? "";
         const template = (formData.get(`cp_template_${idx}`) as string | null)?.trim() ?? "";
@@ -530,25 +592,35 @@ export default function QuizInputForm({
     setCpPromptCount((count) => Math.max(1, count - 1));
   };
 
-  const loadQuizPage = async (page: number) => {
-    setIsPending(true);
-    try {
-      const result = await getPaginatedRecentQuizzes(page, 20, {
-        id: idFilter,
-        search: searchFilter,
-        category: categoryFilter,
-        section: sectionFilter,
-        difficulty: difficultyFilter,
-        type: typeFilter,
-      });
-      setRecentQuizzes(result.quizzes);
-      setCurrentPage(result.currentPage);
-      setTotalPages(result.totalPages);
-      setTotalCount(result.totalCount);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const loadQuizPage = useCallback(
+    async (page: number) => {
+      setIsPending(true);
+      try {
+        const result = await getPaginatedRecentQuizzes(page, 20, {
+          id: idFilter,
+          search: searchFilter,
+          category: categoryFilter,
+          section: sectionFilter,
+          difficulty: difficultyFilter,
+          type: typeFilter,
+        });
+        setRecentQuizzes(result.quizzes as RecentQuizItem[]);
+        setCurrentPage(result.currentPage);
+        setTotalPages(result.totalPages);
+        setTotalCount(result.totalCount);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      idFilter,
+      searchFilter,
+      categoryFilter,
+      sectionFilter,
+      difficultyFilter,
+      typeFilter,
+    ],
+  );
 
   useEffect(() => {
     if (!showRecentQuizzes) return;
@@ -558,121 +630,111 @@ export default function QuizInputForm({
     }, 150);
 
     return () => window.clearTimeout(refreshTimer);
-  }, [
-    idFilter,
-    searchFilter,
-    categoryFilter,
-    sectionFilter,
-    difficultyFilter,
-    typeFilter,
-    showRecentQuizzes,
-  ]);
+  }, [loadQuizPage, showRecentQuizzes]);
 
   useEffect(() => {
     if (types.length > 0 && !hasInitializedType.current) {
       setSelectedTypeId(types[0].quiz_type_id.toString());
       hasInitializedType.current = true;
     }
-  }, [types, selectedTypeId]);
+  }, [types]);
 
   // Synchronize live authoring telemetry states with editing state
   useEffect(() => {
-    if (editingQuiz) {
-      setSelectedTypeId(editingQuiz.quiz_type_id?.toString() ?? "");
-      setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
-      setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
-      setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
-      setSelectedUnit(editingQuiz.unit?.toString() ?? "");
-      setQuestionText(editingQuiz.question_text ?? "");
-      setAssessmentSteps(
-        getAssessmentSteps(
-          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "",
-        ),
-      );
-      setAssessmentTitle(
-        getAssessmentTitle(
-          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
-        ),
-      );
-      setAssessmentDescription(
-        getAssessmentDescription(
-          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
-        ),
-      );
-      setExpectedOutcome(
-        getExpectedOutcome(
-          editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
-        ),
-      );
-      setFitbAnswer(editingQuiz.quiz_payload?.answer ?? "");
-      setOrderItems(
-        editingQuiz.type_name === "Order" &&
-          Array.isArray(editingQuiz.quiz_payload?.items)
-          ? editingQuiz.quiz_payload.items
-          : ["", "", "", ""],
-      );
-      setPairValues(
-        editingQuiz.type_name === "Pair" &&
-          Array.isArray(editingQuiz.quiz_payload?.pairs)
-          ? editingQuiz.quiz_payload.pairs
-          : [
-              { left: "", right: "" },
-              { left: "", right: "" },
-              { left: "", right: "" },
-              { left: "", right: "" },
-            ],
-      );
-      if (editingQuiz.type_name === "MCQ") {
-        setMcqOptions(
-          Array.isArray(editingQuiz.quiz_payload?.options)
-            ? editingQuiz.quiz_payload.options
+    startTransition(() => {
+      if (editingQuiz) {
+        setSelectedTypeId(editingQuiz.quiz_type_id?.toString() ?? "");
+        setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
+        setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
+        setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
+        setSelectedUnit(editingQuiz.unit?.toString() ?? "");
+        setQuestionText(editingQuiz.question_text ?? "");
+        setAssessmentSteps(
+          getAssessmentSteps(
+            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "",
+          ),
+        );
+        setAssessmentTitle(
+          getAssessmentTitle(
+            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
+          ),
+        );
+        setAssessmentDescription(
+          getAssessmentDescription(
+            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
+          ),
+        );
+        setExpectedOutcome(
+          getExpectedOutcome(
+            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
+          ),
+        );
+        setFitbAnswer(editingQuiz.quiz_payload?.answer ?? "");
+        setOrderItems(
+          editingQuiz.type_name === "Order" &&
+            Array.isArray(editingQuiz.quiz_payload?.items)
+            ? editingQuiz.quiz_payload.items
             : ["", "", "", ""],
         );
-        setMcqCorrectIndex(editingQuiz.quiz_payload?.correct_index ?? 0);
+        setPairValues(
+          editingQuiz.type_name === "Pair" &&
+            Array.isArray(editingQuiz.quiz_payload?.pairs)
+            ? editingQuiz.quiz_payload.pairs
+            : [
+                { left: "", right: "" },
+                { left: "", right: "" },
+                { left: "", right: "" },
+                { left: "", right: "" },
+              ],
+        );
+        if (editingQuiz.type_name === "MCQ") {
+          setMcqOptions(
+            Array.isArray(editingQuiz.quiz_payload?.options)
+              ? editingQuiz.quiz_payload.options
+              : ["", "", "", ""],
+          );
+          setMcqCorrectIndex(editingQuiz.quiz_payload?.correct_index ?? 0);
+        }
+        setOptionCount(
+          editingQuiz.type_name === "Order"
+            ? Math.max(4, editingQuiz.quiz_payload?.items?.length ?? 0)
+            : editingQuiz.type_name === "Pair"
+              ? Math.max(4, editingQuiz.quiz_payload?.pairs?.length ?? 0)
+              : 4,
+        );
+        if (editingQuiz.type_name === "CP") {
+          const stepCount =
+            editingQuiz.quiz_payload?.steps?.length ??
+            editingQuiz.quiz_payload?.prompts?.length ??
+            1;
+          setCpPromptCount(Math.max(1, stepCount));
+        }
+      } else {
+        setSelectedCatId((prev) => (!prev && categories.length > 0 ? categories[0].cat_id.toString() : prev));
+        setSelectedDiffId((prev) => (!prev && difficulties.length > 0 ? difficulties[0].difficulty_id.toString() : prev));
+        setSelectedSecId("");
+        setSelectedUnit("");
+        setQuestionText("");
+        setUnitTitle("");
+        setLessonSlides([{ text: "" }]);
+        setCurrentLessonSlide(0);
+        setLessonEditorView("code");
+        setMcqOptions(["", "", "", ""]);
+        setMcqCorrectIndex(0);
+        setFitbAnswer("");
+        setOrderItems(["", "", "", ""]);
+        setPairValues([
+          { left: "", right: "" },
+          { left: "", right: "" },
+          { left: "", right: "" },
+          { left: "", right: "" },
+        ]);
+        setAssessmentSteps([""]);
+        setAssessmentTitle("");
+        setAssessmentDescription("");
+        setExpectedOutcome("");
       }
-      setOptionCount(
-        editingQuiz.type_name === "Order"
-          ? Math.max(4, editingQuiz.quiz_payload?.items?.length ?? 0)
-          : editingQuiz.type_name === "Pair"
-            ? Math.max(4, editingQuiz.quiz_payload?.pairs?.length ?? 0)
-            : 4,
-      );
-      if (editingQuiz.type_name === "CP") {
-        const stepCount =
-          editingQuiz.quiz_payload?.steps?.length ??
-          editingQuiz.quiz_payload?.prompts?.length ??
-          1;
-        setCpPromptCount(Math.max(1, stepCount));
-      }
-    } else {
-      if (categories.length > 0 && !selectedCatId) {
-        setSelectedCatId(categories[0].cat_id.toString());
-      }
-      if (difficulties.length > 0 && !selectedDiffId) {
-        setSelectedDiffId(difficulties[0].difficulty_id.toString());
-      }
-      setSelectedSecId("");
-      setSelectedUnit("");
-      setQuestionText("");
-      setUnitTitle("");
-      setLessonSlides([{ text: "" }]);
-      setCurrentLessonSlide(0);
-      setLessonEditorView("code");
-      setMcqOptions(["", "", "", ""]);
-      setMcqCorrectIndex(0);
-      setFitbAnswer("");
-      setOrderItems(["", "", "", ""]);
-      setPairValues([
-        { left: "", right: "" },
-        { left: "", right: "" },
-        { left: "", right: "" },
-        { left: "", right: "" },
-      ]);
-      setAssessmentSteps([""]);
-      setAssessmentTitle("");
-      setAssessmentDescription("");
-      setExpectedOutcome("");
-    }
+    });
   }, [editingQuiz, categories, difficulties]);
 
   const refreshMetrics = async () => {
@@ -716,9 +778,9 @@ export default function QuizInputForm({
       breakdown.length > 0
         ? breakdown
         : recentQuizzes.map((q) => ({
-            cat_name: q.cat_name,
-            difficulty_name: q.difficulty_name,
-            type_name: q.type_name,
+            cat_name: q.cat_name ?? "",
+            difficulty_name: q.difficulty_name ?? "",
+            type_name: q.type_name ?? "",
             count: 1,
           }));
 
@@ -857,9 +919,10 @@ export default function QuizInputForm({
     }
 
     try {
-      const unitResult = editingQuiz?._pendingUnit
-        ? await updatePendingUnitFromForm(editingQuiz.pending_id, formData)
-        : await saveUnit(null, formData);
+      const unitResult =
+        editingQuiz?._pendingUnit && typeof editingQuiz.pending_id === "number"
+          ? await updatePendingUnitFromForm(editingQuiz.pending_id, formData)
+          : await saveUnit(null, formData);
       if (unitResult.error) {
         setMessage({ type: "error", text: unitResult.error });
         return;
@@ -914,7 +977,7 @@ export default function QuizInputForm({
     }
   };
 
-  const handleEdit = (quiz: any) => {
+  const handleEdit = (quiz: RecentQuizItem) => {
     if (quiz.type_name === "Unit") {
       const pendingQuizzes = Array.isArray(quiz.quiz_payload?.quizzes)
         ? quiz.quiz_payload.quizzes
@@ -926,9 +989,10 @@ export default function QuizInputForm({
       }
       const lessonDocument =
         quiz.quiz_payload?.lesson_card ??
-        quiz.quiz_payload?.lesson_text ??
-        {};
-      const savedSlides = Array.isArray(lessonDocument.lesson_slide)
+        (typeof quiz.quiz_payload?.lesson_text === "string"
+          ? { lesson_text: quiz.quiz_payload.lesson_text }
+          : {});
+      const savedSlides: SavedLessonSlide[] = Array.isArray(lessonDocument.lesson_slide)
         ? lessonDocument.lesson_slide
         : Array.isArray(lessonDocument.lesson_slides)
           ? lessonDocument.lesson_slides
@@ -944,7 +1008,7 @@ export default function QuizInputForm({
       setUnitTitle(quiz.question_text ?? "");
       setLessonSlides(
         savedSlides.length > 0
-          ? savedSlides.map((slide: any) => ({
+          ? savedSlides.map((slide: SavedLessonSlide) => ({
               text: slide.lesson_text ?? slide.text ?? "",
               ...((slide.lesson_title ?? slide.title) !== undefined
                 ? { title: slide.lesson_title ?? slide.title }
@@ -972,6 +1036,7 @@ export default function QuizInputForm({
       setExpectedOutcome(getExpectedOutcome(assessmentValue));
       setEditingQuiz({
         ...firstQuiz,
+        quiz_id: quiz.quiz_id,
         type_name: firstQuizTypeName,
         pending_id: quiz.quiz_id,
         _pendingUnit: true,
@@ -980,7 +1045,7 @@ export default function QuizInputForm({
       return;
     }
     setEditingQuiz(quiz);
-    setSelectedTypeId(quiz.quiz_type_id.toString());
+    setSelectedTypeId(quiz.quiz_type_id?.toString() ?? "");
     setSelectedCatId(quiz.cat_id?.toString() ?? "");
     setSelectedDiffId(quiz.difficulty_id?.toString() ?? "");
     setSelectedSecId(quiz.sec_id?.toString() ?? "");
@@ -3416,7 +3481,7 @@ export default function QuizInputForm({
                         <button
                           type="button"
                           className="btn-delete"
-                          onClick={() => handleDelete(quiz.quiz_id, quiz.type_name)}
+                          onClick={() => handleDelete(quiz.quiz_id ?? 0, quiz.type_name ?? "")}
                           title={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
                           aria-label={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
                         >
@@ -3663,7 +3728,7 @@ export default function QuizInputForm({
                         {quiz.type_name === "Pair" && payload.pairs && (
                           <div>
                             <strong>Matching Pairs:</strong>
-                            {payload.pairs.map((pair: any, i: number) => (
+                            {payload.pairs.map((pair: { left: string; right: string }, i: number) => (
                               <div
                                 key={i}
                                 style={{
@@ -3687,7 +3752,7 @@ export default function QuizInputForm({
                             }}
                           >
                             {payload.steps && payload.steps.length > 0 ? (
-                              payload.steps.map((step: any, sIdx: number) => (
+                              payload.steps.map((step: { prompt?: string; template?: string; expected?: string }, sIdx: number) => (
                                 <div
                                   key={sIdx}
                                   style={{
