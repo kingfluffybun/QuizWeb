@@ -183,20 +183,52 @@ html[data-motion="reduce"] .admin-main *::after {
    2. APP LAYOUT & CORE WRAPPER
    ----------------------------------------------------------------------------- */
 .admin-app-layout {
-  display: flex;
-  min-height: 100vh;
+  display: grid;
+  grid-template-areas:
+    "navbar navbar"
+    "sidebar main";
+  grid-template-rows: 80px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
+  transition: grid-template-columns 0.2s ease;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   width: 100%;
   background-color: var(--admin-bg);
   transition: background-color 0.3s ease;
 }
 
-.admin-main {
-  flex: 1;
+.admin-app-layout > nav {
+  grid-area: navbar;
+  background-color: var(--primary-color);
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.admin-app-layout > .sidebar {
+  grid-area: sidebar;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 80px);
+  height: calc(100dvh - 80px);
+  overflow-y: auto;
+}
+
+.admin-app-layout > .admin-main {
+  grid-area: main;
+  width: 100%;
   min-width: 0;
+  min-height: 0;
   padding: 40px 32px 80px;
   overflow-y: auto;
   font-family: 'Montserrat', sans-serif;
   color: var(--admin-text-main);
+}
+
+.admin-app-layout.sidebar-collapsed {
+  grid-template-columns: 80px minmax(0, 1fr);
 }
 
 .admin-container {

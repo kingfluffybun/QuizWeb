@@ -187,6 +187,12 @@ export default function MaintainerStudioClient({
   const handleLaunchNewCreation = () => {
     if (typeof window !== "undefined") {
       window.sessionStorage.removeItem("quizweb-edit-pending-id");
+      const workspaceEl = document.getElementById("quiz-workspace");
+      if (workspaceEl) {
+        workspaceEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.location.hash = "quiz-workspace";
+        return;
+      }
     }
     router.push("/input");
   };

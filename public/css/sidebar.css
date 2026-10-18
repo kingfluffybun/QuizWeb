@@ -32,7 +32,8 @@
 }
 
 .quiz-page.sidebar-collapsed,
-.dashboard-page.sidebar-collapsed {
+.dashboard-page.sidebar-collapsed,
+.admin-app-layout.sidebar-collapsed {
     grid-template-columns: 80px auto;
 }
 
@@ -80,6 +81,14 @@
             padding-block: 8px;
             padding-left: 24px;
             opacity: 0.9;
+            svg {
+                animation: none !important;
+                transition: none !important;
+            }
+            &:hover svg {
+                animation: none !important;
+                transform: none !important;
+            }
         }
     }
 }
@@ -143,7 +152,8 @@
 
 /* harvy preferebly mga nasa 48px-64px yung width ng collapse */
 .quiz-page.sidebar-collapsed,
-.dashboard-page.sidebar-collapsed {
+.dashboard-page.sidebar-collapsed,
+.admin-app-layout.sidebar-collapsed {
     .sidebar {
         width: 80px;
     }
@@ -153,6 +163,10 @@
             opacity: 0;
             transition: none;
         }
+    }
+
+    .sidebar-suboption {
+        display: none !important;
     }
 
     .sidebar-role-badge {

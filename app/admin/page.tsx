@@ -17,6 +17,8 @@ import AdminDashboardClient from "./AdminDashboardClient";
 import "#css/sidebar.css";
 import "#css/nav.css";
 import "#css/admin.css";
+import "#css/input.css";
+import "#css/pending.css";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +84,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="admin-app-layout">
+    <div className="dashboard-page admin-app-layout">
       <Sidebar role="admin" username={admin.email || "Admin"} />
       <main className="admin-main">
         <div className="admin-container">

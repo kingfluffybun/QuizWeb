@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import QuizInputForm from "@/app/input/QuizInputForm";
-import PendingReview from "@/app/pending/PendingReview";
-import type { Category, Difficulty, QuizMetricsData, QuizType, PendingUnit } from "@/app/actions/quiz";
 import type { ComponentProps } from "react";
+import type { Category, Difficulty, QuizMetricsData, QuizType, PendingUnit } from "@/app/actions/quiz";
+import PendingReview from "@/app/pending/PendingReview";
+import "#css/input.css";
+import "#css/pending.css";
 import "#css/staff-workspace.css";
 
 type QuizInputProps = ComponentProps<typeof QuizInputForm>;
@@ -58,6 +60,23 @@ export default function StaffWorkspaceTools({
       ? "pending"
       : "input",
   );
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash === "#pending-submissions") {
+        setActiveTool("pending");
+      } else if (hash === "#quiz-workspace") {
+        setActiveTool("input");
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => {
+      window.removeEventListener("hashchange", handleHash);
+    };
+  }, []);
+
   const reviewQuizzes: PendingReviewQuiz[] = pendingQuizzes.map((quiz) => ({
     pending_id: quiz.pending_id,
     unit_title: quiz.unit_title,
@@ -70,7 +89,7 @@ export default function StaffWorkspaceTools({
   }));
 
   return (
-    <section className="staff-workspace" aria-labelledby="staff-workspace-title">
+    <section className="staff-workspace" id="quiz-workspace" aria-labelledby="staff-workspace-title">
       <div className="staff-workspace-heading">
         <div>
           <p className="staff-workspace-kicker">Integrated tools</p>

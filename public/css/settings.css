@@ -371,7 +371,10 @@ html[data-motion="reduce"] .settings-main *::after {
   width: 100%;
   background-color: var(--settings-bg);
   overflow: hidden;
-  transition: grid-template-columns 0.2s ease;
+}
+
+.settings-app-layout .toggle-sidebar-nav {
+  display: none !important;
 }
 
 .settings-app-layout > nav {
@@ -407,10 +410,6 @@ html[data-motion="reduce"] .settings-main *::after {
   min-height: 0;
   overflow-y: auto;
   padding-top: 40px;
-}
-
-.settings-app-layout.sidebar-collapsed {
-  grid-template-columns: 80px minmax(0, 1fr);
 }
 
 /* User Profile Summary Card */

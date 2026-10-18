@@ -15,6 +15,8 @@ import type { MaintainerSubmission, MaintainerStats, MaintainerUserProfile } fro
 import "#css/sidebar.css";
 import "#css/dashboard.css";
 import "#css/maintainer.css";
+import "#css/input.css";
+import "#css/pending.css";
 
 // Force dynamic execution for live review status freshness
 export const dynamic = "force-dynamic";
@@ -102,7 +104,7 @@ export default async function MaintainerStudioPage() {
   };
 
   return (
-    <div className="dashboard-page maintainer-studio-page">
+    <div className="dashboard-page maintainer-page maintainer-studio-page">
       <Sidebar
         role={staff.role}
         username={currentUserProfile.name}
