@@ -34,10 +34,6 @@ export default function VerifyEmailClient({ token }: VerifyEmailClientProps) {
             setStatus("error");
             setMessage("An error occurred during verification. Please try again.");
         }
-
-        if (status === "success") {
-            router.push("/login");
-        }
     }
 
 
