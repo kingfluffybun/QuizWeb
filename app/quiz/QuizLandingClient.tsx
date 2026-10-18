@@ -443,22 +443,8 @@ export default function QuizLandingClient({
                             {!result?.correct && result && <p><b>Correct Answer:</b> {result.correctAnswer}</p>}
                         </div>
                     </div>
-                    <button
-                        className="options"
-                        id="skip"
-                        onClick={previousQuiz}
-                        disabled={!quiz || (currentIndex === 0 && !hasLesson)}
-                    >
-                        Previous
-                    </button>
-                    <button
-                        className="options"
-                        id="submit"
-                        onClick={result ? continueQuiz : submitAnswer}
-                        disabled={!quiz || (!result && isAnswerIncomplete)}
-                    >
-                        {result ? "Continue" : "Submit"}
-                    </button></>}
+                    <button className="options" id="skip" onClick={previousQuiz} disabled={!quiz || (currentIndex === 0 && !hasLesson)} > Previous </button>
+                    <button className="options" id="submit" onClick={result ? continueQuiz : submitAnswer} disabled={!quiz || (!result && isAnswerIncomplete)} > {result ? "Continue" : "Submit"} </button></>}
                 </div>
             </footer>
         </div>
