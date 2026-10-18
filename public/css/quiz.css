@@ -1033,7 +1033,7 @@
         > .lesson-footer-controls > button.options {
             justify-content: center;
             width: 320px;
-            min-height: clamp(56px, 6vh, 80px);
+            height: clamp(56px, 6vh, 80px);
             font-size: clamp(1rem, 1vw, 2rem);
             margin: 0;
             transition: all 200ms ease;
@@ -1050,13 +1050,14 @@
             position: absolute;
             inset: 0;
             background-color: transparent;
+            border-radius: 14px;
             transition: background-color 200ms ease;
         }
         > .lesson-footer-controls > button.options#submit:hover::after {
             background-color: rgba(255, 255, 255, 0.1);
         }
         > .lesson-footer-controls > button.options#skip {
-            color: var(--text-main);
+            color: var(--border-main);
             background-color: var(--bg-card);
         }
         > .lesson-footer-controls > button.options#skip:disabled {
@@ -1077,7 +1078,7 @@
         }
         > button.options {
             justify-content: center;
-            min-height: clamp(56px, 6vh, 80px);
+            height: clamp(56px, 6vh, 80px);
             width: 320px;
             font-size: clamp(1rem, 1vw, 2rem);
             transition: all 200ms ease;
