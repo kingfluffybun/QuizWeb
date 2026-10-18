@@ -109,7 +109,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername }
                             onClick={(event) => {
                                 const nextCollapsed = !isCollapsed;
                                 setIsCollapsed(nextCollapsed);
-                                event.currentTarget.closest(".quiz-page, .dashboard-page")?.classList.toggle(
+                                event.currentTarget.closest(".quiz-page, .dashboard-page, .settings-app-layout")?.classList.toggle(
                                     "sidebar-collapsed",
                                     nextCollapsed,
                                 );
@@ -161,6 +161,24 @@ export default function Sidebar({ role: initialRole, username: initialUsername }
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-pen"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
                             <p>Question Studio</p>
                         </Link>
+                    )}
+                    {(isAdmin || isMaintainer) && (
+                        <>
+                            <Link
+                                href={`${isAdmin ? "/admin" : "/maintainer"}#quiz-workspace`}
+                                className="sidebar-option sidebar-suboption"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                                <p>Create Quiz</p>
+                            </Link>
+                            <Link
+                                href={`${isAdmin ? "/admin" : "/maintainer"}#pending-submissions`}
+                                className="sidebar-option sidebar-suboption"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
+                                <p>Pending Review</p>
+                            </Link>
+                        </>
                     )}
 
                     {/* Bottom Profile and Settings */}

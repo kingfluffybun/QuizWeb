@@ -76,6 +76,11 @@
             }
             &:nth-last-child(2) {margin-top: auto;}
         }
+        .sidebar-suboption {
+            padding-block: 8px;
+            padding-left: 24px;
+            opacity: 0.9;
+        }
     }
 }
 

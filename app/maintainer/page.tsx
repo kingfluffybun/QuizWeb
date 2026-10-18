@@ -2,7 +2,14 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { requireStaff } from "@/lib/rbac";
+import {
+  getPaginatedRecentQuizzes,
+  getPendingQuizzes,
+  getQuizMetadata,
+  getQuizMetrics,
+} from "@/app/actions/quiz";
 import Sidebar from "@/app/components/Sidebar";
+import StaffWorkspaceTools from "@/app/components/StaffWorkspaceTools";
 import MaintainerStudioClient from "./MaintainerStudioClient";
 import type { MaintainerSubmission, MaintainerStats, MaintainerUserProfile } from "./MaintainerStudioClient";
 import "#css/sidebar.css";
@@ -33,15 +40,42 @@ export default async function MaintainerStudioPage() {
   // 2. Initial Data Loading from Maintainer Actions
   let initialStats: MaintainerStats = { approved: 0, pending: 0, rejected: 0, total: 0 };
   let initialSubmissions: MaintainerSubmission[] = [];
+  let workspaceMetadata: Awaited<ReturnType<typeof getQuizMetadata>> = {
+    categories: [],
+    difficulties: [],
+    types: [],
+    sections: [],
+  };
+  let workspaceRecent: Awaited<ReturnType<typeof getPaginatedRecentQuizzes>> = {
+    quizzes: [],
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+  };
+  let workspaceMetrics: Awaited<ReturnType<typeof getQuizMetrics>> = {
+    totalQuizzes: 0,
+    byCategory: [],
+    byType: [],
+    byDifficulty: [],
+    bySection: [],
+    lowCoverageSections: [],
+    matrix: [],
+    facetedBreakdown: [],
+  };
+  let workspacePending: Awaited<ReturnType<typeof getPendingQuizzes>> = [];
 
   try {
     const { getMaintainerStats, getMaintainerSubmissions } = await import(
       "@/app/actions/maintainer"
     );
 
-    const [statsResult, subsResult] = await Promise.allSettled([
+    const [statsResult, subsResult, metadataResult, recentResult, metricsResult, pendingResult] = await Promise.allSettled([
       getMaintainerStats(),
       getMaintainerSubmissions(),
+      getQuizMetadata(),
+      getPaginatedRecentQuizzes(),
+      getQuizMetrics(),
+      getPendingQuizzes("pending"),
     ]);
 
     if (statsResult.status === "fulfilled") {
@@ -51,6 +85,10 @@ export default async function MaintainerStudioPage() {
     if (subsResult.status === "fulfilled") {
       initialSubmissions = subsResult.value.submissions;
     }
+    if (metadataResult.status === "fulfilled") workspaceMetadata = metadataResult.value;
+    if (recentResult.status === "fulfilled") workspaceRecent = recentResult.value;
+    if (metricsResult.status === "fulfilled") workspaceMetrics = metricsResult.value;
+    if (pendingResult.status === "fulfilled") workspacePending = pendingResult.value;
   } catch (error) {
     console.error("[MaintainerStudioPage] Failed to load maintainer data:", error);
     // Graceful fallback: renders client studio with empty state rather than 500 error
@@ -74,6 +112,19 @@ export default async function MaintainerStudioPage() {
           initialStats={initialStats}
           initialSubmissions={initialSubmissions}
           currentUser={currentUserProfile}
+        />
+        <StaffWorkspaceTools
+          categories={workspaceMetadata.categories}
+          difficulties={workspaceMetadata.difficulties}
+          types={workspaceMetadata.types}
+          sections={workspaceMetadata.sections}
+          recentQuizzes={workspaceRecent.quizzes}
+          recentPage={workspaceRecent.currentPage}
+          recentTotalPages={workspaceRecent.totalPages}
+          recentTotalCount={workspaceRecent.totalCount}
+          metrics={workspaceMetrics}
+          pendingQuizzes={workspacePending}
+          canReview={false}
         />
       </main>
     </div>
