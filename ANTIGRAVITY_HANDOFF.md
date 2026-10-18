@@ -25,16 +25,22 @@ used for project status.
 
 ## Current work
 
-Completed. Antigravity agent resolved layout and visual quirks:
-- Fixed admin sidebar icon displacement by converting `.admin-app-layout` to CSS Grid matching the dashboard layout, placing `<nav>` at the top rather than side-by-side with sidebar in flex row.
-- Disabled and hid sidebar collapse toggle button on `/settings` (`.settings-app-layout .toggle-sidebar-nav { display: none !important; }` and removed from toggle handler).
-- Disabled icon transitions/animations on `.sidebar-suboption` while preserving main navigation icons; hid suboptions completely in collapsed sidebar mode.
-- Directly integrated `/input` and `/pending` (preview) onto `/maintainer` and `/admin` by importing `#css/input.css` and `#css/pending.css` into `StaffWorkspaceTools.tsx` and host pages, adding dark mode support in `staff-workspace.css`, wiring anchor `id="quiz-workspace"` and `hashchange` tab synchronization, and connecting maintainer studio launcher buttons to scroll directly to the embedded workspace.
+Completed. Removed staff elevation settings for non-admin users in `app/settings/SettingsClient.tsx`.
+
+Completed changes:
+- `app/settings/SettingsClient.tsx`:
+  - Tab 3 ("Staff Elevation") navigation button is now rendered conditionally only when `user.role === "admin"`.
+  - Non-admins (`role: 'user'` and `role: 'maintainer'`) can no longer see the Staff Elevation tab button, elevation form, or password warning prompt.
+  - Derived `activeTab` to automatically fall back to `"account"` if a non-admin session ever enters an `"elevation"` tab state, preventing any unauthorized rendering or flashes of elevation controls without triggering React 19 cascading render ESLint warnings.
+  - Retained the admin status banner and `/admin` navigation link for accounts that already possess administrator privileges (`user.role === "admin"`).
+  - Cleaned up unused form state and handlers (`claimAdminWithSecretKey`, `secretKeyInput`, `showSecretKey`, `elevationError`, `isPendingElevation`, `handleElevationSubmit`) in `SettingsClient.tsx`.
+  - Left `claimAdminWithSecretKey` server action in `app/actions/admin.ts` intact for `/admin` modal workflows.
+- `ANTIGRAVITY_HANDOFF.md`: updated status and handoff log.
 
 Validation completed:
 - `npx tsc --noEmit` (0 errors)
-- `npx eslint app/components/StaffWorkspaceTools.tsx app/components/Sidebar.tsx app/admin/page.tsx app/maintainer/page.tsx app/maintainer/MaintainerStudioClient.tsx` (0 errors, 0 warnings)
-- `npm run build` (Clean production build)
+- `npx eslint app/settings/SettingsClient.tsx` (0 errors, 0 warnings)
+- `npm run build` (Clean production build, all routes compiled)
 - `npx tsx tests/test-rbac-e2e.ts` (137/137 E2E tests passing)
 
 Before starting work, an agent should replace this section with the files it
@@ -57,3 +63,8 @@ handoff-history entry.
   animations, hid suboptions in collapsed mode, imported input/pending styles
   into staff workspace, added dark mode rules, and wired hash navigation and
   studio launchers to the embedded quiz workspace.
+- 2026-10-19: Removed staff elevation settings for non-admin users in
+  `app/settings/SettingsClient.tsx`. Staff Elevation tab is now hidden for
+  standard users and maintainers; elevation form is removed; activeTab safely
+  falls back to "account" for non-admins; admin status badge and dashboard
+  navigation remain intact for admins. All 137 RBAC E2E tests passed.

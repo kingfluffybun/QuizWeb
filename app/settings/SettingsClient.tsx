@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useTransition, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { updateUsername, changePassword, setPasswordForOAuth } from "@/app/actions/credentials";
-import { claimAdminWithSecretKey } from "@/app/actions/admin";
 
 export interface SettingsUserData {
   id: string;
@@ -83,9 +82,12 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
   );
 
   // Active section tab
-  const [activeTab, setActiveTab] = useState<"account" | "security" | "elevation" | "accessibility">(
+  const [selectedTab, setSelectedTab] = useState<"account" | "security" | "elevation" | "accessibility">(
     initialUser ? "account" : "accessibility"
   );
+  // Non-admin accounts cannot access elevation; derive activeTab directly without cascading effect render
+  const activeTab = user?.role === "admin" ? selectedTab : selectedTab === "elevation" ? "account" : selectedTab;
+  const setActiveTab = setSelectedTab;
 
   // Global alert banner
   const [globalBanner, setGlobalBanner] = useState<{
@@ -108,13 +110,7 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isPendingPassword, startPasswordTransition] = useTransition();
 
-  // --- 3. Admin Secret Key Elevation State ---
-  const [secretKeyInput, setSecretKeyInput] = useState("");
-  const [showSecretKey, setShowSecretKey] = useState(false);
-  const [elevationError, setElevationError] = useState<string | null>(null);
-  const [isPendingElevation, startElevationTransition] = useTransition();
-
-  // --- 4. Accessibility Preferences State ---
+  // --- 3. Accessibility Preferences State ---
   const accessibility = useSyncExternalStore(
     subscribeAccessibility,
     getAccessibilitySettings,
@@ -227,35 +223,6 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
     });
   };
 
-  const handleElevationSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setElevationError(null);
-    setGlobalBanner(null);
-
-    if (!secretKeyInput) {
-      setElevationError("Invalid admin secret key.");
-      return;
-    }
-
-    startElevationTransition(async () => {
-      try {
-        const res = await claimAdminWithSecretKey(secretKeyInput);
-        if (res.success) {
-          setSecretKeyInput("");
-          if (user) setUser({ ...user, role: "admin" });
-          setGlobalBanner({
-            type: "success",
-            message: "Success! Your account has been elevated to Administrator.",
-          });
-        } else {
-          setElevationError(res.error || "Invalid admin secret key.");
-        }
-      } catch (err: unknown) {
-        setElevationError(err instanceof Error ? err.message : "An unexpected error occurred.");
-      }
-    });
-  };
-
   const scaleMin = 90;
   const scaleMax = 125;
   const scalePercentage = ((Number(uiScale) - scaleMin) / (scaleMax - scaleMin)) * 100;
@@ -349,15 +316,17 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
             >
               Password &amp; Security
             </button>
-            <button
-              type="button"
-              role="tab"
-              className={`settings-tab-btn ${activeTab === "elevation" ? "active" : ""}`}
-              onClick={() => setActiveTab("elevation")}
-              aria-selected={activeTab === "elevation"}
-            >
-              Staff Elevation
-            </button>
+            {user.role === "admin" && (
+              <button
+                type="button"
+                role="tab"
+                className={`settings-tab-btn ${activeTab === "elevation" ? "active" : ""}`}
+                onClick={() => setActiveTab("elevation")}
+                aria-selected={activeTab === "elevation"}
+              >
+                Staff Elevation
+              </button>
+            )}
           </>
         )}
         <button
@@ -564,102 +533,23 @@ export default function SettingsClient({ initialUser }: SettingsClientProps) {
         </section>
       )}
 
-      {/* --- TAB 3: Staff Elevation --- */}
-      {user && activeTab === "elevation" && (
+      {/* --- TAB 3: Staff Elevation (Admin Only) --- */}
+      {user && user.role === "admin" && activeTab === "elevation" && (
         <section className="settings-section" aria-labelledby="heading-elevation">
           <h2 id="heading-elevation" className="settings-section-title">Admin Access Elevation</h2>
           <p className="settings-section-desc">
-            Authorize administrative privileges using a valid server secret key.
+            Administrative privileges and staff access status.
           </p>
 
-          {/* Already Admin */}
-          {user.role === "admin" && (
-            <div className="settings-alert alert-success" role="status">
-              <div className="alert-content">
-                <strong>Administrator Privileges Active</strong>
-                <p>Your account currently holds full administrator permissions.</p>
-              </div>
-              <Link href="/admin" className="settings-btn settings-btn-primary settings-btn-sm">
-                Open Admin Dashboard
-              </Link>
+          <div className="settings-alert alert-success" role="status">
+            <div className="alert-content">
+              <strong>Administrator Privileges Active</strong>
+              <p>Your account currently holds full administrator permissions.</p>
             </div>
-          )}
-
-          {/* Password Guard Warning */}
-          {user.role !== "admin" && !user.hasPassword && (
-            <div className="settings-alert alert-warning" role="alert">
-              <div className="alert-content">
-                <strong>Password Required</strong>
-                <p>
-                  You must establish an account password before claiming administrative privileges.
-                  OAuth-only accounts without a password cannot be elevated.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="settings-btn settings-btn-secondary settings-btn-sm"
-                onClick={() => setActiveTab("security")}
-              >
-                Set Password First
-              </button>
-            </div>
-          )}
-
-          {/* Elevation Form (Eligible User) */}
-          {user.role !== "admin" && user.hasPassword && (
-            <div className="elevation-box">
-              <p>
-                Have an administrative invite code or server secret key? Enter it below to claim
-                elevated permissions.
-              </p>
-              <form onSubmit={handleElevationSubmit} className="settings-form">
-                <div className="settings-form-group">
-                  <label htmlFor="settings-secret-key">Admin Secret Key</label>
-                  <div className="settings-input-wrapper">
-                    <input
-                      id="settings-secret-key"
-                      type={showSecretKey ? "text" : "password"}
-                      className="settings-input"
-                      value={secretKeyInput}
-                      onChange={(e) => {
-                        setSecretKeyInput(e.target.value);
-                        if (elevationError) setElevationError(null);
-                      }}
-                      placeholder="Enter ADMIN_SECRET_KEY"
-                      disabled={isPendingElevation}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="settings-input-toggle"
-                      onClick={() => setShowSecretKey(!showSecretKey)}
-                      aria-label={showSecretKey ? "Hide secret key" : "Show secret key"}
-                    >
-                      {showSecretKey ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                  <span className="settings-field-hint">
-                    Failed attempts are rate-limited and locked after 5 failed tries.
-                  </span>
-                  {elevationError && (
-                    <p className="settings-field-error" role="alert">
-                      {elevationError}
-                    </p>
-                  )}
-                </div>
-
-                <div className="settings-form-actions">
-                  <button
-                    type="submit"
-                    className="settings-btn settings-btn-primary"
-                    disabled={isPendingElevation || !secretKeyInput}
-                  >
-                    {isPendingElevation ? "Verifying..." : "Claim Admin Privileges"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+            <Link href="/admin" className="settings-btn settings-btn-primary settings-btn-sm">
+              Open Admin Dashboard
+            </Link>
+          </div>
         </section>
       )}
 
