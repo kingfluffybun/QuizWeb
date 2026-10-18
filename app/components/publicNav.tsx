@@ -1,14 +1,35 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AccessibilityPanel from "../settings/AccessibilityPanel";
 
-export default function PublicNav() {
+interface PublicNavProps {
+  session?: { user?: { name?: string | null; email?: string | null } } | null;
+}
+
+export default function PublicNav({ session: initialSession }: PublicNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+  const [session, setSession] = useState(initialSession ?? null);
+
+  useEffect(() => {
+    if (initialSession !== undefined) return;
+    let isMounted = true;
+    fetch("/api/auth/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && typeof data === "object" && data.user) {
+          setSession(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [initialSession]);
 
   const openAccessibility = () => {
     setAccessibilityClosing(false);
@@ -46,7 +67,13 @@ export default function PublicNav() {
         <div><Link href="/leaderboard"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
         {/* <div><Link href="/settings"><p>Settings</p></Link></div> */}
-        <div><Link href="/login"><p>Get Started </p></Link></div>
+        <div>
+            {session?.user ? (
+                <Link href="/home"><p>Dashboard</p></Link>
+            ) : (
+                <Link href="/login"><p>Get Started</p></Link>
+            )}
+        </div>
       </div>
 
       <div className="accessibility">
