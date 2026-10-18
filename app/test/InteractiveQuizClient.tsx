@@ -13,6 +13,8 @@ import QuizOrder from "./components/questions/QuizOrder";
 import QuizPair from "./components/questions/QuizPair";
 import QuizCP from "./components/questions/QuizCP";
 import LessonCard from "@/app/components/LessonCard";
+import { useQuizSounds } from "@/app/quiz/useQuizSounds";
+import { shuffleItems } from "@/app/quiz/shuffle";
 
 function normalizeQuizType(typeName?: string) {
     return (typeName ?? "").trim().toLowerCase();
@@ -47,16 +49,16 @@ function getInitialQuizState(quiz: QuizData | undefined) {
     if (typeName === "MCQ" && payload?.options) {
         const opts = payload.options.map((text, id) => ({ id, text }));
         state = {
-            options: opts.sort(() => Math.random() - 0.5),
+            options: shuffleItems(opts),
             correctId: payload.correct_index ?? 0
         };
         answer = null;
     } else if (typeName === "Order" && payload?.items) {
-        answer = [...payload.items].sort(() => Math.random() - 0.5);
+        answer = shuffleItems(payload.items);
     } else if (typeName === "Pair" && payload?.pairs) {
         answer = {
-            left: payload.pairs.map((p) => p.left).sort(() => Math.random() - 0.5),
-            right: payload.pairs.map((p) => p.right).sort(() => Math.random() - 0.5)
+            left: shuffleItems(payload.pairs.map((p) => p.left)),
+            right: shuffleItems(payload.pairs.map((p) => p.right))
         };
     } else if (typeName === "CP") {
         const steps = getCPSteps(quiz);
@@ -101,6 +103,7 @@ export default function InteractiveQuizClient({
     quizzes: QuizData[];
     completionDestination?: "home" | "input";
 }) {
+    const playQuizSound = useQuizSounds();
     const [isMounted, setIsMounted] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
@@ -206,23 +209,43 @@ export default function InteractiveQuizClient({
         }
 
         if (isCorrect) {
+            if (activeQuizType === "MCQ" || activeQuizType === "FITB") {
+                playQuizSound("correct-answer1");
+            } else if (activeQuizType === "Order") {
+                playQuizSound("correct-answer3");
+            } else if (activeQuizType === "Pair") {
+                playQuizSound("correct-answer2");
+            }
             setScore((prev) => prev + 1);
             setStatus("correct");
         } else {
+            if (["MCQ", "FITB", "Order", "Pair"].includes(activeQuizType)) {
+                playQuizSound("wrong-answer");
+            }
             setLives((prev) => Math.max(0, prev - 1));
             setStatus("incorrect");
         }
     };
 
-    const nextQuestion = () => {
+    const nextQuestion = (isContinue = false) => {
         if (currentIndex < quizzes.length - 1 && lives > 0) {
             setCurrentIndex((prev) => prev + 1);
             setStatus("idle");
         } else if (hasAssessment) {
             setStatus("assessment");
         } else {
+            if (isContinue && hasLesson && lives > 0) {
+                playQuizSound("lesson-complete");
+            }
             setStatus("finished");
         }
+    };
+
+    const finishAssessment = () => {
+        if (hasLesson && lives > 0) {
+            playQuizSound("lesson-complete");
+        }
+        setStatus("finished");
     };
 
     if (!isMounted || !activeQuiz) return null;
@@ -266,7 +289,7 @@ export default function InteractiveQuizClient({
                         <button
                             className="options footer-btn anim-pop"
                             id="submit"
-                            onClick={() => setStatus("finished")}
+                            onClick={finishAssessment}
                         >
                             Continue
                         </button>
@@ -381,7 +404,12 @@ export default function InteractiveQuizClient({
                     </div>
                 </div>
             </main>
-            <QuizFooter status={status} onSkip={nextQuestion} onSubmit={handleCheckAnswer} onContinue={nextQuestion} />
+            <QuizFooter
+                status={status}
+                onSkip={() => nextQuestion()}
+                onSubmit={handleCheckAnswer}
+                onContinue={() => nextQuestion(true)}
+            />
         </div>
     );
 }

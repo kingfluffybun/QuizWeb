@@ -2,19 +2,18 @@
 
 import { useState } from "react";
 import type { QuestionProps } from "@/app/quiz/types";
+import { shuffleItems } from "@/app/quiz/shuffle";
 
-function shuffleItems(items: string[]) {
-    const shuffled = [...items];
-
-    for (let index = shuffled.length - 1; index > 0; index -= 1) {
-        const randomIndex = Math.floor(Math.random() * (index + 1));
-        [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
-    }
-
-    return shuffled;
-}
-
-export default function PairQuestion({ quiz, onChange }: QuestionProps) {
+export default function PairQuestion({
+    quiz,
+    onChange,
+    disabled = false,
+    onPairMatched,
+    onIncorrectPair,
+}: QuestionProps & {
+    onPairMatched?: () => void;
+    onIncorrectPair?: () => void;
+}) {
     const pairs = quiz.quiz_payload.pairs ?? [];
     const [leftItems] = useState(() => shuffleItems(pairs.map((p) => p.left)));
     const [rightItems] = useState(() => shuffleItems(pairs.map((p) => p.right)));
@@ -35,6 +34,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     const completePair = (left: string, right: string) => {
         if (correctPairs[left] === right) {
             const nextLeft = [...matchedLeft, left];
+            onPairMatched?.();
             setMatchedLeft(nextLeft);
             setMatchedRight((current) => [...current, right]);
             reportProgress(nextLeft);
@@ -46,6 +46,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
             }, 500);
             return;
         }
+        onIncorrectPair?.();
         setIncorrectPair({ left, right });
         setTimeout(() => {
         setSelectedLeft(null);
@@ -55,7 +56,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     };
 
     const handleLeftClick = (item: string) => {
-        if (matchedLeft.includes(item) || incorrectPair) return;
+        if (disabled || matchedLeft.includes(item) || incorrectPair) return;
 
         if (selectedRight === null) {
             setSelectedLeft(item);
@@ -66,7 +67,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     };
 
     const handleRightClick = (item: string) => {
-        if (matchedRight.includes(item) || incorrectPair) return;
+        if (disabled || matchedRight.includes(item) || incorrectPair) return;
 
         if (selectedLeft === null) {
             setSelectedRight(item);
@@ -91,7 +92,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
     };
 
     return (
-        <div className="options-container row" id="pair">
+        <div className={`options-container row${disabled ? " is-locked" : ""}`} id="pair">
             <div className="pair-left-column col">
                 {leftItems.map((item) => (
                     <label
@@ -104,7 +105,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
                             type="radio"
                             name="pair-left"
                             checked={selectedLeft === item}
-                            disabled={matchedLeft.includes(item)}
+                            disabled={disabled || matchedLeft.includes(item)}
                             onChange={() => handleLeftClick(item)}
                         />
                         <div className={`options ${getButtonClassName("left", item)}`}>
@@ -125,7 +126,7 @@ export default function PairQuestion({ quiz, onChange }: QuestionProps) {
                             type="radio"
                             name="pair-right"
                             checked={selectedRight === item}
-                            disabled={matchedRight.includes(item)}
+                            disabled={disabled || matchedRight.includes(item)}
                             onChange={() => handleRightClick(item)}
                         />
                         <div className={`options ${getButtonClassName("right", item)}`}>

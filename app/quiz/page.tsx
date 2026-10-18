@@ -1,5 +1,6 @@
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import type { QuizData } from "@/app/quiz/types";
+import { shuffleQuizOptions } from "@/app/quiz/shuffle";
 import QuizLandingClient from "./QuizLandingClient";
 
 export const revalidate = 3600;
@@ -66,7 +67,7 @@ export default async function QuizPage({
         : null;
     const selectedPayload = selectedUnit ?? selectedQuiz;
     const quizzesToDisplay = selectedPayload
-        ? unwrapUnitQuizzes([selectedPayload])
+        ? unwrapUnitQuizzes([selectedPayload]).map(shuffleQuizOptions)
         : [];
 
     if (unitId || quizId) {

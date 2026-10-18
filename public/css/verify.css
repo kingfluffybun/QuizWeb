@@ -2,15 +2,6 @@
     --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
-html {
-    /* font: ; */
-    background: #fcfbff;
-    margin: 0;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
 /*.container {
     max-width: 480px;
     margin: 0 auto;
@@ -48,11 +39,11 @@ html {
 } */
 
 .main-email {
-    min-height: "100vh";
-    display: "flex";
+    min-height: 100vh;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #fcfbff;
+    background-color: var(--bg-main, #fcfbff);
     padding: 20px;
 }
 

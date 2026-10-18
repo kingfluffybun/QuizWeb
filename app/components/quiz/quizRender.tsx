@@ -14,7 +14,11 @@ const questionComponents: Record<string, ComponentType<QuestionProps>> = {
     Pair: Pair,
 };
 
-export default function QuizRender(props: QuestionProps & { quiz: QuizData }) {
+export default function QuizRender(props: QuestionProps & {
+    quiz: QuizData;
+    onPairMatched?: () => void;
+    onIncorrectPair?: () => void;
+}) {
     const Component = questionComponents[props.quiz.type_name];
 
     if (!Component) return <p>Unknown quiz type: {props.quiz.type_name}</p>;
