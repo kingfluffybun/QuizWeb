@@ -28,7 +28,7 @@
     transition: all 0.2s ease;
     outline: none;
     svg {color: white;}
-    &:hover {background-color:#f5f2ff; svg{color: var(--primary-color);}}
+    &:hover {background-color:var(--border-main); svg{color: var(--primary-color);}}
 }
 
 .quiz-page.sidebar-collapsed,
@@ -85,7 +85,7 @@
 }
 
 .sidebar-option:not(.active):hover {
-    background-color:#f5f2ff;
+    background-color:var(--border-main);
 }
 
 /* harvy preferebly mga nasa 48px-64px yung width ng collapse */

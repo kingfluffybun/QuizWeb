@@ -134,11 +134,12 @@ export function LessonCodeFrame({
           options={{
             readOnly: true,
             fontSize: 18,
-            padding: { top: 16, bottom: 16 },
+            padding: { top: 24, bottom: 24 },
             minimap: { enabled: false },
             lineNumbers: "on",
             scrollBeyondLastLine: false,
             wordWrap: "on",
+            renderLineHighlight: 'none',
           }}
         />
       ) : (

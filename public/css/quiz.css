@@ -318,6 +318,7 @@
     width: 100%;
     padding: 12px 0;
     /* kailangan naka set talaga as white (hindi var(--bg-card)) */
+    section, iframe {pointer-events: none; user-select: none;}
     iframe {background-color: #fff; outline: 1px solid var(--border-main);}
 }
 
@@ -343,6 +344,7 @@
         padding: 4px;
         background-color: #3C3C3C;
         border-radius: 999px;
+        > button {transition: all 200ms;}
     }
 }
 
@@ -383,13 +385,11 @@
     border-radius: 0 0 8px 8px;
     pointer-events: none;
     user-select: none;
-    -webkit-user-select: none;
     margin-top: -2px;
 }
 
 .lesson-code-editor * {
     user-select: none;
-    -webkit-user-select: none;
 }
 
 .lesson-card .lesson-slide-controls {
@@ -503,7 +503,7 @@
         aspect-ratio: 1/1;
         border-radius: 8px;
         border: 3px solid var(--border-main);
-        color: #AFAFAF;
+        color: var(--text-main);
         font-weight: 600;
         font-size: clamp(1rem, 1.25vw, 1.25rem);
         transition: all 250ms ease;
@@ -1056,13 +1056,13 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
         > .lesson-footer-controls > button.options#skip {
-            color: #AFAFAF;
+            color: var(--text-main);
             background-color: var(--bg-card);
         }
         > .lesson-footer-controls > button.options#skip:disabled {
-            background-color: #AFAFAF;
+            background-color: var(--border-main);
             border: none;
-            color: var(--text-inverse);
+            color: var(--text-muted);
             pointer-events: none;
         }
         > .lesson-footer-controls > button.options#skip:hover {
@@ -1093,7 +1093,8 @@
         }
 
         > button#submit:disabled {
-            background-color: #AFAFAF;
+            background-color: var(--border-main);
+            color: var(--text-muted);
             border: none;
             pointer-events: none;
         }
@@ -1108,7 +1109,7 @@
         }
 
         > button.options#submit:not(:disabled):hover::after {background-color: rgba(255, 255, 255, 0.1);}
-        > button.options#skip {color: #AFAFAF; background-color: var(--bg-card);}
+        > button.options#skip {color: var(--text-main); background-color: var(--bg-card);}
         > button.options#skip:hover {filter:brightness(0.9); border-color: var(--border-main);}
         > button.options#skip:active {border-bottom-width: 3px;}
         > button.options#submit:active {border-bottom-width: 0;}

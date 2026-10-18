@@ -12,6 +12,7 @@ import QuizRender from "@/app/components/quiz/quizRender";
 import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
+import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 
 type AnswerResult = {
     correct: boolean;
@@ -106,6 +107,7 @@ export default function QuizLandingClient({
     completionDestination?: "home" | "input";
 }) {
     const router = useRouter();
+    const playQuizSound = useQuizSounds();
     const { quizzes: allQuizzes } = useQuizData();
     const quizzes = initialQuizzes ?? allQuizzes.slice(0, 10);
     const selectedQuizzes = quizzes as UnitQuizData[];
@@ -195,6 +197,13 @@ export default function QuizLandingClient({
     };
 
     const continueQuiz = () => {
+        if (
+            hasLesson &&
+            lives > 0 &&
+            currentIndex >= quizzes.length - 1
+        ) {
+            playQuizSound("lesson-complete");
+        }
         nextQuiz();
     };
 
@@ -207,8 +216,16 @@ export default function QuizLandingClient({
         }));
         setResult(nextResult);
         if (nextResult.correct) {
+            if (quiz.type_name === "MCQ" || quiz.type_name === "FITB") {
+                playQuizSound("correct-answer1");
+            } else if (quiz.type_name === "Order") {
+                playQuizSound("correct-answer3");
+            } else if (quiz.type_name === "Pair") {
+                playQuizSound("correct-answer2");
+            }
             setScore((currentScore) => currentScore + 1);
         } else {
+            playQuizSound("wrong-answer");
             setLives((currentLives) => Math.max(0, currentLives - 1));
         }
     };
@@ -227,8 +244,10 @@ export default function QuizLandingClient({
             }));
             setResult(nextResult);
             if (nextResult.correct) {
+                playQuizSound("correct-answer2");
                 setScore((currentScore) => currentScore + 1);
             } else {
+                playQuizSound("wrong-answer");
                 setLives((currentLives) => Math.max(0, currentLives - 1));
             }
         }
@@ -362,6 +381,8 @@ export default function QuizLandingClient({
                                     value={value}
                                     onChange={handleAnswerChange}
                                     disabled={areChoicesLocked}
+                                    onPairMatched={() => playQuizSound("correct-answer1")}
+                                    onIncorrectPair={() => playQuizSound("wrong-answer")}
                                 />
                             )}
                         </div>
@@ -391,6 +412,7 @@ export default function QuizLandingClient({
                                     id="submit"
                                     onClick={() => {
                                         if (isLessonOnlyUnit) {
+                                            playQuizSound("lesson-complete");
                                             router.push("/learn");
                                         } else {
                                             setHasStartedQuiz(true);

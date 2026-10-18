@@ -2,19 +2,18 @@
 
 import { useState } from "react";
 import type { QuestionProps } from "@/app/quiz/types";
+import { shuffleItems } from "@/app/quiz/shuffle";
 
-function shuffleItems(items: string[]) {
-    const shuffled = [...items];
-
-    for (let index = shuffled.length - 1; index > 0; index -= 1) {
-        const randomIndex = Math.floor(Math.random() * (index + 1));
-        [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
-    }
-
-    return shuffled;
-}
-
-export default function PairQuestion({ quiz, onChange, disabled = false }: QuestionProps) {
+export default function PairQuestion({
+    quiz,
+    onChange,
+    disabled = false,
+    onPairMatched,
+    onIncorrectPair,
+}: QuestionProps & {
+    onPairMatched?: () => void;
+    onIncorrectPair?: () => void;
+}) {
     const pairs = quiz.quiz_payload.pairs ?? [];
     const [leftItems] = useState(() => shuffleItems(pairs.map((p) => p.left)));
     const [rightItems] = useState(() => shuffleItems(pairs.map((p) => p.right)));
@@ -35,6 +34,7 @@ export default function PairQuestion({ quiz, onChange, disabled = false }: Quest
     const completePair = (left: string, right: string) => {
         if (correctPairs[left] === right) {
             const nextLeft = [...matchedLeft, left];
+            onPairMatched?.();
             setMatchedLeft(nextLeft);
             setMatchedRight((current) => [...current, right]);
             reportProgress(nextLeft);
@@ -46,6 +46,7 @@ export default function PairQuestion({ quiz, onChange, disabled = false }: Quest
             }, 500);
             return;
         }
+        onIncorrectPair?.();
         setIncorrectPair({ left, right });
         setTimeout(() => {
         setSelectedLeft(null);
