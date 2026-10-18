@@ -359,10 +359,37 @@ html[data-motion="reduce"] .settings-main *::after {
    ============================================================================= */
 
 .settings-app-layout {
-  display: flex;
+  display: grid;
+  grid-template-areas:
+    "navbar navbar"
+    "sidebar main";
+  grid-template-rows: 80px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   width: 100%;
   background-color: var(--settings-bg);
+  overflow: hidden;
+  transition: grid-template-columns 0.2s ease;
+}
+
+.settings-app-layout > nav {
+  grid-area: navbar;
+  width: 100%;
+  background-color: var(--primary-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.settings-app-layout > .sidebar {
+  grid-area: sidebar;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 80px);
+  height: calc(100dvh - 80px);
+  overflow-y: auto;
 }
 
 .settings-public-layout {
@@ -374,8 +401,16 @@ html[data-motion="reduce"] .settings-main *::after {
 }
 
 .settings-app-layout .settings-main {
+  grid-area: main;
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 40px;
+}
+
+.settings-app-layout.sidebar-collapsed {
+  grid-template-columns: 80px minmax(0, 1fr);
 }
 
 /* User Profile Summary Card */

@@ -5,7 +5,14 @@ import {
   getAdminAnalytics,
   getAdminReviewQueue,
 } from "@/app/actions/admin";
+import {
+  getPaginatedRecentQuizzes,
+  getPendingQuizzes,
+  getQuizMetadata,
+  getQuizMetrics,
+} from "@/app/actions/quiz";
 import Sidebar from "@/app/components/Sidebar";
+import StaffWorkspaceTools from "@/app/components/StaffWorkspaceTools";
 import AdminDashboardClient from "./AdminDashboardClient";
 import "#css/sidebar.css";
 import "#css/nav.css";
@@ -29,16 +36,47 @@ export default async function AdminPage() {
     contributors: [],
   };
   let initialReviewQueue: Awaited<ReturnType<typeof getAdminReviewQueue>> = [];
+  let workspaceMetadata: Awaited<ReturnType<typeof getQuizMetadata>> = {
+    categories: [],
+    difficulties: [],
+    types: [],
+    sections: [],
+  };
+  let workspaceRecent: Awaited<ReturnType<typeof getPaginatedRecentQuizzes>> = {
+    quizzes: [],
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+  };
+  let workspaceMetrics: Awaited<ReturnType<typeof getQuizMetrics>> = {
+    totalQuizzes: 0,
+    byCategory: [],
+    byType: [],
+    byDifficulty: [],
+    bySection: [],
+    lowCoverageSections: [],
+    matrix: [],
+    facetedBreakdown: [],
+  };
+  let workspacePending: Awaited<ReturnType<typeof getPendingQuizzes>> = [];
 
   try {
-    const [usersResult, analyticsResult, queueResult] = await Promise.all([
+    const [usersResult, analyticsResult, queueResult, metadata, recent, metrics, pending] = await Promise.all([
       getAdminUsers(),
       getAdminAnalytics(),
       getAdminReviewQueue(),
+      getQuizMetadata(),
+      getPaginatedRecentQuizzes(),
+      getQuizMetrics(),
+      getPendingQuizzes("pending"),
     ]);
     initialUsers = usersResult.users;
     initialAnalytics = analyticsResult;
     initialReviewQueue = queueResult;
+    workspaceMetadata = metadata;
+    workspaceRecent = recent;
+    workspaceMetrics = metrics;
+    workspacePending = pending;
   } catch (err) {
     console.error("Failed to load initial admin dashboard data:", err);
   }
@@ -66,6 +104,19 @@ export default async function AdminPage() {
             initialUsers={initialUsers}
             initialAnalytics={initialAnalytics}
             initialReviewQueue={initialReviewQueue}
+          />
+          <StaffWorkspaceTools
+            categories={workspaceMetadata.categories}
+            difficulties={workspaceMetadata.difficulties}
+            types={workspaceMetadata.types}
+            sections={workspaceMetadata.sections}
+            recentQuizzes={workspaceRecent.quizzes}
+            recentPage={workspaceRecent.currentPage}
+            recentTotalPages={workspaceRecent.totalPages}
+            recentTotalCount={workspaceRecent.totalCount}
+            metrics={workspaceMetrics}
+            pendingQuizzes={workspacePending}
+            canReview
           />
         </div>
       </main>
