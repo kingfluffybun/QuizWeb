@@ -1,11 +1,11 @@
-import { auth } from "@/auth";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const adminRoutes = ["/admin", "/pending"];
 const staffRoutes = ["/maintainer", "/input"];
 
-export const middleware = auth(async function middleware(req) {
+export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
 
@@ -22,24 +22,21 @@ export const middleware = auth(async function middleware(req) {
     return NextResponse.next();
   }
 
-  const session = req.auth;
-  let user = session?.user as { role?: string; user_role?: string; id?: string } | undefined;
-  let role = user?.role || user?.user_role;
+  let user: { role?: string; user_role?: string; id?: string } | undefined;
+  let role: string | undefined;
 
-  // Extract role/user from session with JWT token fallback (for test harness/direct invocations)
-  if (!user || !role) {
-    const token = await getToken({
-      req,
-      secret: process.env.AUTH_SECRET,
-    });
-    if (token) {
-      role = (token.role as string) || (token.user_role as string);
-      user = {
-        id: (token.id || token.sub) as string,
-        role,
-        user_role: role,
-      };
-    }
+  // Keep the proxy bundle edge-safe: full auth.ts imports Node-only database and Argon2 modules.
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+  });
+  if (token) {
+    role = (token.role as string) || (token.user_role as string);
+    user = {
+      id: (token.id || token.sub) as string,
+      role,
+      user_role: role,
+    };
   }
 
   // 2. Unauthenticated check: redirect to /login preserving full pathname and query params
@@ -80,7 +77,7 @@ export const middleware = auth(async function middleware(req) {
   }
 
   return NextResponse.next();
-});
+}
 
 export default middleware;
 
