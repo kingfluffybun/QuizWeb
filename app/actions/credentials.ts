@@ -8,8 +8,8 @@ import { auth } from "@/auth";
 // -----------------------------------------------------------------------------
 // Validation Constants (Authoritative Contracts per PROJECT.md & test-rbac-e2e)
 // -----------------------------------------------------------------------------
-export const USERNAME_REGEX = /^[a-zA-Z0-9_.\- ]{3,30}$/;
-export const PASSWORD_COMPLEXITY_REGEX =
+const USERNAME_REGEX = /^[a-zA-Z0-9_.\- ]{3,30}$/;
+const PASSWORD_COMPLEXITY_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,24}$/;
 
 export interface ActionResult {

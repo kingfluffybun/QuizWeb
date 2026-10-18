@@ -161,7 +161,12 @@
 /* Reduced Motion Override */
 html[data-motion="reduce"] .admin-main *,
 html[data-motion="reduce"] .admin-main *::before,
-html[data-motion="reduce"] .admin-main *::after,
+html[data-motion="reduce"] .admin-main *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-main *,
   .admin-modal-overlay *,

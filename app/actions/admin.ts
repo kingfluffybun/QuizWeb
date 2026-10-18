@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { verifyAdminSecretKey, requireAdmin } from "@/lib/rbac";
+import { reviewPendingQuiz as reviewPendingQuizAction } from "@/app/actions/quiz";
 
 export interface ActionResult {
   success: boolean;
@@ -430,5 +431,10 @@ export async function getAdminReviewQueue(): Promise<PendingReviewItem[]> {
   }));
 }
 
-export { reviewPendingQuiz } from "@/app/actions/quiz";
-
+export async function reviewPendingQuiz(
+  pendingId: number,
+  decision: "approve" | "reject",
+  rejectionNotes = "",
+) {
+  return reviewPendingQuizAction(pendingId, decision, rejectionNotes);
+}

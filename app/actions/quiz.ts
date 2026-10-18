@@ -107,8 +107,6 @@ export interface UnitRow extends RowDataPacket {
   assessment_json: unknown;
 }
 
-export { requireAdmin };
-
 function getIndexedFormValues(formData: FormData, prefix: string) {
   const values: string[] = [];
   for (let index = 0; ; index++) {
