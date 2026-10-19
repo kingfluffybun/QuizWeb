@@ -1,0 +1,105 @@
+.mobile-shell {
+  display: contents;
+}
+
+.mobile-app-bar,
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-shell {
+    display: block;
+    min-height: 100dvh;
+  }
+
+  .mobile-app-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border-main);
+    background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+    color: var(--text-main);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-app-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: inherit;
+    font-family: var(--font-poppins), sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .mobile-app-brand img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mobile-app-action {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid var(--border-main);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .mobile-shell-content {
+    min-height: calc(100dvh - 112px);
+    padding: 12px 16px 88px;
+    overflow-x: hidden;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: 56px;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-main);
+    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-bottom-nav-item {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: var(--font-montserrat), sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .mobile-bottom-nav-item.active {
+    background: var(--selected-background-color);
+    color: var(--primary-color);
+  }
+
+  .mobile-bottom-nav-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+}
