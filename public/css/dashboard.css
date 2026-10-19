@@ -799,3 +799,97 @@ button.quick-action-btn:hover {
     color: var(--text-main);
     border-color: var(--text-muted);
 }
+
+/* =============================================================================
+   DASHBOARD MOBILE RESPONSIVE BREAKPOINT (< 768px)
+   ============================================================================= */
+@media (max-width: 768px) {
+    .dashboard-content {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        padding: 16px 12px !important;
+        gap: 16px !important;
+    }
+
+    .welcome-banner {
+        width: 100% !important;
+    }
+
+    .welcome-banner > div {
+        padding: 18px 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .welcome-banner h1 {
+        font-size: clamp(1.2rem, 5vw, 1.55rem) !important;
+        line-height: 1.25 !important;
+    }
+
+    .welcome-banner p {
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
+    }
+
+    .welcome-banner .cloud-right,
+    .welcome-banner .cloud-left {
+        opacity: 0.25 !important;
+        max-width: 100px !important;
+    }
+
+    /* Streak Calendar Mobile Scaling */
+    .streak-calendar-card {
+        padding: 16px 12px !important;
+        border-radius: 14px !important;
+        width: 100% !important;
+    }
+
+    .streak-calendar-header {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .streak-month-title {
+        font-size: 0.95rem !important;
+    }
+
+    .streak-calendar-grid {
+        gap: 3px !important;
+    }
+
+    .streak-weekday-header {
+        font-size: 0.68rem !important;
+        padding-bottom: 4px !important;
+    }
+
+    .streak-day-cell {
+        min-height: 32px !important;
+        border-radius: 6px !important;
+    }
+
+    .streak-day-number {
+        font-size: 0.72rem !important;
+    }
+
+    .streak-week-indicators {
+        gap: 4px !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .streak-week-badge {
+        padding: 4px 6px !important;
+        font-size: 0.68rem !important;
+    }
+
+    .streak-modal-content {
+        width: min(440px, 92vw) !important;
+        padding: 18px 16px !important;
+    }
+
+    /* Leaderboard & Stats */
+    .leaderboard-container,
+    .dashboard-leaderboard {
+        width: 100% !important;
+    }
+}

@@ -1384,15 +1384,19 @@
 /* Mobile Breakpoint (<768px) */
 @media (max-width: 768px) {
   .maintainer-page {
-    grid-template-areas:
-      "navbar"
-      "main";
-    grid-template-rows: 80px minmax(0, 1fr);
-    grid-template-columns: 1fr;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  .maintainer-page > nav {
+    display: none !important;
   }
 
   .maintainer-page > .sidebar {
-    display: none;
+    display: none !important;
   }
 
   .maintainer-container {

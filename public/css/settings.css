@@ -832,3 +832,75 @@ html[data-motion="reduce"] .settings-main *::after {
   border: 1px solid rgba(153, 102, 255, 0.25);
   color: var(--settings-text-main);
 }
+
+/* =============================================================================
+   SETTINGS MOBILE RESPONSIVE BREAKPOINT (< 768px)
+   ============================================================================= */
+@media (max-width: 768px) {
+  .settings-main {
+    padding: 20px 12px !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .settings-card {
+    padding: 20px 14px !important;
+    border-radius: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .settings-card .settings-header h1 {
+    font-size: clamp(1.4rem, 6vw, 1.8rem) !important;
+  }
+
+  /* Horizontal swipeable tabs nav */
+  .settings-tabs-nav {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .settings-tabs-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .settings-tab-btn {
+    flex-shrink: 0 !important;
+    padding: 8px 14px !important;
+    font-size: 0.85rem !important;
+    min-height: 40px !important;
+  }
+
+  .settings-user-summary {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .settings-main .theme-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .ui-scale-buttons {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .ui-scale-btn {
+    flex: 1 1 calc(50% - 8px) !important;
+    min-height: 42px !important;
+  }
+
+  .settings-btn-primary {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+}

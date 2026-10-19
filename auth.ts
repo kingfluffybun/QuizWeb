@@ -70,6 +70,23 @@ async function getActiveSessionUser(): Promise<{ id: string; email?: string } | 
                 isSecure = true;
             } else if (standardCookie?.value) {
                 sessionToken = standardCookie.value;
+            } else {
+                // Reassemble chunked cookies if token exceeded single-cookie limit
+                const allCookies = cookieStore.getAll();
+                const secureChunks = allCookies
+                    .filter((c) => c.name.startsWith("__Secure-authjs.session-token."))
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+                if (secureChunks.length > 0) {
+                    sessionToken = secureChunks.map((c) => c.value).join("");
+                    isSecure = true;
+                } else {
+                    const standardChunks = allCookies
+                        .filter((c) => c.name.startsWith("authjs.session-token."))
+                        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+                    if (standardChunks.length > 0) {
+                        sessionToken = standardChunks.map((c) => c.value).join("");
+                    }
+                }
             }
         } catch {
             // Outside cookie request scope
@@ -91,31 +108,56 @@ async function getActiveSessionUser(): Promise<{ id: string; email?: string } | 
                     isSecure = true;
                 } else if (cookiesParsed["authjs.session-token"]) {
                     sessionToken = cookiesParsed["authjs.session-token"];
+                } else {
+                    const secureChunkKeys = Object.keys(cookiesParsed)
+                        .filter((k) => k.startsWith("__Secure-authjs.session-token."))
+                        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+                    if (secureChunkKeys.length > 0) {
+                        sessionToken = secureChunkKeys.map((k) => cookiesParsed[k]).join("");
+                        isSecure = true;
+                    } else {
+                        const standardChunkKeys = Object.keys(cookiesParsed)
+                            .filter((k) => k.startsWith("authjs.session-token."))
+                            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+                        if (standardChunkKeys.length > 0) {
+                            sessionToken = standardChunkKeys.map((k) => cookiesParsed[k]).join("");
+                        }
+                    }
                 }
             } catch {
                 // Outside header scope
             }
         }
 
-        if (sessionToken && process.env.AUTH_SECRET) {
+        const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+        if (sessionToken && secret) {
             const { decode } = await import("next-auth/jwt");
-            const decoded = await decode({
+            let decoded = await decode({
                 token: sessionToken,
-                secret: process.env.AUTH_SECRET,
+                secret,
                 salt: isSecure ? "__Secure-authjs.session-token" : "authjs.session-token",
             });
+            if (!decoded) {
+                decoded = await decode({
+                    token: sessionToken,
+                    secret,
+                    salt: !isSecure ? "__Secure-authjs.session-token" : "authjs.session-token",
+                });
+            }
 
-            const userId = decoded?.id || decoded?.sub;
-            if (userId) {
-                const [rows] = await db.query<RowDataPacket[]>(
-                    "SELECT token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
-                    [userId]
-                );
-                if (rows.length > 0) {
-                    const dbVer = Number(rows[0].token_version ?? 1);
-                    const tokenVer = Number((decoded as { tokenVersion?: number }).tokenVersion ?? 1);
-                    if (dbVer === tokenVer) {
-                        return { id: String(userId), email: decoded.email as string | undefined };
+            if (decoded) {
+                const userId = decoded.id || decoded.sub;
+                if (userId) {
+                    const [rows] = await db.query<RowDataPacket[]>(
+                        "SELECT token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+                        [userId]
+                    );
+                    if (rows.length > 0) {
+                        const dbVer = Number(rows[0].token_version ?? 1);
+                        const tokenVer = Number((decoded as { tokenVersion?: number }).tokenVersion ?? 1);
+                        if (dbVer === tokenVer) {
+                            return { id: String(userId), email: decoded.email as string | undefined };
+                        }
                     }
                 }
             }
