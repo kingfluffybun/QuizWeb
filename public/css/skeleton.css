@@ -1,0 +1,262 @@
+/* ==========================================================================
+   Skeleton Loading System & Component Shimmer Primitives
+   Directly reflects the layout, hierarchy, and cards of QuizWeb views
+   ========================================================================== */
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Base Shimmer Element */
+.skeleton-shimmer,
+[data-skeleton] {
+  background: linear-gradient(
+    90deg,
+    rgba(153, 102, 255, 0.06) 20%,
+    rgba(153, 102, 255, 0.15) 50%,
+    rgba(153, 102, 255, 0.06) 80%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  border-radius: 8px;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+}
+
+[data-theme="dark"] .skeleton-shimmer,
+[data-theme="dark"] [data-skeleton] {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 80%
+  );
+  background-size: 200% 100%;
+}
+
+html[data-motion="reduce"] .skeleton-shimmer,
+html[data-motion="reduce"] [data-skeleton] {
+  animation: none !important;
+}
+
+/* Skeleton Atomic Primitives */
+.skeleton-line {
+  height: 14px;
+  width: 100%;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.skeleton-line.short { width: 40%; }
+.skeleton-line.medium { width: 70%; }
+.skeleton-line.title {
+  height: 28px;
+  width: 50%;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.skeleton-line.sub-title {
+  height: 20px;
+  width: 35%;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.skeleton-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.skeleton-pill {
+  height: 32px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+.skeleton-btn {
+  height: 42px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+/* App Layout Skeleton Container */
+.skeleton-app-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width, 240px) 1fr;
+  min-height: 100vh;
+  background-color: var(--bg-main, #fcfbff);
+}
+
+@media (max-width: 900px) {
+  .skeleton-app-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Skeleton Sidebar */
+.skeleton-sidebar {
+  width: var(--sidebar-width, 240px);
+  min-height: 100vh;
+  background: var(--bg-card, #ffffff);
+  border-right: 1px solid var(--border-main, #e0e0e0);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.skeleton-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-main, #e0e0e0);
+}
+
+.skeleton-sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.skeleton-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(153, 102, 255, 0.03);
+}
+
+.skeleton-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-main, #e0e0e0);
+}
+
+/* Skeleton Main Area */
+.skeleton-main {
+  flex: 1;
+  padding: 32px;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .skeleton-main {
+    padding: 16px;
+  }
+}
+
+/* Public Nav Skeleton */
+.skeleton-public-nav {
+  height: 70px;
+  border-bottom: 1px solid var(--border-main, #e0e0e0);
+  background: var(--bg-card, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+/* Dashboard Skeleton Elements */
+.skeleton-welcome-banner {
+  height: 140px;
+  border-radius: 20px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-main, #e0e0e0);
+  padding: 28px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.skeleton-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.8fr 1.2fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1100px) {
+  .skeleton-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skeleton-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-main, #e0e0e0);
+  border-radius: 20px;
+  padding: 24px;
+}
+
+/* Admin / Staff Stats Grid Skeleton */
+.skeleton-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1024px) {
+  .skeleton-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .skeleton-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skeleton-stat-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-main, #e0e0e0);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Table Skeleton */
+.skeleton-table-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-main, #e0e0e0);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.skeleton-table-header {
+  height: 52px;
+  background: rgba(153, 102, 255, 0.04);
+  border-bottom: 1px solid var(--border-main, #e0e0e0);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.skeleton-table-row {
+  height: 60px;
+  border-bottom: 1px solid var(--border-main, #e0e0e0);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.skeleton-table-row:last-child {
+  border-bottom: none;
+}

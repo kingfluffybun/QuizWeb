@@ -3,6 +3,7 @@ import Script from "next/script";
 import { JetBrains_Mono, Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
 import "@/public/css/settings.css";
+import "@/public/css/skeleton.css";
 import AccessibilityInit from "@/app/components/AccessibilityInit";
 
 const poppins = Poppins({
