@@ -25,33 +25,22 @@ used for project status.
 
 ## Current work
 
-Completed. Added tailored skeleton loading pages to all application views directly mirroring the structure, layout, and visual components of each page.
+Completed. Implemented fully functional Streak Calendar for the player dashboard on `/home`.
 
 Completed changes:
-- `public/css/skeleton.css`: Created system-wide skeleton shimmer animations and atomic component classes (`.skeleton-shimmer`, `[data-skeleton]`, `.skeleton-line`, `.skeleton-circle`, `.skeleton-pill`, `.skeleton-btn`, `.skeleton-card`, `.skeleton-table-card`), supporting dark mode (`[data-theme="dark"]`) and reduced motion preferences (`html[data-motion="reduce"]`).
-- `app/layout.tsx`: Imported `@/public/css/skeleton.css` globally for instant streaming Suspense fallback styling.
-- `app/components/skeletons/SkeletonSidebar.tsx`: Shared navigation skeleton reflecting logo, navigation list (with optional staff links), divider, and profile footer.
-- `app/components/skeletons/SkeletonPublicNav.tsx`: Shared public navigation skeleton reflecting PublicNav brand, links, and accessibility button.
-- `app/loading.tsx`: Global fallback & landing page skeleton reflecting PublicNav, hero banner, CTA button, and feature showcase card.
-- `app/home/loading.tsx`: Player Dashboard skeleton reflecting Sidebar, welcome banner with cloud silhouette, Lesson Progress card, Daily Goal XP 7-day chart, Streak Calendar matrix, and Leaderboard podium.
-- `app/admin/loading.tsx`: Admin Dashboard skeleton reflecting Sidebar, Admin header with staff badge, 4 metric stat cards, navigation tabs, user management search toolbar, user data table, and embedded workspace.
-- `app/maintainer/loading.tsx`: Maintainer Studio skeleton reflecting Sidebar, header with action buttons, 4 interactive stats ribbon cards, 4 studio creation launchers, filter toolbar, submissions table, and embedded workspace.
-- `app/settings/loading.tsx`: Settings skeleton reflecting Sidebar, header, user profile summary banner with avatar and badges, category tabs, and active form section.
-- `app/quiz/loading.tsx`: Quiz view skeleton reflecting Sidebar, top bar with segmented progress indicators, question card, code context box, choice options grid, and previous/submit footer buttons.
-- `app/learn/loading.tsx`: Curriculum Units skeleton reflecting Sidebar, header, and responsive grid of available unit cards with badges and start action buttons.
-- `app/input/loading.tsx`: Input Question Studio skeleton reflecting header links, metadata selectors, question type tabs, form fields, answer choices, and action buttons.
-- `app/pending/loading.tsx`: Pending Review skeleton reflecting header, pending submission cards with action buttons, and Recent Quizzes sidebar card.
-- `app/login/loading.tsx`: Auth/Login skeleton reflecting split-card design with brand mark, info panel, clouds, mini quiz preview, and form card with inputs and social auth buttons.
-- `app/about/loading.tsx`: About page skeleton reflecting PublicNav, hero header, Mission/Vision cards, Core Values grid, Team Leader and member cards, tech stack grid, and footer.
-- `app/quiz-cp/loading.tsx`: Coding Playground skeleton reflecting Sidebar, problem instructions, step checklist, Monaco editor frame, and console output drawer.
-- `app/verify-email/[token]/loading.tsx`: Verify email skeleton reflecting centered card, logo, message placeholder, and activation button.
-- `ANTIGRAVITY_HANDOFF.md`: Updated status to Ready and appended handoff log.
+- `migrations/004_user_activity.sql` & `migrations/004_user_activity_rollback.sql`: Created and idempotently applied `user_activity_tbl` on MySQL (`user_id`, `activity_date`, `activity_type`, `xp_earned`, `created_at`) with indexes on `(user_id, activity_date)` and foreign key cascade on `user_auth_tbl(user_id)`.
+- `app/actions/streak.ts`: Implemented `getUserStreakData`, `getMonthActivity`, and `recordUserActivity` server actions with streak calculations (current streak, longest streak, total active days, dynamic week indicators, month active days).
+- `app/home/StreakCalendar.tsx`: Created interactive client component featuring month navigation (`◀` / `▶`), Jump to "Today", dynamic calendar grid (padding empty cells, active days, today highlights), real-time flame indicator status, week status checkmarks, and an accessible "View Details" overview modal with stats and manual practice check-in.
+- `app/home/page.tsx`: Connected `StreakCalendar` with initial server-side streak and calendar data.
+- `app/quiz/QuizLandingClient.tsx` & `app/test/InteractiveQuizClient.tsx`: Hooked quiz completions to automatically record user activity and maintain daily streaks upon completion.
+- `public/css/dashboard.css`: Added styles for month header, navigation buttons, today view button, today indicators, and streak overview modal.
 
 Validation completed:
+- `node scripts/migrate.mjs` (004_user_activity.sql applied cleanly to live MySQL database)
 - `npx tsc --noEmit` (0 errors)
-- `npx eslint` on all skeleton loading files (0 errors, 0 warnings)
-- `npm run build` (Clean production build; all routes compiled successfully with streaming Suspense fallbacks)
-- `npx tsx tests/test-rbac-e2e.ts` (137/137 E2E tests passing)
+- Unit tests for streak calculations, month transitions, and calendar metrics (10/10 passing)
+- DB integration tests for user activity logging, month queries, and streak progression (all passing)
+- `npm run build` (Clean production build; all static and dynamic routes compiled successfully)
 
 Before starting work, an agent should replace this section with the files it
 intends to change and a short description. After finishing, it should replace
@@ -82,3 +71,10 @@ handoff-history entry.
   all views directly reflecting their exact page elements, visual hierarchy, and
   layouts. Created `public/css/skeleton.css` with shimmer animations and dark
   mode support. All 137 E2E tests and production build passed with zero errors.
+- 2026-10-19: Implemented functional Streak Calendar on `/home` backed by
+  `user_activity_tbl` MySQL migration (004), server actions in `app/actions/streak.ts`,
+  interactive `StreakCalendar.tsx` with month navigation and details modal, and
+  automatic streak activity tracking on quiz completions in `QuizLandingClient.tsx`
+  and `InteractiveQuizClient.tsx`. Passed unit tests, DB integration tests, and
+  production build.
+

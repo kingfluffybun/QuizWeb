@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import "#css/test_quiz.css";
 import "#css/nav.css";
 import {
@@ -23,6 +23,7 @@ import QuizPair from "./components/questions/QuizPair";
 import QuizCP from "./components/questions/QuizCP";
 import LessonCard from "@/app/components/LessonCard";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
+import { recordUserActivity } from "@/app/actions/streak";
 import { shuffleItems } from "@/app/quiz/shuffle";
 
 function normalizeQuizType(typeName?: string) {
@@ -123,6 +124,17 @@ export default function InteractiveQuizClient({
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
+
+    useEffect(() => {
+        if (status === "finished" && lives > 0) {
+            recordUserActivity({
+                type: "quiz",
+                xp: Math.max(10, score * 10),
+            }).catch((e) => {
+                console.error("Failed to record activity:", e);
+            });
+        }
+    }, [status, lives, score]);
 
     const [cpStepIndex, setCpStepIndex] = useState(0);
     const [stepMessage, setStepMessage] = useState<string | null>(null);

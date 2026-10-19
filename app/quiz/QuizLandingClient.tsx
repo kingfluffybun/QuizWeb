@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "#css/quiz.css";
 import "#css/nav.css";
 import "#css/sidebar.css"
@@ -13,6 +13,7 @@ import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
+import { recordUserActivity } from "@/app/actions/streak";
 
 type AnswerResult = {
     correct: boolean;
@@ -122,6 +123,17 @@ export default function QuizLandingClient({
     const [questionProgress, setQuestionProgress] = useState<Record<number, SavedQuestionProgress>>({});
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+
+    useEffect(() => {
+        if (isFinished && lives > 0) {
+            recordUserActivity({
+                type: "quiz",
+                xp: Math.max(10, score * 10),
+            }).catch((e) => {
+                console.error("Failed to record activity:", e);
+            });
+        }
+    }, [isFinished, lives, score]);
 
     const openAccessibility = () => {
         setAccessibilityClosing(false);

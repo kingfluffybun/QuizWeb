@@ -1,0 +1,289 @@
+"use server";
+
+import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+
+export interface WeekDayStatus {
+    date: string; // YYYY-MM-DD
+    dayOfWeek: number; // 0..6 (0=Sun, 6=Sat)
+    dayLetter: string; // 'S' | 'M' | 'T' | 'W' | 'T' | 'F' | 'S'
+    dayName: string; // 'Sun' | 'Mon' ...
+    isActive: boolean;
+    isToday: boolean;
+}
+
+export interface StreakData {
+    currentStreak: number;
+    longestStreak: number;
+    totalActiveDays: number;
+    todayCompleted: boolean;
+    activeDatesInMonth: number[]; // Day numbers active in target month e.g. [1, 2, 19]
+    allActiveDates: string[]; // YYYY-MM-DD
+    weekDays: WeekDayStatus[];
+    targetMonth: number; // 1..12
+    targetYear: number;
+    todayDate: string; // YYYY-MM-DD
+}
+
+function getAdjacentDate(dateStr: string, dayOffset: number): string {
+    const d = new Date(dateStr + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + dayOffset);
+    return d.toISOString().slice(0, 10);
+}
+
+function getDaysBetween(d1Str: string, d2Str: string): number {
+    const t1 = Date.parse(d1Str + "T00:00:00Z");
+    const t2 = Date.parse(d2Str + "T00:00:00Z");
+    return Math.round((t2 - t1) / (1000 * 60 * 60 * 24));
+}
+
+function computeStreaks(sortedDatesAsc: string[], todayStr: string): { currentStreak: number; longestStreak: number } {
+    if (sortedDatesAsc.length === 0) {
+        return { currentStreak: 0, longestStreak: 0 };
+    }
+
+    const dateSet = new Set(sortedDatesAsc);
+    const yesterdayStr = getAdjacentDate(todayStr, -1);
+
+    // Current streak:
+    // If today is completed, count backwards starting today.
+    // If today is not completed, but yesterday was, count backwards starting yesterday.
+    // If neither, current streak is 0.
+    let currentStreak = 0;
+    let anchorDate: string | null = null;
+
+    if (dateSet.has(todayStr)) {
+        anchorDate = todayStr;
+    } else if (dateSet.has(yesterdayStr)) {
+        anchorDate = yesterdayStr;
+    }
+
+    if (anchorDate) {
+        let checkDate = anchorDate;
+        while (dateSet.has(checkDate)) {
+            currentStreak += 1;
+            checkDate = getAdjacentDate(checkDate, -1);
+        }
+    }
+
+    // Longest streak across all recorded history:
+    let longestStreak = 0;
+    let currentRun = 0;
+    let previousDate: string | null = null;
+
+    for (const d of sortedDatesAsc) {
+        if (!previousDate) {
+            currentRun = 1;
+        } else {
+            const diff = getDaysBetween(previousDate, d);
+            if (diff === 1) {
+                currentRun += 1;
+            } else if (diff > 1) {
+                currentRun = 1;
+            }
+        }
+        if (currentRun > longestStreak) {
+            longestStreak = currentRun;
+        }
+        previousDate = d;
+    }
+
+    return { currentStreak, longestStreak };
+}
+
+export async function getUserStreakData(
+    targetYear?: number,
+    targetMonth?: number,
+    clientToday?: string
+): Promise<StreakData> {
+    const session = await auth();
+    const now = new Date();
+
+    // Use clientToday if valid YYYY-MM-DD, otherwise default to server UTC date
+    const todayDate = (clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday))
+        ? clientToday
+        : now.toISOString().slice(0, 10);
+
+    const [todayYearStr, todayMonthStr] = todayDate.split("-");
+    const resolvedYear = targetYear ?? Number(todayYearStr);
+    const resolvedMonth = targetMonth ?? Number(todayMonthStr);
+
+    const emptyWeekDays: WeekDayStatus[] = (() => {
+        const d = new Date(todayDate + "T00:00:00Z");
+        const dayOfWeek = d.getUTCDay();
+        const sundayStr = getAdjacentDate(todayDate, -dayOfWeek);
+        const letters = ["S", "M", "T", "W", "T", "F", "S"];
+        const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        return Array.from({ length: 7 }, (_, i) => {
+            const date = getAdjacentDate(sundayStr, i);
+            return {
+                date,
+                dayOfWeek: i,
+                dayLetter: letters[i],
+                dayName: names[i],
+                isActive: false,
+                isToday: date === todayDate,
+            };
+        });
+    })();
+
+    const emptyResult: StreakData = {
+        currentStreak: 0,
+        longestStreak: 0,
+        totalActiveDays: 0,
+        todayCompleted: false,
+        activeDatesInMonth: [],
+        allActiveDates: [],
+        weekDays: emptyWeekDays,
+        targetMonth: resolvedMonth,
+        targetYear: resolvedYear,
+        todayDate,
+    };
+
+    if (!session?.user?.id) {
+        return emptyResult;
+    }
+
+    const userId = Number(session.user.id);
+    if (!Number.isFinite(userId) || userId <= 0) {
+        return emptyResult;
+    }
+
+    try {
+        const [rows] = await db.query<RowDataPacket[]>(
+            `SELECT DISTINCT DATE_FORMAT(activity_date, '%Y-%m-%d') as act_date 
+             FROM user_activity_tbl 
+             WHERE user_id = ? 
+             ORDER BY act_date ASC`,
+            [userId]
+        );
+
+        const allActiveDates: string[] = rows.map((r) => r.act_date as string);
+        const activeDateSet = new Set(allActiveDates);
+
+        const { currentStreak, longestStreak } = computeStreaks(allActiveDates, todayDate);
+        const todayCompleted = activeDateSet.has(todayDate);
+
+        // Find active days in the target year & month
+        const monthPrefix = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-`;
+        const activeDatesInMonth: number[] = [];
+        for (const date of allActiveDates) {
+            if (date.startsWith(monthPrefix)) {
+                const dayNum = Number(date.slice(8, 10));
+                if (!Number.isNaN(dayNum)) {
+                    activeDatesInMonth.push(dayNum);
+                }
+            }
+        }
+
+        // Build week days status
+        const d = new Date(todayDate + "T00:00:00Z");
+        const dayOfWeek = d.getUTCDay();
+        const sundayStr = getAdjacentDate(todayDate, -dayOfWeek);
+        const letters = ["S", "M", "T", "W", "T", "F", "S"];
+        const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        const weekDays: WeekDayStatus[] = Array.from({ length: 7 }, (_, i) => {
+            const date = getAdjacentDate(sundayStr, i);
+            return {
+                date,
+                dayOfWeek: i,
+                dayLetter: letters[i],
+                dayName: names[i],
+                isActive: activeDateSet.has(date),
+                isToday: date === todayDate,
+            };
+        });
+
+        return {
+            currentStreak,
+            longestStreak,
+            totalActiveDays: allActiveDates.length,
+            todayCompleted,
+            activeDatesInMonth,
+            allActiveDates,
+            weekDays,
+            targetMonth: resolvedMonth,
+            targetYear: resolvedYear,
+            todayDate,
+        };
+    } catch (err) {
+        console.error("Failed to query user streak data:", err);
+        return emptyResult;
+    }
+}
+
+export async function getMonthActivity(
+    year: number,
+    month: number
+): Promise<{ success: boolean; activeDays: number[]; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, activeDays: [], error: "Unauthorized" };
+    }
+
+    const userId = Number(session.user.id);
+    const monthPrefix = `${year}-${String(month).padStart(2, "0")}-`;
+
+    try {
+        const [rows] = await db.query<RowDataPacket[]>(
+            `SELECT DISTINCT DATE_FORMAT(activity_date, '%Y-%m-%d') as act_date 
+             FROM user_activity_tbl 
+             WHERE user_id = ? AND activity_date >= ? AND activity_date <= LAST_DAY(?)
+             ORDER BY act_date ASC`,
+            [userId, `${monthPrefix}01`, `${monthPrefix}01`]
+        );
+
+        const activeDays = rows
+            .map((r) => Number((r.act_date as string).slice(8, 10)))
+            .filter((n) => !Number.isNaN(n));
+
+        return { success: true, activeDays };
+    } catch (err) {
+        console.error("Failed to query month activity:", err);
+        return { success: false, activeDays: [], error: "Database query failed" };
+    }
+}
+
+export async function recordUserActivity(options?: {
+    type?: string;
+    xp?: number;
+    date?: string;
+}): Promise<{ success: boolean; streak?: number; message?: string; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: "Authentication required to log activity" };
+    }
+
+    const userId = Number(session.user.id);
+    if (!Number.isFinite(userId) || userId <= 0) {
+        return { success: false, error: "Invalid user session" };
+    }
+
+    const activityType = options?.type ?? "quiz";
+    const xpEarned = typeof options?.xp === "number" ? Math.max(0, options.xp) : 10;
+    const activityDate = (options?.date && /^\d{4}-\d{2}-\d{2}$/.test(options.date))
+        ? options.date
+        : new Date().toISOString().slice(0, 10);
+
+    try {
+        await db.query<ResultSetHeader>(
+            `INSERT INTO user_activity_tbl (user_id, activity_date, activity_type, xp_earned) 
+             VALUES (?, ?, ?, ?)`,
+            [userId, activityDate, activityType, xpEarned]
+        );
+
+        const streakData = await getUserStreakData(undefined, undefined, activityDate);
+        return {
+            success: true,
+            streak: streakData.currentStreak,
+            message: "Activity logged successfully",
+        };
+    } catch (err) {
+        console.error("Failed to record user activity:", err);
+        return { success: false, error: "Failed to save activity" };
+    }
+}
+
