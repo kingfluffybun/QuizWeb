@@ -26,10 +26,38 @@ export async function middleware(req: NextRequest) {
   let role: string | undefined;
 
   // Keep the proxy bundle edge-safe: full auth.ts imports Node-only database and Argon2 modules.
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET,
-  });
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+  const cookieHeader = req.headers.get("cookie") || "";
+  const isSecure =
+    req.cookies.has("__Secure-authjs.session-token") ||
+    req.cookies.has("__Secure-authjs.session-token.0") ||
+    req.cookies.has("__Secure-next-auth.session-token") ||
+    req.cookies.has("__Secure-next-auth.session-token.0") ||
+    cookieHeader.includes("__Secure-authjs.session-token") ||
+    cookieHeader.includes("__Secure-next-auth.session-token") ||
+    nextUrl.protocol === "https:" ||
+    req.headers.get("x-forwarded-proto") === "https";
+
+  // Multi-tier token resolution: handles HTTP dev, HTTPS production (__Secure- prefix), and legacy cookie names
+  let token = await getToken({ req, secret, secureCookie: isSecure });
+  if (!token) {
+    token = await getToken({ req, secret, secureCookie: !isSecure });
+  }
+  if (!token) {
+    token = await getToken({
+      req,
+      secret,
+      cookieName: isSecure ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+    });
+  }
+  if (!token) {
+    token = await getToken({
+      req,
+      secret,
+      cookieName: !isSecure ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+    });
+  }
+
   if (token) {
     role = (token.role as string) || (token.user_role as string);
     user = {

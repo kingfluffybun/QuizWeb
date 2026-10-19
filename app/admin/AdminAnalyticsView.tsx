@@ -12,7 +12,10 @@ export interface AdminAnalyticsViewProps {
 export default function AdminAnalyticsView({
   analytics,
 }: AdminAnalyticsViewProps) {
-  const totalQuizzes = analytics.totalQuizzes || 1; // Prevent division by zero
+  const categories = analytics?.categories ?? [];
+  const difficulties = analytics?.difficulties ?? [];
+  const contributors = analytics?.contributors ?? [];
+  const totalQuizzes = analytics?.totalQuizzes || 1; // Prevent division by zero
 
   return (
     <div className="admin-analytics-view">
@@ -21,13 +24,13 @@ export default function AdminAnalyticsView({
         <div className="admin-card">
           <div className="admin-card-header">
             <h3 className="admin-card-title">Curriculum by Category</h3>
-            <span className="admin-card-subtitle">{analytics.categories.length} Total Categories</span>
+            <span className="admin-card-subtitle">{categories.length} Total Categories</span>
           </div>
           <div className="admin-chart-list">
-            {analytics.categories.length === 0 ? (
+            {categories.length === 0 ? (
               <p className="admin-chart-empty">No category data recorded.</p>
             ) : (
-              analytics.categories.map((cat) => {
+              categories.map((cat) => {
                 const percentage = Math.round((cat.count / totalQuizzes) * 100);
                 return (
                   <div key={cat.category} className="admin-chart-row">
@@ -55,10 +58,10 @@ export default function AdminAnalyticsView({
             <span className="admin-card-subtitle">Student Skill Progression</span>
           </div>
           <div className="admin-chart-list">
-            {analytics.difficulties.length === 0 ? (
+            {difficulties.length === 0 ? (
               <p className="admin-chart-empty">No difficulty data recorded.</p>
             ) : (
-              analytics.difficulties.map((diff) => {
+              difficulties.map((diff) => {
                 const percentage = Math.round((diff.count / totalQuizzes) * 100);
                 const diffKey = diff.difficulty.toLowerCase();
                 return (
@@ -90,7 +93,7 @@ export default function AdminAnalyticsView({
             <span className="admin-card-subtitle">Approved Curriculum Contributors</span>
           </div>
           <div className="admin-leaderboard">
-            {analytics.contributors.length === 0 ? (
+            {contributors.length === 0 ? (
               <p className="admin-chart-empty">No contributor submission records found.</p>
             ) : (
               <table className="admin-table" aria-label="Contributor Leaderboard">
@@ -102,7 +105,7 @@ export default function AdminAnalyticsView({
                   </tr>
                 </thead>
                 <tbody>
-                  {[...analytics.contributors]
+                  {[...contributors]
                     .sort((a, b) => b.totalUnits - a.totalUnits)
                     .map((contrib, idx) => (
                       <tr key={contrib.authorId}>

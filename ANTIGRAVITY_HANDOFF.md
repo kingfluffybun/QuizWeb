@@ -25,6 +25,30 @@ used for project status.
 
 ## Current work
 
+Completed. Resolved production HTTPS admin redirect loop error and hardened token resolution.
+
+Completed changes:
+- `middleware.ts`: Implemented robust multi-tier token resolution in Next.js Edge middleware. Detects HTTPS / reverse proxy `x-forwarded-proto` and `__Secure-` cookie prefixes; checks `getToken` with `secureCookie: isSecure` and fallback `secureCookie: !isSecure`, as well as legacy `next-auth.session-token` formats and fallback `NEXTAUTH_SECRET`.
+- `auth.ts`: Added chunked cookie concatenation support (`__Secure-authjs.session-token.0`, `.1`) and defensive `secret`/`salt` fallbacks in `getActiveSessionUser` so chunked production cookies resolve correctly.
+- `app/actions/admin.ts`: Hardened `getAdminAnalytics` MySQL `JSON_TABLE` queries with `COALESCE(NULLIF(u.unit_quiz_json, ""), "[]")` to prevent errors on empty/null JSON rows.
+- `app/admin/AdminAnalyticsView.tsx`: Added defensive null-safety for `categories`, `difficulties`, and `contributors` arrays (`?? []`) preventing runtime TypeError exceptions on partial analytics.
+
+Validation completed:
+- `npx tsc --noEmit` (0 errors)
+- Node test suite verifying `getToken` resolution across HTTPS `__Secure-authjs`, chunked cookies, HTTP `authjs`, and legacy tokens (6/6 passing)
+- Standalone RBAC E2E test suite `npx tsx tests/test-rbac-e2e.ts` (137/137 passing)
+- Live Azure MySQL query verification on `getAdminAnalytics` (clean execution)
+- `npm run build` (Clean production build; all 14 static and dynamic routes compiled successfully)
+
+Before starting work, an agent should replace this section with the files it
+intends to change and a short description. After finishing, it should replace
+the section with the completed changes and validation results, then append a
+handoff-history entry.
+
+## Handoff history
+
+- 2026-10-19: Fixed production HTTPS admin redirect loop. Diagnosed that NextAuth v5 sets `__Secure-authjs.session-token` cookies in production HTTPS; `getToken({ req, secret })` in `middleware.ts` defaulted `secureCookie` to `false`, causing it to miss the secure cookie and return `null`, which triggered a 307 redirect loop to `/login?callbackUrl=/admin`. Updated `middleware.ts` with multi-tier `secureCookie` and chunked cookie detection, updated `auth.ts` for chunked cookies, hardened `JSON_TABLE` in `admin.ts`, and added defensive fallbacks in `AdminAnalyticsView.tsx`. All 137 RBAC tests and production build passed.
+
 Completed. Implemented fully functional Streak Calendar for the player dashboard on `/home`.
 
 Completed changes:
