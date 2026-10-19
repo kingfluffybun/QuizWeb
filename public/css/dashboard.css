@@ -164,7 +164,7 @@
     }
 }
 
-.unit-list {
+.unit-list-dashboard {
     display: flex;
     flex-direction: column;
     gap: 12px;

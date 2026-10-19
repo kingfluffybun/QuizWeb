@@ -75,7 +75,7 @@
 
 /* Dark Theme Overrides */
 [data-theme="dark"] {
-  --admin-primary: #a377ff;
+  --admin-primary: #672fce;
   --admin-primary-hover: #b58eff;
   --admin-primary-light: rgba(163, 119, 255, 0.12);
   --admin-primary-glow: rgba(163, 119, 255, 0.35);
@@ -233,7 +233,7 @@ html[data-motion="reduce"] .admin-main *::after {
 
 .admin-container {
   width: 100%;
-  max-width: 1360px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
@@ -282,7 +282,7 @@ html[data-motion="reduce"] .admin-main *::after {
 .admin-header-subtitle,
 .admin-header-titles p {
   font-size: 0.95rem;
-  color: var(--admin-text-muted);
+  color: var(--admin-text-inverse);
   margin: 0;
 }
 
@@ -1262,6 +1262,7 @@ html[data-motion="reduce"] .admin-main *::after {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
 }
 
 .admin-card-full-width {

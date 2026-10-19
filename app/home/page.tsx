@@ -55,7 +55,7 @@ export default async function DashboardPage() {
                                         </div>
                                     </div>
                                     <hr></hr>
-                                    <div className="unit-list">
+                                    <div className="unit-list-dashboard">
                                         <div className="unit row">
                                             <div className="unit-no row"><p>1</p></div>
                                             <div className="unit-info">

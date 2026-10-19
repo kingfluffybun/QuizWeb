@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --input-surface: #fff;
   --input-on-accent: #fafafa;
   --input-background: #f6f6f6;
@@ -23,7 +23,7 @@ body {
 input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
 select,
 textarea {
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-main);
 }
 .admin-header {
   background-color: var(--primary-color);
@@ -59,7 +59,7 @@ textarea {
   margin: 24px auto;
   padding: 0 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, auto);
   gap: 20px;
 }
 .admin-container > .admin-card {
@@ -562,14 +562,14 @@ textarea {
   }
 }
 .admin-card {
-  background: var(--input-surface);
-  border: 2px solid #e0e0e0;
+  background: var(--bg-card);
+  border: 2px solid var(--border-main);
   border-radius: 20px;
   padding: 30px;
   box-shadow: 0 8px 24px #9966ff0d;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  width: 100%;
 }
 .incoming-admin-card {
   min-width: 0;
@@ -867,7 +867,7 @@ textarea {
 }
 .assessment-heading h3 {
   margin: 0;
-  color: #333;
+  color: var(--text-main);
   font-family: "Poppins", sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
@@ -970,7 +970,7 @@ textarea {
 }
 .lesson-slide-heading h3 {
   margin: 0;
-  color: #1e293b;
+  color: var(--text-main);
   font-family: "Poppins", sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
@@ -1057,21 +1057,21 @@ textarea {
   padding: 16px 16px 16px;
   border: 2px solid #cbd5e1;
   border-radius: 14px;
-  background: #f8fafc;
+  background: var(--bg-main);
 }
 .lesson-slide-fields {
   margin-bottom: 16px;
   padding: 16px 18px 0;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--bg-card);
 }
 .lesson-slide-fields:last-child {
   margin-bottom: 0;
 }
 .lesson-slide-number {
   margin-bottom: 16px;
-  color: #1e293b;
+  color: var(--text-main);
   font-family: "Poppins", sans-serif;
   font-size: 1rem;
   font-weight: 700;
@@ -1181,7 +1181,7 @@ textarea {
   font-family: "Poppins", sans-serif;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #333;
+  color: var(--text-main);
   font-size: 0.95rem;
 }
 .form-select,
