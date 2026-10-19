@@ -10,6 +10,7 @@ const EXCLUDED_PREFIXES = [
   "/login",
   "/verify-email",
   "/test",
+  "/quiz",
   "/quiz-cp",
   "/about",
   "/post-login",

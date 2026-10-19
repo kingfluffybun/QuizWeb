@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import InteractiveQuizClient from "./InteractiveQuizClient";
 import { QuizData, UnitLessonCardData } from "./types";
@@ -54,8 +55,28 @@ export default async function InteractiveQuizPage({
 
     if (quizzesToDisplay.length === 0) {
         return (
-            <main style={{ display: "flex", justifyContent: "center", padding: "50px" }}>
-                <div className="empty-state">No quizzes available.</div>
+            <main style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "32px 16px", textAlign: "center", gap: "16px" }}>
+                <h2 style={{ fontSize: "1.4rem", color: "var(--text-main)" }}>Practice Arena</h2>
+                <p style={{ maxWidth: "420px", color: "var(--text-muted)", fontSize: "0.95rem", lineHeight: "1.5" }}>
+                    Select a curriculum unit to practice interactive quizzes, tests, and coding challenges.
+                </p>
+                <Link
+                    href="/learn"
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "12px 24px",
+                        borderRadius: "12px",
+                        background: "var(--primary-color)",
+                        color: "#ffffff",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        minHeight: "44px",
+                    }}
+                >
+                    Browse Curriculum
+                </Link>
             </main>
         );
     }

@@ -804,12 +804,17 @@ button.quick-action-btn:hover {
    DASHBOARD MOBILE RESPONSIVE BREAKPOINT (< 768px)
    ============================================================================= */
 @media (max-width: 768px) {
+    .dashboard-page > main {
+        border-top: none !important;
+    }
+
     .dashboard-content {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
-        padding: 16px 12px !important;
+        padding: 14px 12px !important;
         gap: 16px !important;
+        box-sizing: border-box !important;
     }
 
     .welcome-banner {
@@ -817,12 +822,12 @@ button.quick-action-btn:hover {
     }
 
     .welcome-banner > div {
-        padding: 18px 16px !important;
+        padding: 16px 14px !important;
         border-radius: 14px !important;
     }
 
     .welcome-banner h1 {
-        font-size: clamp(1.2rem, 5vw, 1.55rem) !important;
+        font-size: clamp(1.2rem, 5vw, 1.5rem) !important;
         line-height: 1.25 !important;
     }
 
@@ -831,65 +836,211 @@ button.quick-action-btn:hover {
         line-height: 1.4 !important;
     }
 
-    .welcome-banner .cloud-right,
-    .welcome-banner .cloud-left {
+    .welcome-banner .cloud-right {
         opacity: 0.25 !important;
-        max-width: 100px !important;
+        max-width: 90px !important;
+        right: -4px !important;
+        bottom: -20px !important;
     }
 
-    /* Streak Calendar Mobile Scaling */
-    .streak-calendar-card {
-        padding: 16px 12px !important;
-        border-radius: 14px !important;
+    .dashboard {
+        width: 100% !important;
+        gap: 16px !important;
+    }
+
+    /* Convert Two-Column Cards to Single Column on Mobile */
+    .dashboard .two-col-card {
+        flex-direction: column !important;
+        gap: 16px !important;
         width: 100% !important;
     }
 
-    .streak-calendar-header {
-        flex-wrap: wrap !important;
+    .card {
+        padding: 16px 14px !important;
+        border-radius: 14px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Lesson Progress Card */
+    .current-lesson {
         gap: 8px !important;
     }
 
-    .streak-month-title {
-        font-size: 0.95rem !important;
+    .current-lesson h2 {
+        font-size: 1rem !important;
     }
 
-    .streak-calendar-grid {
-        gap: 3px !important;
+    .lesson-progress-details {
+        align-items: center !important;
     }
 
-    .streak-weekday-header {
-        font-size: 0.68rem !important;
-        padding-bottom: 4px !important;
+    .lesson-progress-details > .row h1 {
+        font-size: 1.3rem !important;
     }
 
-    .streak-day-cell {
-        min-height: 32px !important;
-        border-radius: 6px !important;
+    /* Daily Goal Card & Graph */
+    .daily-goal-xp {
+        width: 100% !important;
     }
 
-    .streak-day-number {
-        font-size: 0.72rem !important;
-    }
-
-    .streak-week-indicators {
-        gap: 4px !important;
+    .daily-prograss-graph {
+        width: 100% !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
 
-    .streak-week-badge {
-        padding: 4px 6px !important;
-        font-size: 0.68rem !important;
+    .graph-y-axis div {
+        padding: 4px !important;
+        min-width: 28px !important;
     }
 
-    .streak-modal-content {
-        width: min(440px, 92vw) !important;
-        padding: 18px 16px !important;
+    .graph-y-axis div p {
+        font-size: 0.75rem !important;
     }
 
-    /* Leaderboard & Stats */
-    .leaderboard-container,
-    .dashboard-leaderboard {
+    .graph-y-axis div > .graph-y-bar {
+        width: 12px !important;
+    }
+
+    /* Streak Calendar */
+    .calendar-container {
+        flex-direction: column !important;
+        gap: 20px !important;
         width: 100% !important;
+    }
+
+    .streak {
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    .streak-status {
+        gap: 16px !important;
+    }
+
+    .streak-status > .streak-progress-bar svg {
+        width: 64px !important;
+        height: auto !important;
+    }
+
+    .streak-status h1 {
+        font-size: 3rem !important;
+        margin: 0 !important;
+    }
+
+    .streak-week {
+        gap: 4px !important;
+        justify-content: space-between !important;
+    }
+
+    .streak-day {
+        height: 34px !important;
+        width: 34px !important;
+    }
+
+    .streak-day svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    .calendar {
+        gap: 4px !important;
+        width: 100% !important;
+    }
+
+    .calendar-month {
+        margin-bottom: 6px !important;
+    }
+
+    .calendar-month p {
+        font-size: 0.9rem !important;
+    }
+
+    .day-label p {
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+    }
+
+    .day {
+        aspect-ratio: 1 !important;
+    }
+
+    .day p {
+        padding: 4px !important;
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+    }
+
+    .streak-modal-card {
+        width: min(420px, calc(100vw - 32px)) !important;
+        padding: 18px 16px !important;
+        border-radius: 16px !important;
+    }
+
+    .streak-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+    }
+
+    .streak-stat-item {
+        padding: 8px 4px !important;
+    }
+
+    .streak-stat-value {
+        font-size: 1.2rem !important;
+    }
+
+    .streak-stat-label {
+        font-size: 0.65rem !important;
+    }
+
+    /* Leaderboard Card */
+    .leaderboard {
+        width: 100% !important;
+        position: static !important;
+    }
+
+    .sort-by-time {
+        padding: 4px !important;
+    }
+
+    .sort-by-time label {
+        padding: 6px 0 !important;
+    }
+
+    .sort-by-time label p {
+        font-size: 0.75rem !important;
+    }
+
+    .podium {
+        gap: 8px !important;
+    }
+
+    .podium-place {
+        padding: 12px 6px !important;
+    }
+
+    .podium-place h1 {
+        font-size: 2rem !important;
+    }
+
+    .podium-place-container .player-icon {
+        width: 44px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .podium-player-xp {
+        bottom: -18px !important;
+        padding: 2px 6px !important;
+    }
+
+    .podium-player-xp p {
+        font-size: 0.65rem !important;
+    }
+
+    .podium-place-container #player-name {
+        font-size: 0.75rem !important;
+        padding: 4px 0 !important;
     }
 }

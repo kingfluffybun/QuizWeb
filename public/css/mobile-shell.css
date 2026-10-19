@@ -27,10 +27,12 @@
     justify-content: space-between;
     height: 56px;
     padding: 0 16px;
+    padding-top: env(safe-area-inset-top);
     border-bottom: 1px solid var(--border-main);
     background: color-mix(in srgb, var(--bg-card) 94%, transparent);
     color: var(--text-main);
     backdrop-filter: blur(12px);
+    font-family: var(--font-montserrat), sans-serif;
   }
 
   .mobile-app-brand {
@@ -128,10 +130,11 @@
     align-items: stretch;
     justify-content: space-around;
     min-height: 56px;
-    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    padding: 6px 8px max(8px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--border-main);
     background: color-mix(in srgb, var(--bg-card) 96%, transparent);
     backdrop-filter: blur(14px);
+    font-family: var(--font-montserrat), sans-serif;
   }
 
   .mobile-bottom-nav-item {
@@ -189,6 +192,7 @@
     box-shadow: -8px 0 28px rgba(0, 0, 0, 0.16);
     display: flex !important;
     flex-direction: column;
+    font-family: var(--font-montserrat), sans-serif;
     transform: translateX(100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
