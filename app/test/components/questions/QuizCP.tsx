@@ -2,7 +2,7 @@ import React from "react";
 import { QuizPayload, QuizStatus } from "../../types";
 
 interface QuizCPProps {
-    payload: QuizPayload;
+    payload?: QuizPayload;
     currentStepIndex: number;
     totalSteps: number;
     stepPrompt: string;
@@ -14,7 +14,6 @@ interface QuizCPProps {
 }
 
 export default function QuizCP({
-    payload,
     currentStepIndex,
     totalSteps,
     stepPrompt,

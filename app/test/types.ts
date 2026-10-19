@@ -55,4 +55,43 @@ export interface QuizData {
     type_name: QuizType;
     question_text: string;
     quiz_payload: QuizPayload;
+    unit_title?: string;
+    unit_lesson_card?: UnitLessonCardData;
+    unit_assessment?: Record<string, unknown> | string;
 }
+
+export interface LessonSlideItem {
+    lesson_title?: string;
+    lesson_text?: string;
+    lesson_code?: string;
+}
+
+export interface UnitLessonCardData {
+    lesson_title?: string;
+    lesson_text?: string;
+    lesson_code?: string;
+    lesson_slide?: LessonSlideItem[];
+    lesson_card?: {
+        lesson_text?: string;
+    };
+    [key: string]: unknown;
+}
+
+export interface PairAnswer {
+    left: string[];
+    right: string[];
+}
+
+export type QuizAnswer = number | string | string[] | PairAnswer | null;
+
+export interface McqOption {
+    id: number;
+    text: string;
+}
+
+export interface McqQuizState {
+    options: McqOption[];
+    correctId: number;
+}
+
+export type QuizCustomState = McqQuizState | null;

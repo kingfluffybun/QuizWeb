@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
+import { requireAdmin, requireStaff } from "@/lib/rbac";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
 const getAssessmentStepsFromForm = (formData: FormData): string[] | null => {
@@ -104,43 +105,6 @@ export interface UnitRow extends RowDataPacket {
   unit_lesson_card_json: unknown;
   quiz_json: unknown;
   assessment_json: unknown;
-}
-
-export async function requireAdmin() {
-  interface AuthSession {
-    user?: {
-      id?: string;
-      role?: string;
-      user_role?: string;
-    };
-  }
-
-  let session = (globalThis as unknown as { __TEST_AUTH_SESSION__?: AuthSession | null }).__TEST_AUTH_SESSION__;
-  if (session === undefined) {
-    try {
-      session = (await auth()) as AuthSession | null;
-    } catch {
-      session = null;
-    }
-  }
-  const userId = session?.user?.id;
-  if (!userId) return false;
-
-  try {
-    const [rows] = await db.query<RowDataPacket[]>(
-      "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
-      [userId],
-    );
-    if (rows && rows.length > 0) {
-      if (rows[0]?.user_role === "admin") {
-        return { id: String(userId), role: "admin" };
-      }
-      return false;
-    }
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 function getIndexedFormValues(formData: FormData, prefix: string) {
@@ -296,21 +260,6 @@ async function tableExists(tableName: string) {
   }
 }
 
-async function getSectionTableName() {
-  const candidates = ["sec_tbl", "section_tbl", "sections_tbl"];
-
-  for (const tableName of candidates) {
-    try {
-      await db.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
-      return tableName;
-    } catch {
-      // try the next known section table name
-    }
-  }
-
-  return null;
-}
-
 async function quizHasColumn(columnName: string) {
   try {
     const [columns] = await db.query<RowDataPacket[]>(
@@ -351,6 +300,11 @@ export async function getQuizMetadata() {
 }
 
 export async function saveUnit(_state: unknown, formData: FormData) {
+  const staff = await requireStaff();
+  if (!staff) {
+    return { error: "Unauthorized: Maintainer or Administrator access required." };
+  }
+
   const sectionId = formData.get("sec_id") ?? formData.get("unit_sec_id");
   if (!sectionId) {
     return { error: "A valid Section ID is required." };
@@ -429,9 +383,11 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     expected_outcome: expectedOutcome,
   });
   const session = await auth();
+  const authorId = staff.id ? Number(staff.id) : (session?.user?.id ? Number(session.user.id) : null);
   const pendingName = (
     session?.user?.name ??
     session?.user?.email?.split("@")[0] ??
+    staff.email?.split("@")[0] ??
     "Contributor"
   ).slice(0, 50);
 
@@ -439,8 +395,8 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     const [result] = await db.query<ResultSetHeader>(
       `INSERT INTO pending_tbl
        (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
-        unit_assessment_json, pending_status, pending_note, pending_name)
-             VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+        unit_assessment_json, pending_status, pending_note, pending_name, author_id)
+             VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
       [
         lessonTitle,
         sectionId,
@@ -449,6 +405,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
         assessmentDocument,
         "",
         pendingName,
+        authorId,
       ],
     );
 
@@ -1153,7 +1110,8 @@ export async function getQuizOrUnitById(id: number) {
 }
 
 export async function createQuiz(state: unknown, formData: FormData) {
-  if (!(await requireAdmin())) {
+  const staff = await requireStaff();
+  if (!staff) {
     return { error: "Unauthorized" };
   }
   if (!(await tableExists("quiz_tbl"))) {
@@ -1194,40 +1152,40 @@ export async function createQuiz(state: unknown, formData: FormData) {
       return { error: parsedPayload.error };
     }
 
-    const hasSecId = await quizHasColumn("sec_id");
-    const columns = [
-      "cat_id",
-      "difficulty_id",
-      "quiz_type_id",
-      "question_text",
-      "quiz_payload",
-    ];
-    const values: unknown[] = [
-      catId,
-      difficultyId,
-      quizTypeId,
-      questionText.toString().trim(),
-      JSON.stringify(parsedPayload.payload),
-    ];
-
-    if (hasSecId && secId && secId !== "") {
-      columns.push("sec_id");
-      values.push(secId);
-    }
-
     const session = await auth();
+    const authorId = staff.id ? Number(staff.id) : (session?.user?.id ? Number(session.user.id) : null);
     const pendingName = (
       session?.user?.name ??
       session?.user?.email?.split("@")[0] ??
+      staff.email?.split("@")[0] ??
       "Contributor"
     ).slice(0, 50);
 
-    columns.push("pending_status", "pending_name");
-    values.push("pending", pendingName);
+    const quizItem = {
+      cat_id: Number(catId),
+      difficulty_id: Number(difficultyId),
+      quiz_type_id: Number(quizTypeId),
+      question_text: questionText.toString().trim(),
+      quiz_payload: parsedPayload.payload,
+    };
+
+    const resolvedSecId = secId && String(secId).trim() !== "" ? Number(secId) : 1;
 
     const [insertResult] = await db.query<ResultSetHeader>(
-      `INSERT INTO pending_tbl (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
-      values,
+      `INSERT INTO pending_tbl
+       (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
+        unit_assessment_json, pending_status, pending_note, pending_name, author_id)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+      [
+        questionText.toString().trim().slice(0, 50),
+        resolvedSecId,
+        JSON.stringify({ lesson_slide: [] }),
+        JSON.stringify([quizItem]),
+        JSON.stringify({ steps: [] }),
+        "",
+        pendingName,
+        authorId !== null && !isNaN(authorId) ? authorId : null,
+      ],
     );
 
     return {
@@ -1637,8 +1595,8 @@ export async function updatePendingQuiz(
 
   try {
     const [result] = await db.query<ResultSetHeader>(
-      "UPDATE pending_tbl SET question_text = ? WHERE pending_id = ?",
-      [questionText.trim(), pendingId],
+      "UPDATE pending_tbl SET unit_title = ? WHERE pending_id = ?",
+      [questionText.trim().slice(0, 255), pendingId],
     );
     return result.affectedRows === 0
       ? { error: "Pending quiz was not found." }
@@ -1704,18 +1662,23 @@ export async function updatePendingQuizFromForm(
     const parsedPayload = getQuizPayload(typeRows[0].type_name, formData);
     if (parsedPayload.error) return { error: parsedPayload.error };
 
+    const quizItem = {
+      cat_id: Number(catId),
+      difficulty_id: Number(difficultyId),
+      quiz_type_id: Number(quizTypeId),
+      question_text: questionText.toString().trim(),
+      quiz_payload: parsedPayload.payload,
+    };
+    const resolvedSecId = secId && String(secId).trim() !== "" ? Number(secId) : 1;
     const [result] = await db.query<ResultSetHeader>(
-      `UPDATE pending_tbl
-       SET cat_id = ?, sec_id = ?, difficulty_id = ?, quiz_type_id = ?, question_text = ?, quiz_payload = ?
+      `UPDATE pending_tbl 
+       SET unit_title = ?, sec_id = ?, unit_quiz_json = ? 
        WHERE pending_id = ?`,
       [
-        catId,
-        secId || null,
-        difficultyId,
-        quizTypeId,
-        questionText.toString().trim(),
-        JSON.stringify(parsedPayload.payload),
-        pendingId,
+        questionText.toString().trim().slice(0, 50),
+        resolvedSecId,
+        JSON.stringify([quizItem]),
+        Number(pendingId),
       ],
     );
     return result.affectedRows === 0

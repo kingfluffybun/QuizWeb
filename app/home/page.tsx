@@ -1,103 +1,21 @@
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { headers, cookies } from "next/headers";
 import Image from "next/image";
 import "#css/dashboard.css";
 import "#css/sidebar.css"
 import Sidebar from "@/app/components/Sidebar";
 
-export default async function DashboardPage(
-    props: { searchParams: Promise<Record<string, string | string[] | undefined>> }
-) {
-    const searchParams = await props.searchParams;
+export default async function DashboardPage() {
     const session = await auth();
 
     if (!session?.user) {
         redirect("/login");
     }
 
-    const headersList = await headers();
-    const userAgent = headersList.get('user-agent') || 'Unknown';
-    const host = headersList.get('host') || 'Unknown';
-    const isSecureContext = headersList.get('x-forwarded-proto') === 'https';
-    const referer = headersList.get('referer') || 'None';
-    const acceptLanguage = headersList.get('accept-language') || 'None';
-
-    const cookieStore = await cookies();
-    const allCookies = cookieStore.getAll();
-
-    const serverTime = new Date().toISOString();
-
-    async function handleSignOut() {
-        "use server";
-        await signOut({ redirectTo: "/login" });
-    }
-
     return (
         <div className="dashboard-page">
             <Sidebar />
             <main>
-                {/* <header>
-                        <p>Welcome, {session?.user?.name || 'User'}!</p>
-
-                        <form action={handleSignOut}>
-                            <button type="submit">
-                                Sign Out
-                            </button>
-                        </form>
-                    </header>
-
-                    <hr />
-                <section>
-                    <pre>
-                        {JSON.stringify(session, null, 2)}
-                    </pre>
-                </section>
-
-                <hr />
-
-                <section>
-                    <pre>
-                        {JSON.stringify({
-                            host,
-                            userAgent,
-                            referer,
-                            acceptLanguage,
-                            isSecureContext
-                        }, null, 2)}
-                    </pre>
-                </section>
-
-                <hr />
-
-                <section>
-                    <pre>
-                        {JSON.stringify(allCookies, null, 2)}
-                    </pre>
-                </section>
-
-                <hr />
-
-                <section>
-                    <pre>
-                        {JSON.stringify(searchParams, null, 2)}
-                    </pre>
-                </section>
-
-                <hr />
-
-                <section>
-                    <pre>
-                        {JSON.stringify({
-                            nodeEnv: process.env.NODE_ENV,
-                            serverTime,
-                            configChecks: {
-                                hasAuthSecret: !!process.env.AUTH_SECRET,
-                                hasDatabaseUrl: !!process.env.DATABASE_URL,
-                            }
-                        }, null, 2)}
-                    </pre>
-                </section> */}
                 <div className="dashboard-content">
                     <div className="welcome-banner">
                         <div>
@@ -137,7 +55,7 @@ export default async function DashboardPage(
                                         </div>
                                     </div>
                                     <hr></hr>
-                                    <div className="unit-list">
+                                    <div className="unit-list-dashboard">
                                         <div className="unit row">
                                             <div className="unit-no row"><p>1</p></div>
                                             <div className="unit-info">
@@ -263,7 +181,7 @@ export default async function DashboardPage(
                                             <p>day streak!</p>
                                         </div>
                                     </div>
-                                    <p>You're on a roll! Finish a lesson today to make it 5.</p>
+                                    <p>You&apos;re on a roll! Finish a lesson today to make it 5.</p>
                                     <div className="streak-week">
                                         <div className="streak-day-container col">
                                             <div className="streak-day row active"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check preview-icon"><path d="M20 6 9 17l-5-5"/></svg></div>
