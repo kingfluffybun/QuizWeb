@@ -5,6 +5,8 @@
   border-radius: 18px;
   background: var(--bg-card, #fff);
   color: var(--text-main, #333);
+  max-width: 1440px;
+  margin-inline: auto;
 }
 
 .staff-workspace-heading {
@@ -76,6 +78,9 @@
 
 .staff-workspace-panel {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .staff-workspace-panel .admin-container,
@@ -137,4 +142,6 @@
   border-color: var(--maintainer-border, #2d2d3d);
   color: var(--maintainer-text-muted, #a0a0b0);
 }
+
+[dark-theme="dark"] form input {background: #1c1c24}
 
