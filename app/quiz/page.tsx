@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import type { QuizData } from "@/app/quiz/types";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
@@ -73,8 +74,28 @@ export default async function QuizPage({
     if (unitId || quizId) {
         if (quizzesToDisplay.length === 0) {
             return (
-                <main style={{ display: "flex", justifyContent: "center", padding: "50px" }}>
-                    <div className="empty-state">No quizzes available.</div>
+                <main style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "32px 16px", textAlign: "center", gap: "16px" }}>
+                    <h2 style={{ fontSize: "1.4rem", color: "var(--text-main)" }}>No Quizzes Available</h2>
+                    <p style={{ maxWidth: "420px", color: "var(--text-muted)", fontSize: "0.95rem", lineHeight: "1.5" }}>
+                        This unit currently has no questions configured. Check back soon or browse other lessons.
+                    </p>
+                    <Link
+                        href="/learn"
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "12px 24px",
+                            borderRadius: "12px",
+                            background: "var(--primary-color)",
+                            color: "#ffffff",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                            minHeight: "44px",
+                        }}
+                    >
+                        Back to Curriculum
+                    </Link>
                 </main>
             );
         }

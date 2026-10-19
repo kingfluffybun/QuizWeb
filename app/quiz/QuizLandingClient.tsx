@@ -110,7 +110,7 @@ export default function QuizLandingClient({
     const router = useRouter();
     const playQuizSound = useQuizSounds();
     const { quizzes: allQuizzes } = useQuizData();
-    const quizzes = initialQuizzes ?? allQuizzes.slice(0, 10);
+    const quizzes = initialQuizzes ?? allQuizzes;
     const selectedQuizzes = quizzes as UnitQuizData[];
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);

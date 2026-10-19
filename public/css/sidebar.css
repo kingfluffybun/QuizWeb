@@ -320,3 +320,44 @@
         }
     }
 }
+
+/* =============================================================================
+   MOBILE RESPONSIVE BREAKPOINT (< 768px)
+   ============================================================================= */
+@media (max-width: 768px) {
+    /* Suppress desktop 240px sidebar on mobile */
+    .sidebar {
+        display: none !important;
+    }
+
+    /* Suppress desktop navbar header to prevent duplicate headers with MobileShell */
+    .dashboard-page > nav,
+    .quiz-page > nav,
+    .settings-app-layout > nav,
+    .admin-app-layout > nav {
+        display: none !important;
+    }
+
+    /* Convert multi-column grid layouts to single-column fluid containers */
+    .dashboard-page,
+    .quiz-page,
+    .settings-app-layout,
+    .admin-app-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100% !important;
+        overflow: visible !important;
+    }
+
+    .dashboard-page > main,
+    .quiz-page > main,
+    .settings-app-layout .settings-main,
+    .admin-app-layout .admin-main {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 !important;
+        overflow-y: visible !important;
+        border-top: none !important;
+    }
+}

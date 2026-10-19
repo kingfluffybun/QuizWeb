@@ -323,7 +323,7 @@ export async function getAdminAnalytics(): Promise<PlatformAnalytics> {
       SELECT jt.cat_id 
       FROM unit_tbl u,
       JSON_TABLE(
-        u.unit_quiz_json,
+        COALESCE(NULLIF(u.unit_quiz_json, ""), "[]"),
         "$[*]" COLUMNS (
           cat_id INT PATH "$.cat_id"
         )
@@ -346,7 +346,7 @@ export async function getAdminAnalytics(): Promise<PlatformAnalytics> {
       SELECT jt.difficulty_id 
       FROM unit_tbl u,
       JSON_TABLE(
-        u.unit_quiz_json,
+        COALESCE(NULLIF(u.unit_quiz_json, ""), "[]"),
         "$[*]" COLUMNS (
           difficulty_id INT PATH "$.difficulty_id"
         )

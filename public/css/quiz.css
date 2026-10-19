@@ -1178,3 +1178,383 @@ footer.incorrect {
         }
     }
 }
+
+/* =============================================================================
+   QUIZ & LEARN MOBILE RESPONSIVE BREAKPOINT (< 768px)
+   ============================================================================= */
+@media (max-width: 768px) {
+    .quiz-page {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100dvh !important;
+        height: auto !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+    }
+
+    .quiz-page main {
+        padding: 14px 12px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        gap: 14px !important;
+        align-items: stretch !important;
+        flex: 1 !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page main > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .quiz-page .quiz-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page .quiz-container > h1 {
+        padding: 4px 0 !important;
+        font-size: 1.25rem !important;
+        line-height: 1.35 !important;
+        text-align: left !important;
+    }
+
+    /* Lesson Slide Cards on Mobile */
+    .lesson-card {
+        flex-direction: column !important;
+        gap: 14px !important;
+        height: auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    .lesson-text-container {
+        width: 100% !important;
+        min-width: 0 !important;
+        gap: 12px !important;
+        flex: none !important;
+    }
+
+    .lesson-card .lesson-slide-title {
+        font-size: 1.3rem !important;
+        line-height: 1.25 !important;
+    }
+
+    .lesson-card-text {
+        font-size: 0.95rem !important;
+        line-height: 1.55 !important;
+        width: 100% !important;
+    }
+
+    .lesson-code-frame {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: none !important;
+        padding: 4px 0 !important;
+    }
+
+    .lesson-code-source {
+        font-size: 0.8rem !important;
+        min-height: 120px !important;
+        max-height: 260px !important;
+        padding: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .code-problem-layout {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+    }
+
+    /* Multiple Choice & Options */
+    .quiz-page label {
+        max-height: none !important;
+        height: auto !important;
+        width: 100% !important;
+    }
+
+    .quiz-page .options {
+        min-height: 48px !important;
+        max-height: none !important;
+        height: auto !important;
+        padding: 10px 14px !important;
+        gap: 10px !important;
+        font-size: 0.9rem !important;
+        border-radius: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page .options > div {
+        height: 32px !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        font-size: 0.88rem !important;
+        border-radius: 6px !important;
+    }
+
+    .options-container#multiple-choice {
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    .options-container#pair {
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    .pair-left-column, .pair-right-column {
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .pair-left-column > label, .pair-right-column > label {
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    .options-container#order {
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .order-number {
+        gap: 6px !important;
+    }
+
+    .order-number > div {
+        max-height: none !important;
+        min-height: 48px !important;
+        height: auto !important;
+    }
+
+    .order-options {
+        gap: 6px !important;
+    }
+
+    .order-options > .options {
+        min-height: 48px !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    .options-container#ftb {
+        width: 100% !important;
+    }
+
+    .answer-box {
+        width: 100% !important;
+        font-size: 1rem !important;
+        min-height: 120px !important;
+        padding: 12px 14px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Header & Navigation on Quiz */
+    .quiz-header {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        gap: 8px !important;
+    }
+
+    .quiz-header > .quiz-navigation {
+        gap: 8px !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    .quiz-settings-button,
+    .quiz-close-button {
+        width: 32px !important;
+        height: 32px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .quiz-close-button svg {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    .quiz-page .quiz-unit-title {
+        font-size: 0.95rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: calc(100% - 150px) !important;
+        margin: 0 !important;
+    }
+
+    .quiz-header > .quiz-navigation > .heart-container {
+        padding-left: 0 !important;
+        margin-left: auto !important;
+    }
+
+    .heart-container > svg {
+        width: 22px !important;
+        height: 22px !important;
+        margin-left: -7px !important;
+    }
+
+    .progress-container {
+        gap: 4px !important;
+        height: 8px !important;
+    }
+
+    .progress-container > div {
+        height: 8px !important;
+        border-radius: 3px !important;
+    }
+
+    /* Quiz Footer & Touch Controls */
+    .quiz-page footer {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 50 !important;
+        padding: 10px 14px max(10px, env(safe-area-inset-bottom)) !important;
+        width: 100% !important;
+        background-color: var(--bg-card) !important;
+        border-top: 1px solid var(--border-main) !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page footer > div {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        align-items: center !important;
+    }
+
+    .quiz-page footer #skip {
+        flex: 1 1 80px !important;
+        max-width: 110px !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        font-size: 0.9rem !important;
+        border-radius: 12px !important;
+        padding: 0 12px !important;
+        justify-content: center !important;
+    }
+
+    .quiz-page footer #submit {
+        flex: 2 1 140px !important;
+        width: auto !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        font-size: 0.95rem !important;
+        border-radius: 12px !important;
+        padding: 0 16px !important;
+        justify-content: center !important;
+    }
+
+    .lesson-footer-controls {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .lesson-footer-controls > button.options {
+        flex: 1 !important;
+        width: auto !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        font-size: 0.95rem !important;
+        border-radius: 12px !important;
+        justify-content: center !important;
+    }
+
+    .answer-message {
+        display: flex !important;
+        width: 100% !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .answer-message-icon {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        border-radius: 50% !important;
+    }
+
+    .answer-message-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    #answer-message-text h2 {
+        font-size: 0.95rem !important;
+        margin: 0 !important;
+    }
+
+    #answer-message-text p {
+        font-size: 0.8rem !important;
+        margin: 2px 0 0 !important;
+    }
+
+    /* Unit Lists & Completion Cards */
+    .available-units {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .available-units-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .available-unit-card {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .available-unit-link {
+        width: 100% !important;
+        text-align: center !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .quiz-complete-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 24px 16px !important;
+        border-radius: 16px !important;
+    }
+
+    .quiz-complete-card button,
+    .quiz-complete-card a {
+        width: 100% !important;
+        min-height: 48px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+}

@@ -25,6 +25,35 @@ used for project status.
 
 ## Current work
 
+Completed. Implemented comprehensive mobile view across QuizWeb.
+
+Completed changes:
+- `app/components/MobileShell.tsx`: Replaced static placeholder with a route-aware, role-responsive mobile shell. Automatically suppresses mobile bars on public/marketing routes (`/`, `/about`, `/login`, `/verify-email/*`) and full-screen exercise runners (`/test`, `/quiz-cp`). Replaced text glyphs with accessible SVG navigation icons (Home, Learn, Quiz, Staff Studio/Admin, Settings). Implemented an interactive slide-over drawer with user profile details, role badges, full navigation, and NextAuth session sign-out.
+- `public/css/mobile-shell.css`: Implemented styles for sticky mobile app bar, role pills, fixed bottom navigation with safe-area insets, fluid content region (`padding-bottom: 72px`), backdrop blur overlay, and animated slide-over navigation drawer.
+- `public/css/sidebar.css`: Added mobile media query (`< 768px`) to suppress the 240px desktop sidebar and duplicate top navbar headers, and converted outer app containers (`.dashboard-page`, `.quiz-page`, `.settings-app-layout`, `.admin-app-layout`) into single-column fluid flex containers.
+- `public/css/dashboard.css`: Implemented responsive styles for the player dashboard, stacking `.dashboard-content` into a single column, scaling the welcome banner and background clouds, and adapting the Streak Calendar grid and stats modal for small viewports.
+- `public/css/quiz.css`: Adapted the available units list in the curriculum browser to single-column cards with touch-friendly actions, responsive quiz option choices, and a full-width completion card.
+- `public/css/settings.css`: Added a horizontal swipeable pill bar for `.settings-tabs-nav` with `-webkit-overflow-scrolling: touch`, stacked the accessibility theme grid, and sized form inputs and buttons to full width.
+- `public/css/admin.css` & `public/css/maintainer.css`: Added responsive horizontal scroll wrappers for data tables and stacked metric counter grids and filter toolbars.
+- `public/css/test_quiz.css`: Switched practice quiz page to a clean single-column flex layout with hidden sidebar and touch-friendly choices.
+
+Validation completed:
+- `npx tsc --noEmit` (0 errors)
+- `npx eslint app/components/MobileShell.tsx app/layout.tsx` (0 errors, 0 warnings)
+- `npx tsx tests/test-rbac-e2e.ts` (137/137 tests passing)
+- `npm run build` (Clean production build; all 14 static and dynamic routes compiled successfully)
+
+Before starting work, an agent should replace this section with the files it
+intends to change and a short description. After finishing, it should replace
+the section with the completed changes and validation results, then append a
+handoff-history entry.
+
+## Handoff history
+
+- 2026-10-19: Fully implemented proper mobile view across QuizWeb. Replaced initial placeholder mobile shell with a route-aware, role-responsive shell in `MobileShell.tsx` and `mobile-shell.css`. Added slide-over mobile drawer, SVG bottom navigation, suppressed 240px desktop sidebar and duplicate headers under 768px in `sidebar.css`, and implemented fluid single-column layouts for Home Dashboard (`dashboard.css`), Learn & Quiz (`quiz.css`), Settings (`settings.css`), Admin & Maintainer (`admin.css`, `maintainer.css`), and Practice Runner (`test_quiz.css`). Passed TypeScript (0 errors), ESLint (0 warnings), all 137 RBAC E2E tests, and Next.js production build.
+
+- 2026-10-19: Fixed production HTTPS admin redirect loop. Diagnosed that NextAuth v5 sets `__Secure-authjs.session-token` cookies in production HTTPS; `getToken({ req, secret })` in `middleware.ts` defaulted `secureCookie` to `false`, causing it to miss the secure cookie and return `null`, which triggered a 307 redirect loop to `/login?callbackUrl=/admin`. Updated `middleware.ts` with multi-tier `secureCookie` and chunked cookie detection, updated `auth.ts` for chunked cookies, hardened `JSON_TABLE` in `admin.ts`, and added defensive fallbacks in `AdminAnalyticsView.tsx`. All 137 RBAC tests and production build passed.
+
 Completed. Implemented fully functional Streak Calendar for the player dashboard on `/home`.
 
 Completed changes:
@@ -77,4 +106,7 @@ handoff-history entry.
   automatic streak activity tracking on quiz completions in `QuizLandingClient.tsx`
   and `InteractiveQuizClient.tsx`. Passed unit tests, DB integration tests, and
   production build.
-
+- 2026-10-19: Added `MobileShell.tsx` and `mobile-shell.css`, wrapped the root
+  content in `app/layout.tsx`, and limited all shell UI to `max-width: 767px`.
+  Desktop behavior is preserved via `display: contents` and hidden mobile
+  controls above the breakpoint.

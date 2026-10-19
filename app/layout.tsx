@@ -5,6 +5,8 @@ import "./globals.css";
 import "@/public/css/settings.css";
 import "@/public/css/skeleton.css";
 import AccessibilityInit from "@/app/components/AccessibilityInit";
+import MobileShell from "@/app/components/MobileShell";
+import "@/public/css/mobile-shell.css";
 
 const poppins = Poppins({
     variable: "--font-poppins",
@@ -61,11 +63,11 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning>
             <head>
                 <meta charSet="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
             </head>
             <body className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
                 <AccessibilityInit />
-                {children}
+                <MobileShell>{children}</MobileShell>
                 <Script id="theme-init" strategy="beforeInteractive">
                     {themeInitScript}
                 </Script>

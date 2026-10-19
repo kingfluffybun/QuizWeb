@@ -173,7 +173,13 @@ export default async function DashboardPage() {
                         {/* Streak */}
                         <StreakCalendar initialData={streakData} />
 
-                        <div className="card"><h2>Continue Where You Left Off</h2></div>
+                        <div className="card">
+                            <div className="card-title">
+                                <h2>Continue Where You Left Off</h2>
+                                <a href="/learn" className="quick-action">Resume</a>
+                            </div>
+                            <p>Pick up right where you left off in the interactive curriculum to maintain your streak.</p>
+                        </div>
                     </div>
 
                     {/* Leaderboard */}
