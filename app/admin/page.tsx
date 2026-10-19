@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { requireAdmin } from "@/lib/rbac";
 import {
   getAdminUsers,
@@ -28,6 +29,7 @@ export default async function AdminPage() {
   if (!admin) {
     redirect("/home");
   }
+  const session = await auth();
 
   // 2. Parallel Data Loading with Graceful Fallbacks
   let initialUsers: Awaited<ReturnType<typeof getAdminUsers>>["users"] = [];
@@ -85,7 +87,11 @@ export default async function AdminPage() {
 
   return (
     <div className="dashboard-page admin-app-layout">
-      <Sidebar role="admin" username={admin.email || "Admin"} />
+      <Sidebar
+        role="admin"
+        username={session?.user?.name || admin.email?.split("@")[0] || "Admin"}
+        email={admin.email}
+      />
       <main className="admin-main">
         <div className="admin-container">
           <header className="admin-header">

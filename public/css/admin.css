@@ -185,7 +185,7 @@ html[data-motion="reduce"] .admin-main *::after {
 .admin-app-layout {
   display: grid;
   grid-template-areas:
-    "navbar navbar"
+    "sidebar navbar"
     "sidebar main";
   grid-template-rows: 80px minmax(0, 1fr);
   grid-template-columns: 240px minmax(0, 1fr);
@@ -211,8 +211,8 @@ html[data-motion="reduce"] .admin-main *::after {
   grid-area: sidebar;
   position: sticky;
   top: 0;
-  height: calc(100vh - 80px);
-  height: calc(100dvh - 80px);
+  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
 }
 
@@ -852,7 +852,7 @@ html[data-motion="reduce"] .admin-main *::after {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .admin-btn {

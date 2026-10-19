@@ -876,7 +876,7 @@ export async function signOutAction() {
     } catch (err) {
         console.error("Error updating token_version during signOutAction:", err);
     }
-    await signOut({ redirectTo: "/login" });
+    await signOut({ redirectTo: "/" });
 }
 
 export async function logoutUser(userId?: string | number) {
