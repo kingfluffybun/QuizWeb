@@ -1178,3 +1178,96 @@ footer.incorrect {
         }
     }
 }
+
+/* =============================================================================
+   QUIZ & LEARN MOBILE RESPONSIVE BREAKPOINT (< 768px)
+   ============================================================================= */
+@media (max-width: 768px) {
+    .quiz-page main {
+        padding: 16px 12px !important;
+        width: 100% !important;
+        gap: 18px !important;
+    }
+
+    .available-units {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .available-units-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .available-unit-card {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .available-unit-link {
+        width: 100% !important;
+        text-align: center !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .quiz-header {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 4px !important;
+        gap: 12px !important;
+    }
+
+    .quiz-complete-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 24px 16px !important;
+        border-radius: 16px !important;
+    }
+
+    .quiz-complete-card button,
+    .quiz-complete-card a {
+        width: 100% !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* Quiz Question Choices and Options */
+    .quiz-options-grid,
+    .choices-container {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    button.options {
+        min-height: 44px !important;
+        padding: 12px 14px !important;
+        font-size: 0.95rem !important;
+    }
+
+    footer {
+        padding: 12px 16px !important;
+    }
+
+    footer > div {
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: stretch !important;
+    }
+
+    footer button.options#submit {
+        width: 100% !important;
+        min-height: 44px !important;
+    }
+}
