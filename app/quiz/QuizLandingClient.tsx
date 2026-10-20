@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useEffectEvent } from "react";
+import type { AnimationEvent, ReactNode } from "react";
 import "#css/quiz.css";
 import "#css/nav.css";
 import "#css/sidebar.css"
@@ -49,6 +50,48 @@ type UnitQuizData = QuizData & {
 
 const correctMessages = ["That's correct!", "Excellent job!", "Well done!"];
 const incorrectMessages = ["Hard luck!", "That’s incorrect.", "Not quite right."];
+
+function LessonSlideTransition({
+    slideIndex,
+    slideCount,
+    renderSlide,
+}: {
+    slideIndex: number;
+    slideCount: number;
+    renderSlide: (index: number) => ReactNode;
+}) {
+    const [activeSlideIndex, setActiveSlideIndex] = useState(slideIndex);
+    const incomingSlideIndex = activeSlideIndex === slideIndex ? null : slideIndex;
+    const isMovingBackward = incomingSlideIndex !== null && incomingSlideIndex < activeSlideIndex;
+
+    const finishTransition = (index: number, event: AnimationEvent<HTMLDivElement>) => {
+        if (event.target !== event.currentTarget) return;
+        if (incomingSlideIndex === index) {
+            setActiveSlideIndex(index);
+        }
+    };
+
+    return (
+        <div className="lesson-slide-transition">
+            {Array.from({ length: slideCount }, (_, index) => {
+                const isEntering = incomingSlideIndex === index;
+                const isExiting = incomingSlideIndex !== null && activeSlideIndex === index;
+                const isHidden = !isEntering && !isExiting && index !== activeSlideIndex;
+
+                return (
+                    <div
+                        key={`slide-${index}`}
+                        className={`lesson-slide-layer${isEntering ? " is-entering" : ""}${isExiting ? " is-exiting" : ""}${isMovingBackward && (isEntering || isExiting) ? " is-backward" : ""}${isHidden ? " is-hidden" : ""}`}
+                        aria-hidden={isHidden || isExiting}
+                        onAnimationEnd={isEntering ? (event) => finishTransition(index, event) : undefined}
+                    >
+                        {renderSlide(index)}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 function getAnswer(quiz: QuizData) {
     const payload = quiz.quiz_payload;
@@ -508,13 +551,19 @@ export default function QuizLandingClient({
 
                 <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
                     {hasLesson && !hasStartedQuiz ? (
-                        <LessonCard
-                            key={selectedQuiz?.quiz_id ?? currentIndex}
-                            slides={lessonSlides}
-                            className="unit-meta"
+                        <LessonSlideTransition
                             slideIndex={lessonSlideIndex}
-                            onSlideIndexChange={setLessonSlideIndex}
-                            showControls={false}
+                            slideCount={lessonSlides.length}
+                            renderSlide={(slideIndex) => (
+                                <LessonCard
+                                    key={`${selectedQuiz?.quiz_id ?? currentIndex}-${slideIndex}`}
+                                    slides={lessonSlides}
+                                    className="unit-meta"
+                                    slideIndex={slideIndex}
+                                    onSlideIndexChange={setLessonSlideIndex}
+                                    showControls={false}
+                                />
+                            )}
                         />
                     ) : (
                         <div className="quiz-container" key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}>
@@ -543,7 +592,9 @@ export default function QuizLandingClient({
                                 type="button"
                                 className="options"
                                 id="skip"
-                                onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1))}
+                                onClick={() =>
+                                    setLessonSlideIndex((index) => Math.max(0, index - 1))
+                                }
                                 disabled={lessonSlideIndex === 0}
                                 aria-label="Previous lesson slide"
                             >
@@ -570,7 +621,11 @@ export default function QuizLandingClient({
                                     type="button"
                                     className="options"
                                     id="submit"
-                                    onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1))}
+                                    onClick={() =>
+                                        setLessonSlideIndex((index) =>
+                                            Math.min(lessonSlides.length - 1, index + 1),
+                                        )
+                                    }
                                     aria-label="Next lesson slide"
                                 >
                                     Next

@@ -439,7 +439,71 @@
     width: 100%;
     min-width: 1080px;
     flex: 1;
+    animation: quiz-elevate-in 300ms ease-out both;
     h1 {padding: 8px 0;}
+}
+
+.lesson-slide-transition {
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.lesson-slide-layer {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: 100%;
+}
+
+.lesson-slide-layer.is-entering {
+    animation: lesson-slide-enter-right 300ms ease-out both;
+    animation-delay: 200ms;
+}
+
+.lesson-slide-layer.is-entering.is-backward {
+    animation-name: lesson-slide-enter-left;
+}
+
+.lesson-slide-layer.is-exiting {
+    animation: lesson-slide-exit-left 300ms ease-in both;
+    pointer-events: none;
+}
+
+.lesson-slide-layer.is-exiting.is-backward {
+    animation-name: lesson-slide-exit-right;
+}
+
+.lesson-slide-layer.is-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+@keyframes lesson-slide-exit-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+}
+
+@keyframes lesson-slide-enter-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes lesson-slide-exit-right {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+}
+
+@keyframes lesson-slide-enter-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes quiz-elevate-in {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .lesson-card {
@@ -480,7 +544,6 @@
     overflow-x: hidden;
     overflow-y: hidden;
 }
-
 
 .lesson-code-frame {
     flex: 1;
@@ -1345,6 +1408,16 @@ footer.correct, footer.incorrect {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .lesson-slide-layer.is-entering,
+    .lesson-slide-layer.is-exiting,
+    .quiz-page .quiz-container {
+        animation-duration: 1ms;
+    }
+
+    .lesson-slide-layer.is-entering {
+        animation-delay: 0ms;
+    }
+
     footer.correct .answer-message-icon,
     footer.incorrect .answer-message-icon {
         animation-duration: 1ms;
