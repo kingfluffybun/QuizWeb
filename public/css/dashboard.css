@@ -124,14 +124,16 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        > .quick-action {
-            font-size: clamp(0.5rem, 1.75vw, 1rem);
-            color: var(--primary-color);
-            text-transform: uppercase;
-            /* temporary */
-            cursor: pointer; 
-        }
+        a {text-decoration: none;}
     }
+}
+
+.quick-action {
+    font-size: clamp(0.5rem, 1.75vw, 1rem);
+    color: var(--primary-color) !important;
+    text-transform: uppercase;
+    /* temporary */
+    cursor: pointer; 
 }
 
 .card .card-title > h2 {
@@ -298,18 +300,6 @@
     cursor: not-allowed;
 }
 
-button.quick-action-btn {
-    background: none;
-    border: none;
-    /* padding: 0;
-    margin: 0; */
-    font-weight: 700;
-    color: var(--primary-color);
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: opacity 0.15s ease;
-}
-
 button.quick-action-btn:hover {
     opacity: 0.8;
 }
@@ -372,7 +362,6 @@ button.quick-action-btn:hover {
 button.quick-action-btn {
     background: none;
     border: none;
-    font-weight: 700;
     color: var(--primary-color);
     text-transform: uppercase;
     cursor: pointer;

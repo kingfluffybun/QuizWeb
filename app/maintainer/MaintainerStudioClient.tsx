@@ -529,47 +529,6 @@ export default function MaintainerStudioClient({
       </section>
 
       {/* ------------------------------------------------------------------- */}
-      {/* 3. Studio Launcher Section (Question & Unit Creation Tools)          */}
-      {/* ------------------------------------------------------------------- */}
-      <section className="studio-launcher-section" hidden={studioView === "submissions"}>
-        <div className="section-title-wrap">
-          <h2>Question &amp; Unit Creation Studio</h2>
-          <p>Select a composition workflow below to configure the integrated authoring studio immediately underneath.</p>
-        </div>
-        <div className="launcher-grid">
-          {STUDIO_LAUNCHERS.map((tool) => {
-            const isSelected = activeLauncher === tool.id;
-            return (
-              <div
-                key={tool.id}
-                className={`launcher-card ${isSelected ? "launcher-card-active" : ""}`}
-              >
-                <div className="launcher-card-top">
-                  <div className="launcher-icon-box">{tool.iconSvg}</div>
-                  <span className={`launcher-badge ${tool.badgeClass}`}>{tool.typeBadge}</span>
-                </div>
-                <h3>{tool.title}</h3>
-                <p>{tool.description}</p>
-                <div className="launcher-card-bottom">
-                  <button
-                    type="button"
-                    className="btn-launcher-action"
-                    onClick={() => handleLaunchNewCreation(tool)}
-                  >
-                    <span>Compose {tool.title}</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------- */}
       {/* 3.5. Embedded Authoring Workspace (/input Integrated Studio)         */}
       {/* ------------------------------------------------------------------- */}
       {children && (
