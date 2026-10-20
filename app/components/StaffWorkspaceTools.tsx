@@ -72,8 +72,19 @@ export default function StaffWorkspaceTools({
     };
     handleHash();
     window.addEventListener("hashchange", handleHash);
+
+    const handleEdit = () => {
+      setActiveTool("input");
+      const formEl =
+        document.getElementById("quiz-form") ||
+        document.getElementById("quiz-workspace");
+      if (formEl) formEl.scrollIntoView({ behavior: "smooth" });
+    };
+    window.addEventListener("quizweb-edit-pending", handleEdit);
+
     return () => {
       window.removeEventListener("hashchange", handleHash);
+      window.removeEventListener("quizweb-edit-pending", handleEdit);
     };
   }, []);
 

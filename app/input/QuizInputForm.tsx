@@ -64,6 +64,9 @@ export interface QuizPayload {
 
 export interface RecentQuizItem {
   quiz_id: number;
+  unit_id?: number;
+  pending_id?: number;
+  pending_status?: string;
   cat_id?: number;
   sec_id?: number;
   difficulty_id?: number;
@@ -78,7 +81,9 @@ export interface RecentQuizItem {
 
 export interface EditingQuizItem extends Omit<RecentQuizItem, "quiz_id"> {
   quiz_id?: number;
+  unit_id?: number;
   pending_id?: number;
+  pending_status?: string;
   unit?: number;
   unit_assessment?: unknown;
   _pendingUnit?: boolean;
@@ -176,7 +181,7 @@ export default function QuizInputForm({
       if (!pendingId) return;
       window.sessionStorage.removeItem("quizweb-edit-pending-id");
       void getPendingQuizById(Number(pendingId)).then((quiz) => {
-        if (quiz) setEditingQuiz(quiz as unknown as EditingQuizItem);
+        if (quiz) handleEdit(quiz as unknown as RecentQuizItem);
       });
     };
     const handleEditRequest = (event: Event) => {
@@ -936,6 +941,9 @@ export default function QuizInputForm({
       });
 
       router.refresh();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("quizweb-pending-updated"));
+      }
 
       // Reset inputs
       setEditingQuiz(null);
@@ -1034,14 +1042,29 @@ export default function QuizInputForm({
       setAssessmentTitle(getAssessmentTitle(assessmentValue));
       setAssessmentDescription(getAssessmentDescription(assessmentValue));
       setExpectedOutcome(getExpectedOutcome(assessmentValue));
+      const resolvedSecId = quiz.sec_id ?? firstQuiz.sec_id;
+      if (resolvedSecId) {
+        setSelectedSecId(resolvedSecId.toString());
+      }
       setEditingQuiz({
         ...firstQuiz,
+        sec_id: resolvedSecId,
         quiz_id: quiz.quiz_id,
         type_name: firstQuizTypeName,
-        pending_id: quiz.quiz_id,
+        pending_id: quiz.pending_id ?? quiz.quiz_id,
         _pendingUnit: true,
         unit_assessment: assessmentValue,
+        pending_status:
+          (quiz as unknown as { pending_status?: string }).pending_status ??
+          quiz.difficulty_name,
       });
+      const formEl =
+        document.getElementById("quiz-form") ||
+        document.getElementById("quiz-workspace") ||
+        document.getElementById("unit-form");
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: "smooth" });
+      }
       return;
     }
     setEditingQuiz(quiz);
@@ -1727,7 +1750,7 @@ export default function QuizInputForm({
         <h2>
           {editingQuiz
             ? editingQuiz._pendingUnit
-              ? `Edit Pending Unit (ID: #${editingQuiz.pending_id})`
+              ? `Edit ${(editingQuiz as unknown as { pending_status?: string }).pending_status === "approved" || editingQuiz.difficulty_name === "approved" ? "Approved " : ""}Unit (ID: #${editingQuiz.pending_id})`
               : editingQuiz._queuedUnitQuiz
                 ? `Unit Quiz ${currentPendingQuizIndex + 1} of ${queuedQuizzes.length + 1}`
                 : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`

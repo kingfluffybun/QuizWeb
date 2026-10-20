@@ -999,21 +999,43 @@ export async function getUnitById(unitId: number) {
 
   try {
     const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
-              p.unit_lesson_card_json, p.unit_quiz_json,
-              p.unit_assessment_json, p.pending_status, p.pending_name
-       FROM pending_tbl p
-       LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
-       WHERE p.pending_id = ?
+      `SELECT p.pending_id, u.unit_id,
+              COALESCE(u.unit_title, p.unit_title) AS unit_title,
+              COALESCE(u.sec_id, p.sec_id) AS sec_id,
+              s.sec_num,
+              COALESCE(u.unit_lesson_card_json, p.unit_lesson_card_json) AS unit_lesson_card_json,
+              COALESCE(u.unit_quiz_json, p.unit_quiz_json) AS unit_quiz_json,
+              COALESCE(u.unit_assessment_json, p.unit_assessment_json) AS unit_assessment_json,
+              COALESCE(p.pending_status, 'approved') AS pending_status,
+              COALESCE(p.pending_name, 'Administrator') AS pending_name
+       FROM unit_tbl u
+       LEFT JOIN unit_approved_tbl a ON a.unit_id = u.unit_id
+       LEFT JOIN pending_tbl p ON p.pending_id = a.pending_id
+       LEFT JOIN sec_tbl s ON s.sec_id = COALESCE(u.sec_id, p.sec_id)
+       WHERE u.unit_id = ? OR p.pending_id = ?
        LIMIT 1`,
-      [unitId],
+      [unitId, unitId],
     );
-    const row = rows[0];
+    let row = rows[0];
+    if (!row) {
+      const [pendingRows] = await db.query<RowDataPacket[]>(
+        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
+                p.unit_lesson_card_json, p.unit_quiz_json,
+                p.unit_assessment_json, p.pending_status, p.pending_name
+         FROM pending_tbl p
+         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
+         WHERE p.pending_id = ?
+         LIMIT 1`,
+        [unitId],
+      );
+      row = pendingRows[0];
+    }
     if (!row) return null;
 
     const quizzes = parseJsonColumn(row.unit_quiz_json);
     return {
-      quiz_id: row.pending_id,
+      quiz_id: row.pending_id ?? row.unit_id,
+      unit_id: row.unit_id ?? row.pending_id,
       cat_id: 0,
       sec_id: row.sec_id,
       difficulty_id: 0,
@@ -1471,20 +1493,64 @@ export async function getPendingQuizById(pendingId: number) {
        LIMIT 1`,
       [pendingId],
     );
-    const quiz = rows[0];
+    let quiz = rows[0];
+
+    if (!quiz) {
+      const [approvedRows] = await db.query<PendingUnit[]>(
+        `SELECT p.pending_id, p.unit_title, p.sec_id,
+                p.unit_lesson_card_json, p.unit_quiz_json,
+                p.unit_assessment_json, p.pending_status, p.pending_name,
+                p.pending_note, s.sec_num
+         FROM unit_approved_tbl a
+         JOIN pending_tbl p ON p.pending_id = a.pending_id
+         LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
+         WHERE a.unit_id = ?
+         LIMIT 1`,
+        [pendingId],
+      );
+      quiz = approvedRows[0];
+    }
+
+    if (!quiz) {
+      const [unitRows] = await db.query<RowDataPacket[]>(
+        `SELECT u.unit_id AS pending_id, u.unit_title, u.sec_id,
+                u.unit_lesson_card_json, u.unit_quiz_json,
+                u.unit_assessment_json, 'approved' AS pending_status,
+                'Administrator' AS pending_name, NULL AS pending_note, s.sec_num
+         FROM unit_tbl u
+         LEFT JOIN sec_tbl s ON u.sec_id = s.sec_id
+         WHERE u.unit_id = ?
+         LIMIT 1`,
+        [pendingId],
+      );
+      if (unitRows[0]) {
+        quiz = unitRows[0] as unknown as PendingUnit;
+      }
+    }
+
     if (!quiz) return undefined;
+    const lessonCard = parseJsonColumn(quiz.unit_lesson_card_json);
     const unitQuizJson = parseJsonColumn(quiz.unit_quiz_json);
-    const firstQuiz = Array.isArray(unitQuizJson) ? unitQuizJson[0] : {};
+    const assessment = parseJsonColumn(quiz.unit_assessment_json);
+    const quizzes = Array.isArray(unitQuizJson) ? unitQuizJson : [];
+    const firstQuiz = quizzes[0] ?? {};
+
     return {
       ...quiz,
-      unit_lesson_card_json: parseJsonColumn(quiz.unit_lesson_card_json),
-      unit_quiz_json: unitQuizJson,
-      unit_assessment_json: parseJsonColumn(quiz.unit_assessment_json),
+      unit_lesson_card_json: lessonCard,
+      unit_quiz_json: quizzes,
+      unit_assessment_json: assessment,
       question_text: quiz.unit_title,
       cat_name: "",
-      difficulty_name: "",
+      difficulty_name: quiz.pending_status,
       type_name: "Unit",
-      quiz_payload: firstQuiz?.quiz_payload ?? {},
+      quiz_payload: {
+        ...(firstQuiz?.quiz_payload ?? {}),
+        title: quiz.unit_title,
+        lesson_card: lessonCard,
+        quizzes,
+        assessment,
+      },
     };
   } catch (error) {
     console.error("Failed to fetch pending quiz:", error);
@@ -1755,8 +1821,21 @@ export async function updatePendingUnitFromForm(
     return { error: "At least one quiz is required for the unit." };
   }
 
+  const lessonCardJson = JSON.stringify({ lesson_slide: lessonSlides });
+  const quizJson = JSON.stringify(quizzes);
+  const assessmentJson = JSON.stringify({
+    title: assessmentTitle,
+    description: assessmentDescription,
+    assessment: assessmentSteps.join("\n\n"),
+    steps: assessmentSteps,
+    expected_outcome: expectedOutcome,
+  });
+
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query<ResultSetHeader>(
+    await connection.beginTransaction();
+
+    const [pendingUpdate] = await connection.query<ResultSetHeader>(
       `UPDATE pending_tbl
        SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?,
            unit_quiz_json = ?, unit_assessment_json = ?
@@ -1764,25 +1843,100 @@ export async function updatePendingUnitFromForm(
       [
         unitTitle,
         sectionId,
-        JSON.stringify({ lesson_slide: lessonSlides }),
-        JSON.stringify(quizzes),
-        JSON.stringify({
-          title: assessmentTitle,
-          description: assessmentDescription,
-          assessment: assessmentSteps.join("\n\n"),
-          steps: assessmentSteps,
-          expected_outcome: expectedOutcome,
-        }),
+        lessonCardJson,
+        quizJson,
+        assessmentJson,
         pendingId,
       ],
     );
-    return result.affectedRows === 0
-      ? { error: "Pending unit was not found." }
-      : { success: true, message: "Pending unit updated successfully." };
+
+    // If this pending unit has an approved counterpart in unit_tbl, update it as well
+    const [approvedRows] = await connection.query<RowDataPacket[]>(
+      "SELECT unit_id FROM unit_approved_tbl WHERE pending_id = ?",
+      [pendingId],
+    );
+
+    let unitTblUpdated = false;
+    if (approvedRows.length > 0) {
+      for (const row of approvedRows) {
+        await connection.query(
+          `UPDATE unit_tbl
+           SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?,
+               unit_quiz_json = ?, unit_assessment_json = ?
+           WHERE unit_id = ?`,
+          [
+            unitTitle,
+            sectionId,
+            lessonCardJson,
+            quizJson,
+            assessmentJson,
+            row.unit_id,
+          ],
+        );
+        unitTblUpdated = true;
+      }
+    } else {
+      // Check if pendingId is directly a unit_id in unit_tbl
+      const [unitRows] = await connection.query<RowDataPacket[]>(
+        "SELECT unit_id FROM unit_tbl WHERE unit_id = ?",
+        [pendingId],
+      );
+      if (unitRows.length > 0) {
+        await connection.query(
+          `UPDATE unit_tbl
+           SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?,
+               unit_quiz_json = ?, unit_assessment_json = ?
+           WHERE unit_id = ?`,
+          [
+            unitTitle,
+            sectionId,
+            lessonCardJson,
+            quizJson,
+            assessmentJson,
+            pendingId,
+          ],
+        );
+        unitTblUpdated = true;
+
+        await connection.query(
+          `UPDATE pending_tbl p
+           JOIN unit_approved_tbl a ON a.pending_id = p.pending_id
+           SET p.unit_title = ?, p.sec_id = ?, p.unit_lesson_card_json = ?,
+               p.unit_quiz_json = ?, p.unit_assessment_json = ?
+           WHERE a.unit_id = ?`,
+          [
+            unitTitle,
+            sectionId,
+            lessonCardJson,
+            quizJson,
+            assessmentJson,
+            pendingId,
+          ],
+        );
+      }
+    }
+
+    if (pendingUpdate.affectedRows === 0 && !unitTblUpdated) {
+      await connection.rollback();
+      return { error: "Pending unit was not found." };
+    }
+
+    await connection.commit();
+    return { success: true, message: "Unit updated successfully." };
   } catch (error) {
-    console.error("Failed to update pending unit:", error);
+    await connection.rollback();
+    console.error("Failed to update unit:", error);
     return { error: "An error occurred while updating the pending unit." };
+  } finally {
+    connection.release();
   }
+}
+
+export async function updateUnit(unitId: number, formData: FormData) {
+  if (!(await requireAdmin())) {
+    return { error: "Unauthorized" };
+  }
+  return updatePendingUnitFromForm(unitId, formData);
 }
 
 export async function deletePendingQuiz(pendingId: number) {
