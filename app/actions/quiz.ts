@@ -7,6 +7,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import {
   CodeProblemAssessmentSchema,
   hasAnyNonEmptyBuffer,
+  unwrapCodeProblemAssessment,
   wrapCodeProblemAssessmentForStorage,
   type CPStep,
 } from "@/lib/cp-schema";
@@ -535,6 +536,7 @@ export interface AvailableUnit {
   unit_title: string;
   sec_num?: string;
   quiz_count: number;
+  has_coding_assessment?: boolean;
 }
 
 export interface CodeProblemStep {
@@ -649,7 +651,7 @@ export async function getAvailableUnits(): Promise<AvailableUnit[]> {
   try {
     const [rows] = await db.query<RowDataPacket[]>(
       `SELECT p.pending_id, u.unit_id, u.unit_title, s.sec_num,
-              u.unit_quiz_json
+              u.unit_quiz_json, u.unit_assessment_json
        FROM unit_approved_tbl a
        JOIN pending_tbl p ON p.pending_id = a.pending_id
        JOIN unit_tbl u ON u.unit_id = a.unit_id
@@ -660,12 +662,14 @@ export async function getAvailableUnits(): Promise<AvailableUnit[]> {
 
     return rows.map((row) => {
       const quizzes = parseJsonColumn(row.unit_quiz_json);
+      const assessment = parseJsonColumn(row.unit_assessment_json);
       return {
         pending_id: Number(row.pending_id),
         unit_id: Number(row.unit_id),
         unit_title: String(row.unit_title),
         sec_num: row.sec_num ?? undefined,
         quiz_count: Array.isArray(quizzes) ? quizzes.length : 0,
+        has_coding_assessment: Boolean(unwrapCodeProblemAssessment(assessment)),
       };
     });
   } catch (error) {

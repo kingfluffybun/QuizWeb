@@ -3,7 +3,14 @@
 import Editor from "@monaco-editor/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   getPublicCodeProblem,
   verifyCodeProblemStep,
@@ -44,6 +51,30 @@ type PersistedCPSession = {
   lives: number;
 };
 
+type MobileTab = "task" | "code" | "preview";
+
+const MOBILE_QUERY = "(max-width: 768px)";
+
+function subscribeMobileViewport(onChange: () => void) {
+  const query = window.matchMedia(MOBILE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function getMobileViewportSnapshot() {
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function getMobileViewportServerSnapshot() {
+  return false;
+}
+
+// Quick-symbol bar shown above the soft keyboard on phones.
+const QUICK_SYMBOLS = [
+  "<", ">", "/", "=", '"', "'", "{", "}", "(", ")", ";", ":", "#", ".",
+] as const;
+const TAB_INDENT = "    ";
+
 function getSessionStorageKey(unitId: number): string {
   return `quizweb:cp-session:v2:${unitId}`;
 }
@@ -82,6 +113,17 @@ function CodeProblemRunner() {
   );
   const [isMobilePreview, setIsMobilePreview] = useState(false);
 
+  // Phone layout: tabbed Task | Code | Preview workspace (desktop is unchanged).
+  const isMobileViewport = useSyncExternalStore(
+    subscribeMobileViewport,
+    getMobileViewportSnapshot,
+    getMobileViewportServerSnapshot,
+  );
+  const [mobileTab, setMobileTab] = useState<MobileTab>("task");
+  const [isTyping, setIsTyping] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const gutterRef = useRef<HTMLPreElement>(null);
+
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
@@ -100,6 +142,27 @@ function CodeProblemRunner() {
     setAccessibilityOpen(false);
     setAccessibilityClosing(false);
   };
+
+  // Track the *visual* viewport so the action bar stays above the iOS Safari
+  // soft keyboard / bottom URL bar instead of hiding behind them.
+  useEffect(() => {
+    if (!isMobileViewport) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const root = document.documentElement;
+    const update = () => {
+      root.style.setProperty("--cp-vh", `${viewport.height}px`);
+      if (viewport.offsetTop > 0) window.scrollTo(0, 0);
+    };
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+      root.style.removeProperty("--cp-vh");
+    };
+  }, [isMobileViewport]);
 
   // Fetch public problem definition (with expectedTemplate stripped on server)
   useEffect(() => {
@@ -277,6 +340,26 @@ function CodeProblemRunner() {
   const handleRunCode = () => {
     setConsoleMessages([]);
     setRenderedCode({ ...code });
+    if (isMobileViewport) {
+      editorRef.current?.blur();
+      setMobileTab("preview");
+    }
+  };
+
+  // Insert text at the caret of the mobile editor (quick-symbol bar / Tab key)
+  const insertAtCursor = (token: string) => {
+    const element = editorRef.current;
+    const current = code[activeFile];
+    const start = element?.selectionStart ?? current.length;
+    const end = element?.selectionEnd ?? start;
+    const next = current.slice(0, start) + token + current.slice(end);
+    setCode((previous) => ({ ...previous, [activeFile]: next }));
+    const caret = start + token.length;
+    requestAnimationFrame(() => {
+      if (!element) return;
+      element.focus();
+      element.setSelectionRange(caret, caret);
+    });
   };
 
   // Reset current step back to its starting snapshot
@@ -383,6 +466,7 @@ function CodeProblemRunner() {
         if (result.failedTab) {
           setActiveFile(result.failedTab);
         }
+        if (isMobileViewport) setMobileTab("code");
         if (nextLives <= 0) {
           if (typeof window !== "undefined") {
             window.sessionStorage.removeItem(
@@ -542,6 +626,7 @@ function CodeProblemRunner() {
         )}
 
         <div
+          className="cp-workspace"
           style={{
             width: "100%",
             display: "flex",
@@ -552,7 +637,89 @@ function CodeProblemRunner() {
             minHeight: "0",
           }}
         >
-          <div className="code-problem-layout">
+          {problem && problem.steps[currentStepIndex] && (
+            <div
+              className={`cp-mobile-banner${
+                stepFeedback && !stepFeedback.passed ? " is-error" : ""
+              }${isTyping ? " is-typing" : ""}`}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="cp-mobile-banner-step">
+                Step {currentStepIndex + 1}/{totalSteps}
+              </span>
+              <div className="cp-mobile-banner-body">
+                <div className="cp-mobile-banner-text">
+                  {problem.steps[currentStepIndex].instruction}
+                </div>
+                {revealedHints[currentStepIndex] &&
+                  problem.steps[currentStepIndex].hint && (
+                    <div className="cp-mobile-banner-note">
+                      <strong>Hint:</strong> {problem.steps[currentStepIndex].hint}
+                    </div>
+                  )}
+                {stepFeedback && (
+                  <div
+                    className={`cp-mobile-banner-note ${
+                      stepFeedback.passed ? "is-success" : "is-fail"
+                    }`}
+                  >
+                    {stepFeedback.passed
+                      ? ""
+                      : `Check failed (-1 heart)${
+                          stepFeedback.lineNumber
+                            ? ` • near line ${stepFeedback.lineNumber}`
+                            : ""
+                        }: `}
+                    {stepFeedback.message}
+                  </div>
+                )}
+              </div>
+              {problem.steps[currentStepIndex].hint && (
+                <button
+                  type="button"
+                  className="cp-mobile-banner-hint"
+                  aria-label={
+                    revealedHints[currentStepIndex] ? "Hide hint" : "Show hint"
+                  }
+                  onClick={() =>
+                    setRevealedHints((prev) => ({
+                      ...prev,
+                      [currentStepIndex]: !prev[currentStepIndex],
+                    }))
+                  }
+                >
+                  💡
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="cp-mobile-tabs" role="tablist" aria-label="Workspace view">
+            {(
+              [
+                ["task", "Task"],
+                ["code", "Code"],
+                ["preview", "Preview"],
+              ] as const
+            ).map(([tabKey, tabLabel]) => (
+              <button
+                key={tabKey}
+                type="button"
+                role="tab"
+                aria-selected={mobileTab === tabKey}
+                className={`cp-mobile-tab${mobileTab === tabKey ? " active" : ""}`}
+                onClick={() => {
+                  editorRef.current?.blur();
+                  setMobileTab(tabKey);
+                }}
+              >
+                {tabLabel}
+              </button>
+            ))}
+          </div>
+
+          <div className="code-problem-layout" data-mobile-tab={mobileTab}>
             <div id="instructions">
               <div className="header">
                 <div>
@@ -828,6 +995,72 @@ function CodeProblemRunner() {
                 })}
               </div>
               <div className="code-editor-container monaco-editor-shell row">
+                {isMobileViewport ? (
+                  <div className="cp-mobile-editor">
+                    <div className="cp-mobile-editor-area">
+                      <pre className="cp-mobile-gutter" ref={gutterRef} aria-hidden="true">
+                        {Array.from(
+                          { length: Math.max(1, code[activeFile].split("\n").length) },
+                          (_, lineIndex) => lineIndex + 1,
+                        ).join("\n")}
+                      </pre>
+                      <textarea
+                        ref={editorRef}
+                        className="cp-mobile-textarea"
+                        aria-label={`Edit ${fileMeta[activeFile].label}`}
+                        value={code[activeFile]}
+                        wrap="off"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        autoComplete="off"
+                        spellCheck={false}
+                        data-gramm="false"
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setCode((previous) => ({
+                            ...previous,
+                            [activeFile]: nextValue,
+                          }));
+                        }}
+                        onScroll={(event) => {
+                          if (gutterRef.current) {
+                            gutterRef.current.scrollTop = event.currentTarget.scrollTop;
+                          }
+                        }}
+                        onFocus={() => setIsTyping(true)}
+                        onBlur={() => setIsTyping(false)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Tab") {
+                            event.preventDefault();
+                            insertAtCursor(TAB_INDENT);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="cp-quick-symbols" role="toolbar" aria-label="Quick symbols">
+                      <button
+                        type="button"
+                        className="cp-quick-symbol cp-quick-symbol-tab"
+                        onPointerDown={(event) => event.preventDefault()}
+                        onClick={() => insertAtCursor(TAB_INDENT)}
+                      >
+                        Tab
+                      </button>
+                      {QUICK_SYMBOLS.map((symbol) => (
+                        <button
+                          key={symbol}
+                          type="button"
+                          className="cp-quick-symbol"
+                          aria-label={`Insert ${symbol}`}
+                          onPointerDown={(event) => event.preventDefault()}
+                          onClick={() => insertAtCursor(symbol)}
+                        >
+                          {symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
                 <Editor
                   className="monaco-code-editor"
                   height="100%"
@@ -885,6 +1118,7 @@ function CodeProblemRunner() {
                     wordWrap: "off",
                   }}
                 />
+                )}
                 <div className="code-options">
                   <button
                     type="button"
@@ -1090,6 +1324,33 @@ function CodeProblemRunner() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="cp-mobile-actionbar">
+            <button
+              type="button"
+              className="cp-mobile-action-btn"
+              onClick={handleResetStep}
+              disabled={!problem || isLoading || isSubmitting}
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              className="cp-mobile-action-btn"
+              onClick={handleRunCode}
+              disabled={!problem || isLoading}
+            >
+              ▶ Run
+            </button>
+            <button
+              type="button"
+              className="cp-mobile-action-btn primary"
+              onClick={handleSubmitStep}
+              disabled={!problem || isLoading || isSubmitting}
+            >
+              {isSubmitting ? "Checking..." : `Check Step ${currentStepIndex + 1}`}
+            </button>
           </div>
         </div>
       </main>

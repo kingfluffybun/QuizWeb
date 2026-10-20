@@ -1250,4 +1250,52 @@ button.quick-action-btn:hover {
         font-size: 0.75rem !important;
         padding: 4px 0 !important;
     }
+
+    .dashboard-mobile-jumpbar {
+        display: flex !important;
+        gap: 8px;
+        width: 100%;
+        padding: 6px;
+        border-radius: 999px;
+        background-color: var(--bg-card);
+        border: 1.5px solid var(--border-main);
+        position: sticky;
+        top: 64px;
+        z-index: 25;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        box-sizing: border-box;
+    }
+
+    .dashboard-jump-pill {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-main);
+        text-decoration: none;
+        background-color: rgba(124, 58, 237, 0.08);
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .dashboard-jump-pill:active,
+    .dashboard-jump-pill:hover {
+        background-color: var(--primary-color);
+        color: #ffffff;
+    }
+
+    #dashboard-progress,
+    #streak-calendar,
+    #leaderboard {
+        scroll-margin-top: 116px;
+    }
 }
+
+.dashboard-mobile-jumpbar {
+    display: none;
+}
+

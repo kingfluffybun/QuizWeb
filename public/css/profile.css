@@ -749,3 +749,159 @@
     margin-top: 2px;
 }
 
+
+/* =============================================================================
+   PROFILE MOBILE RESPONSIVE BREAKPOINTS
+   Desktop layout above 768px is intentionally untouched.
+   ============================================================================= */
+@media (max-width: 768px) {
+    .profile-page,
+    .profile-page.quiz-page {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100% !important;
+        overflow: visible !important;
+    }
+
+    .profile-page main {
+        --profile-gutter: 14px;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        padding: 16px var(--profile-gutter) 32px !important;
+    }
+
+    .profile-content {
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-bottom: 8px !important;
+        overflow: visible !important;
+        scrollbar-gutter: auto;
+    }
+
+    .profile-page-heading {
+        margin-bottom: 16px;
+        gap: 12px;
+    }
+
+    .profile-page-heading h1 {
+        font-size: clamp(1.4rem, 6vw, 1.8rem);
+    }
+
+    .profile-hero {
+        gap: 16px;
+        min-height: 0;
+        padding: 20px 16px;
+    }
+
+    .profile-avatar {
+        flex-basis: 72px;
+        width: 72px;
+        height: 72px;
+        border-radius: 22px;
+        font-size: 1.35rem;
+    }
+
+    .profile-name-line h2 {
+        font-size: 1.3rem;
+    }
+
+    .profile-hero::after {
+        width: 120px;
+        height: 120px;
+        opacity: .5;
+    }
+
+    .profile-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .profile-stat-card {
+        min-height: 92px;
+        flex-wrap: wrap;
+        padding: 14px;
+        gap: 10px;
+    }
+
+    .profile-stat-card > small {
+        flex-basis: 100%;
+        margin-left: 0;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .profile-details-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .profile-about-panel,
+    .profile-activity-panel {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .profile-panel {
+        min-height: 0;
+        padding: 18px 16px;
+    }
+
+    .profile-details-list > div {
+        height: auto;
+        min-height: 52px;
+        padding: 8px 0;
+        flex-wrap: wrap;
+        gap: 4px 16px;
+    }
+
+    .profile-details-list dd {
+        overflow-wrap: anywhere;
+    }
+
+    .profile-form-actions {
+        flex-wrap: wrap;
+    }
+
+    .profile-save-button,
+    .profile-cancel-button {
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: .85rem;
+    }
+
+    .profile-icon-button {
+        width: 44px;
+        height: 44px;
+    }
+
+    .activity-streak-flame {
+        flex-basis: 64px;
+        width: 64px;
+        height: 76px;
+    }
+}
+
+@media (max-width: 380px) {
+    .profile-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .profile-name-line,
+    .profile-meta {
+        justify-content: center;
+    }
+
+    .profile-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-day-marker {
+        width: 34px;
+        height: 34px;
+    }
+}

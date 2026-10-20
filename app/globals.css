@@ -178,3 +178,91 @@ textarea {
         --dots: #626262;
     }
 }
+/* -----------------------------------------------------------------------------
+   Mobile ergonomics (<= 768px only; desktop is unaffected)
+   - 16px minimum on form controls prevents iOS Safari focus auto-zoom.
+   - Dynamic viewport + safe-area helpers for Safari's bottom URL bar.
+   ----------------------------------------------------------------------------- */
+:root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+}
+
+@media (max-width: 768px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: max(16px, 1rem);
+    }
+
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    button,
+    a,
+    [role="button"] {
+        touch-action: manipulation;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Order question: touch-friendly handle + explicit up/down buttons.
+   Buttons are hidden for mouse users and shown on phones / coarse pointers.
+   ----------------------------------------------------------------------------- */
+.order-grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    cursor: grab;
+}
+
+.order-move-btns {
+    display: none;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+    .order-move-btns {
+        display: inline-flex;
+        flex-direction: row;
+        gap: 6px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .order-move-btn {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 2px solid var(--border-main);
+        border-radius: 10px;
+        background: var(--bg-card);
+        color: var(--text-main);
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .order-move-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .order-move-btn:active:not(:disabled) {
+        border-color: var(--selected-color);
+        background: var(--selected-background-color);
+        color: var(--selected-color);
+    }
+
+    .order-options > .options > p,
+    .options.draggable-item > p {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}
