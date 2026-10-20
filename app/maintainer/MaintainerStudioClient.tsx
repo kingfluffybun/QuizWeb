@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/rbac";
@@ -40,10 +40,12 @@ export interface MaintainerStudioClientProps {
   initialStats: MaintainerStats;
   initialSubmissions: MaintainerSubmission[];
   currentUser: MaintainerUserProfile;
+  children?: React.ReactNode;
 }
 
 export type SubmissionFilterStatus = "all" | "pending" | "approved" | "rejected";
 export type SubmissionSortOption = "newest" | "oldest" | "title_asc" | "section";
+export type StudioViewMode = "all" | "editor" | "submissions";
 
 interface StudioLauncherTool {
   id: string;
@@ -150,10 +152,13 @@ export default function MaintainerStudioClient({
   initialStats,
   initialSubmissions,
   currentUser,
+  children,
 }: MaintainerStudioClientProps) {
   const router = useRouter();
   const [stats, setStats] = useState<MaintainerStats>(initialStats);
   const [submissions, setSubmissions] = useState<MaintainerSubmission[]>(initialSubmissions);
+  const [studioView, setStudioView] = useState<StudioViewMode>("all");
+  const [activeLauncher, setActiveLauncher] = useState<string>("unit");
 
   // Client Filter & Sort State
   const [statusFilter, setStatusFilter] = useState<SubmissionFilterStatus>("all");
@@ -171,34 +176,8 @@ export default function MaintainerStudioClient({
     }
   };
 
-  // Resubmit / Edit rejected or pending item bridge
-  const handleEditSubmission = (pendingId: number) => {
-    const idStr = String(pendingId);
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem("quizweb-edit-pending-id", idStr);
-      window.dispatchEvent(
-        new CustomEvent("quizweb-edit-pending", { detail: idStr })
-      );
-    }
-    router.push(`/input?pending_id=${idStr}`);
-  };
-
-  // Launch new blank creation session
-  const handleLaunchNewCreation = () => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem("quizweb-edit-pending-id");
-      const workspaceEl = document.getElementById("quiz-workspace");
-      if (workspaceEl) {
-        workspaceEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.location.hash = "quiz-workspace";
-        return;
-      }
-    }
-    router.push("/input");
-  };
-
   // Live Refresh from Server Actions
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     startTransition(async () => {
       try {
         const { getMaintainerStats, getMaintainerSubmissions } = await import(
@@ -214,6 +193,75 @@ export default function MaintainerStudioClient({
         console.error("Failed to refresh maintainer submissions:", err);
       }
     });
+  }, []);
+
+  // Automatically sync stats & submissions whenever QuizInputForm saves/updates/deletes a unit
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPendingUpdated = () => {
+      handleRefresh();
+    };
+    window.addEventListener("quizweb-pending-updated", onPendingUpdated);
+    return () => {
+      window.removeEventListener("quizweb-pending-updated", onPendingUpdated);
+    };
+  }, [handleRefresh]);
+
+  // Resubmit / Edit rejected or pending item directly inside the embedded Maintainer Studio
+  const handleEditSubmission = (pendingId: number) => {
+    const idStr = String(pendingId);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("quizweb-edit-pending-id", idStr);
+      if (studioView === "submissions") {
+        setStudioView("all");
+      }
+      window.dispatchEvent(
+        new CustomEvent("quizweb-edit-pending", { detail: idStr })
+      );
+      const workspaceEl =
+        document.getElementById("quiz-form") ||
+        document.getElementById("quiz-workspace");
+      if (workspaceEl) {
+        workspaceEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    }
+    router.push(`/input?pending_id=${idStr}`);
+  };
+
+  // Launch new creation session for a specific Studio Tool directly in-place
+  const handleLaunchNewCreation = (tool?: StudioLauncherTool) => {
+    const targetToolId = tool?.id ?? "unit";
+    const targetTitle = tool?.title ?? "Full Lesson Unit";
+    setActiveLauncher(targetToolId);
+    if (studioView === "submissions") {
+      setStudioView("all");
+    }
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem("quizweb-edit-pending-id");
+      window.dispatchEvent(
+        new CustomEvent("quizweb-studio-launch", {
+          detail: { toolId: targetToolId, title: targetTitle },
+        }),
+      );
+      window.setTimeout(() => {
+        const workspaceEl = document.getElementById("quiz-workspace");
+        if (workspaceEl) {
+          workspaceEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 30);
+      if (document.getElementById("quiz-workspace")) {
+        return;
+      }
+    }
+    router.push("/input");
+  };
+
+  const handleSelectStatFilter = (nextStatus: SubmissionFilterStatus) => {
+    setStatusFilter(nextStatus);
+    if (studioView === "editor") {
+      setStudioView("all");
+    }
   };
 
   // Filter & Sort Pipeline
@@ -265,10 +313,48 @@ export default function MaintainerStudioClient({
             </span>
           </div>
           <p>
-            Welcome, <strong>{currentUser.name}</strong>. Author curriculum units, track review status, and resubmit rejected items.
+            Welcome, <strong>{currentUser.name}</strong>. Author curriculum units, multi-step coding assessments, track review status, and resubmit rejected items in one unified workspace.
           </p>
         </div>
         <div className="maintainer-header-actions">
+          <div className="maintainer-view-switcher" role="tablist" aria-label="Maintainer studio layout view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={studioView === "all"}
+              className={`maintainer-view-pill ${studioView === "all" ? "active" : ""}`}
+              onClick={() => setStudioView("all")}
+            >
+              Unified Studio
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={studioView === "editor"}
+              className={`maintainer-view-pill ${studioView === "editor" ? "active" : ""}`}
+              onClick={() => {
+                setStudioView("editor");
+                if (typeof window !== "undefined") {
+                  window.setTimeout(() => {
+                    document
+                      .getElementById("quiz-workspace")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 30);
+                }
+              }}
+            >
+              Focus Editor
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={studioView === "submissions"}
+              className={`maintainer-view-pill ${studioView === "submissions" ? "active" : ""}`}
+              onClick={() => setStudioView("submissions")}
+            >
+              My Submissions ({submissions.length})
+            </button>
+          </div>
           <button
             type="button"
             className="btn-studio-refresh"
@@ -298,13 +384,13 @@ export default function MaintainerStudioClient({
           <button
             type="button"
             className="btn-studio-primary"
-            onClick={handleLaunchNewCreation}
+            onClick={() => handleLaunchNewCreation()}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14" />
               <path d="M5 12h14" />
             </svg>
-            <span>Launch Input Tool</span>
+            <span>New Unit / Question</span>
           </button>
         </div>
       </header>
@@ -312,16 +398,20 @@ export default function MaintainerStudioClient({
       {/* ------------------------------------------------------------------- */}
       {/* 2. Maintainer Stats Ribbon (Interactive Clickable Cards)             */}
       {/* ------------------------------------------------------------------- */}
-      <section className="maintainer-stats-ribbon" aria-label="Author Submission Statistics">
+      <section
+        className="maintainer-stats-ribbon"
+        aria-label="Author Submission Statistics"
+        hidden={studioView === "editor"}
+      >
         <div
           className={`stat-card stat-card-total ${statusFilter === "all" ? "active-stat-card" : ""}`}
-          onClick={() => setStatusFilter("all")}
+          onClick={() => handleSelectStatFilter("all")}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setStatusFilter("all");
+              handleSelectStatFilter("all");
             }
           }}
           aria-label="Filter all submissions"
@@ -341,13 +431,13 @@ export default function MaintainerStudioClient({
 
         <div
           className={`stat-card stat-card-approved ${statusFilter === "approved" ? "active-stat-card" : ""}`}
-          onClick={() => setStatusFilter("approved")}
+          onClick={() => handleSelectStatFilter("approved")}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setStatusFilter("approved");
+              handleSelectStatFilter("approved");
             }
           }}
           aria-label="Filter approved submissions"
@@ -367,13 +457,13 @@ export default function MaintainerStudioClient({
 
         <div
           className={`stat-card stat-card-pending ${statusFilter === "pending" ? "active-stat-card" : ""}`}
-          onClick={() => setStatusFilter("pending")}
+          onClick={() => handleSelectStatFilter("pending")}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setStatusFilter("pending");
+              handleSelectStatFilter("pending");
             }
           }}
           aria-label="Filter pending submissions"
@@ -393,13 +483,13 @@ export default function MaintainerStudioClient({
 
         <div
           className={`stat-card stat-card-rejected ${statusFilter === "rejected" ? "active-stat-card" : ""}`}
-          onClick={() => setStatusFilter("rejected")}
+          onClick={() => handleSelectStatFilter("rejected")}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setStatusFilter("rejected");
+              handleSelectStatFilter("rejected");
             }
           }}
           aria-label="Filter rejected submissions needing action"
@@ -422,45 +512,67 @@ export default function MaintainerStudioClient({
       {/* ------------------------------------------------------------------- */}
       {/* 3. Studio Launcher Section (Question & Unit Creation Tools)          */}
       {/* ------------------------------------------------------------------- */}
-      <section className="studio-launcher-section">
+      <section className="studio-launcher-section" hidden={studioView === "submissions"}>
         <div className="section-title-wrap">
           <h2>Question &amp; Unit Creation Studio</h2>
-          <p>Quick-launch dedicated composition workflows to author questions and curriculum modules.</p>
+          <p>Select a composition workflow below to configure the integrated authoring studio immediately underneath.</p>
         </div>
         <div className="launcher-grid">
-          {STUDIO_LAUNCHERS.map((tool) => (
-            <div key={tool.id} className="launcher-card">
-              <div className="launcher-card-top">
-                <div className="launcher-icon-box">{tool.iconSvg}</div>
-                <span className={`launcher-badge ${tool.badgeClass}`}>{tool.typeBadge}</span>
+          {STUDIO_LAUNCHERS.map((tool) => {
+            const isSelected = activeLauncher === tool.id;
+            return (
+              <div
+                key={tool.id}
+                className={`launcher-card ${isSelected ? "launcher-card-active" : ""}`}
+              >
+                <div className="launcher-card-top">
+                  <div className="launcher-icon-box">{tool.iconSvg}</div>
+                  <span className={`launcher-badge ${tool.badgeClass}`}>{tool.typeBadge}</span>
+                </div>
+                <h3>{tool.title}</h3>
+                <p>{tool.description}</p>
+                <div className="launcher-card-bottom">
+                  <button
+                    type="button"
+                    className="btn-launcher-action"
+                    onClick={() => handleLaunchNewCreation(tool)}
+                  >
+                    <span>Compose {tool.title}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <h3>{tool.title}</h3>
-              <p>{tool.description}</p>
-              <div className="launcher-card-bottom">
-                <button
-                  type="button"
-                  className="btn-launcher-action"
-                  onClick={handleLaunchNewCreation}
-                >
-                  <span>Compose {tool.title}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14" />
-                    <path d="m12 5 7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
       {/* ------------------------------------------------------------------- */}
+      {/* 3.5. Embedded Authoring Workspace (/input Integrated Studio)         */}
+      {/* ------------------------------------------------------------------- */}
+      {children && (
+        <div
+          className="maintainer-embedded-workspace"
+          hidden={studioView === "submissions"}
+        >
+          {children}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------- */}
       {/* 4. "My Submissions" Filterable Tracker                              */}
       {/* ------------------------------------------------------------------- */}
-      <section className="submissions-tracker-section">
+      <section
+        id="my-submissions-section"
+        className="submissions-tracker-section"
+        hidden={studioView === "editor"}
+      >
         <div className="section-title-wrap">
           <h2>My Submissions</h2>
-          <p>Live ledger of authored units and questions, administrative review notes, and resubmission controls.</p>
+          <p>Live ledger of authored units and questions, administrative review notes, and in-place resubmission controls.</p>
         </div>
 
         {/* Toolbar: Filter Tabs + Search + Sort */}

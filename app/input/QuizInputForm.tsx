@@ -211,13 +211,58 @@ export default function QuizInputForm({
       loadPendingQuiz((event as CustomEvent<string>).detail);
     };
 
+    const handleStudioLaunch = (event: Event) => {
+      const detail = (event as CustomEvent<{ toolId?: string; title?: string }>).detail;
+      const toolId = (detail?.toolId ?? "unit").toLowerCase();
+      setEditingQuiz(null);
+      setMessage(null);
+
+      if (toolId === "cp") {
+        setUnitInputTab("assessment");
+        setPreviewTab("assessment");
+        window.setTimeout(() => {
+          document.getElementById("assessment_title")?.focus();
+        }, 80);
+        return;
+      }
+
+      setUnitInputTab("lesson");
+      setPreviewTab("lesson");
+
+      if (toolId === "unit") {
+        window.setTimeout(() => {
+          document.getElementById("unit_title")?.focus();
+        }, 80);
+        return;
+      }
+
+      const matchedType = types.find(
+        (t) => t.type_name.toLowerCase() === toolId,
+      );
+      if (matchedType) {
+        setSelectedTypeId(matchedType.quiz_type_id.toString());
+      }
+      window.setTimeout(() => {
+        const questionInput = document.getElementById("question_text");
+        if (questionInput) {
+          questionInput.scrollIntoView({ behavior: "smooth", block: "center" });
+          questionInput.focus();
+        }
+      }, 100);
+    };
+
     window.addEventListener("quizweb-edit-pending", handleEditRequest);
-    loadPendingQuiz(window.sessionStorage.getItem("quizweb-edit-pending-id"));
+    window.addEventListener("quizweb-studio-launch", handleStudioLaunch);
+
+    const urlPendingId = new URLSearchParams(window.location.search).get("pending_id");
+    const sessionPendingId = window.sessionStorage.getItem("quizweb-edit-pending-id");
+    loadPendingQuiz(urlPendingId || sessionPendingId);
 
     return () => {
       window.removeEventListener("quizweb-edit-pending", handleEditRequest);
+      window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
     };
-  }, [initialEditingQuiz]);
+  }, [initialEditingQuiz, types]);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -1004,11 +1049,15 @@ export default function QuizInputForm({
       const pendingQuizzes = Array.isArray(quiz.quiz_payload?.quizzes)
         ? quiz.quiz_payload.quizzes
         : [];
-      const firstQuiz = pendingQuizzes[0];
-      if (!firstQuiz) {
-        setMessage({ type: "error", text: "This pending unit has no quizzes to edit." });
-        return;
-      }
+      const firstQuiz: QueuedQuizEntry = pendingQuizzes[0] ?? {
+        cat_id: categories[0]?.cat_id,
+        difficulty_id: difficulties[0]?.difficulty_id,
+        quiz_type_id: types[0]?.quiz_type_id,
+        sec_id: quiz.sec_id,
+        unit: 1,
+        question_text: "",
+        quiz_payload: {},
+      };
       const lessonDocument =
         quiz.quiz_payload?.lesson_card ??
         (typeof quiz.quiz_payload?.lesson_text === "string"
@@ -1024,7 +1073,7 @@ export default function QuizInputForm({
           (type) =>
             type.quiz_type_id.toString() ===
             firstQuiz.quiz_type_id?.toString(),
-        )?.type_name ?? "";
+        )?.type_name ?? (types[0]?.type_name ?? "MCQ");
       setQueuedQuizzes(pendingQuizzes.slice(1));
       setCurrentPendingQuizIndex(0);
       setUnitTitle(quiz.question_text ?? "");
@@ -1763,16 +1812,78 @@ export default function QuizInputForm({
       </section>
 
       {/* Form Section */}
-      <div className="admin-card">
-        <h2>
-          {editingQuiz
-            ? editingQuiz._pendingUnit
-              ? `Edit ${(editingQuiz as unknown as { pending_status?: string }).pending_status === "approved" || editingQuiz.difficulty_name === "approved" ? "Approved " : ""}Unit (ID: #${editingQuiz.pending_id})`
-              : editingQuiz._queuedUnitQuiz
-                ? `Unit Quiz ${currentPendingQuizIndex + 1} of ${queuedQuizzes.length + 1}`
-                : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
-            : "Create New Unit"}
-        </h2>
+      <div id="quiz-form" className="admin-card unit-authoring-card">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: editingQuiz ? "10px" : "0",
+          }}
+        >
+          <h2 style={{ marginBottom: 0 }}>
+            {editingQuiz
+              ? editingQuiz._pendingUnit
+                ? `Edit ${(editingQuiz as unknown as { pending_status?: string }).pending_status === "approved" || editingQuiz.difficulty_name === "approved" ? "Approved " : ""}Unit (ID: #${editingQuiz.pending_id})`
+                : editingQuiz._queuedUnitQuiz
+                  ? `Unit Quiz ${currentPendingQuizIndex + 1} of ${queuedQuizzes.length + 1}`
+                  : `Edit Quiz Question (ID: #${editingQuiz.quiz_id ?? editingQuiz.pending_id})`
+              : "Create New Unit"}
+          </h2>
+          {editingQuiz && !editingQuiz._queuedUnitQuiz && (
+            <button
+              type="button"
+              className="btn-delete"
+              onClick={handleCancelEdit}
+              disabled={isPending}
+              style={{ padding: "6px 12px", fontSize: "0.82rem" }}
+            >
+              Discard &amp; New Unit
+            </button>
+          )}
+        </div>
+        {editingQuiz && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "10px",
+              flexWrap: "wrap",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              background: "rgba(37, 99, 235, 0.08)",
+              border: "1.5px solid rgba(37, 99, 235, 0.3)",
+              fontSize: "0.84rem",
+              marginBottom: "16px",
+            }}
+          >
+            <span>
+              <strong>Active Edit Session:</strong>{" "}
+              {unitTitle || editingQuiz.question_text || `Submission #${editingQuiz.pending_id ?? editingQuiz.quiz_id}`}{" "}
+              {editingQuiz.pending_status && (
+                <span
+                  style={{
+                    marginLeft: "6px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    background: "rgba(37, 99, 235, 0.16)",
+                  }}
+                >
+                  {editingQuiz.pending_status}
+                </span>
+              )}
+            </span>
+            <span style={{ opacity: 0.8, fontSize: "0.78rem" }}>
+              Save changes below to update &amp; resubmit
+            </span>
+          </div>
+        )}
         <form
           id="unit-form"
           key={
@@ -1789,17 +1900,24 @@ export default function QuizInputForm({
               type="button"
               className={`preview-tab${unitInputTab === "lesson" ? " active" : ""}`}
               aria-pressed={unitInputTab === "lesson"}
-              onClick={() => setUnitInputTab("lesson")}
+              onClick={() => {
+                setUnitInputTab("lesson");
+                setPreviewTab("lesson");
+              }}
             >
-              Lesson
+              Lesson ({lessonSlides.length} slide{lessonSlides.length === 1 ? "" : "s"}
+              {queuedQuizzes.length > 0 ? ` • ${queuedQuizzes.length} queued` : ""})
             </button>
             <button
               type="button"
               className={`preview-tab${unitInputTab === "assessment" ? " active" : ""}`}
               aria-pressed={unitInputTab === "assessment"}
-              onClick={() => setUnitInputTab("assessment")}
+              onClick={() => {
+                setUnitInputTab("assessment");
+                setPreviewTab("assessment");
+              }}
             >
-              Assessment
+              Coding Assessment ({cpSteps.length} step{cpSteps.length === 1 ? "" : "s"})
             </button>
           </div>
           <div hidden={unitInputTab !== "lesson"}>
@@ -3598,14 +3716,26 @@ export default function QuizInputForm({
                         </span>
                       )}
                       {quiz.type_name === "Unit" && (
-                        <span
-                          className="badge badge-metric-tag"
-                          title="Queued quizzes"
-                        >
-                          {Array.isArray(payload?.quizzes)
-                            ? payload.quizzes.length
-                            : 0} quizzes
-                        </span>
+                        <>
+                          <span
+                            className="badge badge-metric-tag"
+                            title="Queued quizzes"
+                          >
+                            {Array.isArray(payload?.quizzes)
+                              ? payload.quizzes.length
+                              : 0} quizzes
+                          </span>
+                          {Array.isArray(payload?.assessment?.cp_steps) &&
+                            payload.assessment.cp_steps.length > 0 && (
+                              <span
+                                className="badge badge-metric-tag"
+                                title="Coding Problem steps"
+                              >
+                                {payload.assessment.cp_steps.length} CP step
+                                {payload.assessment.cp_steps.length === 1 ? "" : "s"}
+                              </span>
+                            )}
+                        </>
                       )}
                     </div>
                     {payload && (
@@ -3793,7 +3923,16 @@ export default function QuizInputForm({
                             </div>
                             <div>
                               <strong>Assessment:</strong>{" "}
-                              {payload?.assessment?.assessment ?? ""}
+                              {String(
+                                payload?.assessment?.assessment_title ||
+                                  payload?.assessment?.assessment ||
+                                  "None"
+                              )}
+                              {Array.isArray(payload?.assessment?.cp_steps) &&
+                                payload.assessment.cp_steps.length > 0 &&
+                                ` (${payload.assessment.cp_steps.length} interactive coding step${
+                                  payload.assessment.cp_steps.length === 1 ? "" : "s"
+                                })`}
                             </div>
                             <div>
                               <strong>Quizzes:</strong>{" "}

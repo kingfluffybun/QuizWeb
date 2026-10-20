@@ -378,7 +378,7 @@ function CodeProblemRunner() {
           passed: false,
           message: result.message,
           failedTab: result.failedTab,
-          lineNumber: result.lineNumber,
+          lineNumber: result.failedLine,
         });
         if (result.failedTab) {
           setActiveFile(result.failedTab);
@@ -417,7 +417,7 @@ function CodeProblemRunner() {
             </h2>
             <p className="quiz-completion-message">
               {isVictory
-                ? problem?.expectedOutcome ||
+                ? problem?.expected_outcome ||
                   "Outstanding work! You built and verified every step of the coding assessment."
                 : stepFeedback?.message ||
                   "You ran out of hearts. Review the step instructions and try again!"}
