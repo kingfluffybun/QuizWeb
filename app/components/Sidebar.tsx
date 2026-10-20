@@ -283,24 +283,6 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                         <p>Log Out</p>
                                     </button>
                                 </form>
-                                {/* {(isAdmin || isMaintainer) && (
-                                    <>
-                                        <Link
-                                            href={`${isAdmin ? "/admin" : "/maintainer"}#quiz-workspace`}
-                                            className="profile-options sidebar-suboption"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                                            <p>Create Quiz</p>
-                                        </Link>
-                                        <Link
-                                            href={`${isAdmin ? "/admin" : "/maintainer"}#pending-submissions`}
-                                            className="profile-options sidebar-suboption"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
-                                            <p>Pending Review</p>
-                                        </Link>
-                                    </>
-                                )} */}
                             </div>
                         </div>
                     </div>
@@ -321,7 +303,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"> <path d="M12 1.5C12.5171 1.5 13.0196 1.66034 13.4395 1.95605L13.6133 2.09082L13.6162 2.09277L20.6162 8.09277H20.6152C20.892 8.32713 21.1149 8.61834 21.2676 8.94727C21.4206 9.27697 21.5 9.63654 21.5 10V19C21.5 19.663 21.2364 20.2997 20.7676 20.7686C20.2988 21.2372 19.6629 21.5 19 21.5H15V13.1113C15 12.8166 14.8946 12.5336 14.707 12.3252C14.5195 12.1169 14.2651 12 14 12H10C9.73486 12 9.48049 12.1169 9.29297 12.3252C9.10543 12.5336 9 12.8166 9 13.1113V21.5H5C4.33708 21.5 3.70124 21.2372 3.23242 20.7686C2.76358 20.2997 2.5 19.663 2.5 19V10C2.5 9.63654 2.57944 9.27697 2.73242 8.94727C2.88502 8.61857 3.10733 8.32705 3.38379 8.09277L10.3838 2.09277L10.3867 2.09082C10.8379 1.70954 11.4093 1.5 12 1.5Z" fill="currentColor"/> </svg>
                         <p>Home</p>
                     </Link>
-                    <Link href={"/quiz"} className={`sidebar-option${isRouteActive(pathname, ["/quiz", "/learn"]) ? " active" : ""}`}>
+                    <Link href={"/learn"} className={`sidebar-option${isRouteActive(pathname, ["/quiz", "/learn"]) ? " active" : ""}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-graduation-cap preview-icon"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M21.4198 10.9224C21.5988 10.8434 21.7507 10.7136 21.8567 10.5492C21.9627 10.3847 22.0181 10.1927 22.0161 9.99709C22.0141 9.80144 21.9547 9.61068 21.8454 9.44844C21.736 9.2862 21.5814 9.15961 21.4008 9.08436L12.8298 5.18036C12.5692 5.06151 12.2862 5 11.9998 5C11.7134 5 11.4304 5.06151 11.1698 5.18036L2.5998 9.08036C2.42177 9.15833 2.27031 9.28649 2.16396 9.44917C2.05761 9.61185 2.00098 9.802 2.00098 9.99636C2.00098 10.1907 2.05761 10.3809 2.16396 10.5435C2.27031 10.7062 2.42177 10.8344 2.5998 10.9124L11.1698 14.8204C11.4304 14.9392 11.7134 15.0007 11.9998 15.0007C12.2862 15.0007 12.5692 14.9392 12.8298 14.8204L21.4198 10.9224Z" fill="currentColor" stroke="currentColor"/> <path d="M22 10V16" stroke="currentColor"/> <path d="M6 16.5V14.5C6 14.5 9.53008 17 12 17C14.4699 17 18 14.5 18 14.5V16.5C18 17.2956 17.3679 18.0587 16.2426 18.6213C15.1174 19.1839 13.5913 19.5 12 19.5C10.4087 19.5 8.88258 19.1839 7.75736 18.6213C6.63214 18.0587 6 17.2956 6 16.5Z" fill="currentColor" stroke="currentColor"/> </svg>
 
