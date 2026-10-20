@@ -1,7 +1,7 @@
 .dashboard-page {
     display: grid;
     grid-template-areas:
-        "navbar navbar"
+        "sidebar navbar"
         "sidebar main";
     grid-template-rows: 80px minmax(0, 1fr);
     grid-template-columns: 240px minmax(0, 1fr);
@@ -25,8 +25,8 @@
     grid-area: sidebar;
     position: sticky;
     top: 0;
-    height: calc(100vh - 80px);
-    height: calc(100dvh - 80px);
+    height: calc(100vh);
+    height: calc(100dvh);
     overflow-y: auto;
 }
 
@@ -36,7 +36,7 @@
     min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    border-top: 24px solid var(--bg-main);
+    padding-top: 24px;
 }
 
 .dashboard-content {
@@ -320,7 +320,7 @@ button.quick-action-btn:hover {
 .calendar-nav-btn {
     background: var(--bg-card);
     border: 1px solid var(--border-main);
-    color: var(--text-main);
+    color: var(--text-muted);
     border-radius: 6px;
     width: 26px;
     height: 26px;

@@ -3,37 +3,137 @@
     align-items: center;
     gap: 8px;
     height: 80px;
-    padding: 12px 16px;
-    > div {
-        line-height: 1.25;
-        display: flex; flex-direction: column;
-        h2, p {color: var(--text-inverse);}
-        h2 { font-size: clamp(0.25rem, 1.5vw, 1rem); }
-        p {font-size: clamp(0.25rem, 1.25vw, 0.75rem); font-weight: 400;}
+    padding: 12px 0;
+    padding-left: 24px;
+    padding-right: 40px;
+    > .site-header {color: var(--text-inverse);}
+    > .divider {height: 24px; border-right: solid 2px var(--text-inverse);}
+    > .sidebar-current-icon {
+        display: flex;
+        align-items: center;
+        color: var(--text-inverse);
+        svg {width: 24px; height: 24px;}
     }
 }
 
-/* .toggle-sidebar-nav {
-    width: 76px;
-} */
+.navbar-right {
+    margin-left: auto;
+    .profile-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        .profile-menu {
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            left: calc(-256px + 40px);
+            top: 48px;
+            height: fit-content;
+            width: fit-content;
+            background-color: var(--bg-main);
+            border: 2px solid var(--border-main);
+            border-radius: 12px;
+            padding: 16px;
+            gap: 12px;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(-8px);
+            transition:
+                opacity 0.2s ease,
+                transform 0.2s ease,
+                visibility 0s linear 0.2s;
+            &.is-open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transform: translateY(0);
+                transition:
+                    opacity 0.2s ease,
+                    transform 0.2s ease,
+                    visibility 0s;
+            }
+            > .profile-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                .profile-detail {
+                    #name {color: var(--text-main); font-size: clamp(0.5rem, 1.50vw, 1rem);}
+                    #email {color: var(--text-muted); font-size: clamp(0.25rem, 1.25vw, 0.75rem);}
+                }
+            }
+            > hr {border: 1px solid var(--border-main);}
+            > .profile-options-container {
+                display: flex; flex-direction: column;
+            }
+        }
+    }
+}
+
+.profile-options {
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    svg {
+        color: var(--text-muted);
+    }
+    p {
+        font-size: clamp(0.5rem, 1.5vw, 1rem);
+        text-wrap: nowrap;
+    }
+    &:hover {background-color:var(--border-main);}
+}
+
+.profile-logout {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.profile-icon {
+    aspect-ratio: 1;
+    height: 40px; width: auto;
+    background-color: var(--border-main);
+    border-radius: 999px;
+}
+
+.profile-menu-toggle {
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+}
+
+.profile-menu-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+}
 
 .toggle-sidebar {
     background-color: transparent;
     aspect-ratio: 1;
     padding: 0 8px;
-    margin: 0 4px;
     border: none;
-    border-radius: 999px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     outline: none;
     svg {color: white;}
-    &:hover {background-color:var(--border-main); svg{color: var(--primary-color);}}
+    &:hover {background-color:var(--border-main);}
 }
 
 .quiz-page.sidebar-collapsed,
 .dashboard-page.sidebar-collapsed,
-.admin-app-layout.sidebar-collapsed {
+.admin-app-layout.sidebar-collapsed,
+.settings-app-layout.sidebar-collapsed {
     grid-template-columns: 80px auto;
 }
 
@@ -54,6 +154,30 @@
         padding: 24px 16px;
         position: relative;
         p, svg {color: var(--text-muted);}
+        .logo {
+            margin-bottom: 28px;
+            display: flex;
+            line-height: 1.25;
+            align-items: center;
+            gap: 12px;
+            border-bottom: var(--border-main);
+            div {
+                width: fit-content; 
+                height: fit-content; 
+                gap: 4px;
+                h2, p {white-space: nowrap; transition: all 0.2s;}
+                h2 {
+                    color: var(--text-main); 
+                    font-size: clamp(0.75rem, 2vw, 1.25rem);
+                }
+                p {
+                    color: var(--text-muted);
+                    font-size: clamp(.25rem,1.25vw,.75rem);
+                    font-weight: 500
+                }
+            }
+        }
+        
         .sidebar-option {
             min-width: 48px;
             padding: 12px;
@@ -75,7 +199,18 @@
                 transition: opacity 0.2s ease 0.2s;
                 text-wrap: nowrap;
             }
-            &:nth-last-child(2) {margin-top: auto;}
+            /* &:nth-last-child(2) {margin-top: auto;} */
+            > svg:nth-of-type(2) {
+                display: none;
+            }
+            &.active:has(> svg:nth-of-type(2)) {
+                > svg:first-of-type {
+                    display: none;
+                }
+                > svg:nth-of-type(2) {
+                    display: block;
+                }
+            }
         }
         .sidebar-suboption {
             padding-block: 8px;
@@ -169,7 +304,8 @@
 /* harvy preferebly mga nasa 48px-64px yung width ng collapse */
 .quiz-page.sidebar-collapsed,
 .dashboard-page.sidebar-collapsed,
-.admin-app-layout.sidebar-collapsed {
+.admin-app-layout.sidebar-collapsed,
+.settings-app-layout.sidebar-collapsed {
     .sidebar {
         width: 80px;
     }
@@ -191,6 +327,13 @@
 
     .toggle-sidebar {
         cursor: pointer;
+    }
+
+    .logo {
+        p, h2 {
+            opacity: 0;
+            transition: none;
+        }
     }
 }
 

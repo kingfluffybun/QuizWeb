@@ -108,6 +108,7 @@ export default async function MaintainerStudioPage() {
       <Sidebar
         role={staff.role}
         username={currentUserProfile.name}
+        email={currentUserProfile.email}
       />
       <main className="maintainer-main">
         <MaintainerStudioClient

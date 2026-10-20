@@ -1,7 +1,7 @@
 .quiz-page {
     display: grid;
     grid-template-areas:
-        "navbar navbar"
+        "sidebar navbar"
         "sidebar main"
         "sidebar footer";
     grid-template-rows: 80px 1fr clamp(140px, 2vh, 220px);
