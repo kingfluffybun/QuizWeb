@@ -149,14 +149,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
         <div className="card" id="streak-calendar">
             <div className="card-title">
                 <h2>Streak Calendar</h2>
-                <button
-                    type="button"
-                    className="quick-action quick-action-btn"
-                    onClick={() => setIsDetailsOpen(true)}
-                    aria-label="View streak details"
-                >
-                    View Details
-                </button>
+                <button type="button" className="quick-action quick-action-btn" onClick={() => setIsDetailsOpen(true)} aria-label="View streak details" > <h2 className="quick-action">View Details</h2> </button>
             </div>
             <div className="calendar-container">
                 {/* Left column: streak summary & current week */}

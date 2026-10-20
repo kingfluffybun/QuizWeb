@@ -181,7 +181,7 @@ export default async function DashboardPage() {
                         <div className="card">
                             <div className="card-title">
                                 <h2>Continue Where You Left Off</h2>
-                                <a href="/learn" className="quick-action">Resume</a>
+                                <a href="/learn"><h2 className="quick-action">Resume</h2></a>
                             </div>
                             <p>Pick up right where you left off in the interactive curriculum to maintain your streak.</p>
                         </div>
