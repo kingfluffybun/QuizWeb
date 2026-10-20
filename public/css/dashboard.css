@@ -403,7 +403,7 @@ button.quick-action-btn:hover {
 }
 
 .day.today:not(.active) p {
-    border: 2px dashed var(--primary-color);
+    outline: 2px dashed var(--primary-color);
     background-color: transparent;
 }
 
@@ -936,16 +936,10 @@ button.quick-action-btn:hover {
 }
 
 .skeleton-dashboard-page .skeleton-calendar-weekday {
-    height: 1.5em;
     margin: 0;
 }
 
 .skeleton-dashboard-page .skeleton-calendar-day > p {
-    width: 2.25em;
-    height: 2.25em;
-    padding: 8px;
-    aspect-ratio: 1;
-    border-radius: 50%;
     color: transparent;
 }
 
