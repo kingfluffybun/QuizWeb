@@ -133,7 +133,7 @@ export default function HomeLoading() {
                     <div className="streak-progress-bar col inactive">
                       <div className="skeleton-shimmer skeleton-streak-flame" aria-hidden="true" />
                     </div>
-                    <div className="streak-no-of-days col">
+                    <div className="streak-no-of-days col skeleton-streak-no-of-days">
                       <h1 className="skeleton-shimmer skeleton-streak-count" aria-hidden="true">0</h1>
                       <p className="skeleton-shimmer skeleton-streak-count-label" aria-hidden="true">day streak!</p>
                     </div>

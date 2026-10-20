@@ -893,8 +893,16 @@ button.quick-action-btn:hover {
 }
 
 .skeleton-dashboard-page .skeleton-streak-count {
-    width: 44px;
+    width: 1em;
+    height: 1em;
+    line-height: 1;
+    margin: 0;
     color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-streak-no-of-days {
+    align-self: stretch;
+    justify-content: space-between;
 }
 
 .skeleton-dashboard-page .skeleton-streak-count-label,
@@ -1383,4 +1391,3 @@ button.quick-action-btn:hover {
 .dashboard-mobile-jumpbar {
     display: none;
 }
-
