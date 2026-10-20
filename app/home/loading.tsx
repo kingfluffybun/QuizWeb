@@ -13,8 +13,8 @@ export default function HomeLoading() {
           {/* 1. Welcome Banner Skeleton */}
           <div className="welcome-banner">
             <div>
-              <h1 className="skeleton-shimmer skeleton-welcome-title" aria-hidden="true" />
-              <p className="skeleton-shimmer skeleton-welcome-description" aria-hidden="true" />
+              <h1 className="skeleton-welcome-title" aria-hidden="true" />
+              <p className="skeleton-welcome-description" aria-hidden="true" />
               <span className="cloud-right skeleton-shimmer skeleton-welcome-art" aria-hidden="true" />
             </div>
           </div>
