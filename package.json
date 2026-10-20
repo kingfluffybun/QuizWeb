@@ -8,7 +8,7 @@
         "start": "next start",
         "lint": "eslint",
         "db:migrate": "node scripts/migrate.mjs",
-        "test:cp": "node --experimental-strip-types tests/test-cp-engine.ts"
+        "test:cp": "npx tsx tests/test-cp-engine.ts"
     },
     "dependencies": {
         "@monaco-editor/react": "^4.7.0",

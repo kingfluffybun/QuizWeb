@@ -65,6 +65,29 @@ export default function AdminReviewQueue({
               <div className="admin-queue-card-actions">
                 <button
                   type="button"
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => {
+                    const idStr = String(item.pending_id);
+                    if (typeof window !== "undefined") {
+                      window.sessionStorage.setItem("quizweb-edit-pending-id", idStr);
+                      window.dispatchEvent(
+                        new CustomEvent("quizweb-edit-pending", { detail: idStr }),
+                      );
+                      const formEl =
+                        document.getElementById("quiz-form") ||
+                        document.getElementById("quiz-workspace");
+                      if (formEl) {
+                        formEl.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }
+                  }}
+                  disabled={isPending}
+                >
+                  Edit Unit
+                </button>
+
+                <button
+                  type="button"
                   className="admin-btn admin-btn-success"
                   onClick={() => onApprove(item.pending_id)}
                   disabled={isPending}
