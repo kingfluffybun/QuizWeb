@@ -134,6 +134,10 @@
     }
 }
 
+.card .card-title > h2 {
+    line-height: 1.2;
+}
+
 
 
 /* Lesson Progress */
@@ -169,7 +173,8 @@
 .current-lesson {
     display: flex;
     gap: 12px;
-    h2 {text-wrap: nowrap; margin-bottom: 0;}
+    h2 {text-wrap: nowrap; margin-bottom: 0; line-height: 1.2;}
+    p {line-height: 1.4;}
     .language-icon {
         aspect-ratio: 1;
         border-radius: 8px;
@@ -848,6 +853,129 @@ button.quick-action-btn:hover {
     position: absolute !important;
     right: -8px;
     bottom: -40px;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-title,
+.skeleton-dashboard-page .skeleton-lesson-action,
+.skeleton-dashboard-page .skeleton-section-title,
+.skeleton-dashboard-page .skeleton-section-subtitle,
+.skeleton-dashboard-page .skeleton-lesson-percent,
+.skeleton-dashboard-page .skeleton-unit-number,
+.skeleton-dashboard-page .skeleton-unit-title,
+.skeleton-dashboard-page .skeleton-unit-count {
+    display: block;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-title {
+    width: 150px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-action {
+    width: 60px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-language-mark {
+    width: 28px;
+    height: 28px;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.skeleton-dashboard-page .skeleton-section-title {
+    width: 130px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-section-subtitle {
+    width: 90px;
+    height: 1.4em;
+    line-height: 1.4;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-percent {
+    width: 45px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-unit-number {
+    width: 8px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-unit-title {
+    width: 140px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-unit-count {
+    width: 28px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-progress-fill {
+    position: absolute;
+    left: 0;
+    width: 35%;
+    height: 16px;
+    border-radius: inherit;
+}
+
+.skeleton-dashboard-page .skeleton-daily-title,
+.skeleton-dashboard-page .skeleton-daily-action {
+    display: block;
+    min-height: 1.2em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-daily-title {
+    width: 120px;
+}
+
+.skeleton-dashboard-page .skeleton-daily-action {
+    width: 72px;
+}
+
+.skeleton-dashboard-page .skeleton-xp-label,
+.skeleton-dashboard-page .skeleton-xp-value,
+.skeleton-dashboard-page .skeleton-graph-value,
+.skeleton-dashboard-page .skeleton-graph-day {
+    display: block;
+    min-height: 1em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-xp-label {
+    width: 80px;
+}
+
+.skeleton-dashboard-page .skeleton-xp-value {
+    width: 40px;
+}
+
+.skeleton-dashboard-page .skeleton-graph-value {
+    width: 40px;
+}
+
+.skeleton-dashboard-page .skeleton-graph-day {
+    width: 18px;
+}
+
+.skeleton-dashboard-page .skeleton-daily-progress-fill {
+    position: absolute;
+    left: 0;
+    width: 50%;
+    height: 16px;
+    border-radius: inherit;
 }
 
 /* =============================================================================

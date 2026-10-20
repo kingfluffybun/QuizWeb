@@ -24,62 +24,85 @@ export default function HomeLoading() {
             <div className="two-col-card">
               {/* Lesson Progress Card */}
               <div className="card">
-                <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div className="skeleton-shimmer skeleton-line sub-title" style={{ width: 150 }} />
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: 60, height: 14 }} />
+                <div className="card-title">
+                  <h2 className="skeleton-shimmer skeleton-lesson-title" aria-hidden="true" />
+                  <h2 className="quick-action skeleton-shimmer skeleton-lesson-action" aria-hidden="true" />
                 </div>
-                <div className="lesson-progress col" style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <div className="skeleton-shimmer skeleton-circle" style={{ width: 44, height: 44 }} />
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div className="skeleton-shimmer skeleton-line" style={{ width: 130, height: 18 }} />
-                        <div className="skeleton-shimmer skeleton-line" style={{ width: 90, height: 12 }} />
+                <div className="lesson-progress col">
+                  <div className="lesson-progress-header">
+                    <div className="lesson-progress-details">
+                      <div className="current-lesson">
+                        <div className="language-icon col">
+                          <div className="skeleton-shimmer skeleton-language-mark" />
+                        </div>
+                        <div className="skeleton-lesson-copy">
+                          <h2 className="skeleton-shimmer skeleton-section-title" aria-hidden="true" />
+                          <p className="skeleton-shimmer skeleton-section-subtitle" aria-hidden="true" />
+                        </div>
+                      </div>
+                      <div className="row">
+                        <h1 className="skeleton-shimmer skeleton-lesson-percent" aria-hidden="true" />
                       </div>
                     </div>
-                    <div className="skeleton-shimmer skeleton-line" style={{ width: 45, height: 26 }} />
+                    <div className="lesson-progress-bar">
+                      <div className="skeleton-shimmer skeleton-progress-fill" />
+                    </div>
                   </div>
-                  <div className="skeleton-shimmer" style={{ width: "100%", height: 10, borderRadius: 999 }} />
-                  <div style={{ height: 1, background: "var(--border-main, #e0e0e0)", margin: "4px 0" }} />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div className="skeleton-shimmer skeleton-circle" style={{ width: 28, height: 28 }} />
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div className="skeleton-shimmer skeleton-line" style={{ width: "60%", height: 14 }} />
-                        <div className="skeleton-shimmer" style={{ width: "100%", height: 6, borderRadius: 999 }} />
+                  <hr />
+                  <div className="unit-list-dashboard">
+                    {[1, 2].map((unit) => (
+                      <div className="unit row" key={unit}>
+                        <div className="unit-no row">
+                          <p className="skeleton-shimmer skeleton-unit-number" aria-hidden="true" />
+                        </div>
+                        <div className="unit-info">
+                          <div className="unit-description">
+                            <p className="skeleton-shimmer skeleton-unit-title" aria-hidden="true" />
+                            <p className="skeleton-shimmer skeleton-unit-count" aria-hidden="true" />
+                          </div>
+                          <div className="unit-progress-bar">
+                            <div className="skeleton-shimmer skeleton-progress-fill" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div className="skeleton-shimmer skeleton-circle" style={{ width: 28, height: 28 }} />
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div className="skeleton-shimmer skeleton-line" style={{ width: "50%", height: 14 }} />
-                        <div className="skeleton-shimmer" style={{ width: "100%", height: 6, borderRadius: 999 }} />
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
               {/* Daily Goal Card */}
               <div className="card">
-                <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div className="skeleton-shimmer skeleton-line sub-title" style={{ width: 120 }} />
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: 65, height: 14 }} />
+                <div className="card-title">
+                  <h2 className="skeleton-shimmer skeleton-daily-title" aria-hidden="true" />
+                  <h2 className="quick-action skeleton-shimmer skeleton-daily-action" aria-hidden="true" />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div className="skeleton-shimmer skeleton-line" style={{ width: 80, height: 14 }} />
-                    <div className="skeleton-shimmer skeleton-line" style={{ width: 40, height: 14 }} />
+                <div className="daily-goal-xp">
+                  <p className="skeleton-shimmer skeleton-xp-label" aria-hidden="true" />
+                  <div className="daily-progress-bar-container row">
+                    <div className="daily-progress-bar">
+                      <div className="skeleton-shimmer skeleton-daily-progress-fill" />
+                    </div>
+                    <div>
+                      <p className="skeleton-shimmer skeleton-xp-value" aria-hidden="true" />
+                    </div>
                   </div>
-                  <div className="skeleton-shimmer" style={{ width: "100%", height: 10, borderRadius: 999 }} />
-                  {/* Weekly Graph Bars */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: 100, paddingTop: 16 }}>
-                    {[50, 75, 40, 90, 60, 85, 30].map((h, i) => (
-                      <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: 24 }}>
-                        <div className="skeleton-shimmer" style={{ width: 14, height: `${h}%`, borderRadius: 4 }} />
-                        <div className="skeleton-shimmer skeleton-line" style={{ width: 16, height: 10, margin: 0 }} />
-                      </div>
-                    ))}
+                  <div className="daily-prograss-graph">
+                    <div className="graph-x-axis-container">
+                      {[40, 30, 20, 10, 0].map((value) => (
+                        <div className="graph-x-axis" key={value}>
+                          <p className="skeleton-shimmer skeleton-graph-value" aria-hidden="true" />
+                          <div className="x-axis-line" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="graph-y-axis">
+                      {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                        <div key={day}>
+                          <div className="graph-y-bar skeleton-shimmer" />
+                          <p className="skeleton-shimmer skeleton-graph-day" aria-hidden="true" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
