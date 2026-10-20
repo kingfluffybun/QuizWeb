@@ -403,7 +403,7 @@ button.quick-action-btn:hover {
 }
 
 .day.today:not(.active) p {
-    border: 2px dashed var(--primary-color);
+    outline: 2px dashed var(--primary-color);
     background-color: transparent;
 }
 
@@ -893,8 +893,16 @@ button.quick-action-btn:hover {
 }
 
 .skeleton-dashboard-page .skeleton-streak-count {
-    width: 44px;
+    width: 1em;
+    height: 1em;
+    line-height: 1;
+    margin: 0;
     color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-streak-no-of-days {
+    align-self: stretch;
+    justify-content: space-between;
 }
 
 .skeleton-dashboard-page .skeleton-streak-count-label,
@@ -936,16 +944,10 @@ button.quick-action-btn:hover {
 }
 
 .skeleton-dashboard-page .skeleton-calendar-weekday {
-    height: 1.5em;
     margin: 0;
 }
 
 .skeleton-dashboard-page .skeleton-calendar-day > p {
-    width: 2.25em;
-    height: 2.25em;
-    padding: 8px;
-    aspect-ratio: 1;
-    border-radius: 50%;
     color: transparent;
 }
 
@@ -1389,4 +1391,3 @@ button.quick-action-btn:hover {
 .dashboard-mobile-jumpbar {
     display: none;
 }
-
