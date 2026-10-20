@@ -16,59 +16,61 @@
     }
 }
 
-.navbar-right {
-    margin-left: auto;
-    .profile-container {
-        position: relative;
+.profile-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    z-index: 9999;
+    .profile-menu {
         display: flex;
-        align-items: center;
-        .profile-menu {
-            display: flex;
-            flex-direction: column;
-            position: absolute;
-            left: calc(-256px + 40px);
-            top: 48px;
-            height: fit-content;
-            width: fit-content;
-            background-color: var(--bg-main);
-            border: 2px solid var(--border-main);
-            border-radius: 12px;
-            padding: 16px;
-            gap: 12px;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            transform: translateY(-8px);
+        flex-direction: column;
+        position: fixed;
+        left: 12px;
+        bottom: 88px;
+        height: fit-content;
+        width: fit-content;
+        max-width: calc(100vw - 24px);
+        background-color: var(--bg-main);
+        border: 2px solid var(--border-main);
+        border-radius: 12px;
+        padding: 16px;
+        gap: 12px;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(8px);
+        transition:
+            opacity 0.2s ease,
+            transform 0.2s ease,
+            visibility 0s linear 0.2s;
+        &.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
             transition:
                 opacity 0.2s ease,
                 transform 0.2s ease,
-                visibility 0s linear 0.2s;
-            &.is-open {
-                opacity: 1;
-                visibility: visible;
-                pointer-events: auto;
-                transform: translateY(0);
-                transition:
-                    opacity 0.2s ease,
-                    transform 0.2s ease,
-                    visibility 0s;
-            }
-            > .profile-header {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                .profile-detail {
-                    #name {color: var(--text-main); font-size: clamp(0.5rem, 1.50vw, 1rem);}
-                    #email {color: var(--text-muted); font-size: clamp(0.25rem, 1.25vw, 0.75rem);}
-                }
-            }
-            > hr {border: 1px solid var(--border-main);}
-            > .profile-options-container {
-                display: flex; flex-direction: column;
-            }
+                visibility 0s;
+        }
+        > .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        > hr {border: 1px solid var(--border-main);}
+        > .profile-options-container {
+            display: flex; flex-direction: column;
         }
     }
+}
+
+.profile-detail {
+    display: flex;
+    flex-direction: column;
+    #name, #email {white-space: nowrap;}
+    #name {color: var(--text-main); font-size: clamp(0.5rem, 1.50vw, 1rem);}
+    #email {color: var(--text-muted); font-size: clamp(0.25rem, 1.25vw, 0.75rem);}
 }
 
 .profile-options {
@@ -102,7 +104,7 @@
 .profile-icon {
     aspect-ratio: 1;
     height: 40px; width: auto;
-    background-color: var(--border-main);
+    background-color: var(--primary-color);
     border-radius: 999px;
     color: var(--text-inverse);
     display: grid;
@@ -111,9 +113,22 @@
 }
 
 .profile-menu-toggle {
-    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px;
     border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
+    transition: all 0.2s ease;
+    &:hover {
+        background-color: var(--border-main);
+    }
 }
 
 .profile-menu-toggle:focus-visible {
@@ -181,6 +196,12 @@
                 }
             }
         }
+
+        .sidebar-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
         
         .sidebar-option {
             min-width: 48px;
@@ -214,19 +235,6 @@
                 > svg:nth-of-type(2) {
                     display: block;
                 }
-            }
-        }
-        .sidebar-suboption {
-            padding-block: 8px;
-            padding-left: 24px;
-            opacity: 0.9;
-            svg {
-                animation: none !important;
-                transition: none !important;
-            }
-            &:hover svg {
-                animation: none !important;
-                transform: none !important;
             }
         }
     }
