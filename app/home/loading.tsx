@@ -4,6 +4,19 @@ import "#css/dashboard.css";
 import "#css/sidebar.css";
 
 export default function HomeLoading() {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const monthStartDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const monthLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(now);
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekLabels = ["S", "M", "T", "W", "T", "F", "S"];
+
   return (
     <div className="dashboard-page skeleton-dashboard-page" aria-busy="true" aria-label="Loading dashboard">
       <SkeletonSidebar />
@@ -109,28 +122,56 @@ export default function HomeLoading() {
             </div>
 
             {/* Streak Calendar Card */}
-            <div className="card" id="streak-calendar">
-              <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div className="skeleton-shimmer skeleton-line sub-title" style={{ width: 150 }} />
-                <div className="skeleton-shimmer skeleton-line" style={{ width: 80, height: 14 }} />
+            <div className="card skeleton-streak-calendar-card" id="streak-calendar">
+              <div className="card-title">
+                <h2 className="skeleton-shimmer skeleton-streak-title" aria-hidden="true" />
+                <span className="quick-action skeleton-shimmer skeleton-streak-action" aria-hidden="true" />
               </div>
-              <div style={{ display: "flex", gap: 24, marginTop: 16, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 200, display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div className="skeleton-shimmer skeleton-circle" style={{ width: 48, height: 48 }} />
-                    <div className="skeleton-shimmer skeleton-line title" style={{ width: 80, height: 32, margin: 0 }} />
+              <div className="calendar-container">
+                <div className="streak">
+                  <div className="streak-status row">
+                    <div className="streak-progress-bar col inactive">
+                      <div className="skeleton-shimmer skeleton-streak-flame" aria-hidden="true" />
+                    </div>
+                    <div className="streak-no-of-days col">
+                      <h1 className="skeleton-shimmer skeleton-streak-count" aria-hidden="true">0</h1>
+                      <p className="skeleton-shimmer skeleton-streak-count-label" aria-hidden="true">day streak!</p>
+                    </div>
                   </div>
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: "90%", height: 14 }} />
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                      <div key={d} className="skeleton-shimmer skeleton-circle" style={{ width: 28, height: 28 }} />
+                  <p className="skeleton-shimmer skeleton-streak-message" aria-hidden="true">
+                    Complete a lesson or quiz today to start your streak!
+                  </p>
+                  <div className="streak-week">
+                    {weekLabels.map((day, index) => (
+                      <div key={index} className="streak-day-container col">
+                        <div className="streak-day row skeleton-shimmer skeleton-week-day" />
+                        <p className="skeleton-shimmer skeleton-week-label" aria-hidden="true">{day}</p>
+                      </div>
                     ))}
                   </div>
                 </div>
-                {/* Calendar Days Matrix */}
-                <div style={{ flex: 1.2, minWidth: 220, display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
-                  {Array.from({ length: 28 }).map((_, i) => (
-                    <div key={i} className="skeleton-shimmer" style={{ height: 28, borderRadius: 6 }} />
+                <div className="calendar" aria-hidden="true">
+                  <div className="calendar-month">
+                    <div className="calendar-month-header">
+                      <p className="skeleton-shimmer skeleton-calendar-month" aria-hidden="true">{monthLabel}</p>
+                    </div>
+                    <div className="calendar-month-nav">
+                      <span className="skeleton-shimmer skeleton-calendar-nav" />
+                      <span className="skeleton-shimmer skeleton-calendar-nav" />
+                    </div>
+                  </div>
+                  {dayLabels.map((day) => (
+                    <div key={day} className="day-label">
+                      <p className="skeleton-shimmer skeleton-calendar-weekday" aria-hidden="true">{day}</p>
+                    </div>
+                  ))}
+                  {Array.from({ length: monthStartDay }).map((_, index) => (
+                    <div key={`empty-${index}`} className="day-empty" />
+                  ))}
+                  {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => (
+                    <div key={day} className="day col skeleton-calendar-day">
+                      <p className="skeleton-shimmer">{day}</p>
+                    </div>
                   ))}
                 </div>
               </div>

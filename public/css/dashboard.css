@@ -870,6 +870,85 @@ button.quick-action-btn:hover {
     min-height: 365px;
 }
 
+.skeleton-dashboard-page .skeleton-streak-title,
+.skeleton-dashboard-page .skeleton-streak-action {
+    display: block;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-streak-title {
+    width: 150px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-action {
+    width: 108px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-flame {
+    width: 100px;
+    height: 114px;
+    flex: 0 0 114px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-count {
+    width: 44px;
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-streak-count-label,
+.skeleton-dashboard-page .skeleton-week-label,
+.skeleton-dashboard-page .skeleton-calendar-month,
+.skeleton-dashboard-page .skeleton-calendar-weekday {
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-streak-count-label {
+    width: 92px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-streak-message {
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-week-day {
+    flex: 0 0 40px;
+}
+
+.skeleton-dashboard-page .skeleton-week-label {
+    width: 16px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-month {
+    width: 120px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-nav {
+    width: 26px;
+    height: 26px;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-weekday {
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-day > p {
+    width: 2.25em;
+    height: 2.25em;
+    padding: 8px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    color: transparent;
+}
+
 .skeleton-dashboard-page .skeleton-lesson-title,
 .skeleton-dashboard-page .skeleton-lesson-action,
 .skeleton-dashboard-page .skeleton-section-title,
