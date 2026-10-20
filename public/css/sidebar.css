@@ -237,8 +237,13 @@
     > svg, p {color: white;}
 }
 
+.sidebar-option:hover {
+    transform: translateX(4px);
+}
+
 .sidebar-option:not(.active):hover {
     background-color:var(--border-main);
+    p, svg {color: var(--text-main);}
 }
 
 .sidebar-option[aria-disabled="true"] {

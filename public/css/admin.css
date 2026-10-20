@@ -644,7 +644,7 @@ html[data-motion="reduce"] .admin-main *::after {
 .admin-table thead th {
   position: sticky;
   top: 0;
-  z-index: -1;
+  z-index: 1;
   background: var(--admin-card-subtle);
   border-bottom: 2px solid var(--admin-border);
   padding: 16px 20px;
