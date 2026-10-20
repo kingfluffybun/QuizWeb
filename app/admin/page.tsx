@@ -17,9 +17,9 @@ import StaffWorkspaceTools from "@/app/components/StaffWorkspaceTools";
 import AdminDashboardClient from "./AdminDashboardClient";
 import "#css/sidebar.css";
 import "#css/nav.css";
-import "#css/admin.css";
 import "#css/input.css";
 import "#css/pending.css";
+import "#css/admin.css";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +72,7 @@ export default async function AdminPage() {
       getQuizMetadata(),
       getPaginatedRecentQuizzes(),
       getQuizMetrics(),
-      getPendingQuizzes("pending"),
+      getPendingQuizzes("all"),
     ]);
     initialUsers = usersResult.users;
     initialAnalytics = analyticsResult;

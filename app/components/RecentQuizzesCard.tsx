@@ -85,7 +85,31 @@ function QuizPayloadPreview({ quiz }: { quiz: Quiz }) {
     return <div><strong>Matching Pairs:</strong>{payload.pairs.map((pair, index) => <div key={index} className="quiz-payload-option"><code>{pair.left}</code> &harr; <code>{pair.right}</code></div>)}</div>;
   }
   if (quiz.type_name === "CP" && payload.steps) {
-    return <div className="cp-payload-steps">{payload.steps.map((step, index) => <div className="cp-payload-step" key={index}><strong>Step {index + 1}</strong><div><b>Instruction:</b> {step.prompt}</div>{step.template && <pre>{step.template}</pre>}<div><b>Expected Output:</b></div><pre className="cp-expected-output">{step.expected}</pre></div>)}</div>;
+    return <div className="cp-payload-step-list cp-payload-steps">{payload.steps.map((step, index) => <div className="cp-payload-step" key={index}><strong>Step {index + 1}</strong><div><b>Instruction:</b> {step.prompt}</div>{step.template && <pre>{step.template}</pre>}<div><b>Expected Output:</b></div><pre className="cp-expected-output">{step.expected}</pre></div>)}</div>;
+  }
+  if (quiz.type_name === "Unit") {
+    const lessonCard = payload.lesson_card as { lesson_slide?: Array<{ lesson_title?: string; lesson_text?: string }> } | undefined;
+    const slides = Array.isArray(lessonCard?.lesson_slide) ? lessonCard.lesson_slide : [];
+    const unitQuizzes = Array.isArray(payload.quizzes) ? (payload.quizzes as Array<{ question_text?: string }>) : [];
+    const assessment = payload.assessment as { title?: string; steps?: unknown[] } | undefined;
+    const assessmentStepCount = Array.isArray(assessment?.steps) ? assessment.steps.length : 0;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div>
+          <strong>Unit Contents:</strong> {slides.length} Lesson Slide{slides.length === 1 ? "" : "s"} &bull; {unitQuizzes.length} Quiz{unitQuizzes.length === 1 ? "" : "zes"} &bull; {assessmentStepCount} Assessment Step{assessmentStepCount === 1 ? "" : "s"}
+        </div>
+        {unitQuizzes.length > 0 && (
+          <div>
+            <strong>Quizzes:</strong>
+            {unitQuizzes.map((q, idx) => (
+              <div key={idx} className="quiz-payload-option">
+                <span>Quiz {idx + 1}: {q.question_text || "Untitled Question"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   }
   return <div>{payload.title ?? "No payload details available."}</div>;
 }

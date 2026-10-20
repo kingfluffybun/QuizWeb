@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { requireAdmin, requireStaff } from "@/lib/rbac";
@@ -11,6 +12,20 @@ import {
   wrapCodeProblemAssessmentForStorage,
   type CPStep,
 } from "@/lib/cp-schema";
+
+function revalidateQuizPaths() {
+  try {
+    revalidatePath("/learn");
+    revalidatePath("/quiz");
+    revalidatePath("/quiz-cp");
+    revalidatePath("/admin");
+    revalidatePath("/maintainer");
+    revalidatePath("/input");
+    revalidatePath("/pending");
+  } catch {
+    // Ignore when called outside Next.js request context (e.g. CLI test scripts)
+  }
+}
 
 const getAssessmentStepsFromForm = (formData: FormData): string[] | null => {
   const rawSteps = formData.get("assessment_steps");
@@ -52,10 +67,17 @@ const buildAssessmentDocumentFromForm = (
             s &&
             typeof s === "object" &&
             (String(s.instruction ?? "").trim().length > 0 ||
-              (s.expectedTemplate && hasAnyNonEmptyBuffer(s.expectedTemplate))),
+              (s.expectedTemplate && hasAnyNonEmptyBuffer(s.expectedTemplate)) ||
+              (s.starterCode && hasAnyNonEmptyBuffer(s.starterCode))),
         );
 
-        if (activeSteps.length > 0) {
+        const hasAnyCodeBuffers = activeSteps.some(
+          (s) =>
+            (s.expectedTemplate && hasAnyNonEmptyBuffer(s.expectedTemplate)) ||
+            (s.starterCode && hasAnyNonEmptyBuffer(s.starterCode)),
+        );
+
+        if (activeSteps.length > 0 && hasAnyCodeBuffers) {
           const normalizedSteps: CPStep[] = activeSteps.map((s, idx) => ({
             stepNumber: idx + 1,
             instruction: String(s.instruction ?? "").trim(),
@@ -698,19 +720,44 @@ export async function deleteUnit(unitId: number) {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+    const [approvedRows] = await connection.query<RowDataPacket[]>(
+      "SELECT pending_id, unit_id FROM unit_approved_tbl WHERE unit_id = ? OR pending_id = ?",
+      [unitId, unitId],
+    );
+    const targetUnitIds = new Set<number>([unitId]);
+    const targetPendingIds = new Set<number>();
+    for (const r of approvedRows) {
+      if (r.unit_id) targetUnitIds.add(Number(r.unit_id));
+      if (r.pending_id) targetPendingIds.add(Number(r.pending_id));
+    }
+
     await connection.query(
-      "DELETE FROM unit_approved_tbl WHERE unit_id = ?",
-      [unitId],
+      "DELETE FROM unit_approved_tbl WHERE unit_id = ? OR pending_id = ?",
+      [unitId, unitId],
     );
-    const [result] = await connection.query<ResultSetHeader>(
-      "DELETE FROM unit_tbl WHERE unit_id = ?",
-      [unitId],
-    );
-    if (result.affectedRows === 0) {
+
+    let affected = 0;
+    for (const uId of targetUnitIds) {
+      const [res] = await connection.query<ResultSetHeader>(
+        "DELETE FROM unit_tbl WHERE unit_id = ?",
+        [uId],
+      );
+      affected += res.affectedRows;
+    }
+    for (const pId of targetPendingIds) {
+      const [res] = await connection.query<ResultSetHeader>(
+        "DELETE FROM pending_tbl WHERE pending_id = ?",
+        [pId],
+      );
+      affected += res.affectedRows;
+    }
+
+    if (affected === 0) {
       await connection.rollback();
       return { error: "Unit was not found." };
     }
     await connection.commit();
+    revalidateQuizPaths();
     return { success: true };
   } catch (error) {
     await connection.rollback();
@@ -724,24 +771,159 @@ export async function deleteUnit(unitId: number) {
 export async function getQuizMetrics(): Promise<QuizMetricsData> {
   try {
     const quizTableAvailable = await tableExists("quiz_tbl");
-    if (!quizTableAvailable) {
+    let quizTableCount = 0;
+    if (quizTableAvailable) {
+      const [totalRows] = await db.query<RowDataPacket[]>(
+        "SELECT COUNT(*) AS total FROM quiz_tbl",
+      );
+      quizTableCount = Number(totalRows[0]?.total ?? 0);
+    }
+
+    // When quiz_tbl is empty or absent, compute curriculum metrics from unit_tbl
+    if (!quizTableAvailable || quizTableCount === 0) {
+      const [catLookup] = await db.query<RowDataPacket[]>(
+        "SELECT cat_id, cat_name FROM cat_tbl ORDER BY cat_name",
+      );
+      const [typeLookup] = await db.query<RowDataPacket[]>(
+        "SELECT quiz_type_id, type_name FROM quiz_type_tbl ORDER BY quiz_type_id",
+      );
+      const [diffLookup] = await db.query<RowDataPacket[]>(
+        "SELECT difficulty_id, difficulty_name FROM difficulty_tbl ORDER BY difficulty_id",
+      );
+      const [secLookup] = await db.query<RowDataPacket[]>(
+        "SELECT sec_id, sec_num FROM sec_tbl ORDER BY sec_id",
+      );
+      const [unitRows] = await db.query<RowDataPacket[]>(
+        "SELECT unit_id, sec_id, unit_quiz_json FROM unit_tbl",
+      );
+
+      const catCounts = new Map<number, number>();
+      const typeCounts = new Map<number, number>();
+      const diffCounts = new Map<number, number>();
+      const secCounts = new Map<number, number>();
+      const matrixCounts = new Map<string, number>();
+      const facetedCounts = new Map<string, number>();
+
+      const catNameById = new Map<number, string>(
+        catLookup.map((c) => [Number(c.cat_id), String(c.cat_name)]),
+      );
+      const diffNameById = new Map<number, string>(
+        diffLookup.map((d) => [Number(d.difficulty_id), String(d.difficulty_name)]),
+      );
+      const typeNameById = new Map<number, string>(
+        typeLookup.map((t) => [Number(t.quiz_type_id), String(t.type_name)]),
+      );
+
+      let totalQuizzes = 0;
+      for (const u of unitRows) {
+        const unitSecId = Number(u.sec_id ?? 0);
+        const parsedQuizzes = parseJsonColumn(u.unit_quiz_json);
+        const quizArr = Array.isArray(parsedQuizzes) ? parsedQuizzes : [];
+        for (const q of quizArr) {
+          if (!q || typeof q !== "object") continue;
+          totalQuizzes += 1;
+          const cId = Number(q.cat_id ?? 0);
+          const dId = Number(q.difficulty_id ?? 0);
+          const tId = Number(q.quiz_type_id ?? 0);
+          const sId = Number(q.sec_id ?? unitSecId);
+
+          if (cId) catCounts.set(cId, (catCounts.get(cId) ?? 0) + 1);
+          if (dId) diffCounts.set(dId, (diffCounts.get(dId) ?? 0) + 1);
+          if (tId) typeCounts.set(tId, (typeCounts.get(tId) ?? 0) + 1);
+          if (sId) secCounts.set(sId, (secCounts.get(sId) ?? 0) + 1);
+
+          const cName = catNameById.get(cId);
+          const dName = diffNameById.get(dId);
+          const tName = typeNameById.get(tId);
+          if (cName && dName) {
+            const mKey = `${cName}|||${dName}`;
+            matrixCounts.set(mKey, (matrixCounts.get(mKey) ?? 0) + 1);
+            if (tName) {
+              const fKey = `${cName}|||${dName}|||${tName}`;
+              facetedCounts.set(fKey, (facetedCounts.get(fKey) ?? 0) + 1);
+            }
+          }
+        }
+      }
+
+      const byCategory = catLookup.map((c) => {
+        const id = Number(c.cat_id);
+        const count = catCounts.get(id) ?? 0;
+        return {
+          cat_id: id,
+          cat_name: String(c.cat_name),
+          count,
+          percentage:
+            totalQuizzes > 0 ? Math.round((count / totalQuizzes) * 100) : 0,
+        };
+      });
+
+      const byType = typeLookup.map((t) => {
+        const id = Number(t.quiz_type_id);
+        const count = typeCounts.get(id) ?? 0;
+        return {
+          quiz_type_id: id,
+          type_name: String(t.type_name),
+          count,
+          percentage:
+            totalQuizzes > 0 ? Math.round((count / totalQuizzes) * 100) : 0,
+        };
+      });
+
+      const byDifficulty = diffLookup.map((d) => {
+        const id = Number(d.difficulty_id);
+        const count = diffCounts.get(id) ?? 0;
+        return {
+          difficulty_id: id,
+          difficulty_name: String(d.difficulty_name),
+          count,
+          percentage:
+            totalQuizzes > 0 ? Math.round((count / totalQuizzes) * 100) : 0,
+        };
+      });
+
+      const bySection = secLookup.map((s) => {
+        const id = Number(s.sec_id);
+        return {
+          sec_id: id,
+          sec_num: String(s.sec_num),
+          count: secCounts.get(id) ?? 0,
+        };
+      });
+      const lowCoverageSections = bySection.filter((s) => s.count < 3);
+
+      const matrix = catLookup.map((c) => {
+        const cName = String(c.cat_name);
+        const difficulties: Record<string, number> = {};
+        let total = 0;
+        for (const d of diffLookup) {
+          const dName = String(d.difficulty_name);
+          const cnt = matrixCounts.get(`${cName}|||${dName}`) ?? 0;
+          difficulties[dName] = cnt;
+          total += cnt;
+        }
+        return { cat_name: cName, difficulties, total };
+      });
+
+      const facetedBreakdown: QuizFacetedCount[] = [];
+      for (const [key, count] of facetedCounts.entries()) {
+        const [cat_name, difficulty_name, type_name] = key.split("|||");
+        facetedBreakdown.push({ cat_name, difficulty_name, type_name, count });
+      }
+
       return {
-        totalQuizzes: 0,
-        byCategory: [],
-        byType: [],
-        byDifficulty: [],
-        bySection: [],
-        lowCoverageSections: [],
-        matrix: [],
-        facetedBreakdown: [],
+        totalQuizzes,
+        byCategory,
+        byType,
+        byDifficulty,
+        bySection,
+        lowCoverageSections,
+        matrix,
+        facetedBreakdown,
       };
     }
 
-    // 1. Total count
-    const [totalRows] = await db.query<RowDataPacket[]>(
-      "SELECT COUNT(*) AS total FROM quiz_tbl",
-    );
-    const totalQuizzes = Number(totalRows[0]?.total ?? 0);
+    const totalQuizzes = quizTableCount;
 
     // 2. Breakdown by Category
     const [catRows] = await db.query<RowDataPacket[]>(`
@@ -907,87 +1089,144 @@ export async function getPaginatedRecentQuizzes(
   } = {},
 ) {
   try {
-    if (!(await tableExists("quiz_tbl"))) {
+    const hasQuizTbl = await tableExists("quiz_tbl");
+    let quizTblCount = 0;
+    if (hasQuizTbl) {
+      const [qCountRows] = await db.query<RowDataPacket[]>(
+        "SELECT COUNT(*) AS total FROM quiz_tbl",
+      );
+      quizTblCount = Number(qCountRows[0]?.total ?? 0);
+    }
+
+    if (!hasQuizTbl || quizTblCount === 0) {
       const safePageSize = Math.max(1, Math.floor(pageSize));
-      const search = filters.search?.trim() ?? "";
+      const search = filters.search?.trim().toLowerCase() ?? "";
       const idSearch = filters.id?.replace(/^[#\s]+/, "").trim() ?? "";
       const section = filters.section?.trim() ?? "";
-      const where = [
-        "(? = '' OR CAST(p.pending_id AS CHAR) LIKE ?)",
-        "(? = '' OR p.unit_title LIKE ? OR p.pending_name LIKE ?)",
-        "(? = '' OR s.sec_num = ?)",
-        "(? = '' OR 'Unit' = ?)",
-        "(? = '' OR p.pending_status = ?)",
-        "(? = '' OR 'Unit' = ?)",
-      ];
-      const params = [
-        idSearch,
-        `%${idSearch}%`,
-        search,
-        `%${search}%`,
-        `%${search}%`,
-        section,
-        section,
-        filters.category ?? "",
-        filters.category ?? "",
-        filters.difficulty ?? "",
-        filters.difficulty ?? "",
-        filters.type ?? "",
-        filters.type ?? "",
-      ];
-      const joins = `
-        FROM unit_approved_tbl a
-        JOIN pending_tbl p ON p.pending_id = a.pending_id
-        JOIN unit_tbl u ON u.unit_id = a.unit_id
-        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
-        WHERE ${where.join(" AND ")}
-      `;
-      const [countRows] = await db.query<RowDataPacket[]>(
-        `SELECT COUNT(*) AS total ${joins}`,
-        params,
+      const categoryFilter = filters.category?.trim().toLowerCase() ?? "";
+      const difficultyFilter = filters.difficulty?.trim().toLowerCase() ?? "";
+      const typeFilter = filters.type?.trim().toLowerCase() ?? "";
+
+      const [catLookup] = await db.query<RowDataPacket[]>(
+        "SELECT cat_id, cat_name FROM cat_tbl",
       );
-      const totalCount = Number(countRows[0]?.total ?? 0);
-      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
-      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
-      const offset = (currentPage - 1) * safePageSize;
+      const [diffLookup] = await db.query<RowDataPacket[]>(
+        "SELECT difficulty_id, difficulty_name FROM difficulty_tbl",
+      );
+      const catNameById = new Map<number, string>(
+        catLookup.map((c) => [Number(c.cat_id), String(c.cat_name)]),
+      );
+      const diffNameById = new Map<number, string>(
+        diffLookup.map((d) => [Number(d.difficulty_id), String(d.difficulty_name)]),
+      );
+
       const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
-                u.unit_id, u.unit_lesson_card_json, u.unit_quiz_json,
-                u.unit_assessment_json, p.pending_status, p.pending_name
-         ${joins}
-         ORDER BY u.unit_id DESC
-         LIMIT ? OFFSET ?`,
-        [...params, safePageSize, offset],
+        `SELECT COALESCE(p.pending_id, u.unit_id) AS pending_id,
+                u.unit_id,
+                COALESCE(u.unit_title, p.unit_title) AS unit_title,
+                COALESCE(u.sec_id, p.sec_id) AS sec_id,
+                s.sec_num,
+                COALESCE(u.unit_lesson_card_json, p.unit_lesson_card_json) AS unit_lesson_card_json,
+                COALESCE(u.unit_quiz_json, p.unit_quiz_json) AS unit_quiz_json,
+                COALESCE(u.unit_assessment_json, p.unit_assessment_json) AS unit_assessment_json,
+                COALESCE(p.pending_status, 'approved') AS pending_status,
+                COALESCE(p.pending_name, 'Administrator') AS pending_name
+         FROM unit_tbl u
+         LEFT JOIN unit_approved_tbl a ON a.unit_id = u.unit_id
+         LEFT JOIN pending_tbl p ON p.pending_id = a.pending_id
+         LEFT JOIN sec_tbl s ON s.sec_id = COALESCE(u.sec_id, p.sec_id)
+         ORDER BY u.unit_id DESC`,
       );
-      const units = rows.map((row) => {
+
+      const allUnits = rows.map((row) => {
         const lessonCard = parseJsonColumn(row.unit_lesson_card_json);
         const quizzes = parseJsonColumn(row.unit_quiz_json);
         const assessment = parseJsonColumn(row.unit_assessment_json);
-        const unitNumber = Array.isArray(quizzes) ? quizzes[0]?.unit : null;
+        const quizList = Array.isArray(quizzes) ? quizzes : [];
+        const firstQuiz = quizList[0] ?? {};
+        const unitNumber = firstQuiz?.unit ?? null;
+        const resolvedCatId = Number(firstQuiz?.cat_id ?? 0);
+        const resolvedDiffId = Number(firstQuiz?.difficulty_id ?? 0);
+        const resolvedCatName = catNameById.get(resolvedCatId) ?? "Unit";
+        const resolvedDiffName =
+          diffNameById.get(resolvedDiffId) ?? String(row.pending_status ?? "approved");
+
         return {
-          quiz_id: row.pending_id,
-          unit_id: row.unit_id,
-          cat_id: 0,
-          sec_id: row.sec_id,
-          difficulty_id: 0,
+          quiz_id: Number(row.pending_id ?? row.unit_id),
+          unit_id: Number(row.unit_id),
+          cat_id: resolvedCatId,
+          sec_id: Number(row.sec_id),
+          difficulty_id: resolvedDiffId,
           quiz_type_id: 0,
-          question_text: row.unit_title,
-          cat_name: "Unit",
-          sec_num: row.sec_num,
-          difficulty_name: row.pending_status,
+          question_text: String(row.unit_title),
+          cat_name: resolvedCatName,
+          sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
+          difficulty_name: resolvedDiffName,
           type_name: "Unit",
           quiz_payload: {
-            title: row.unit_title,
+            title: String(row.unit_title),
             lesson_card: lessonCard,
-            quizzes,
+            quizzes: quizList,
             assessment,
             unit_number: unitNumber,
             pending_name: row.pending_name,
+            pending_status: row.pending_status,
           },
         };
       });
+
+      const filteredUnits = allUnits.filter((unit) => {
+        if (
+          idSearch &&
+          !String(unit.quiz_id).includes(idSearch) &&
+          !String(unit.unit_id).includes(idSearch)
+        ) {
+          return false;
+        }
+        if (
+          search &&
+          ![
+            unit.question_text,
+            unit.cat_name,
+            unit.difficulty_name,
+            unit.type_name,
+            String(unit.quiz_payload.pending_name ?? ""),
+          ].some((v) => v?.toLowerCase().includes(search))
+        ) {
+          return false;
+        }
+        if (section && (unit.sec_num ?? "") !== section) {
+          return false;
+        }
+        if (
+          categoryFilter &&
+          unit.cat_name.toLowerCase() !== categoryFilter &&
+          categoryFilter !== "unit"
+        ) {
+          return false;
+        }
+        if (
+          difficultyFilter &&
+          unit.difficulty_name.toLowerCase() !== difficultyFilter &&
+          String(unit.quiz_payload.pending_status ?? "").toLowerCase() !==
+            difficultyFilter
+        ) {
+          return false;
+        }
+        if (typeFilter && unit.type_name.toLowerCase() !== typeFilter) {
+          return false;
+        }
+        return true;
+      });
+
+      const totalCount = filteredUnits.length;
+      const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+      const currentPage = Math.min(Math.max(1, Math.floor(page)), totalPages);
+      const offset = (currentPage - 1) * safePageSize;
+      const pagedUnits = filteredUnits.slice(offset, offset + safePageSize);
+
       return {
-        quizzes: units,
+        quizzes: pagedUnits,
         currentPage,
         totalPages,
         totalCount,
@@ -1131,7 +1370,7 @@ export async function getUnitById(unitId: number) {
       quiz_type_id: 0,
       question_text: row.unit_title,
       cat_name: "Unit",
-      sec_num: row.sec_num,
+      sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
       difficulty_name: row.pending_status,
       type_name: "Unit",
       quiz_payload: {
@@ -1153,67 +1392,34 @@ export async function getQuizOrUnitById(id: number) {
   if (!Number.isInteger(id) || id < 1) return null;
 
   try {
-    if (!(await tableExists("quiz_tbl"))) {
-      const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT p.pending_id, p.unit_title, p.sec_id, s.sec_num,
-                p.unit_lesson_card_json, p.unit_quiz_json,
-                p.unit_assessment_json, p.pending_status, p.pending_name
-         FROM pending_tbl p
-         LEFT JOIN sec_tbl s ON s.sec_id = p.sec_id
-         WHERE p.pending_id = ?
+    if (await tableExists("quiz_tbl")) {
+      const [rows] = await db.query<QuizRow[]>(
+        `SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id,
+                q.quiz_type_id, q.question_text, q.quiz_payload,
+                c.cat_name, d.difficulty_name, t.type_name
+         FROM quiz_tbl q
+         JOIN cat_tbl c ON q.cat_id = c.cat_id
+         JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+         JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+         LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
+         WHERE q.quiz_id = ?
          LIMIT 1`,
         [id],
       );
-      const row = rows[0];
-      if (!row) return null;
-
-      const quizzes = parseJsonColumn(row.unit_quiz_json);
-      return {
-        quiz_id: row.pending_id,
-        cat_id: 0,
-        sec_id: row.sec_id,
-        difficulty_id: 0,
-        quiz_type_id: 0,
-        question_text: row.unit_title,
-        cat_name: "Unit",
-        sec_num: row.sec_num,
-        difficulty_name: row.pending_status,
-        type_name: "Unit",
-        quiz_payload: {
-          title: row.unit_title,
-          lesson_card: parseJsonColumn(row.unit_lesson_card_json),
-          quizzes,
-          assessment: parseJsonColumn(row.unit_assessment_json),
-          unit_number: Array.isArray(quizzes) ? quizzes[0]?.unit ?? null : null,
-          pending_name: row.pending_name,
-        },
-      };
+      const quiz = rows[0];
+      if (quiz) {
+        return {
+          ...quiz,
+          sec_num: quiz.sec_num != null ? String(quiz.sec_num) : undefined,
+          quiz_payload:
+            typeof quiz.quiz_payload === "string"
+              ? parseJsonColumn(quiz.quiz_payload)
+              : quiz.quiz_payload,
+        };
+      }
     }
 
-    const [rows] = await db.query<QuizRow[]>(
-      `SELECT q.quiz_id, q.cat_id, q.sec_id, s.sec_num, q.difficulty_id,
-              q.quiz_type_id, q.question_text, q.quiz_payload,
-              c.cat_name, d.difficulty_name, t.type_name
-       FROM quiz_tbl q
-       JOIN cat_tbl c ON q.cat_id = c.cat_id
-       JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
-       JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
-       LEFT JOIN sec_tbl s ON q.sec_id = s.sec_id
-       WHERE q.quiz_id = ?
-       LIMIT 1`,
-      [id],
-    );
-    const quiz = rows[0];
-    if (!quiz) return null;
-
-    return {
-      ...quiz,
-      sec_num: quiz.sec_num ?? undefined,
-      quiz_payload:
-        typeof quiz.quiz_payload === "string"
-          ? parseJsonColumn(quiz.quiz_payload)
-          : quiz.quiz_payload,
-    };
+    return await getUnitById(id);
   } catch (error) {
     console.error("Failed to fetch selected quiz or unit:", error);
     return null;
@@ -1507,6 +1713,7 @@ export async function getQuizzes(filters?: {
 
 export interface PendingUnit extends RowDataPacket {
   pending_id: number;
+  unit_id?: number;
   unit_title: string;
   sec_id: number;
   unit_lesson_card_json: unknown;
@@ -1532,17 +1739,23 @@ export async function getPendingQuizzes(statusFilter = "pending") {
       params.push(statusFilter);
     }
 
-        const [rows] = await db.query<PendingUnit[]>(
+    const [rows] = await db.query<PendingUnit[]>(
       `
-           SELECT p.pending_id, p.unit_title, p.sec_id,
-             p.unit_lesson_card_json, p.unit_quiz_json,
-             p.unit_assessment_json, p.pending_status, p.pending_name,
-             p.pending_note, s.sec_num
-            FROM pending_tbl p
-            LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
-            ${whereClause}
-            ORDER BY p.pending_id DESC
-        `,
+        SELECT p.pending_id, u.unit_id,
+               COALESCE(u.unit_title, p.unit_title) AS unit_title,
+               COALESCE(u.sec_id, p.sec_id) AS sec_id,
+               COALESCE(u.unit_lesson_card_json, p.unit_lesson_card_json) AS unit_lesson_card_json,
+               COALESCE(u.unit_quiz_json, p.unit_quiz_json) AS unit_quiz_json,
+               COALESCE(u.unit_assessment_json, p.unit_assessment_json) AS unit_assessment_json,
+               p.pending_status, p.pending_name,
+               p.pending_note, s.sec_num
+        FROM pending_tbl p
+        LEFT JOIN unit_approved_tbl a ON a.pending_id = p.pending_id
+        LEFT JOIN unit_tbl u ON u.unit_id = a.unit_id
+        LEFT JOIN sec_tbl s ON COALESCE(u.sec_id, p.sec_id) = s.sec_id
+        ${whereClause}
+        ORDER BY p.pending_id DESC
+      `,
       params,
     );
 
@@ -1551,6 +1764,7 @@ export async function getPendingQuizzes(statusFilter = "pending") {
       const firstQuiz = Array.isArray(unitQuizJson) ? unitQuizJson[0] : {};
       return {
         ...row,
+        sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
         unit_lesson_card_json: parseJsonColumn(row.unit_lesson_card_json),
         unit_quiz_json: unitQuizJson,
         unit_assessment_json: parseJsonColumn(row.unit_assessment_json),
@@ -1572,12 +1786,18 @@ export async function getPendingQuizById(pendingId: number) {
 
   try {
     const [rows] = await db.query<PendingUnit[]>(
-      `SELECT p.pending_id, p.unit_title, p.sec_id,
-              p.unit_lesson_card_json, p.unit_quiz_json,
-              p.unit_assessment_json, p.pending_status, p.pending_name,
+      `SELECT p.pending_id, u.unit_id,
+              COALESCE(u.unit_title, p.unit_title) AS unit_title,
+              COALESCE(u.sec_id, p.sec_id) AS sec_id,
+              COALESCE(u.unit_lesson_card_json, p.unit_lesson_card_json) AS unit_lesson_card_json,
+              COALESCE(u.unit_quiz_json, p.unit_quiz_json) AS unit_quiz_json,
+              COALESCE(u.unit_assessment_json, p.unit_assessment_json) AS unit_assessment_json,
+              p.pending_status, p.pending_name,
               p.pending_note, s.sec_num
        FROM pending_tbl p
-       LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
+       LEFT JOIN unit_approved_tbl a ON a.pending_id = p.pending_id
+       LEFT JOIN unit_tbl u ON u.unit_id = a.unit_id
+       LEFT JOIN sec_tbl s ON COALESCE(u.sec_id, p.sec_id) = s.sec_id
        WHERE p.pending_id = ?
        LIMIT 1`,
       [pendingId],
@@ -1586,13 +1806,18 @@ export async function getPendingQuizById(pendingId: number) {
 
     if (!quiz) {
       const [approvedRows] = await db.query<PendingUnit[]>(
-        `SELECT p.pending_id, p.unit_title, p.sec_id,
-                p.unit_lesson_card_json, p.unit_quiz_json,
-                p.unit_assessment_json, p.pending_status, p.pending_name,
+        `SELECT p.pending_id, u.unit_id,
+                COALESCE(u.unit_title, p.unit_title) AS unit_title,
+                COALESCE(u.sec_id, p.sec_id) AS sec_id,
+                COALESCE(u.unit_lesson_card_json, p.unit_lesson_card_json) AS unit_lesson_card_json,
+                COALESCE(u.unit_quiz_json, p.unit_quiz_json) AS unit_quiz_json,
+                COALESCE(u.unit_assessment_json, p.unit_assessment_json) AS unit_assessment_json,
+                p.pending_status, p.pending_name,
                 p.pending_note, s.sec_num
          FROM unit_approved_tbl a
          JOIN pending_tbl p ON p.pending_id = a.pending_id
-         LEFT JOIN sec_tbl s ON p.sec_id = s.sec_id
+         LEFT JOIN unit_tbl u ON u.unit_id = a.unit_id
+         LEFT JOIN sec_tbl s ON COALESCE(u.sec_id, p.sec_id) = s.sec_id
          WHERE a.unit_id = ?
          LIMIT 1`,
         [pendingId],
@@ -1602,7 +1827,7 @@ export async function getPendingQuizById(pendingId: number) {
 
     if (!quiz) {
       const [unitRows] = await db.query<RowDataPacket[]>(
-        `SELECT u.unit_id AS pending_id, u.unit_title, u.sec_id,
+        `SELECT u.unit_id AS pending_id, u.unit_id, u.unit_title, u.sec_id,
                 u.unit_lesson_card_json, u.unit_quiz_json,
                 u.unit_assessment_json, 'approved' AS pending_status,
                 'Administrator' AS pending_name, NULL AS pending_note, s.sec_num
@@ -1626,6 +1851,7 @@ export async function getPendingQuizById(pendingId: number) {
 
     return {
       ...quiz,
+      sec_num: quiz.sec_num != null ? String(quiz.sec_num) : undefined,
       unit_lesson_card_json: lessonCard,
       unit_quiz_json: quizzes,
       unit_assessment_json: assessment,
@@ -1686,6 +1912,7 @@ export async function reviewPendingQuiz(
         [rejectionNotes.trim(), pendingId],
       );
       await connection.commit();
+      revalidateQuizPaths();
       return {
         success: true,
         message: "Unit rejected and retained in the review history.",
@@ -1723,6 +1950,7 @@ export async function reviewPendingQuiz(
       [pendingId],
     );
     await connection.commit();
+    revalidateQuizPaths();
     return {
       success: true,
       unitId: unitResult.insertId,
@@ -1749,10 +1977,19 @@ export async function updatePendingQuiz(
   }
 
   try {
+    const trimmed = questionText.trim().slice(0, 255);
     const [result] = await db.query<ResultSetHeader>(
       "UPDATE pending_tbl SET unit_title = ? WHERE pending_id = ?",
-      [questionText.trim().slice(0, 255), pendingId],
+      [trimmed, pendingId],
     );
+    await db.query(
+      `UPDATE unit_tbl u
+       JOIN unit_approved_tbl a ON a.unit_id = u.unit_id
+       SET u.unit_title = ?
+       WHERE a.pending_id = ?`,
+      [trimmed, pendingId],
+    );
+    revalidateQuizPaths();
     return result.affectedRows === 0
       ? { error: "Pending quiz was not found." }
       : { success: true };
@@ -1778,6 +2015,7 @@ export async function updatePendingNote(
       "UPDATE pending_tbl SET pending_note = ? WHERE pending_id = ? AND pending_status = 'rejected'",
       [pendingNote.trim(), pendingId],
     );
+    revalidateQuizPaths();
     return result.affectedRows === 0
       ? { error: "Only rejected quizzes can receive a note." }
       : { success: true };
@@ -1836,6 +2074,7 @@ export async function updatePendingQuizFromForm(
         Number(pendingId),
       ],
     );
+    revalidateQuizPaths();
     return result.affectedRows === 0
       ? { success: true, message: "No changes were needed." }
       : { success: true };
@@ -2002,6 +2241,7 @@ export async function updatePendingUnitFromForm(
     }
 
     await connection.commit();
+    revalidateQuizPaths();
     return { success: true, message: "Unit updated successfully." };
   } catch (error) {
     await connection.rollback();
@@ -2025,16 +2265,40 @@ export async function deletePendingQuiz(pendingId: number) {
   }
   if (!pendingId) return { error: "Pending quiz ID is required." };
 
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query<ResultSetHeader>(
+    await connection.beginTransaction();
+    const [approvedRows] = await connection.query<RowDataPacket[]>(
+      "SELECT unit_id FROM unit_approved_tbl WHERE pending_id = ?",
+      [pendingId],
+    );
+    await connection.query(
+      "DELETE FROM unit_approved_tbl WHERE pending_id = ?",
+      [pendingId],
+    );
+    for (const row of approvedRows) {
+      if (row.unit_id) {
+        await connection.query("DELETE FROM unit_tbl WHERE unit_id = ?", [
+          row.unit_id,
+        ]);
+      }
+    }
+    const [result] = await connection.query<ResultSetHeader>(
       "DELETE FROM pending_tbl WHERE pending_id = ?",
       [pendingId],
     );
-    return result.affectedRows === 0
-      ? { error: "Pending quiz was not found." }
-      : { success: true };
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return { error: "Pending quiz was not found." };
+    }
+    await connection.commit();
+    revalidateQuizPaths();
+    return { success: true };
   } catch (error) {
+    await connection.rollback();
     console.error("Failed to delete pending quiz:", error);
     return { error: "An error occurred while deleting the pending quiz." };
+  } finally {
+    connection.release();
   }
 }

@@ -34,7 +34,9 @@ export default function PendingReview({
 }) {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState(initialQuizzes);
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState(() =>
+    initialQuizzes.some((q) => q.pending_status === "pending") ? "pending" : "all",
+  );
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{
     text: string;
@@ -187,8 +189,33 @@ export default function PendingReview({
                   <strong>Reviewer notes:</strong> {quiz.pending_note}
                 </div>
               )}
-              {quiz.pending_status === "rejected" && (
-                <div className="pending-actions">
+              <div className="pending-actions">
+                <button
+                  type="button"
+                  className="pending-edit-unit-button"
+                  onClick={() => editApprovedUnit(quiz.pending_id)}
+                  disabled={isPending}
+                  title="Edit unit in workspace"
+                  aria-label="Edit unit in workspace"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                    <path d="m16 5 3 3" />
+                  </svg>
+                  <span>Edit Unit</span>
+                </button>
+                {quiz.pending_status === "rejected" && (
                   <button
                     type="button"
                     className="pending-note-button"
@@ -197,88 +224,59 @@ export default function PendingReview({
                   >
                     {quiz.pending_note ? "Edit Note" : "Add Note"}
                   </button>
-                </div>
-              )}
-              {quiz.pending_status === "approved" && (
-                <div className="pending-actions">
-                  <button
-                    type="button"
-                    className="pending-edit-unit-button"
-                    onClick={() => editApprovedUnit(quiz.pending_id)}
-                    disabled={isPending}
-                    title="Edit approved unit"
-                    aria-label="Edit approved unit"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                )}
+                {quiz.pending_status === "pending" && (
+                  <>
+                    <button
+                      type="button"
+                      className="pending-approve"
+                      onClick={() => review(quiz.pending_id, "approve")}
+                      disabled={isPending}
+                      title="Approve and publish"
+                      aria-label="Approve and publish"
                     >
-                      <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
-                      <path d="m16 5 3 3" />
-                    </svg>
-                    <span>Edit Unit</span>
-                  </button>
-                </div>
-              )}
-              {quiz.pending_status === "pending" && (
-                <div className="pending-actions">
-                  <button
-                    type="button"
-                    className="pending-approve"
-                    onClick={() => review(quiz.pending_id, "approve")}
-                    disabled={isPending}
-                    title="Approve and publish"
-                    aria-label="Approve and publish"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m5 12 4 4L19 6" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="pending-reject"
+                      onClick={() => review(quiz.pending_id, "reject")}
+                      disabled={isPending}
+                      title="Reject"
+                      aria-label="Reject"
                     >
-                      <path d="m5 12 4 4L19 6" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="pending-reject"
-                    onClick={() => review(quiz.pending_id, "reject")}
-                    disabled={isPending}
-                    title="Reject"
-                    aria-label="Reject"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M18 6 6 18" />
-                      <path d="m6 6 12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
             </article>
           ))}
         </div>

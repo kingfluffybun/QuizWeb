@@ -155,6 +155,14 @@ const getAssessmentDescription = (value: unknown): string => {
 };
 
 const getAssessmentCPSteps = (value: unknown): CPStep[] => {
+  if (
+    value &&
+    typeof value === "object" &&
+    "cp_steps" in value &&
+    Array.isArray((value as { cp_steps?: unknown }).cp_steps)
+  ) {
+    return (value as { cp_steps: CPStep[] }).cp_steps;
+  }
   const unwrapped = unwrapCodeProblemAssessment(value);
   if (unwrapped && unwrapped.steps.length > 0) {
     return unwrapped.steps;
@@ -470,74 +478,126 @@ export default function QuizInputForm({
 
   const buildCurrentQuizEntry = () => {
     const form = document.getElementById("unit-form") as HTMLFormElement | null;
-    if (!form) return null;
-
-    const formData = new FormData(form);
+    const formData = form ? new FormData(form) : new FormData();
     const typeName =
       selectedTypeName ||
-      types.find((t) => t.quiz_type_id.toString() === selectedTypeId)?.type_name;
+      types.find((t) => t.quiz_type_id.toString() === selectedTypeId)?.type_name ||
+      "MCQ";
 
-    if (!typeName || !selectedCatId || !selectedDiffId || !selectedSecId || !selectedUnit) {
-      return null;
-    }
+    const resolvedCatId =
+      selectedCatId ||
+      editingQuiz?.cat_id?.toString() ||
+      (categories[0]?.cat_id ? String(categories[0].cat_id) : "1");
+    const resolvedSecId =
+      selectedSecId ||
+      editingQuiz?.sec_id?.toString() ||
+      (sections[0]?.sec_id ? String(sections[0].sec_id) : "1");
+    const resolvedDiffId =
+      selectedDiffId ||
+      editingQuiz?.difficulty_id?.toString() ||
+      (difficulties[0]?.difficulty_id ? String(difficulties[0].difficulty_id) : "1");
+    const resolvedTypeId =
+      selectedTypeId ||
+      editingQuiz?.quiz_type_id?.toString() ||
+      (types[0]?.quiz_type_id ? String(types[0].quiz_type_id) : "1");
+    const resolvedUnit =
+      selectedUnit ||
+      editingQuiz?.unit?.toString() ||
+      "1";
 
     const makeBase = (questionTextValue: string, payload: Record<string, unknown>) => ({
-      cat_id: Number(selectedCatId),
-      sec_id: Number(selectedSecId),
-      unit: Number(selectedUnit),
-      difficulty_id: Number(selectedDiffId),
-      quiz_type_id: Number(selectedTypeId),
+      cat_id: Number(resolvedCatId),
+      sec_id: Number(resolvedSecId),
+      unit: Number(resolvedUnit),
+      difficulty_id: Number(resolvedDiffId),
+      quiz_type_id: Number(resolvedTypeId),
       question_text: questionTextValue,
       quiz_payload: payload,
     });
 
     if (typeName === "MCQ") {
       const options = [0, 1, 2, 3].map(
-        (idx) => (formData.get(`option_${idx}`) as string | null)?.trim() ?? "",
+        (idx) =>
+          (formData.get(`option_${idx}`) as string | null)?.trim() ||
+          mcqOptions[idx] ||
+          (Array.isArray(editingQuiz?.quiz_payload?.options)
+            ? String((editingQuiz.quiz_payload.options as unknown[])[idx] ?? "")
+            : ""),
       );
-      const correct = Number(formData.get("correct_option_index") ?? mcqCorrectIndex);
+      const rawCorrect = formData.get("correct_option_index");
+      const correct =
+        rawCorrect !== null && !Number.isNaN(Number(rawCorrect))
+          ? Number(rawCorrect)
+          : (mcqCorrectIndex ?? 0);
 
-      if (options.some((option) => !option) || Number.isNaN(correct)) {
-        return null;
-      }
+      const qText =
+        questionText.trim() ||
+        editingQuiz?.question_text ||
+        "Untitled Multiple Choice Question";
 
-      return makeBase(questionText.trim(), {
-        options,
+      return makeBase(qText, {
+        options: options.map((opt, i) => opt || `Option ${i + 1}`),
         correct_index: correct,
       });
     }
 
     if (typeName === "FITB") {
-      const answer = (formData.get("fitb_answer") as string | null)?.trim() ?? "";
-      if (!answer) return null;
-      return makeBase(questionText.trim() || "Fill in the blank", {
-        answer,
-      });
+      const answer =
+        (formData.get("fitb_answer") as string | null)?.trim() ||
+        fitbAnswer ||
+        String(editingQuiz?.quiz_payload?.answer ?? "");
+      return makeBase(
+        questionText.trim() || editingQuiz?.question_text || "Fill in the blank",
+        {
+          answer: answer || "answer",
+        },
+      );
     }
 
     if (typeName === "Order") {
-      const items = Array.from({ length: optionCount }, (_, idx) =>
-        (formData.get(`order_${idx}`) as string | null)?.trim() ?? "",
+      let items = Array.from({ length: optionCount }, (_, idx) =>
+        (formData.get(`order_${idx}`) as string | null)?.trim() || orderItems[idx] || "",
       ).filter(Boolean);
-      if (items.length < 4) return null;
-      return makeBase(questionText.trim() || "Arrange the items in order", {
-        items,
-      });
+      if (items.length < 2 && Array.isArray(editingQuiz?.quiz_payload?.items)) {
+        items = (editingQuiz.quiz_payload.items as string[]).filter(Boolean);
+      }
+      return makeBase(
+        questionText.trim() || editingQuiz?.question_text || "Arrange the items in order",
+        {
+          items: items.length > 0 ? items : ["Item 1", "Item 2"],
+        },
+      );
     }
 
     if (typeName === "Pair") {
-      const pairs = Array.from({ length: optionCount }, (_, idx) => ({
-        left: (formData.get(`pair_left_${idx}`) as string | null)?.trim() ?? "",
-        right: (formData.get(`pair_right_${idx}`) as string | null)?.trim() ?? "",
+      let pairs = Array.from({ length: optionCount }, (_, idx) => ({
+        left:
+          (formData.get(`pair_left_${idx}`) as string | null)?.trim() ||
+          pairValues[idx]?.left ||
+          "",
+        right:
+          (formData.get(`pair_right_${idx}`) as string | null)?.trim() ||
+          pairValues[idx]?.right ||
+          "",
       })).filter((pair) => pair.left && pair.right);
-      if (pairs.length < 4) return null;
-      return makeBase(questionText.trim() || "Match the items", {
-        pairs,
-      });
+      if (pairs.length === 0 && Array.isArray(editingQuiz?.quiz_payload?.pairs)) {
+        pairs = (editingQuiz.quiz_payload.pairs as { left: string; right: string }[]).filter(
+          (p) => p.left && p.right,
+        );
+      }
+      return makeBase(
+        questionText.trim() || editingQuiz?.question_text || "Match the items",
+        {
+          pairs: pairs.length > 0 ? pairs : [{ left: "Item 1", right: "Match 1" }],
+        },
+      );
     }
 
     if (typeName === "CP") {
-      const title = (formData.get("cp_title") as string | null)?.trim() ?? "";
+      const title =
+        (formData.get("cp_title") as string | null)?.trim() ||
+        String(editingQuiz?.quiz_payload?.title ?? "") ||
+        "Coding Challenge";
       const promptCount = Number(formData.get("cp_prompt_count") ?? cpPromptCount);
       const steps: { prompt: string; template: string; expected: string }[] = [];
       for (let idx = 0; idx < promptCount; idx++) {
@@ -545,22 +605,32 @@ export default function QuizInputForm({
         const template = (formData.get(`cp_template_${idx}`) as string | null)?.trim() ?? "";
         const expected = (formData.get(`cp_expected_${idx}`) as string | null)?.trim() ?? "";
         if (prompt || template || expected) {
-          if (!prompt || !expected) return null;
-          steps.push({ prompt, template, expected });
+          steps.push({ prompt: prompt || "Instruction", template, expected: expected || "" });
         }
       }
-      if (!title || steps.length === 0) return null;
-      return makeBase(questionText.trim() || title, {
+      const existingSteps = Array.isArray(editingQuiz?.quiz_payload?.steps)
+        ? (editingQuiz.quiz_payload.steps as { prompt: string; template: string; expected: string }[])
+        : [];
+      const resolvedSteps =
+        steps.length > 0
+          ? steps
+          : existingSteps.length > 0
+            ? existingSteps
+            : [{ prompt: "Instruction", template: "", expected: "" }];
+      return makeBase(questionText.trim() || editingQuiz?.question_text || title, {
         title,
-        steps,
-        prompts: steps.map((step) => step.prompt),
-        prompt: steps[0].prompt,
-        template: steps[0].template,
-        expected: steps[0].expected,
+        steps: resolvedSteps,
+        prompts: resolvedSteps.map((s) => s.prompt),
+        prompt: resolvedSteps[0].prompt,
+        template: resolvedSteps[0].template,
+        expected: resolvedSteps[0].expected,
       });
     }
 
-    return null;
+    return makeBase(
+      questionText.trim() || editingQuiz?.question_text || "Quiz Question",
+      editingQuiz?.quiz_payload || {},
+    );
   };
 
   const buildQuizBatch = (
@@ -588,13 +658,18 @@ export default function QuizInputForm({
       return;
     }
 
-    if (queuedQuizzes.length >= 10) {
+    if (queuedQuizzes.length >= 9) {
       setMessage({
         type: "error",
-        text: "A unit can hold up to 10 quizzes before saving.",
+        text: "A unit can hold up to 10 quizzes.",
       });
       return;
     }
+
+    const wasPendingUnit = editingQuiz?._pendingUnit;
+    const pendingId = editingQuiz?.pending_id;
+    const resolvedUnitAssessment = editingQuiz?.unit_assessment;
+    const currentQuizId = editingQuiz?.quiz_id;
 
     setQueuedQuizzes((prev) => [...prev, nextEntry]);
     setQuestionText("");
@@ -611,9 +686,26 @@ export default function QuizInputForm({
     setOptionCount(4);
     setCpPromptCount(1);
     setCurrentPendingQuizIndex(queuedQuizzes.length + 1);
+
+    if (wasPendingUnit) {
+      setEditingQuiz({
+        cat_id: Number(selectedCatId || 1),
+        sec_id: Number(selectedSecId || 1),
+        unit: Number(selectedUnit || 1),
+        difficulty_id: Number(selectedDiffId || 1),
+        quiz_type_id: Number(selectedTypeId || 1),
+        question_text: "",
+        quiz_payload: {},
+        pending_id: pendingId,
+        quiz_id: currentQuizId,
+        _pendingUnit: true,
+        unit_assessment: resolvedUnitAssessment,
+      });
+    }
+
     const queueMessage = {
       type: "success",
-      text: `Quiz added to unit queue (${queuedQuizzes.length + 1}/10).`,
+      text: `Quiz added to unit (${queuedQuizzes.length + 2}/10).`,
     } as const;
     setMessage(queueMessage);
     window.setTimeout(() => {
@@ -621,6 +713,42 @@ export default function QuizInputForm({
         currentMessage?.text === queueMessage.text ? null : currentMessage,
       );
     }, 2000);
+  };
+
+  const handleRemoveCurrentQuiz = () => {
+    if (queuedQuizzes.length === 0) {
+      setMessage({
+        type: "error",
+        text: "A unit must retain at least one quiz.",
+      });
+      return;
+    }
+    const nextQuiz = queuedQuizzes[0];
+    setQueuedQuizzes(queuedQuizzes.slice(1));
+    setCurrentPendingQuizIndex((prev) =>
+      Math.max(0, Math.min(prev, queuedQuizzes.length - 1)),
+    );
+    loadQueuedQuiz(nextQuiz);
+    setMessage({
+      type: "success",
+      text: "Quiz removed from unit.",
+    });
+  };
+
+  const handleRemoveLessonSlide = (indexToRemove: number) => {
+    if (lessonSlides.length <= 1) {
+      setMessage({
+        type: "error",
+        text: "A unit must have at least one lesson slide.",
+      });
+      return;
+    }
+    setLessonSlides((slides) => slides.filter((_, idx) => idx !== indexToRemove));
+    setCurrentLessonSlide((prev) => Math.max(0, Math.min(prev, lessonSlides.length - 2)));
+    setMessage({
+      type: "success",
+      text: "Lesson slide removed.",
+    });
   };
 
   const handleAddOption = () => {
@@ -709,31 +837,40 @@ export default function QuizInputForm({
     startTransition(() => {
       if (editingQuiz) {
         setSelectedTypeId(editingQuiz.quiz_type_id?.toString() ?? "");
-        setSelectedCatId(editingQuiz.cat_id?.toString() ?? "");
-        setSelectedDiffId(editingQuiz.difficulty_id?.toString() ?? "");
-        setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
-        setSelectedUnit(editingQuiz.unit?.toString() ?? "");
+        if (editingQuiz.cat_id) setSelectedCatId(editingQuiz.cat_id.toString());
+        if (editingQuiz.difficulty_id)
+          setSelectedDiffId(editingQuiz.difficulty_id.toString());
+        if (editingQuiz.sec_id) setSelectedSecId(editingQuiz.sec_id.toString());
+        if (editingQuiz.unit) setSelectedUnit(editingQuiz.unit.toString());
         setQuestionText(editingQuiz.question_text ?? "");
-        setCpSteps(
-          getAssessmentCPSteps(
-            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "",
-          ),
-        );
-        setAssessmentTitle(
-          getAssessmentTitle(
-            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
-          ),
-        );
-        setAssessmentDescription(
-          getAssessmentDescription(
-            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
-          ),
-        );
-        setExpectedOutcome(
-          getExpectedOutcome(
-            editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment,
-          ),
-        );
+
+        if (!editingQuiz._queuedUnitQuiz) {
+          setCpSteps(
+            getAssessmentCPSteps(
+              editingQuiz.unit_assessment ??
+                editingQuiz.quiz_payload?.assessment ??
+                "",
+            ),
+          );
+          setAssessmentTitle(
+            getAssessmentTitle(
+              editingQuiz.unit_assessment ??
+                editingQuiz.quiz_payload?.assessment,
+            ),
+          );
+          setAssessmentDescription(
+            getAssessmentDescription(
+              editingQuiz.unit_assessment ??
+                editingQuiz.quiz_payload?.assessment,
+            ),
+          );
+          setExpectedOutcome(
+            getExpectedOutcome(
+              editingQuiz.unit_assessment ??
+                editingQuiz.quiz_payload?.assessment,
+            ),
+          );
+        }
         setFitbAnswer(editingQuiz.quiz_payload?.answer ?? "");
         setOrderItems(
           editingQuiz.type_name === "Order" &&
@@ -2152,26 +2289,81 @@ export default function QuizInputForm({
                 ) : null,
               )}
             </div>
-            <div className="lesson-slide-navigation">
-              <button
-                type="button"
-                className="btn-primary lesson-slide-nav-button"
-                onClick={handlePreviousLessonSlide}
-                disabled={currentLessonSlide === 0}
-              >
-                Previous
-              </button>
-              <span className="lesson-slide-counter">
-                Slide {currentLessonSlide + 1} of {lessonSlides.length}
-              </span>
-              <button
-                type="button"
-                className="btn-primary lesson-slide-nav-button"
-                onClick={handleNextLessonSlide}
-                disabled={currentLessonSlide === lessonSlides.length - 1}
-              >
-                Next
-              </button>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Slides:</span>
+              {lessonSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`btn-secondary${idx === currentLessonSlide ? " active" : ""}`}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "0.82rem",
+                    borderRadius: "6px",
+                    border: idx === currentLessonSlide ? "2px solid var(--primary-color, #9966ff)" : undefined,
+                    fontWeight: idx === currentLessonSlide ? 700 : 500,
+                  }}
+                  onClick={() => setCurrentLessonSlide(idx)}
+                >
+                  Slide {idx + 1}
+                </button>
+              ))}
+            </div>
+            <div
+              className="lesson-slide-navigation"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                  type="button"
+                  className="btn-primary lesson-slide-nav-button"
+                  onClick={handlePreviousLessonSlide}
+                  disabled={currentLessonSlide === 0}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary lesson-slide-nav-button"
+                  onClick={handleNextLessonSlide}
+                  disabled={currentLessonSlide === lessonSlides.length - 1}
+                >
+                  Next
+                </button>
+                <span className="lesson-slide-counter">
+                  Slide {currentLessonSlide + 1} of {lessonSlides.length}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {lessonSlides.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: "0.85rem",
+                      color: "var(--admin-danger, #ef4444)",
+                    }}
+                    onClick={() => handleRemoveLessonSlide(currentLessonSlide)}
+                  >
+                    Remove Slide
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+                  onClick={handleAddLessonSlide}
+                >
+                  + Add Slide
+                </button>
+              </div>
             </div>
           </div>
 
@@ -2827,56 +3019,106 @@ export default function QuizInputForm({
               marginBottom: "18px",
             }}
           >
-            {(queuedQuizzes.length > 0 || editingQuiz?._queuedUnitQuiz) && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "16px",
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn-primary queue-button pending-quiz-nav-button"
-                  onClick={handlePreviousPendingQuiz}
-                  disabled={isPending || queuedQuizzes.length === 0}
+            {(queuedQuizzes.length > 0 || editingQuiz?._queuedUnitQuiz || editingQuiz?._pendingUnit) ? (
+              <>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Unit Quizzes:</span>
+                  {Array.from({ length: queuedQuizzes.length + 1 }, (_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`btn-secondary${idx === currentPendingQuizIndex ? " active" : ""}`}
+                      style={{
+                        padding: "4px 10px",
+                        fontSize: "0.82rem",
+                        borderRadius: "6px",
+                        border: idx === currentPendingQuizIndex ? "2px solid var(--primary-color, #9966ff)" : undefined,
+                        fontWeight: idx === currentPendingQuizIndex ? 700 : 500,
+                      }}
+                      onClick={() => {
+                        if (idx === currentPendingQuizIndex) return;
+                        if (idx > currentPendingQuizIndex) {
+                          handleNextPendingQuiz();
+                        } else {
+                          handlePreviousPendingQuiz();
+                        }
+                      }}
+                    >
+                      Quiz {idx + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
                 >
-                  Previous
-                </button>
-                <span className="pending-quiz-counter">
-                  Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
-                </span>
-                <button
-                  type="button"
-                  className="btn-primary queue-button pending-quiz-nav-button"
-                  onClick={handleNextPendingQuiz}
-                  disabled={isPending || queuedQuizzes.length === 0}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-            {!editingQuiz?._pendingUnit && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                      type="button"
+                      className="btn-primary queue-button pending-quiz-nav-button"
+                      onClick={handlePreviousPendingQuiz}
+                      disabled={isPending || queuedQuizzes.length === 0}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary queue-button pending-quiz-nav-button"
+                      onClick={handleNextPendingQuiz}
+                      disabled={isPending || queuedQuizzes.length === 0}
+                    >
+                      Next
+                    </button>
+                    <span className="pending-quiz-counter">
+                      Quiz {currentPendingQuizIndex + 1} of {queuedQuizzes.length + 1}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {queuedQuizzes.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{
+                          padding: "8px 14px",
+                          fontSize: "0.85rem",
+                          color: "var(--admin-danger, #ef4444)",
+                        }}
+                        onClick={handleRemoveCurrentQuiz}
+                        disabled={isPending}
+                      >
+                        Remove Quiz
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-primary queue-button queue-add-button"
+                      onClick={handleAddToUnitQueue}
+                      disabled={isPending || queuedQuizzes.length >= 9}
+                    >
+                      {queuedQuizzes.length >= 9
+                        ? "Unit Full (10/10)"
+                        : `+ Add Quiz (${queuedQuizzes.length + 1}/10)`}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button
                   type="button"
                   className="btn-primary queue-button queue-add-button"
                   onClick={handleAddToUnitQueue}
-                  disabled={isPending || queuedQuizzes.length >= 10}
+                  disabled={isPending}
                 >
-                  {queuedQuizzes.length >= 10
-                    ? "Unit Full (10/10)"
-                    : `Add Quiz (${queuedQuizzes.length}/10)`}
-                  <span className="queue-add-tooltip" role="tooltip">
-                    Add new Quiz to Unit
-                  </span>
+                  Add Quiz (1/10)
                 </button>
-                {message && (
-                  <div className={`status-message queue-action-status status-${message.type}`}>
-                    {message.text}
-                  </div>
-                )}
               </div>
             )}
           </div>
