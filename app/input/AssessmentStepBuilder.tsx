@@ -666,6 +666,12 @@ export default function AssessmentStepBuilder({
           name="assessment_cp_steps"
           value={JSON.stringify(cpSteps)}
         />
+        {authoringMode === "dsl" && (
+          <>
+            <input type="hidden" name="assessment_title" value={assessmentTitle} />
+            <input type="hidden" name="assessment_description" value={assessmentDescription} />
+          </>
+        )}
       </section>
 
       <div className="form-group assessment-outcome">
