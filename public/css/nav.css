@@ -394,3 +394,32 @@
         }
     }
 }
+
+/* Mobile: the floating accessibility FAB is replaced by an in-menu entry so it
+   never collides with bottom bars or Safari's bottom URL bar. */
+.nav-a11y-item { display: none; }
+
+@media (max-width: 768px) {
+    .public-nav .accessibility { display: none !important; }
+
+    .nav-options .nav-a11y-item { display: block; }
+
+    .public-nav.menu-open .nav-options .nav-a11y-btn,
+    .public-nav .nav-options .nav-a11y-btn {
+        position: static;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: auto;
+        margin: 0;
+        padding: 0;
+        color: var(--text-inverse);
+        font-family: var(--font-poppins), sans-serif;
+        cursor: pointer;
+    }
+
+    .public-nav .nav-options .nav-a11y-btn p {
+        font-size: 1.75rem;
+        color: var(--text-inverse);
+    }
+}

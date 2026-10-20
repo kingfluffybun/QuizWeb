@@ -158,6 +158,7 @@ export default function MaintainerStudioClient({
   const [stats, setStats] = useState<MaintainerStats>(initialStats);
   const [submissions, setSubmissions] = useState<MaintainerSubmission[]>(initialSubmissions);
   const [studioView, setStudioView] = useState<StudioViewMode>("all");
+  const [mobileNoticeDismissed, setMobileNoticeDismissed] = useState(false);
   const [activeLauncher, setActiveLauncher] = useState<string>("unit");
 
   // Client Filter & Sort State
@@ -301,6 +302,24 @@ export default function MaintainerStudioClient({
 
   return (
     <div className="maintainer-container">
+      {!mobileNoticeDismissed && (
+        <div className="staff-mobile-notice" role="status">
+          <div className="staff-mobile-notice-body">
+            <strong>Best experienced on Desktop</strong>
+            <span>
+              Multi-step code template authoring and side-by-side live previews are optimized for desktop screens.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="staff-mobile-notice-dismiss"
+            onClick={() => setMobileNoticeDismissed(true)}
+            aria-label="Dismiss desktop recommendation notice"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* ------------------------------------------------------------------- */}
       {/* 1. Header & Quick Actions                                           */}
       {/* ------------------------------------------------------------------- */}

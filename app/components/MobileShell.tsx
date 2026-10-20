@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { signOutAction } from "@/app/actions/auth";
+import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 
 const EXCLUDED_PREFIXES = [
   "/login",
@@ -33,6 +34,19 @@ export default function MobileShell({ children }: { children: React.ReactNode })
   const [role, setRole] = useState<string>("user");
   const [username, setUsername] = useState<string>("Player");
   const [email, setEmail] = useState<string>("");
+  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+  const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+
+  const openAccessibility = () => {
+    setIsDrawerOpen(false);
+    setAccessibilityClosing(false);
+    setAccessibilityOpen(true);
+  };
+  const closeAccessibility = () => setAccessibilityClosing(true);
+  const finishClosingAccessibility = () => {
+    setAccessibilityOpen(false);
+    setAccessibilityClosing(false);
+  };
 
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
@@ -167,6 +181,21 @@ export default function MobileShell({ children }: { children: React.ReactNode })
             </span>
           )}
         </Link>
+        <div className="mobile-app-actions">
+        <button
+          type="button"
+          className="mobile-app-action"
+          data-accessibility-trigger
+          aria-label="Open accessibility options"
+          onClick={accessibilityOpen ? closeAccessibility : openAccessibility}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="5" r="1" />
+            <path d="m9 20 3-6 3 6" />
+            <path d="m6 8 6 2 6-2" />
+            <path d="M12 10v4" />
+          </svg>
+        </button>
         <button
           type="button"
           className="mobile-app-action"
@@ -188,6 +217,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
             </svg>
           )}
         </button>
+        </div>
       </header>
 
       {/* Main Single-Column Content Region */}
@@ -309,6 +339,13 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Leaderboard</span>
             </Link>
+            <Link href="/profile" className={`mobile-drawer-link${isActiveRoute(pathname, "/profile") ? " active" : ""}`}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              </svg>
+              <span>My Profile</span>
+            </Link>
             <Link href="/settings" className={`mobile-drawer-link${isActiveRoute(pathname, "/settings") ? " active" : ""}`}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
@@ -316,6 +353,20 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Settings</span>
             </Link>
+            <button
+              type="button"
+              className="mobile-drawer-link mobile-drawer-link-button"
+              data-accessibility-trigger
+              onClick={openAccessibility}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="5" r="1" />
+                <path d="m9 20 3-6 3 6" />
+                <path d="m6 8 6 2 6-2" />
+                <path d="M12 10v4" />
+              </svg>
+              <span>Accessibility</span>
+            </button>
           </div>
 
           {(isAdmin || isMaintainer) && (
@@ -369,6 +420,14 @@ export default function MobileShell({ children }: { children: React.ReactNode })
           </form>
         </div>
       </aside>
+
+      {accessibilityOpen && (
+        <AccessibilityPanel
+          isClosing={accessibilityClosing}
+          onClose={closeAccessibility}
+          onClosed={finishClosingAccessibility}
+        />
+      )}
     </div>
   );
 }

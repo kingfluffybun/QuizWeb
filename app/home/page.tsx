@@ -28,8 +28,13 @@ export default async function DashboardPage() {
                             <Image src="/assets/landing-page/Clouds-right.svg" width={180} height={180} alt="" className="cloud-right"/>
                         </div>
                     </div>
+                    <nav className="dashboard-mobile-jumpbar" aria-label="Jump to dashboard section">
+                        <a href="#dashboard-progress" className="dashboard-jump-pill">Overview</a>
+                        <a href="#streak-calendar" className="dashboard-jump-pill">Streak</a>
+                        <a href="#leaderboard" className="dashboard-jump-pill">Leaderboard</a>
+                    </nav>
                     <div className="dashboard">
-                        <div className="two-col-card">
+                        <div className="two-col-card" id="dashboard-progress">
                             <div className="card">
                                 <div className="card-title">
                                     <h2>Lesson Progress</h2>
@@ -183,7 +188,7 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Leaderboard */}
-                    <div className="leaderboard ">
+                    <div className="leaderboard" id="leaderboard">
                         <div className="card">
                             <div>
                                 <div className="card-title">

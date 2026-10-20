@@ -349,6 +349,7 @@
     /* Suppress desktop navbar header to prevent duplicate headers with MobileShell */
     .dashboard-page > nav,
     .quiz-page > nav,
+    .profile-page > nav,
     .settings-app-layout > nav,
     .admin-app-layout > nav {
         display: none !important;
@@ -357,6 +358,7 @@
     /* Convert multi-column grid layouts to single-column fluid containers */
     .dashboard-page,
     .quiz-page,
+    .profile-page,
     .settings-app-layout,
     .admin-app-layout {
         display: flex !important;
@@ -368,6 +370,7 @@
 
     .dashboard-page > main,
     .quiz-page > main,
+    .profile-page > main,
     .settings-app-layout .settings-main,
     .admin-app-layout .admin-main {
         width: 100% !important;

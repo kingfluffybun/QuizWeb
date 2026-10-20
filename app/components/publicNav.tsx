@@ -67,6 +67,20 @@ export default function PublicNav({ session: initialSession }: PublicNavProps) {
         <div><Link href="/home#leaderboard"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
         {/* <div><Link href="/settings"><p>Settings</p></Link></div> */}
+        <div className="nav-a11y-item">
+          <button
+            type="button"
+            className="nav-a11y-btn"
+            data-accessibility-trigger
+            aria-label="Open accessibility options"
+            onClick={() => {
+              setMenuOpen(false);
+              openAccessibility();
+            }}
+          >
+            <p>Accessibility</p>
+          </button>
+        </div>
         <div>
             {session?.user ? (
                 <Link href="/home"><p>Dashboard</p></Link>

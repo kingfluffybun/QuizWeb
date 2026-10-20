@@ -287,6 +287,7 @@ export default function QuizInputForm({
   ]);
   const [cpPromptCount, setCpPromptCount] = useState(1);
   const [copiedQuizId, setCopiedQuizId] = useState<number | null>(null);
+  const [mobileNoticeDismissed, setMobileNoticeDismissed] = useState(false);
 
   // Metrics Suite States
   const [metrics, setMetrics] = useState<QuizMetricsData>(
@@ -1317,6 +1318,24 @@ export default function QuizInputForm({
 
   return (
     <>
+      {!mobileNoticeDismissed && (
+        <div className="staff-mobile-notice input-only-mobile-notice" role="status">
+          <div className="staff-mobile-notice-body">
+            <strong>Best experienced on Desktop</strong>
+            <span>
+              Multi-step code template authoring and side-by-side live previews are optimized for desktop screens.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="staff-mobile-notice-dismiss"
+            onClick={() => setMobileNoticeDismissed(true)}
+            aria-label="Dismiss desktop recommendation notice"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Top Full-Width Metrics Banner */}
       <section
         className="admin-metrics-banner analytics-legacy-hidden"
