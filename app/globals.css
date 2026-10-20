@@ -59,6 +59,28 @@ html[data-theme="dark"] *::-webkit-scrollbar-thumb {
     border-radius: 5px;
 }
 
+html[data-theme="light"] {
+    scrollbar-color: #aaa #f1f1f1;
+    scrollbar-width: thin;
+}
+
+html[data-theme="light"]::-webkit-scrollbar,
+html[data-theme="light"] *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+html[data-theme="light"]::-webkit-scrollbar-track,
+html[data-theme="light"] *::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+}
+
+html[data-theme="light"]::-webkit-scrollbar-thumb,
+html[data-theme="light"] *::-webkit-scrollbar-thumb {
+    background-color: #aaa;
+    border-radius: 5px;
+}
+
 [data-theme="dark"] [data-hide-on-theme="dark"] { display: none; }
 [data-theme="light"] [data-hide-on-theme="light"] { display: none; }
 
