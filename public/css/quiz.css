@@ -838,6 +838,14 @@
     gap: 36px;
 }
 
+.options-container#pair .options {
+    color: var(--text-main);
+}
+
+.options-container#pair .options > p {
+    color: inherit;
+}
+
 .pair-left-column, .pair-right-column {
     height: 100%;
     flex: 1;
@@ -878,8 +886,12 @@
 }
 .pair-option-incorrect > p {color: #dc2626 !important;}
 .pair-option-settled {
-    color: #e0e0e0 !important;
+    color: var(--text-muted) !important;
     cursor: default !important;
+}
+
+.pair-option-disabled .pair-option-settled > p {
+    color: var(--border-main) !important;
 }
 
 /* =========================== End of Pair =========================== */
@@ -899,7 +911,7 @@
     max-height: 200px;
     flex: 1;
     resize: none;
-    
+    background: var(--bg-card);
     font-family: 'Montserrat', sans-serif;
     font-size: clamp(1rem, 2vw, 1.5rem);
     font-weight: 500;
