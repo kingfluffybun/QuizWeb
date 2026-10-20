@@ -178,43 +178,60 @@ export default function HomeLoading() {
             </div>
 
             {/* Continue Where You Left Off */}
-            <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div className="skeleton-shimmer skeleton-line sub-title" style={{ width: 220, margin: 0 }} />
-              <div className="skeleton-shimmer skeleton-btn" style={{ width: 120, height: 36 }} />
+            <div className="card">
+              <div className="card-title">
+                <h2 className="skeleton-shimmer skeleton-continue-title" aria-hidden="true" />
+                <span className="quick-action skeleton-shimmer skeleton-continue-action" aria-hidden="true" />
+              </div>
+              <p className="skeleton-shimmer skeleton-continue-description" aria-hidden="true" />
             </div>
           </div>
 
           {/* 3. Leaderboard Skeleton */}
-          <div className="leaderboard" style={{ marginTop: 24 }}>
+          <div className="leaderboard">
             <div className="card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <div className="skeleton-shimmer skeleton-line title" style={{ width: 140, margin: 0 }} />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div className="skeleton-shimmer skeleton-pill" style={{ width: 60, height: 30 }} />
-                  <div className="skeleton-shimmer skeleton-pill" style={{ width: 60, height: 30 }} />
-                  <div className="skeleton-shimmer skeleton-pill" style={{ width: 60, height: 30 }} />
+              <div>
+                <div className="card-title">
+                  <h2 className="skeleton-shimmer skeleton-leaderboard-title" aria-hidden="true" />
+                </div>
+                <div className="sort-by-time skeleton-leaderboard-filters">
+                  {[1, 2, 3, 4].map((filter) => (
+                    <label key={filter} aria-hidden="true">
+                      <span className="skeleton-shimmer skeleton-leaderboard-filter" />
+                    </label>
+                  ))}
                 </div>
               </div>
-              {/* Podium */}
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 20, height: 180, paddingBottom: 12 }}>
-                {/* 2nd Place */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: 90 }}>
-                  <div className="skeleton-shimmer skeleton-circle" style={{ width: 44, height: 44 }} />
-                  <div className="skeleton-shimmer" style={{ width: "100%", height: 70, borderRadius: "12px 12px 0 0" }} />
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: 60, height: 12 }} />
-                </div>
-                {/* 1st Place */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: 100 }}>
-                  <div className="skeleton-shimmer skeleton-circle" style={{ width: 52, height: 52 }} />
-                  <div className="skeleton-shimmer" style={{ width: "100%", height: 110, borderRadius: "12px 12px 0 0" }} />
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: 70, height: 12 }} />
-                </div>
-                {/* 3rd Place */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: 90 }}>
-                  <div className="skeleton-shimmer skeleton-circle" style={{ width: 44, height: 44 }} />
-                  <div className="skeleton-shimmer" style={{ width: "100%", height: 50, borderRadius: "12px 12px 0 0" }} />
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: 60, height: 12 }} />
-                </div>
+              <div className="podium">
+                {[
+                  { place: "second-place", width: "60px" },
+                  { place: "first-place", width: "70px" },
+                  { place: "third-place", width: "60px" },
+                ].map(({ place, width }) => (
+                  <div className="podium-place-container" key={place}>
+                    <div className="player-icon skeleton-shimmer skeleton-podium-avatar">
+                      <div className="podium-player-xp">
+                        <span className="skeleton-shimmer skeleton-podium-xp" style={{ width }} />
+                      </div>
+                    </div>
+                    <div className="podium-place skeleton-shimmer" id={place}>
+                      <h1 className="skeleton-shimmer skeleton-podium-rank" aria-hidden="true" />
+                    </div>
+                    <p className="skeleton-shimmer skeleton-podium-name" aria-hidden="true" />
+                  </div>
+                ))}
+              </div>
+              <div className="leaderboard-placement">
+                {Array.from({ length: 7 }, (_, index) => index + 4).map((place) => (
+                  <div className="leaderboard-player row" key={place}>
+                    <div className="player-details row">
+                      <p className="skeleton-shimmer skeleton-leaderboard-rank" aria-hidden="true" />
+                      <div className="player-icon skeleton-shimmer skeleton-leaderboard-avatar" />
+                      <p className="skeleton-shimmer skeleton-leaderboard-name" aria-hidden="true" />
+                    </div>
+                    <p className="skeleton-shimmer skeleton-leaderboard-xp" aria-hidden="true" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

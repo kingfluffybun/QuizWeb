@@ -587,7 +587,11 @@ button.quick-action-btn:hover {
         flex-direction: column;
         align-items: center;
         flex: 1;
-        #player-name {padding: 8px 0;}
+        #player-name,
+        .skeleton-podium-name {
+            padding: 8px 0;
+            line-height: 1.2;
+        }
         .player-icon {
             margin-bottom: 24px; 
             width: 64px;
@@ -949,6 +953,89 @@ button.quick-action-btn:hover {
 
 .skeleton-dashboard-page .skeleton-calendar-day > p {
     color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-title {
+    display: block;
+    width: 140px;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-filters label {
+    cursor: default;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-filter {
+    width: 44px;
+    height: 1em;
+}
+
+.skeleton-dashboard-page .skeleton-podium-avatar {
+    background-color: var(--border-main);
+}
+
+.skeleton-dashboard-page .skeleton-podium-xp {
+    height: 0.8em;
+}
+
+.skeleton-dashboard-page .skeleton-podium-rank {
+    width: 1em;
+    height: 1.2em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-podium-name {
+    width: 70%;
+    height: 1.2em;
+    margin: 8px 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-rank {
+    width: 16px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-avatar {
+    background-color: var(--border-main);
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-name {
+    width: 120px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-xp {
+    width: 50px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-continue-title,
+.skeleton-dashboard-page .skeleton-continue-action {
+    display: block;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-continue-title {
+    width: 290px;
+    max-width: 70%;
+}
+
+.skeleton-dashboard-page .skeleton-continue-action {
+    width: 72px;
+}
+
+.skeleton-dashboard-page .skeleton-continue-description {
+    width: 88%;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
 }
 
 .skeleton-dashboard-page .skeleton-lesson-title,
@@ -1342,6 +1429,10 @@ button.quick-action-btn:hover {
     .podium-place-container #player-name {
         font-size: 0.75rem !important;
         padding: 4px 0 !important;
+    }
+
+    .skeleton-dashboard-page .skeleton-podium-name {
+        margin: 4px 0;
     }
 
     .dashboard-mobile-jumpbar {
