@@ -361,7 +361,7 @@ html[data-motion="reduce"] .settings-main *::after {
 .settings-app-layout {
   display: grid;
   grid-template-areas:
-    "navbar navbar"
+    "sidebar navbar"
     "sidebar main";
   grid-template-rows: 80px minmax(0, 1fr);
   grid-template-columns: 240px minmax(0, 1fr);
@@ -371,10 +371,6 @@ html[data-motion="reduce"] .settings-main *::after {
   width: 100%;
   background-color: var(--settings-bg);
   overflow: hidden;
-}
-
-.settings-app-layout .toggle-sidebar-nav {
-  display: none !important;
 }
 
 .settings-app-layout > nav {
@@ -390,8 +386,8 @@ html[data-motion="reduce"] .settings-main *::after {
   grid-area: sidebar;
   position: sticky;
   top: 0;
-  height: calc(100vh - 80px);
-  height: calc(100dvh - 80px);
+  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
 }
 
@@ -856,6 +852,7 @@ html[data-motion="reduce"] .settings-main *::after {
   }
 
   /* Horizontal swipeable tabs nav */
+  .settings-tabs,
   .settings-tabs-nav {
     display: flex !important;
     overflow-x: auto !important;
@@ -866,6 +863,7 @@ html[data-motion="reduce"] .settings-main *::after {
     scrollbar-width: none !important;
   }
 
+  .settings-tabs::-webkit-scrollbar,
   .settings-tabs-nav::-webkit-scrollbar {
     display: none !important;
   }
@@ -897,6 +895,12 @@ html[data-motion="reduce"] .settings-main *::after {
   .ui-scale-btn {
     flex: 1 1 calc(50% - 8px) !important;
     min-height: 42px !important;
+  }
+
+  .settings-input,
+  input.settings-input {
+    font-size: 16px !important;
+    min-height: 44px !important;
   }
 
   .settings-btn-primary {

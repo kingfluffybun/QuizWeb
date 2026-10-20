@@ -37,6 +37,28 @@
     
 }
 
+html[data-theme="dark"] {
+    scrollbar-color: #666 #1e1e1e;
+    scrollbar-width: thin;
+}
+
+html[data-theme="dark"]::-webkit-scrollbar,
+html[data-theme="dark"] *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+html[data-theme="dark"]::-webkit-scrollbar-track,
+html[data-theme="dark"] *::-webkit-scrollbar-track {
+    background-color: #1e1e1e;
+}
+
+html[data-theme="dark"]::-webkit-scrollbar-thumb,
+html[data-theme="dark"] *::-webkit-scrollbar-thumb {
+    background-color: #666;
+    border-radius: 5px;
+}
+
 [data-theme="dark"] [data-hide-on-theme="dark"] { display: none; }
 [data-theme="light"] [data-hide-on-theme="light"] { display: none; }
 
@@ -85,22 +107,35 @@ html[data-motion="reduce"] *::after {
     scroll-behavior: smooth;
 }
 
-h1, h2 {
-    font-family: 'Poppins', sans-serif;
+html, body {
+    font-family: var(--font-montserrat), 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text-main);
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+}
+
+button, input, select, textarea, dialog, aside {
+    font-family: inherit;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-poppins), 'Poppins', sans-serif;
     color: var(--text-main);
     font-weight: 600;
 }
 h1 { font-size: clamp(1.25rem, 3.25vw, 2rem); }
 h2 { font-size: clamp(0.75rem, 2vw, 1.25rem); }
+h3 { font-size: clamp(0.7rem, 1.75vw, 1.15rem); }
 
 p {
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--font-montserrat), 'Montserrat', sans-serif;
     font-size: clamp(0.75rem, 1.75vw, 1.25rem);
     font-weight: 500;
     color: var(--text-muted);
 }
 small {
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--font-montserrat), 'Montserrat', sans-serif;
     font-size: clamp(0.5rem, 1.5vw, 1rem);
     font-weight: 400;
 }
@@ -141,5 +176,93 @@ textarea {
 
         --background-color: #2a1952;
         --dots: #626262;
+    }
+}
+/* -----------------------------------------------------------------------------
+   Mobile ergonomics (<= 768px only; desktop is unaffected)
+   - 16px minimum on form controls prevents iOS Safari focus auto-zoom.
+   - Dynamic viewport + safe-area helpers for Safari's bottom URL bar.
+   ----------------------------------------------------------------------------- */
+:root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+}
+
+@media (max-width: 768px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: max(16px, 1rem);
+    }
+
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    button,
+    a,
+    [role="button"] {
+        touch-action: manipulation;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Order question: touch-friendly handle + explicit up/down buttons.
+   Buttons are hidden for mouse users and shown on phones / coarse pointers.
+   ----------------------------------------------------------------------------- */
+.order-grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    cursor: grab;
+}
+
+.order-move-btns {
+    display: none;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+    .order-move-btns {
+        display: inline-flex;
+        flex-direction: row;
+        gap: 6px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .order-move-btn {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 2px solid var(--border-main);
+        border-radius: 10px;
+        background: var(--bg-card);
+        color: var(--text-main);
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .order-move-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .order-move-btn:active:not(:disabled) {
+        border-color: var(--selected-color);
+        background: var(--selected-background-color);
+        color: var(--selected-color);
+    }
+
+    .order-options > .options > p,
+    .options.draggable-item > p {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 }

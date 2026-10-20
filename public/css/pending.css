@@ -602,16 +602,23 @@ body {
   color: #ff4d4d;
 }
 
-.pending-note-button {
+.pending-note-button,
+.pending-edit-unit-button {
   width: auto !important;
   min-height: 36px;
   padding: 6px 12px !important;
   border: 1px solid var(--pending-accent) !important;
   color: var(--pending-accent-dark);
+  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
 }
 
 .pending-note-button:hover:not(:disabled),
-.pending-note-button:focus-visible {
+.pending-note-button:focus-visible,
+.pending-edit-unit-button:hover:not(:disabled),
+.pending-edit-unit-button:focus-visible {
   background-color: #f3e8ff !important;
   color: var(--pending-accent-dark);
 }

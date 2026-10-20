@@ -14,6 +14,7 @@ import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { recordUserActivity } from "@/app/actions/streak";
+import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 
 type AnswerResult = {
     correct: boolean;
@@ -28,6 +29,7 @@ type SavedQuestionProgress = {
 
 type UnitQuizData = QuizData & {
     unit_title?: string;
+    unit_assessment?: unknown;
     unit_lesson_card?: {
         lesson_slide?: Array<{
             lesson_title?: string;
@@ -103,14 +105,16 @@ function evaluate(quiz: QuizData, value: AnswerValue): AnswerResult {
 export default function QuizLandingClient({
     initialQuizzes,
     completionDestination = "input",
+    unitId,
 }: {
     initialQuizzes?: QuizData[];
     completionDestination?: "home" | "input";
+    unitId?: number;
 }) {
     const router = useRouter();
     const playQuizSound = useQuizSounds();
     const { quizzes: allQuizzes } = useQuizData();
-    const quizzes = initialQuizzes ?? allQuizzes.slice(0, 10);
+    const quizzes = initialQuizzes ?? allQuizzes;
     const selectedQuizzes = quizzes as UnitQuizData[];
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
@@ -298,6 +302,12 @@ export default function QuizLandingClient({
     if (isFinished) {
         const backHref = completionDestination === "home" ? "/home" : "/input";
         const backLabel = completionDestination === "home" ? "Back to Home" : "Back to Quiz Input";
+        const hasCodingAssessment = Boolean(
+            unwrapCodeProblemAssessment(selectedQuizzes[0]?.unit_assessment),
+        );
+        const codingAssessmentHref = unitId
+            ? `/quiz-cp?unitId=${unitId}`
+            : "/quiz-cp";
 
         return (
             <div className="quiz-page">
@@ -309,13 +319,39 @@ export default function QuizLandingClient({
                         <p className="quiz-completion-message">
                             {lives === 0
                                 ? "You ran out of lives. Try again to sharpen your skills!"
-                                : "Outstanding performance!"}
+                                : hasCodingAssessment
+                                  ? "Outstanding performance! Ready to tackle the Unit Coding Assessment?"
+                                  : "Outstanding performance!"}
                         </p>
+                        {lives > 0 && hasCodingAssessment && (
+                            <Link
+                                href={codingAssessmentHref}
+                                className="options"
+                                id="submit"
+                                style={{ textDecoration: "none" }}
+                            >
+                                Start Coding Assessment
+                            </Link>
+                        )}
                         <button
                             className="options"
-                            id="submit"
+                            id={lives > 0 && hasCodingAssessment ? undefined : "submit"}
                             type="button"
                             onClick={() => window.location.reload()}
+                            style={
+                                lives > 0 && hasCodingAssessment
+                                    ? {
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          margin: "14px auto 0",
+                                          minHeight: "54px",
+                                          width: "240px",
+                                          borderRadius: "16px",
+                                          fontSize: "1.1rem",
+                                      }
+                                    : undefined
+                            }
                         >
                             Play Again
                         </button>

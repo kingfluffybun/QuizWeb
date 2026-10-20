@@ -1,34 +1,33 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Sidebar from "@/app/components/Sidebar";
 import "#css/quiz.css";
 import "#css/nav.css";
 import "#css/sidebar.css";
 import "#css/profile.css";
 
-type ProfileIconName = "edit" | "flame" | "check" | "code" | "calendar" | "move-up-right" | "lock" | "user" | "mail" | "target" | "user-pen" | "user-shield";
+type ProfileIconName = "edit" | "flame" | "check" | "code" | "award" | "calendar" | "lock" | "user" | "mail" | "target" | "user-pen" | "user-shield";
+
+const profileIconPaths: Record<ProfileIconName, ReactNode> = {
+    edit: <><path d="M13 21h8"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></>,
+    flame: <><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></>,
+    check: <><path d="M20 6 9 17l-5-5"/></>,
+    code: <><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></>,
+    award: <><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></>,
+    calendar: <><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></>,
+    lock: <><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
+    user: <><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="5"/></>,
+    mail: <><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>,
+    target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+    "user-pen": <><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></>,
+    "user-shield": <><path d="M10 15H6a4 4 0 0 0-4 4v2"/><path d="M22 17.5c0 2.499-1.75 3.749-3.83 4.474a.5.5 0 0 1-.335-.005c-2.085-.72-3.835-1.97-3.835-4.47V14a.5.5 0 0 1 .5-.499c1 0 2.25-.6 3.12-1.36a.6.6 0 0 1 .76-.001c.875.765 2.12 1.36 3.12 1.36a.5.5 0 0 1 .5.5z"/><circle cx="9" cy="7" r="4"/></>,
+};
 
 function ProfileIcon({ name }: { name: ProfileIconName }) {
-    const paths = {
-        edit: <><path d="M13 21h8"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></>,
-        flame: <><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></>,
-        check: <><path d="M20 6 9 17l-5-5"/></>,
-        code: <><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></>,
-        calendar: <><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></>,
-        "move-up-right": <><path d="M13 5H19V11"/><path d="M19 5L5 19"/></>,
-        lock: <><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
-        user: <><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="5"/></>,
-        mail: <><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>,
-        target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
-        "user-pen": <><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/><circle cx="10" cy="7" r="4"/></>,
-        "user-shield": <><path d="M10 15H6a4 4 0 0 0-4 4v2"/><path d="M22 17.5c0 2.499-1.75 3.749-3.83 4.474a.5.5 0 0 1-.335-.005c-2.085-.72-3.835-1.97-3.835-4.47V14a.5.5 0 0 1 .5-.499c1 0 2.25-.6 3.12-1.36a.6.6 0 0 1 .76-.001c.875.765 2.12 1.36 3.12 1.36a.5.5 0 0 1 .5.5z"/><circle cx="9" cy="7" r="4"/></>,
-    };
-    const iconName = name === "code" ? "code-xml" : name === "edit" ? "pen-line" : name;
-
     return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-${iconName} preview-icon`}>
-            {paths[name]}
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-${name} preview-icon`}>
+            {profileIconPaths[name]}
         </svg>
     );
 }
@@ -75,9 +74,7 @@ export default function ProfilePage() {
     const [saveMessage, setSaveMessage] = useState("");
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [passwordMessage, setPasswordMessage] = useState("");
-    const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
 
     useEffect(() => {
         try {
@@ -98,7 +95,7 @@ export default function ProfilePage() {
             displayName: draft.displayName.trim() || defaultProfile.displayName,
             email: draft.email.trim(),
             learningGoal: draft.learningGoal.trim(),
-        };
+        };  
         setProfile(savedProfile);
         setDraft(savedProfile);
         localStorage.setItem("quizweb-profile-details", JSON.stringify(savedProfile));
@@ -134,9 +131,7 @@ export default function ProfilePage() {
     const cancelPasswordChange = () => {
         setIsChangingPassword(false);
         setPasswordMessage("");
-        setCurrentPassword("");
         setNewPassword("");
-        setConfirmPassword("");
     };
 
     const passedPasswordRules = passwordRules.filter((rule) => rule.test(newPassword)).length;
@@ -175,22 +170,30 @@ export default function ProfilePage() {
                         </div>
                     </section>
 
-                    <section className="profile-stats" aria-label="Learning statistics">
-                        <article className="profile-stat-card">
-                            <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="code" /></span>
-                            <div><strong>24</strong><span>Lesson completed</span></div>
-                            <small>+4 this week</small>
-                        </article>
-                        <article className="profile-stat-card">
-                            <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
-                            <div><strong>7 days</strong><span>Current streak</span></div>
-                            <small>Personal best: 12</small>
-                        </article>
-                        <article className="profile-stat-card">
-                            <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
-                            <div><strong>86%</strong><span>Average accuracy</span></div>
-                            <small>Looking sharp!</small>
-                        </article>
+                    <section className="profile-statistics" aria-labelledby="statistics-title">
+                        <h2 id="statistics-title" className="profile-statistics-title"><ProfileIcon name="award" />Statistics</h2>
+                        <div className="profile-stats" aria-label="Learning statistics">
+                            <article className="profile-stat-card">
+                                <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="code" /></span>
+                                <div><strong>24</strong><span>Lesson completed</span></div>
+                                <small>+4 this week</small>
+                            </article>
+                            <article className="profile-stat-card">
+                                <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
+                                <div><strong>7 days</strong><span>Current streak</span></div>
+                                <small>Personal best: 12</small>
+                            </article>
+                            <article className="profile-stat-card">
+                                <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
+                                <div><strong>86%</strong><span>Average accuracy</span></div>
+                                <small>Looking sharp!</small>
+                            </article>
+                            <article className="profile-stat-card">
+                                <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="award" /></span>
+                                <div><strong>1,240 XP</strong><span>Total experience</span></div>
+                                <small>+120 this week</small>
+                            </article>
+                        </div>
                     </section>
 
                     <div className="profile-details-grid">
@@ -250,7 +253,7 @@ export default function ProfilePage() {
                                     <div className="profile-password-field">
                                         <label className="profile-password-input-group">
                                             <span className="profile-password-field-icon" aria-hidden="true"><ProfileIcon name="lock" /></span>
-                                            <input id="profile-current-password" name="currentPassword" type="password" placeholder=" " autoComplete="current-password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); setPasswordMessage(""); }} />
+                                            <input id="profile-current-password" name="currentPassword" type="password" placeholder=" " autoComplete="current-password" onChange={() => setPasswordMessage("")} />
                                             <span className="profile-password-floating-label">Current password</span>
                                         </label>
                                     </div>
@@ -264,7 +267,7 @@ export default function ProfilePage() {
                                     <div className="profile-password-field">
                                         <label className="profile-password-input-group">
                                             <span className="profile-password-field-icon" aria-hidden="true"><ProfileIcon name="lock" /></span>
-                                            <input id="profile-confirm-password" name="confirmPassword" type="password" placeholder=" " autoComplete="new-password" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setPasswordMessage(""); }} />
+                                            <input id="profile-confirm-password" name="confirmPassword" type="password" placeholder=" " autoComplete="new-password" onChange={() => setPasswordMessage("")} />
                                             <span className="profile-password-floating-label">Confirm new password</span>
                                         </label>
                                     </div>
@@ -329,14 +332,6 @@ export default function ProfilePage() {
                             )}
                         </section>
 
-                        <aside className="profile-encouragement">
-                            <div>
-                                <p className="profile-eyebrow">YOUR NEXT CHAPTER</p>
-                                <h2>Keep building your skills</h2>
-                                <p>Pick up where you left off with a short practice session.</p>
-                            </div>
-                            <a href="/quiz" className="profile-start-link">Continue learning <ProfileIcon name="move-up-right" /></a>
-                        </aside>
                     </div>
                 </div>
             </main>

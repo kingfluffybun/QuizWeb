@@ -2063,10 +2063,12 @@ button:focus-visible, a:focus-visible {
     border-radius: 4px;
   }
 
-  .input-group input {
-    font-size: 16px;
+  .input-group input,
+  .input-group input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+    font-size: 16px !important;
     padding-left: 6px;
     line-height: 1.2;
+    min-height: 24px;
     transform: none !important;
   }
 
@@ -2157,14 +2159,16 @@ button:focus-visible, a:focus-visible {
 
   .back-landing {
     position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 6;
-    min-width: 32px;
-    height: 32px;
-    padding: 0 9px;
-    font-size: 0.70rem;
-    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    z-index: 10;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 0.75rem;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   }
 
   .back-landing svg {

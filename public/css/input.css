@@ -12,6 +12,20 @@
   --input-approved: #1d4ed8;
   --input-approved-background: #dbeafe;
 }
+[data-theme="dark"] {
+  --input-surface: #1c1c24;
+  --input-on-accent: #fafafa;
+  --input-background: #15151e;
+  --input-border: #2d2d3d;
+  --input-text: #fafafa;
+  --input-muted: #a0a0b0;
+  --input-danger: #f87171;
+  --input-danger-background: rgba(239, 68, 68, 0.14);
+  --input-success: #34d399;
+  --input-success-background: rgba(16, 185, 129, 0.14);
+  --input-approved: #60a5fa;
+  --input-approved-background: rgba(59, 130, 246, 0.18);
+}
 body {
   background-color: var(--input-background);
   font-family: "Poppins", "Montserrat", sans-serif;
@@ -54,19 +68,20 @@ textarea {
 }
 .admin-container {
   width: 100%;
-  max-width: none;
+  max-width: 1480px;
   box-sizing: border-box;
   margin: 24px auto;
-  padding: 0 12px;
+  padding: 0 20px;
   display: grid;
-  grid-template-rows: repeat(3, auto);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.32fr) minmax(380px, 0.98fr);
+  gap: 24px;
+  align-items: start;
 }
 .admin-container > .admin-card {
   min-width: 0;
 }
 .recent-units-card {
-  grid-column: auto;
+  grid-column: 1 / -1;
   min-width: 0;
 }
 .lesson-preview-card {
@@ -74,6 +89,8 @@ textarea {
   align-self: start;
   position: sticky;
   top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
 }
 .lesson-preview-heading {
   display: flex;
@@ -2417,3 +2434,125 @@ textarea {
   border-radius: 6px;
   font-weight: 500;
 }
+
+/* =============================================================================
+   DARK MODE OVERRIDES FOR AUTHORING STUDIO & INPUT PANEL
+   ============================================================================= */
+[data-theme="dark"] .admin-card {
+  background: var(--bg-card, #1c1c24);
+  border-color: var(--border-main, #2d2d3d);
+  color: var(--text-main, #fafafa);
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-textarea,
+[data-theme="dark"] .sort-select,
+[data-theme="dark"] .filter-input,
+[data-theme="dark"] .filter-select {
+  background-color: #15151e;
+  border-color: #2d2d3d;
+  color: #fafafa;
+}
+
+[data-theme="dark"] .lesson-card-empty {
+  background: #15151e;
+  color: #a0a0b0;
+  border: 1px dashed #2d2d3d;
+}
+
+[data-theme="dark"] .quiz-payload-preview,
+[data-theme="dark"] .incoming-quiz-details,
+[data-theme="dark"] .filter-drawer {
+  background-color: #15151e;
+  border-color: #2d2d3d;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .badge-metric-tag,
+[data-theme="dark"] .filter-toggle-btn:not(.active) {
+  background-color: #22222d;
+  border-color: #2d2d3d;
+  color: #cbd5e1;
+}
+
+/* =============================================================================
+   STAFF MOBILE NOTICE BANNER & MOBILE RESPONSIVE POLISH (< 768px)
+   ============================================================================= */
+.staff-mobile-notice {
+  display: none;
+}
+
+.maintainer-container .input-only-mobile-notice {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .staff-mobile-notice {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    border: 1.5px solid #c4b5fd;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.08));
+    color: var(--text-main, #1e293b);
+  }
+
+  .staff-mobile-notice-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .staff-mobile-notice-body strong {
+    font-size: 0.88rem;
+    color: #6d28d9;
+  }
+
+  [data-theme="dark"] .staff-mobile-notice-body strong {
+    color: #c4b5fd;
+  }
+
+  .staff-mobile-notice-dismiss {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    background: transparent;
+    color: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .admin-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding: 16px !important;
+  }
+
+  .admin-container {
+    padding: 14px 12px !important;
+  }
+
+  .admin-card {
+    padding: 18px 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .assessment-step {
+    padding: 12px !important;
+  }
+}
+
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   getPendingQuizzes,
   reviewPendingQuiz,
@@ -31,6 +32,7 @@ export default function PendingReview({
 }: {
   initialQuizzes: PendingQuiz[];
 }) {
+  const router = useRouter();
   const [quizzes, setQuizzes] = useState(initialQuizzes);
   const [filter, setFilter] = useState("pending");
   const [isPending, startTransition] = useTransition();
@@ -40,6 +42,24 @@ export default function PendingReview({
   } | null>(null);
   const [noteQuiz, setNoteQuiz] = useState<PendingQuiz | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+
+  const editApprovedUnit = (pendingId: number) => {
+    const idStr = String(pendingId);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("quizweb-edit-pending-id", idStr);
+      window.dispatchEvent(
+        new CustomEvent("quizweb-edit-pending", { detail: idStr }),
+      );
+      const formEl =
+        document.getElementById("quiz-form") ||
+        document.getElementById("quiz-workspace");
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: "smooth" });
+      } else {
+        router.push("/input");
+      }
+    }
+  };
 
   const loadQuizzes = (nextFilter: string) => {
     setFilter(nextFilter);
@@ -176,6 +196,35 @@ export default function PendingReview({
                     disabled={isPending}
                   >
                     {quiz.pending_note ? "Edit Note" : "Add Note"}
+                  </button>
+                </div>
+              )}
+              {quiz.pending_status === "approved" && (
+                <div className="pending-actions">
+                  <button
+                    type="button"
+                    className="pending-edit-unit-button"
+                    onClick={() => editApprovedUnit(quiz.pending_id)}
+                    disabled={isPending}
+                    title="Edit approved unit"
+                    aria-label="Edit approved unit"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                      <path d="m16 5 3 3" />
+                    </svg>
+                    <span>Edit Unit</span>
                   </button>
                 </div>
               )}

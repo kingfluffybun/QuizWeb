@@ -301,3 +301,123 @@
         }
     }
 }
+
+/* =============================================================================
+   ABOUT PAGE MOBILE RESPONSIVE BREAKPOINT (< 768px)
+   ============================================================================= */
+@media (max-width: 768px) {
+    .scroll-section {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .spacer {
+        height: 24px !important;
+    }
+
+    .about #hotair-baloon,
+    .about #plane-banner,
+    .about #clouds-middleright,
+    .about #clouds-middleleft {
+        display: none !important;
+    }
+
+    .about #clouds-topleft,
+    .about #clouds-topright {
+        max-width: 50vw !important;
+        opacity: 0.5 !important;
+    }
+
+    .about > .about-hero {
+        position: relative !important;
+        top: auto !important;
+        margin-top: 4.5rem !important;
+        padding: 0 16px !important;
+        gap: 1rem !important;
+    }
+
+    .about > .about-hero h1 {
+        font-size: clamp(1.8rem, 7vw, 2.4rem) !important;
+        line-height: 1.2 !important;
+    }
+
+    .about > .about-hero p {
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+    }
+
+    .about > .about-description {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+        max-width: 100% !important;
+        padding: 0 16px !important;
+        text-align: left !important;
+        font-size: 0.92rem !important;
+        line-height: 1.6 !important;
+    }
+
+    .about > .about-values {
+        padding: 0 16px !important;
+        gap: 1.5rem !important;
+    }
+
+    .about > .about-values > .values-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .about > .about-values .value-card {
+        height: auto !important;
+        min-height: 80px !important;
+        padding: 16px !important;
+    }
+
+    .about > .about-team {
+        margin-top: 2rem !important;
+        min-height: auto !important;
+        padding: 2rem 16px !important;
+        gap: 2rem !important;
+    }
+
+    .about > .about-team > .team-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    .about > .about-team .team-member,
+    .about > .about-team .team-leader-card {
+        max-width: 100% !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 170px !important;
+        padding: 14px 10px !important;
+        box-sizing: border-box !important;
+    }
+
+    .about > .about-team .team-leader-card .avatar-placeholder,
+    .about > .about-team .team-member .avatar-placeholder {
+        width: 60px !important;
+        height: 60px !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .about > .about-tech {
+        padding: 0 16px 3rem !important;
+        gap: 1.5rem !important;
+    }
+
+    .about > .about-tech > .tech-grid {
+        gap: 12px !important;
+    }
+
+    .about > .about-tech > .tech-grid > .tech-item {
+        width: 90px !important;
+    }
+
+    .about > .about-tech > .tech-grid > .tech-item > .tech-icon-placeholder {
+        width: 52px !important;
+        height: 52px !important;
+        font-size: 1.4rem !important;
+    }
+}

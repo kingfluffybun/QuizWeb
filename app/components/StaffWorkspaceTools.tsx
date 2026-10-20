@@ -60,6 +60,12 @@ export default function StaffWorkspaceTools({
       ? "pending"
       : "input",
   );
+  const [livePendingQuizzes, setLivePendingQuizzes] = useState<PendingUnit[]>(pendingQuizzes);
+  const [activeLaunchLabel, setActiveLaunchLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLivePendingQuizzes(pendingQuizzes);
+  }, [pendingQuizzes]);
 
   useEffect(() => {
     const handleHash = () => {
@@ -72,12 +78,59 @@ export default function StaffWorkspaceTools({
     };
     handleHash();
     window.addEventListener("hashchange", handleHash);
+
+    const handleEdit = () => {
+      setActiveTool("input");
+      setActiveLaunchLabel("Editing Submission");
+      window.setTimeout(() => {
+        const formEl =
+          document.getElementById("quiz-form") ||
+          document.getElementById("quiz-workspace");
+        if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 40);
+    };
+    window.addEventListener("quizweb-edit-pending", handleEdit);
+
+    const handleStudioLaunch = (event: Event) => {
+      setActiveTool("input");
+      const detail = (event as CustomEvent<{ toolId?: string; title?: string }>).detail;
+      if (detail?.title) {
+        setActiveLaunchLabel(detail.title);
+      } else if (detail?.toolId) {
+        setActiveLaunchLabel(detail.toolId.toUpperCase());
+      } else {
+        setActiveLaunchLabel(null);
+      }
+      window.setTimeout(() => {
+        const workspaceEl = document.getElementById("quiz-workspace");
+        if (workspaceEl) {
+          workspaceEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 40);
+    };
+    window.addEventListener("quizweb-studio-launch", handleStudioLaunch);
+
+    const handlePendingUpdated = () => {
+      void import("@/app/actions/quiz")
+        .then(({ getPendingQuizzes }) => getPendingQuizzes("pending"))
+        .then((fresh) => {
+          if (Array.isArray(fresh)) {
+            setLivePendingQuizzes(fresh);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("quizweb-pending-updated", handlePendingUpdated);
+
     return () => {
       window.removeEventListener("hashchange", handleHash);
+      window.removeEventListener("quizweb-edit-pending", handleEdit);
+      window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
+      window.removeEventListener("quizweb-pending-updated", handlePendingUpdated);
     };
   }, []);
 
-  const reviewQuizzes: PendingReviewQuiz[] = pendingQuizzes.map((quiz) => ({
+  const reviewQuizzes: PendingReviewQuiz[] = livePendingQuizzes.map((quiz) => ({
     pending_id: quiz.pending_id,
     unit_title: quiz.unit_title,
     sec_num: quiz.sec_num,
@@ -92,9 +145,20 @@ export default function StaffWorkspaceTools({
     <section className="staff-workspace" id="quiz-workspace" aria-labelledby="staff-workspace-title">
       <div className="staff-workspace-heading">
         <div>
-          <p className="staff-workspace-kicker">Integrated tools</p>
-          <h2 id="staff-workspace-title">Quiz Workspace</h2>
-          <p>Create new lesson units and keep track of submitted work without leaving your staff panel.</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <p className="staff-workspace-kicker" style={{ marginBottom: 0 }}>
+              Integrated Authoring Studio
+            </p>
+            {activeLaunchLabel && (
+              <span className="staff-workspace-mode-pill">
+                Active Mode: {activeLaunchLabel}
+              </span>
+            )}
+          </div>
+          <h2 id="staff-workspace-title">Unit, Question &amp; Code Problem Workspace</h2>
+          <p>
+            Compose interactive lessons, inline quiz checks, and multi-step coding assessments with real-time side-by-side preview.
+          </p>
         </div>
         <div className="staff-workspace-tabs" role="tablist" aria-label="Quiz workspace tools">
           <button
@@ -104,7 +168,7 @@ export default function StaffWorkspaceTools({
             className={`staff-workspace-tab${activeTool === "input" ? " active" : ""}`}
             onClick={() => setActiveTool("input")}
           >
-            Create Quiz
+            Create &amp; Edit Units
           </button>
           <button
             type="button"
@@ -115,13 +179,18 @@ export default function StaffWorkspaceTools({
             onClick={() => setActiveTool("pending")}
           >
             Pending Submissions
-            <span className="staff-workspace-count">{pendingQuizzes.filter((quiz) => quiz.pending_status === "pending").length}</span>
+            <span className="staff-workspace-count">
+              {livePendingQuizzes.filter((quiz) => quiz.pending_status === "pending").length}
+            </span>
           </button>
         </div>
       </div>
 
       <div className="staff-workspace-panel" role="tabpanel">
-        {activeTool === "input" ? (
+        <div
+          className="staff-workspace-input-grid"
+          hidden={activeTool !== "input"}
+        >
           <QuizInputForm
             categories={categories}
             difficulties={difficulties}
@@ -133,16 +202,18 @@ export default function StaffWorkspaceTools({
             initialTotalCount={recentTotalCount}
             initialMetrics={metrics}
           />
-        ) : (
-          <div className={!canReview ? "staff-readonly-pending" : undefined}>
-            {!canReview && (
-              <p className="staff-readonly-note">
-                Pending submissions are visible here for status tracking. Only administrators can approve or reject submissions.
-              </p>
-            )}
-            <PendingReview initialQuizzes={reviewQuizzes} />
-          </div>
-        )}
+        </div>
+        <div
+          className={!canReview ? "staff-readonly-pending" : undefined}
+          hidden={activeTool !== "pending"}
+        >
+          {!canReview && (
+            <p className="staff-readonly-note">
+              Pending submissions are visible here for status tracking. Only administrators can approve or reject submissions.
+            </p>
+          )}
+          <PendingReview initialQuizzes={reviewQuizzes} />
+        </div>
       </div>
     </section>
   );

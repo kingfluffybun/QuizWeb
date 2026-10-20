@@ -1,7 +1,7 @@
 .quiz-page {
     display: grid;
     grid-template-areas:
-        "navbar navbar"
+        "sidebar navbar"
         "sidebar main"
         "sidebar footer";
     grid-template-rows: 80px 1fr clamp(140px, 2vh, 220px);
@@ -201,7 +201,13 @@
     max-width: 1080px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
+}
+
+.available-units-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .available-units-heading h2,
@@ -215,6 +221,66 @@
 .available-units-empty {
     margin: 4px 0 0;
     color: var(--text-main);
+}
+
+.learn-filters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.learn-search-input {
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 2px solid var(--border-main);
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.95rem;
+    min-width: 220px;
+}
+
+.learn-search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.learn-section-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 0;
+}
+
+.learn-section-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.learn-chip {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1.5px solid var(--border-main);
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.learn-chip.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
 }
 
 .available-units-list {
@@ -232,6 +298,70 @@
     background: var(--bg-card);
     border: 2px solid var(--border-main);
     border-radius: 12px;
+}
+
+.available-unit-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.available-unit-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.available-unit-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background-color: rgba(124, 58, 237, 0.1);
+    color: var(--primary-color);
+}
+
+.available-unit-badge.badge-questions {
+    background-color: rgba(100, 116, 139, 0.12);
+    color: var(--text-muted);
+}
+
+.available-unit-badge.badge-coding {
+    background-color: rgba(16, 185, 129, 0.14);
+    color: #059669;
+}
+
+.available-unit-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.available-unit-cp-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 2px solid var(--border-main);
+    border-radius: 14px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.available-unit-cp-link:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .available-unit-link {
@@ -1183,16 +1313,376 @@ footer.incorrect {
    QUIZ & LEARN MOBILE RESPONSIVE BREAKPOINT (< 768px)
    ============================================================================= */
 @media (max-width: 768px) {
-    .quiz-page main {
-        padding: 16px 12px !important;
+    .quiz-page {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100dvh !important;
+        height: auto !important;
+        overflow-x: hidden !important;
         width: 100% !important;
-        gap: 18px !important;
     }
 
+    .quiz-page main {
+        padding: 14px 12px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        gap: 14px !important;
+        align-items: stretch !important;
+        flex: 1 !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page main > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .quiz-page .quiz-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page .quiz-container > h1 {
+        padding: 4px 0 !important;
+        font-size: 1.25rem !important;
+        line-height: 1.35 !important;
+        text-align: left !important;
+    }
+
+    /* Lesson Slide Cards on Mobile */
+    .lesson-card {
+        flex-direction: column !important;
+        gap: 14px !important;
+        height: auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    .lesson-text-container {
+        width: 100% !important;
+        min-width: 0 !important;
+        gap: 12px !important;
+        flex: none !important;
+    }
+
+    .lesson-card .lesson-slide-title {
+        font-size: 1.3rem !important;
+        line-height: 1.25 !important;
+    }
+
+    .lesson-card-text {
+        font-size: 0.95rem !important;
+        line-height: 1.55 !important;
+        width: 100% !important;
+    }
+
+    .lesson-code-frame {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: none !important;
+        padding: 4px 0 !important;
+    }
+
+    .lesson-code-source {
+        font-size: 0.8rem !important;
+        min-height: 120px !important;
+        max-height: 260px !important;
+        padding: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .code-problem-layout {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+    }
+
+    /* Multiple Choice & Options */
+    .quiz-page label {
+        max-height: none !important;
+        height: auto !important;
+        width: 100% !important;
+    }
+
+    .quiz-page .options {
+        min-height: 48px !important;
+        max-height: none !important;
+        height: auto !important;
+        padding: 10px 14px !important;
+        gap: 10px !important;
+        font-size: 0.9rem !important;
+        border-radius: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page .options > div {
+        height: 32px !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        font-size: 0.88rem !important;
+        border-radius: 6px !important;
+    }
+
+    .options-container#multiple-choice {
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    /* Pair: keep both columns visible side by side so no vertical scrolling is needed */
+    .options-container#pair {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        align-items: start !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .pair-left-column .options,
+    .pair-right-column .options {
+        justify-content: center !important;
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        text-align: center !important;
+    }
+
+    .pair-left-column .options p,
+    .pair-right-column .options p {
+        width: 100% !important;
+        font-size: 0.85rem !important;
+        line-height: 1.3 !important;
+        text-align: center !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    .pair-left-column, .pair-right-column {
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .pair-left-column > label, .pair-right-column > label {
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    .options-container#order {
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .order-number {
+        gap: 6px !important;
+    }
+
+    .order-number > div {
+        max-height: none !important;
+        min-height: 48px !important;
+        height: auto !important;
+    }
+
+    .order-options {
+        gap: 6px !important;
+    }
+
+    .order-options > .options {
+        min-height: 48px !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+
+    .options-container#ftb {
+        width: 100% !important;
+    }
+
+    .answer-box {
+        width: 100% !important;
+        font-size: 1rem !important;
+        min-height: 120px !important;
+        padding: 12px 14px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Header & Navigation on Quiz */
+    .quiz-header {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        gap: 8px !important;
+    }
+
+    .quiz-header > .quiz-navigation {
+        gap: 8px !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    .quiz-settings-button,
+    .quiz-close-button {
+        width: 32px !important;
+        height: 32px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .quiz-close-button svg {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    .quiz-page .quiz-unit-title {
+        font-size: 0.95rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: calc(100% - 150px) !important;
+        margin: 0 !important;
+    }
+
+    .quiz-header > .quiz-navigation > .heart-container {
+        padding-left: 0 !important;
+        margin-left: auto !important;
+    }
+
+    .heart-container > svg {
+        width: 22px !important;
+        height: 22px !important;
+        margin-left: -7px !important;
+    }
+
+    .progress-container {
+        gap: 4px !important;
+        height: 8px !important;
+    }
+
+    .progress-container > div {
+        height: 8px !important;
+        border-radius: 3px !important;
+    }
+
+    /* Quiz Footer & Touch Controls */
+    .quiz-page footer {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 50 !important;
+        padding: 10px 14px max(10px, env(safe-area-inset-bottom)) !important;
+        width: 100% !important;
+        background-color: var(--bg-card) !important;
+        border-top: 1px solid var(--border-main) !important;
+        box-sizing: border-box !important;
+    }
+
+    .quiz-page footer > div {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        align-items: center !important;
+    }
+
+    .quiz-page footer #skip {
+        flex: 1 1 80px !important;
+        max-width: 110px !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        font-size: 0.9rem !important;
+        border-radius: 12px !important;
+        padding: 0 12px !important;
+        justify-content: center !important;
+    }
+
+    .quiz-page footer #submit {
+        flex: 2 1 140px !important;
+        width: auto !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        font-size: 0.95rem !important;
+        border-radius: 12px !important;
+        padding: 0 16px !important;
+        justify-content: center !important;
+    }
+
+    .lesson-footer-controls {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .lesson-footer-controls > button.options {
+        flex: 1 !important;
+        width: auto !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        font-size: 0.95rem !important;
+        border-radius: 12px !important;
+        justify-content: center !important;
+    }
+
+    .answer-message {
+        display: flex !important;
+        width: 100% !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .answer-message-icon {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        border-radius: 50% !important;
+    }
+
+    .answer-message-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    #answer-message-text h2 {
+        font-size: 0.95rem !important;
+        margin: 0 !important;
+    }
+
+    #answer-message-text p {
+        font-size: 0.8rem !important;
+        margin: 2px 0 0 !important;
+    }
+
+    /* Unit Lists & Completion Cards */
     .available-units {
         width: 100% !important;
         max-width: 100% !important;
         padding: 0 !important;
+    }
+
+    .learn-filters-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .learn-search-input {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .learn-section-chips {
+        width: 100% !important;
     }
 
     .available-units-list {
@@ -1209,20 +1699,23 @@ footer.incorrect {
         border-radius: 14px !important;
     }
 
+    .available-unit-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .available-unit-cp-link,
     .available-unit-link {
         width: 100% !important;
+        min-width: 0 !important;
         text-align: center !important;
         min-height: 44px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-    }
-
-    .quiz-header {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 4px !important;
-        gap: 12px !important;
+        box-sizing: border-box !important;
     }
 
     .quiz-complete-card {
@@ -1235,39 +1728,362 @@ footer.incorrect {
     .quiz-complete-card button,
     .quiz-complete-card a {
         width: 100% !important;
-        min-height: 44px !important;
+        min-height: 48px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }
+}
 
-    /* Quiz Question Choices and Options */
-    .quiz-options-grid,
-    .choices-container {
+/* =============================================================================
+   CODE PROBLEM — MOBILE IDE (<= 768px)
+   Tabbed Task | Code | Preview workspace with sticky action bar.
+   Desktop 3-pane layout above 768px is untouched; the mobile-only elements
+   below are hidden by default.
+   ============================================================================= */
+.cp-mobile-banner,
+.cp-mobile-tabs,
+.cp-mobile-actionbar,
+.cp-quick-symbols {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #code-problem,
+    #code-problem.quiz-page {
         display: flex !important;
         flex-direction: column !important;
-        width: 100% !important;
-        gap: 10px !important;
+        height: var(--cp-vh, 100dvh) !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
     }
 
-    button.options {
-        min-height: 44px !important;
-        padding: 12px 14px !important;
-        font-size: 0.95rem !important;
-    }
-
-    footer {
-        padding: 12px 16px !important;
-    }
-
-    footer > div {
+    #code-problem > main {
+        display: flex !important;
         flex-direction: column !important;
-        gap: 10px !important;
-        align-items: stretch !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding: 8px 10px 0 !important;
+        gap: 8px !important;
     }
 
-    footer button.options#submit {
+    #code-problem .quiz-header {
+        flex-shrink: 0;
+    }
+
+    #code-problem .cp-workspace {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        align-items: stretch !important;
+        gap: 8px !important;
         width: 100% !important;
-        min-height: 44px !important;
+    }
+
+    /* Desktop-only affordances */
+    #code-problem .code-options,
+    #code-problem .toggle-device-container {
+        display: none !important;
+    }
+
+    /* Active step banner */
+    .cp-mobile-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        flex-shrink: 0;
+        max-height: 108px;
+        overflow-y: auto;
+        padding: 8px 12px;
+        border: 1px solid var(--border-main);
+        border-radius: 12px;
+        background: var(--bg-card);
+    }
+
+    .cp-mobile-banner.is-error {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.08);
+    }
+
+    .cp-mobile-banner.is-typing {
+        display: none;
+    }
+
+    .cp-mobile-banner-step {
+        flex-shrink: 0;
+        margin-top: 2px;
+        color: var(--selected-color);
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .cp-mobile-banner-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .cp-mobile-banner-text {
+        color: var(--text-main);
+        font-size: 0.85rem;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+
+    .cp-mobile-banner-note {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        color: var(--text-muted);
+    }
+
+    .cp-mobile-banner-note.is-fail {
+        color: #dc2626;
+        font-weight: 600;
+    }
+
+    .cp-mobile-banner-note.is-success {
+        color: #16a34a;
+        font-weight: 600;
+    }
+
+    .cp-mobile-banner-hint {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border-main);
+        border-radius: 10px;
+        background: var(--bg-main);
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    /* Tab switcher */
+    .cp-mobile-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        flex-shrink: 0;
+        padding: 4px;
+        border: 1px solid var(--border-main);
+        border-radius: 12px;
+        background: var(--bg-card);
+    }
+
+    .cp-mobile-tab {
+        min-height: 40px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .cp-mobile-tab.active {
+        background: var(--selected-color);
+        color: #fff;
+    }
+
+    /* Only the active pane is visible */
+    #code-problem .code-problem-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        width: 100% !important;
+        grid-template-columns: none !important;
+    }
+
+    #code-problem .code-problem-layout > div {
+        display: none !important;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+        border: 2px solid var(--border-main) !important;
+        border-radius: 12px;
+    }
+
+    #code-problem .code-problem-layout[data-mobile-tab="task"] > #instructions,
+    #code-problem .code-problem-layout[data-mobile-tab="code"] > #tab,
+    #code-problem .code-problem-layout[data-mobile-tab="preview"] > #preview {
+        display: flex !important;
+    }
+
+    #code-problem #instructions .instruction-container {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #code-problem #tab .header {
+        overflow-x: auto;
+        flex-shrink: 0;
+        scrollbar-width: none;
+    }
+
+    #code-problem #tab .code-editor-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        border-left: 0;
+    }
+
+    #code-problem #preview .canvas-container {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    #code-problem #preview .preview-frame {
+        max-width: 100% !important;
+        border-left: 0 !important;
+        border-right: 0 !important;
+    }
+
+    /* Touch editor: >=16px font prevents iOS focus zoom */
+    .cp-mobile-editor {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        width: 100%;
+        min-height: 0;
+    }
+
+    .cp-mobile-editor-area {
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+        background: #f3f4f6;
+    }
+
+    .cp-mobile-gutter,
+    .cp-mobile-textarea {
+        margin: 0;
+        padding: 12px 0;
+        font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 24px;
+        letter-spacing: 0;
+    }
+
+    .cp-mobile-gutter {
+        min-width: 42px;
+        padding-right: 8px;
+        padding-left: 10px;
+        overflow: hidden;
+        background: #e5e7eb;
+        color: #9ca3af;
+        text-align: right;
+        user-select: none;
+        white-space: pre;
+    }
+
+    .cp-mobile-textarea {
+        flex: 1;
+        min-width: 0;
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-bottom: 48px;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: #111827;
+        overflow: auto;
+        resize: none;
+        tab-size: 4;
+        white-space: pre;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cp-quick-symbols {
+        display: flex;
+        flex-shrink: 0;
+        gap: 6px;
+        padding: 6px 8px;
+        overflow-x: auto;
+        border-top: 1px solid var(--border-main);
+        background: var(--bg-card);
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cp-quick-symbols::-webkit-scrollbar {
+        display: none;
+    }
+
+    .cp-quick-symbol {
+        flex: 0 0 auto;
+        min-width: 42px;
+        height: 40px;
+        padding: 0 10px;
+        border: 1px solid var(--border-main);
+        border-radius: 8px;
+        background: var(--bg-main);
+        color: var(--text-main);
+        font-family: var(--font-jetbrains-mono), monospace;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .cp-quick-symbol-tab {
+        min-width: 56px;
+        color: var(--selected-color);
+    }
+
+    .cp-quick-symbol:active {
+        background: var(--selected-background-color);
+        border-color: var(--selected-color);
+    }
+
+    /* Sticky bottom action bar (clears Safari's bottom URL bar / home indicator) */
+    .cp-mobile-actionbar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.4fr);
+        gap: 8px;
+        flex-shrink: 0;
+        padding: 8px 2px calc(8px + env(safe-area-inset-bottom, 0px));
+        border-top: 1px solid var(--border-main);
+        background: var(--bg-main);
+    }
+
+    .cp-mobile-action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 48px;
+        padding: 0 14px;
+        border: 2px solid var(--border-main);
+        border-radius: 12px;
+        background: var(--bg-card);
+        color: var(--text-main);
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .cp-mobile-action-btn.primary {
+        border-color: var(--selected-color);
+        border-bottom: 4px solid #6b36da;
+        background: var(--selected-color);
+        color: #fff;
+    }
+
+    .cp-mobile-action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .cp-mobile-action-btn:active:not(:disabled) {
+        transform: translateY(1px);
     }
 }

@@ -1,12 +1,19 @@
 .staff-workspace {
-  margin-top: 28px;
-  padding: 24px;
-  border: 1px solid var(--border-main, #e0e0e0);
-  border-radius: 18px;
-  background: var(--bg-card, #fff);
-  color: var(--text-main, #333);
+  margin-top: 8px;
+  padding: 28px;
+  border: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
+  border-radius: 20px;
+  background: var(--maintainer-surface, var(--bg-card, #fff));
+  color: var(--maintainer-text, var(--text-main, #333));
   max-width: 1440px;
+  width: 100%;
   margin-inline: auto;
+  box-shadow: var(--maintainer-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.05));
+  box-sizing: border-box;
+}
+
+.staff-workspace [hidden] {
+  display: none !important;
 }
 
 .staff-workspace-heading {
@@ -14,7 +21,9 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
 }
 
 .staff-workspace-heading h2,
@@ -23,12 +32,34 @@
 }
 
 .staff-workspace-heading h2 {
+  font-family: "Poppins", sans-serif;
   font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.staff-workspace-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.staff-workspace-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--primary-color, #7c3aed);
+  border: 1px solid rgba(124, 58, 237, 0.3);
 }
 
 .staff-workspace-heading > div:first-child > p:last-child {
   margin-top: 6px;
-  color: var(--text-muted, #666);
+  color: var(--maintainer-text-muted, var(--text-muted, #666));
   font-size: 0.9rem;
 }
 
@@ -43,37 +74,52 @@
 
 .staff-workspace-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .staff-workspace-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid var(--border-main, #e0e0e0);
-  border-radius: 9px;
-  background: transparent;
-  color: var(--text-main, #333);
+  padding: 10px 16px;
+  border: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
+  border-radius: 10px;
+  background: var(--maintainer-surface-alt, transparent);
+  color: var(--maintainer-text, var(--text-main, #333));
   font: inherit;
+  font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.staff-workspace-tab:hover:not(.active) {
+  border-color: var(--primary-color, #9966ff);
+  color: var(--primary-color, #9966ff);
 }
 
 .staff-workspace-tab.active {
   border-color: var(--primary-color, #9966ff);
   background: var(--primary-color, #9966ff);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(153, 102, 255, 0.25);
 }
 
 .staff-workspace-count {
   min-width: 1.35rem;
-  padding: 2px 5px;
+  padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(153, 102, 255, 0.16);
+  color: inherit;
   text-align: center;
   font-size: 0.75rem;
+}
+
+.staff-workspace-tab.active .staff-workspace-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
 }
 
 .staff-workspace-panel {
@@ -81,6 +127,32 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.staff-workspace-input-grid:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(380px, 0.98fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.staff-workspace-input-grid > .unit-authoring-card {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.staff-workspace-input-grid > .lesson-preview-card {
+  grid-column: 2;
+  min-width: 0;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+
+.staff-workspace-input-grid > .recent-units-card {
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .staff-workspace-panel .admin-container,
@@ -97,17 +169,34 @@
 
 .staff-readonly-note {
   margin: 0 0 16px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-main, #e0e0e0);
+  padding: 12px 16px;
+  border: 1px solid var(--maintainer-border, var(--border-main, #e0e0e0));
   border-radius: 10px;
-  background: var(--bg-main, #f6f6f6);
-  color: var(--text-muted, #666);
+  background: var(--maintainer-surface-alt, var(--bg-main, #f6f6f6));
+  color: var(--maintainer-text-muted, var(--text-muted, #666));
   font-size: 0.88rem;
 }
 
 .staff-readonly-pending .pending-actions,
 .staff-readonly-pending .pending-note-editor-card {
   display: none;
+}
+
+@media (max-width: 1120px) {
+  .staff-workspace-input-grid:not([hidden]) {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-workspace-input-grid > .unit-authoring-card,
+  .staff-workspace-input-grid > .lesson-preview-card,
+  .staff-workspace-input-grid > .recent-units-card {
+    grid-column: 1;
+  }
+
+  .staff-workspace-input-grid > .lesson-preview-card {
+    position: static;
+    max-height: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -119,11 +208,15 @@
     align-items: stretch;
     flex-direction: column;
   }
+
+  .staff-workspace-tabs {
+    flex-wrap: wrap;
+  }
 }
 
 /* Dark Theme Support */
 [data-theme="dark"] .staff-workspace {
-  background: var(--maintainer-card-bg, #1c1c24);
+  background: var(--maintainer-surface, #1c1c24);
   border-color: var(--maintainer-border, #2d2d3d);
   color: var(--maintainer-text, #fcfbff);
 }
@@ -132,9 +225,22 @@
   color: var(--maintainer-text, #fcfbff);
 }
 
+[data-theme="dark"] .staff-workspace-mode-pill {
+  background: rgba(167, 139, 250, 0.16);
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
 [data-theme="dark"] .staff-workspace-tab {
   border-color: var(--maintainer-border, #2d2d3d);
+  background: var(--maintainer-surface-alt, #22222d);
   color: var(--maintainer-text, #fcfbff);
+}
+
+[data-theme="dark"] .staff-workspace-tab.active {
+  border-color: var(--primary-color, #9966ff);
+  background: var(--primary-color, #9966ff);
+  color: #fff;
 }
 
 [data-theme="dark"] .staff-readonly-note {
@@ -142,6 +248,3 @@
   border-color: var(--maintainer-border, #2d2d3d);
   color: var(--maintainer-text-muted, #a0a0b0);
 }
-
-[dark-theme="dark"] form input {background: #1c1c24}
-

@@ -19,13 +19,18 @@ export default async function InputPage() {
   return (
     <div>
       <header className="admin-header">
-        <h1>QuizWeb Admin Panel</h1>
-        <div className="admin-header-links">
+        <div>
+          <h1>QuizWeb Unit &amp; Assessment Studio</h1>
+        </div>
+        <div className="admin-header-links" style={{ display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
+          <Link href="/maintainer" className="header-link">
+            &larr; Maintainer Studio
+          </Link>
           <Link href="/pending" className="header-link">
             Review Pending
           </Link>
-          <Link href="/pending" className="header-link">
-            Go to Quiz Page &rarr;
+          <Link href="/learn" className="header-link">
+            Curriculum &rarr;
           </Link>
         </div>
       </header>

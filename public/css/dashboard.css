@@ -1,7 +1,7 @@
 .dashboard-page {
     display: grid;
     grid-template-areas:
-        "navbar navbar"
+        "sidebar navbar"
         "sidebar main";
     grid-template-rows: 80px minmax(0, 1fr);
     grid-template-columns: 240px minmax(0, 1fr);
@@ -25,8 +25,8 @@
     grid-area: sidebar;
     position: sticky;
     top: 0;
-    height: calc(100vh - 80px);
-    height: calc(100dvh - 80px);
+    height: calc(100vh);
+    height: calc(100dvh);
     overflow-y: auto;
 }
 
@@ -36,7 +36,7 @@
     min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    border-top: 24px solid var(--bg-main);
+    padding-top: 24px;
 }
 
 .dashboard-content {
@@ -59,6 +59,12 @@
     grid-area: welcome;
     div { 
         padding: 24px;
+        min-height: 120px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
         border-radius: 12px;
         background-color: var(--primary-color);
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.08), 0px 12px 24px rgba(0, 0, 0, 0.1);
@@ -73,6 +79,14 @@
             -webkit-user-drag: none;
         }
     }
+}
+
+.welcome-banner h1 {
+    line-height: 1.2;
+}
+
+.welcome-banner p {
+    line-height: 1.4;
 }
 
 .dashboard {
@@ -120,6 +134,10 @@
     }
 }
 
+.card .card-title > h2 {
+    line-height: 1.2;
+}
+
 
 
 /* Lesson Progress */
@@ -145,6 +163,10 @@
     justify-content: space-between;
 }
 
+.lesson-progress-details > .row h1 {
+    line-height: 1.2;
+}
+
 .lesson-progress-bar, .unit-progress-bar {
     display: flex;
     height: 16px;
@@ -155,12 +177,16 @@
 .current-lesson {
     display: flex;
     gap: 12px;
-    h2 {text-wrap: nowrap; margin-bottom: 0;}
+    h2 {text-wrap: nowrap; margin-bottom: 0; line-height: 1.2;}
+    p {line-height: 1.4;}
     .language-icon {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
         aspect-ratio: 1;
         border-radius: 8px;
         background-color: hsl(260, 100%, 70%, 10%);
-        svg {aspect-ratio: 1; width: 28px; height: auto; fill: var(--primary-color);}
+        svg {width: 28px; height: 28px; flex: 0 0 28px; fill: var(--primary-color);}
     }
 }
 
@@ -320,7 +346,7 @@ button.quick-action-btn:hover {
 .calendar-nav-btn {
     background: var(--bg-card);
     border: 1px solid var(--border-main);
-    color: var(--text-main);
+    color: var(--text-muted);
     border-radius: 6px;
     width: 26px;
     height: 26px;
@@ -377,7 +403,7 @@ button.quick-action-btn:hover {
 }
 
 .day.today:not(.active) p {
-    border: 2px dashed var(--primary-color);
+    outline: 2px dashed var(--primary-color);
     background-color: transparent;
 }
 
@@ -444,6 +470,10 @@ button.quick-action-btn:hover {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    > p,
+    .daily-progress-bar-container p {
+        line-height: 1.2;
+    }
 }
 
 .daily-progress-bar {
@@ -557,7 +587,11 @@ button.quick-action-btn:hover {
         flex-direction: column;
         align-items: center;
         flex: 1;
-        #player-name {padding: 8px 0;}
+        #player-name,
+        .skeleton-podium-name {
+            padding: 8px 0;
+            line-height: 1.2;
+        }
         .player-icon {
             margin-bottom: 24px; 
             width: 64px;
@@ -800,16 +834,355 @@ button.quick-action-btn:hover {
     border-color: var(--text-muted);
 }
 
+.skeleton-dashboard-page .skeleton-welcome-title {
+    width: 265px;
+    max-width: 100%;
+    height: clamp(1.5rem, 3.9vw, 2.4rem);
+    font-size: clamp(1.25rem, 3.25vw, 2rem);
+    line-height: 1.2;
+    margin: 0;
+    border-radius: 6px;
+    display: block;
+    background: rgba(255, 255, 255, 0.28);
+    animation: none;
+}
+
+.skeleton-dashboard-page .skeleton-welcome-description {
+    width: 500px;
+    max-width: 100%;
+    height: clamp(1.05rem, 2.45vw, 1.75rem);
+    font-size: clamp(0.75rem, 1.75vw, 1.25rem);
+    line-height: 1.4;
+    margin: 0;
+    border-radius: 4px;
+    display: block;
+    background: rgba(255, 255, 255, 0.28);
+    animation: none;
+}
+
+.skeleton-dashboard-page .skeleton-welcome-art {
+    width: 180px;
+    height: 180px;
+    opacity: 0.6;
+    border-radius: 0;
+    position: absolute !important;
+    right: -8px;
+    bottom: -40px;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-progress-card {
+    min-height: 365px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-title,
+.skeleton-dashboard-page .skeleton-streak-action {
+    display: block;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-streak-title {
+    width: 150px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-action {
+    width: 108px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-flame {
+    width: 100px;
+    height: 114px;
+    flex: 0 0 114px;
+}
+
+.skeleton-dashboard-page .skeleton-streak-count {
+    width: 1em;
+    height: 1em;
+    line-height: 1;
+    margin: 0;
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-streak-no-of-days {
+    align-self: stretch;
+    justify-content: space-between;
+}
+
+.skeleton-dashboard-page .skeleton-streak-count-label,
+.skeleton-dashboard-page .skeleton-week-label,
+.skeleton-dashboard-page .skeleton-calendar-month,
+.skeleton-dashboard-page .skeleton-calendar-weekday {
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-streak-count-label {
+    width: 92px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-streak-message {
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-week-day {
+    flex: 0 0 40px;
+}
+
+.skeleton-dashboard-page .skeleton-week-label {
+    width: 16px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-month {
+    width: 120px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-nav {
+    width: 26px;
+    height: 26px;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-weekday {
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-calendar-day > p {
+    color: transparent;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-title {
+    display: block;
+    width: 140px;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-filters label {
+    cursor: default;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-filter {
+    width: 44px;
+    height: 1.2em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-podium-avatar {
+    background-color: var(--border-main);
+}
+
+.skeleton-dashboard-page .skeleton-podium-xp {
+    height: 0.8em;
+}
+
+.skeleton-dashboard-page .skeleton-podium-rank {
+    width: 1em;
+    height: 1.2em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-podium-name {
+    width: 70%;
+    height: 1.2em;
+    margin: 8px 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-rank {
+    width: 16px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-avatar {
+    background-color: var(--border-main);
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-name {
+    width: 120px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-leaderboard-xp {
+    width: 50px;
+    height: 1.5em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-continue-title,
+.skeleton-dashboard-page .skeleton-continue-action {
+    display: block;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-continue-title {
+    width: 290px;
+    max-width: 70%;
+}
+
+.skeleton-dashboard-page .skeleton-continue-action {
+    width: 72px;
+}
+
+.skeleton-dashboard-page .skeleton-continue-description {
+    width: 88%;
+    height: 1.2em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-title,
+.skeleton-dashboard-page .skeleton-lesson-action,
+.skeleton-dashboard-page .skeleton-section-title,
+.skeleton-dashboard-page .skeleton-section-subtitle,
+.skeleton-dashboard-page .skeleton-lesson-percent,
+.skeleton-dashboard-page .skeleton-unit-number,
+.skeleton-dashboard-page .skeleton-unit-title,
+.skeleton-dashboard-page .skeleton-unit-count {
+    display: block;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-title {
+    width: 150px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-action {
+    width: 60px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-language-mark {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.skeleton-dashboard-page .skeleton-section-title {
+    width: 130px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-section-subtitle {
+    width: 90px;
+    height: 1.4em;
+    line-height: 1.4;
+}
+
+.skeleton-dashboard-page .skeleton-lesson-percent {
+    width: 45px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-unit-number {
+    width: 8px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-unit-title {
+    width: 140px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-unit-count {
+    width: 28px;
+    min-height: 1.2em;
+}
+
+.skeleton-dashboard-page .skeleton-progress-fill {
+    position: absolute;
+    left: 0;
+    width: 35%;
+    height: 16px;
+    border-radius: inherit;
+}
+
+.skeleton-dashboard-page .skeleton-daily-title,
+.skeleton-dashboard-page .skeleton-daily-action {
+    display: block;
+    min-height: 1.2em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-daily-title {
+    width: 120px;
+}
+
+.skeleton-dashboard-page .skeleton-daily-action {
+    width: 72px;
+}
+
+.skeleton-dashboard-page .skeleton-xp-label,
+.skeleton-dashboard-page .skeleton-xp-value,
+.skeleton-dashboard-page .skeleton-graph-value,
+.skeleton-dashboard-page .skeleton-graph-day {
+    display: block;
+    min-height: 1em;
+    margin: 0;
+}
+
+.skeleton-dashboard-page .skeleton-xp-label {
+    width: 80px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-xp-value {
+    width: 40px;
+    height: 1.2em;
+    line-height: 1.2;
+}
+
+.skeleton-dashboard-page .skeleton-graph-value {
+    width: 40px;
+}
+
+.skeleton-dashboard-page .skeleton-graph-day {
+    width: 18px;
+}
+
+.skeleton-dashboard-page .skeleton-daily-progress-fill {
+    position: absolute;
+    left: 0;
+    width: 50%;
+    height: 16px;
+    border-radius: inherit;
+}
+
 /* =============================================================================
    DASHBOARD MOBILE RESPONSIVE BREAKPOINT (< 768px)
    ============================================================================= */
 @media (max-width: 768px) {
+    .dashboard-page > main {
+        border-top: none !important;
+    }
+
     .dashboard-content {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
-        padding: 16px 12px !important;
+        padding: 14px 12px !important;
         gap: 16px !important;
+        box-sizing: border-box !important;
     }
 
     .welcome-banner {
@@ -817,13 +1190,20 @@ button.quick-action-btn:hover {
     }
 
     .welcome-banner > div {
-        padding: 18px 16px !important;
+        padding: 16px 14px !important;
+        min-height: 104px !important;
         border-radius: 14px !important;
     }
 
     .welcome-banner h1 {
-        font-size: clamp(1.2rem, 5vw, 1.55rem) !important;
+        font-size: clamp(1.2rem, 5vw, 1.5rem) !important;
         line-height: 1.25 !important;
+    }
+
+    .skeleton-dashboard-page .skeleton-welcome-title {
+        font-size: clamp(1.2rem, 5vw, 1.5rem);
+        height: clamp(1.5rem, 6.25vw, 1.875rem);
+        line-height: 1.25;
     }
 
     .welcome-banner p {
@@ -831,65 +1211,279 @@ button.quick-action-btn:hover {
         line-height: 1.4 !important;
     }
 
-    .welcome-banner .cloud-right,
-    .welcome-banner .cloud-left {
-        opacity: 0.25 !important;
-        max-width: 100px !important;
+    .skeleton-dashboard-page .skeleton-welcome-description {
+        font-size: 0.85rem;
+        height: 1.19rem;
+        line-height: 1.4;
     }
 
-    /* Streak Calendar Mobile Scaling */
-    .streak-calendar-card {
-        padding: 16px 12px !important;
-        border-radius: 14px !important;
+    .skeleton-dashboard-page .skeleton-welcome-art {
+        width: 90px;
+        height: 90px;
+        right: -4px;
+        bottom: -20px;
+    }
+
+    .welcome-banner .cloud-right {
+        opacity: 0.25 !important;
+        max-width: 90px !important;
+        right: -4px !important;
+        bottom: -20px !important;
+    }
+
+    .dashboard {
+        width: 100% !important;
+        gap: 16px !important;
+    }
+
+    /* Convert Two-Column Cards to Single Column on Mobile */
+    .dashboard .two-col-card {
+        flex-direction: column !important;
+        gap: 16px !important;
         width: 100% !important;
     }
 
-    .streak-calendar-header {
-        flex-wrap: wrap !important;
+    .card {
+        padding: 16px 14px !important;
+        border-radius: 14px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Lesson Progress Card */
+    .current-lesson {
         gap: 8px !important;
     }
 
-    .streak-month-title {
-        font-size: 0.95rem !important;
+    .current-lesson h2 {
+        font-size: 1rem !important;
     }
 
-    .streak-calendar-grid {
-        gap: 3px !important;
+    .lesson-progress-details {
+        align-items: center !important;
     }
 
-    .streak-weekday-header {
-        font-size: 0.68rem !important;
-        padding-bottom: 4px !important;
+    .lesson-progress-details > .row h1 {
+        font-size: 1.3rem !important;
     }
 
-    .streak-day-cell {
-        min-height: 32px !important;
-        border-radius: 6px !important;
+    /* Daily Goal Card & Graph */
+    .daily-goal-xp {
+        width: 100% !important;
     }
 
-    .streak-day-number {
-        font-size: 0.72rem !important;
-    }
-
-    .streak-week-indicators {
-        gap: 4px !important;
+    .daily-prograss-graph {
+        width: 100% !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
 
-    .streak-week-badge {
-        padding: 4px 6px !important;
-        font-size: 0.68rem !important;
+    .graph-y-axis div {
+        padding: 4px !important;
+        min-width: 28px !important;
     }
 
-    .streak-modal-content {
-        width: min(440px, 92vw) !important;
-        padding: 18px 16px !important;
+    .graph-y-axis div p {
+        font-size: 0.75rem !important;
     }
 
-    /* Leaderboard & Stats */
-    .leaderboard-container,
-    .dashboard-leaderboard {
+    .graph-y-axis div > .graph-y-bar {
+        width: 12px !important;
+    }
+
+    /* Streak Calendar */
+    .calendar-container {
+        flex-direction: column !important;
+        gap: 20px !important;
         width: 100% !important;
     }
+
+    .streak {
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    .streak-status {
+        gap: 16px !important;
+    }
+
+    .streak-status > .streak-progress-bar svg {
+        width: 64px !important;
+        height: auto !important;
+    }
+
+    .streak-status h1 {
+        font-size: 3rem !important;
+        margin: 0 !important;
+    }
+
+    .streak-week {
+        gap: 4px !important;
+        justify-content: space-between !important;
+    }
+
+    .streak-day {
+        height: 34px !important;
+        width: 34px !important;
+    }
+
+    .streak-day svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    .calendar {
+        gap: 4px !important;
+        width: 100% !important;
+    }
+
+    .calendar-month {
+        margin-bottom: 6px !important;
+    }
+
+    .calendar-month p {
+        font-size: 0.9rem !important;
+    }
+
+    .day-label p {
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+    }
+
+    .day {
+        aspect-ratio: 1 !important;
+    }
+
+    .day p {
+        padding: 4px !important;
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+    }
+
+    .streak-modal-card {
+        width: min(420px, calc(100vw - 32px)) !important;
+        padding: 18px 16px !important;
+        border-radius: 16px !important;
+    }
+
+    .streak-stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+    }
+
+    .streak-stat-item {
+        padding: 8px 4px !important;
+    }
+
+    .streak-stat-value {
+        font-size: 1.2rem !important;
+    }
+
+    .streak-stat-label {
+        font-size: 0.65rem !important;
+    }
+
+    /* Leaderboard Card */
+    .leaderboard {
+        width: 100% !important;
+        position: static !important;
+    }
+
+    .sort-by-time {
+        padding: 4px !important;
+    }
+
+    .sort-by-time label {
+        padding: 6px 0 !important;
+    }
+
+    .sort-by-time label p {
+        font-size: 0.75rem !important;
+    }
+
+    .podium {
+        gap: 8px !important;
+    }
+
+    .skeleton-dashboard-page .leaderboard .podium {
+        margin-top: 5px;
+    }
+
+    .podium-place {
+        padding: 12px 6px !important;
+    }
+
+    .podium-place h1 {
+        font-size: 2rem !important;
+    }
+
+    .podium-place-container .player-icon {
+        width: 44px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .podium-player-xp {
+        bottom: -18px !important;
+        padding: 2px 6px !important;
+    }
+
+    .podium-player-xp p {
+        font-size: 0.65rem !important;
+    }
+
+    .podium-place-container #player-name {
+        font-size: 0.75rem !important;
+        padding: 4px 0 !important;
+    }
+
+    .skeleton-dashboard-page .skeleton-podium-name {
+        margin: 4px 0;
+    }
+
+    .dashboard-mobile-jumpbar {
+        display: flex !important;
+        gap: 8px;
+        width: 100%;
+        padding: 6px;
+        border-radius: 999px;
+        background-color: var(--bg-card);
+        border: 1.5px solid var(--border-main);
+        position: sticky;
+        top: 64px;
+        z-index: 25;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        box-sizing: border-box;
+    }
+
+    .dashboard-jump-pill {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-main);
+        text-decoration: none;
+        background-color: rgba(124, 58, 237, 0.08);
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .dashboard-jump-pill:active,
+    .dashboard-jump-pill:hover {
+        background-color: var(--primary-color);
+        color: #ffffff;
+    }
+
+    #dashboard-progress,
+    #streak-calendar,
+    #leaderboard {
+        scroll-margin-top: 116px;
+    }
+}
+
+.dashboard-mobile-jumpbar {
+    display: none;
 }

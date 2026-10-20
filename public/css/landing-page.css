@@ -234,26 +234,61 @@
         svg {width: 28px; height: 28px;}
     }
     .section-container .row {flex-direction: column;}
-    .section-container {height: auto;}
-    .section .row {flex-direction: column;}
-    .section .col {justify-content: flex-start;}
+    .section-container {height: auto; width: 100%; max-width: 100%;}
+    .section .row {flex-direction: column; width: 100%;}
+    .section .col {justify-content: flex-start; width: 100%;}
     .section-content {
-        width: auto;
-        align-items: center; text-align: center;
-        > p {font-size: 16px}
+        width: 100% !important;
+        max-width: 100% !important;
+        align-items: center;
+        text-align: center;
+        padding: 0 8px;
+        box-sizing: border-box;
     }
-    .section {padding: 10vh 36px; height: 80vh;}
-    .section.row.first-section {padding-top: 0;}
-    #laptop, #calendar, #books {width: 100%; height:auto; transform:scale(0.75);}
-    #laptop {width:110%; transform: translateY(20px) scale(0.85);}
+    .section-content > h1 {
+        font-size: clamp(1.6rem, 6vw, 2.2rem) !important;
+    }
+    .section-content > p {
+        font-size: 0.95rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        line-height: 1.6 !important;
+        box-sizing: border-box !important;
+        margin: 0 auto !important;
+    }
+    .section {
+        padding: 48px 16px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
+    .section.row.first-section {padding-top: 16px !important;}
+    .section-illustration {
+        width: 100% !important;
+        max-width: 320px !important;
+        display: flex;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    #laptop, #calendar, #books {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+    }
+    #laptop {
+        width: 100% !important;
+        transform: none !important;
+    }
     .pos-1 {order: 1;}
     .pos-2 {order: 2;}
 
-
-    #clouds-topleft {left: -88vh; top: 12vh;}
-    #clouds-topright {right: -88vh; top: 12vh;}
-    #bus {width: 36vh; bottom: 10vh;}
-    #clouds-left {left: -34vh; bottom: 14vh;}
-    #clouds-right {right: -34vh; bottom: 14vh;}
-    #ground {height: calc(15vh + 1px);}
+    #clouds-topleft, #clouds-topright {display: none !important;}
+    #bus {width: 36vh; bottom: 10vh; max-width: 80vw;}
+    #clouds-left {left: -20vh; bottom: 14vh; max-width: 50vw;}
+    #clouds-right {right: -20vh; bottom: 14vh; max-width: 50vw;}
+    #ground {height: calc(15vh + 1px); width: 100%;}
 }
