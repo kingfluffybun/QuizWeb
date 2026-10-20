@@ -111,7 +111,7 @@ export default function HomeLoading() {
                     <div className="graph-y-axis">
                       {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                         <div key={day}>
-                          <div className="graph-y-bar skeleton-shimmer" />
+                          <div className="graph-y-bar skeleton-shimmer skeleton-graph-bar" />
                           <p className="skeleton-shimmer skeleton-graph-day" aria-hidden="true" />
                         </div>
                       ))}

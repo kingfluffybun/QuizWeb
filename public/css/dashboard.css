@@ -1160,6 +1160,38 @@ button.quick-action-btn:hover {
     width: 18px;
 }
 
+.skeleton-dashboard-page .graph-y-axis div > .skeleton-graph-bar {
+    background-color: transparent !important;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(1) > .skeleton-graph-bar {
+    height: 104px;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(2) > .skeleton-graph-bar {
+    height: 148px;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(3) > .skeleton-graph-bar {
+    height: 120px;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(4) > .skeleton-graph-bar {
+    height: 88px;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(5) > .skeleton-graph-bar {
+    height: 136px;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(6) > .skeleton-graph-bar {
+    height: 96px;
+}
+
+.skeleton-dashboard-page .graph-y-axis div:nth-child(7) > .skeleton-graph-bar {
+    height: 128px;
+}
+
 .skeleton-dashboard-page .skeleton-daily-progress-fill {
     position: absolute;
     left: 0;
