@@ -287,7 +287,6 @@ export default function InteractiveQuizClient({
     if (status === "assessment") {
         return (
             <div className="test-page">
-                <nav />
                 <div className="sidebar" />
                 <main>
                     <div className="main-content">
@@ -335,7 +334,7 @@ export default function InteractiveQuizClient({
 
     if (status === "finished") {
         return (
-            <div className="test-page">
+            <div className="test-page test-completion-page">
                 <main>
                     <GameOverCard
                         lives={lives}
@@ -351,7 +350,6 @@ export default function InteractiveQuizClient({
     if (hasLesson && !hasStartedQuiz) {
         return (
             <div className="test-page">
-                <nav />
                 <div className="sidebar" />
                 <main>
                     <div className="main-content">
@@ -381,7 +379,6 @@ export default function InteractiveQuizClient({
 
     return (
         <div className="test-page">
-            <nav />
             <div className="sidebar" />
             <main>
                 <div className="main-content">

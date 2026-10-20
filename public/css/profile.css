@@ -1,8 +1,8 @@
 .profile-page {
     align-items: stretch;
-    grid-template-areas: "sidebar navbar" "sidebar main";
+    grid-template-areas: "sidebar main";
     grid-template-columns: 240px minmax(0, 1fr);
-    grid-template-rows: 80px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     height: 100vh;
     height: 100dvh;
     min-height: 0;

@@ -360,10 +360,8 @@ html[data-motion="reduce"] .settings-main *::after {
 
 .settings-app-layout {
   display: grid;
-  grid-template-areas:
-    "sidebar navbar"
-    "sidebar main";
-  grid-template-rows: 80px minmax(0, 1fr);
+  grid-template-areas: "sidebar main";
+  grid-template-rows: minmax(0, 1fr);
   grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
   height: 100vh;
@@ -371,15 +369,6 @@ html[data-motion="reduce"] .settings-main *::after {
   width: 100%;
   background-color: var(--settings-bg);
   overflow: hidden;
-}
-
-.settings-app-layout > nav {
-  grid-area: navbar;
-  width: 100%;
-  background-color: var(--primary-color);
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
 .settings-app-layout > .sidebar {

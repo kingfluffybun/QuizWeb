@@ -1,24 +1,13 @@
 .dashboard-page {
     display: grid;
-    grid-template-areas:
-        "sidebar navbar"
-        "sidebar main";
-    grid-template-rows: 80px minmax(0, 1fr);
+    grid-template-areas: "sidebar main";
+    grid-template-rows: minmax(0, 1fr);
     grid-template-columns: 240px minmax(0, 1fr);
     transition: grid-template-columns 0.2s ease;
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
     background-color: var(--bg-main);
-}
-
-.dashboard-page > nav {
-    grid-area: navbar;
-    background-color: var(--primary-color);
-    width: 100%;
-    position: sticky;
-    top: 0;
-    z-index: 2;
 }
 
 .dashboard-page > .sidebar {

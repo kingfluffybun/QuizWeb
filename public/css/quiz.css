@@ -2,19 +2,12 @@
     display: grid;
     grid-template-areas:
         "sidebar main"
-        "sidebar main"
         "sidebar footer";
-    grid-template-rows: 80px 1fr clamp(140px, 2vh, 220px);
+    grid-template-rows: minmax(0, 1fr) clamp(140px, 2vh, 220px);
     grid-template-columns: 240px auto;
     transition: grid-template-columns 0.2s ease;
     min-height: 100vh;
     background-color: var(--bg-main);
-}
-
-.quiz-page nav {
-    grid-area: navbar;
-    background-color: var(--primary-color);
-    width: 100%;
 }
 
 .quiz-page main {
@@ -189,6 +182,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.quiz-page.quiz-no-footer-page {
+    grid-template-areas: "sidebar main";
+    grid-template-rows: minmax(0, 1fr);
 }
 
 .quiz-complete-card {
@@ -1252,10 +1250,8 @@
 
 
 #code-problem {
-    grid-template-areas:
-        "navbar navbar"
-        "sidebar main";
-    grid-template-rows: 80px minmax(0, 1fr);
+    grid-template-areas: "sidebar main";
+    grid-template-rows: minmax(0, 1fr);
     height: 100vh;
     height: 100dvh;
     min-height: 0;

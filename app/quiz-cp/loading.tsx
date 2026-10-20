@@ -5,7 +5,7 @@ import "#css/sidebar.css";
 
 export default function QuizCPLoading() {
   return (
-    <div className="quiz-page skeleton-quiz-cp-page" aria-busy="true" aria-label="Loading code challenge">
+    <div className="quiz-page quiz-no-footer-page skeleton-quiz-cp-page" aria-busy="true" aria-label="Loading code challenge">
       <SkeletonSidebar />
 
       <main style={{ display: "flex", flexDirection: "column", gap: 20, padding: 24, flex: 1, minWidth: 0, height: "100vh", overflow: "hidden" }}>

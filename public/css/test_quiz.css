@@ -12,10 +12,9 @@
 .test-page {
     display: grid;
     grid-template-areas:
-        "navbar navbar"
         "sidebar main"
         "sidebar footer";
-    grid-template-rows: 8vh 1fr clamp(100px, 12vh, 140px);
+    grid-template-rows: minmax(0, 1fr) clamp(100px, 12vh, 140px);
     grid-template-columns: 100px 1fr;
     min-height: 100vh;
     background-color: var(--bg-main);
@@ -24,10 +23,10 @@
         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.test-page nav {
-    grid-area: navbar;
-    background-color: var(--primary-color);
-    width: 100%;
+.test-page.test-completion-page {
+    grid-template-areas: "main";
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .test-page .sidebar {

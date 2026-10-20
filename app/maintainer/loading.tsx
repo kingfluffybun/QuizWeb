@@ -6,7 +6,7 @@ import "#css/maintainer.css";
 
 export default function MaintainerLoading() {
   return (
-    <div className="maintainer-app-layout skeleton-maintainer-layout" aria-busy="true" aria-label="Loading maintainer studio">
+    <div className="dashboard-page maintainer-page skeleton-maintainer-layout" aria-busy="true" aria-label="Loading maintainer studio">
       <SkeletonSidebar isStaff />
 
       <main className="maintainer-main">

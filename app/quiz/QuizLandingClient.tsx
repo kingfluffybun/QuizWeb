@@ -434,7 +434,7 @@ export default function QuizLandingClient({
             : "/quiz-cp";
 
         return (
-            <div className="quiz-page">
+            <div className="quiz-page quiz-no-footer-page">
                 <Sidebar />
                 <main className="quiz-completion-main">
                     <div className="quiz-complete-card">

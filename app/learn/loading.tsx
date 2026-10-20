@@ -6,7 +6,7 @@ import "#css/sidebar.css";
 
 export default function LearnLoading() {
   return (
-    <div className="quiz-page learn-page skeleton-learn-page" aria-busy="true" aria-label="Loading curriculum units">
+    <div className="quiz-page quiz-no-footer-page learn-page skeleton-learn-page" aria-busy="true" aria-label="Loading curriculum units">
       <SkeletonSidebar />
 
       <main>

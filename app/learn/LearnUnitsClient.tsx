@@ -38,7 +38,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
     }, [units, selectedSection, searchQuery]);
 
     return (
-        <div className="quiz-page learn-page">
+        <div className="quiz-page quiz-no-footer-page learn-page">
             <Sidebar />
             <main>
                 <section className="available-units" aria-labelledby="available-units-title">
@@ -138,4 +138,3 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
         </div>
     );
 }
-
