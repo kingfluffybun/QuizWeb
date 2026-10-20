@@ -667,7 +667,7 @@ export async function getAvailableUnits(): Promise<AvailableUnit[]> {
         pending_id: Number(row.pending_id),
         unit_id: Number(row.unit_id),
         unit_title: String(row.unit_title),
-        sec_num: row.sec_num ?? undefined,
+        sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
         quiz_count: Array.isArray(quizzes) ? quizzes.length : 0,
         has_coding_assessment: Boolean(unwrapCodeProblemAssessment(assessment)),
       };

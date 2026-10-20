@@ -16,8 +16,8 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
         const unique = Array.from(
             new Set(
                 units
-                    .map((u) => u.sec_num)
-                    .filter((s): s is string => Boolean(s && s.trim())),
+                    .map((u) => (u.sec_num != null ? String(u.sec_num).trim() : ""))
+                    .filter((s): s is string => Boolean(s)),
             ),
         );
         return unique.sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
@@ -26,12 +26,13 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
     const filteredUnits = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
         return units.filter((unit) => {
+            const unitSec = unit.sec_num != null ? String(unit.sec_num).trim() : "";
             const matchesSection =
-                selectedSection === "all" || unit.sec_num === selectedSection;
+                selectedSection === "all" || unitSec === selectedSection;
             const matchesSearch =
                 !q ||
                 unit.unit_title.toLowerCase().includes(q) ||
-                (unit.sec_num ? `section ${unit.sec_num}`.includes(q) : false);
+                (unitSec ? `section ${unitSec}`.toLowerCase().includes(q) : false);
             return matchesSection && matchesSearch;
         });
     }, [units, selectedSection, searchQuery]);
