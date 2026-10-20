@@ -470,6 +470,10 @@ button.quick-action-btn:hover {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    > p,
+    .daily-progress-bar-container p {
+        line-height: 1.2;
+    }
 }
 
 .daily-progress-bar {
@@ -969,10 +973,14 @@ button.quick-action-btn:hover {
 
 .skeleton-dashboard-page .skeleton-xp-label {
     width: 80px;
+    height: 1.2em;
+    line-height: 1.2;
 }
 
 .skeleton-dashboard-page .skeleton-xp-value {
     width: 40px;
+    height: 1.2em;
+    line-height: 1.2;
 }
 
 .skeleton-dashboard-page .skeleton-graph-value {
