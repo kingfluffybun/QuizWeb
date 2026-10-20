@@ -150,6 +150,13 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
     const isMaintainer = effectiveRole === "maintainer";
     const roleBadge = isAdmin ? "Admin" : isMaintainer ? "Maintainer" : null;
     const displayName = initialUsername ?? fetchedUsername ?? "Profile";
+    const profileInitial = (initialUsername ?? fetchedUsername ?? "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((namePart) => namePart.charAt(0).toUpperCase())
+        .join("");
     const displayEmail = initialEmail ?? fetchedEmail ?? null;
     const routeIcon = getRouteIcon(pathname);
 
@@ -222,7 +229,9 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 aria-expanded={isProfileMenuOpen}
                                 aria-controls="profile-menu"
                                 onClick={() => setIsProfileMenuOpen((open) => !open)}
-                            />
+                            >
+                                <span aria-hidden="true">{profileInitial}</span>
+                            </button>
                             <div
                                 className={`profile-menu${isProfileMenuOpen ? " is-open" : ""}`}
                                 id="profile-menu"
@@ -237,7 +246,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 }}
                             >
                                 <div className="profile-header">
-                                    <div className="profile-icon"></div>
+                                    <div className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></div>
                                     <div className="profile-detail">
                                         <p id="name">{displayName}</p>
                                         <p id="email">{displayEmail}</p>

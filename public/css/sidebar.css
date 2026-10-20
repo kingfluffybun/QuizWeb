@@ -35,7 +35,7 @@
             border-radius: 12px;
             padding: 16px;
             gap: 12px;
-            z-index: 999;
+            z-index: 9999;
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
@@ -104,6 +104,10 @@
     height: 40px; width: auto;
     background-color: var(--border-main);
     border-radius: 999px;
+    color: var(--text-inverse);
+    display: grid;
+    place-items: center;
+    span {font-size: 1rem; font-weight: 700;}
 }
 
 .profile-menu-toggle {
