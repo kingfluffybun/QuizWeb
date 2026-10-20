@@ -105,6 +105,7 @@ export default async function QuizPage({
                 key={unitId ?? quizId}
                 initialQuizzes={quizzesToDisplay}
                 completionDestination={source === "quiz" ? "home" : "input"}
+                unitId={selectedUnitId ?? selectedQuizId ?? undefined}
             />
         );
     }

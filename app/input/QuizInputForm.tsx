@@ -19,6 +19,11 @@ import type {
   QuizType,
   QuizMetricsData,
 } from "../actions/quiz";
+import AssessmentStepBuilder, {
+  AssessmentLivePreview,
+  createDefaultCPStep,
+} from "./AssessmentStepBuilder";
+import { unwrapCodeProblemAssessment, type CPStep } from "@/lib/cp-schema";
 
 export interface SavedLessonSlide {
   lesson_text?: string;
@@ -149,6 +154,24 @@ const getAssessmentDescription = (value: unknown): string => {
   return typeof description === "string" ? description : "";
 };
 
+const getAssessmentCPSteps = (value: unknown): CPStep[] => {
+  const unwrapped = unwrapCodeProblemAssessment(value);
+  if (unwrapped && unwrapped.steps.length > 0) {
+    return unwrapped.steps;
+  }
+  const plainSteps = getAssessmentSteps(value);
+  const expectedOut = getExpectedOutcome(value);
+  return plainSteps.map((instruction, idx) => ({
+    ...createDefaultCPStep(idx + 1),
+    instruction,
+    expectedTemplate: {
+      html: idx === plainSteps.length - 1 ? expectedOut : "",
+      css: "",
+      js: "",
+    },
+  }));
+};
+
 export default function QuizInputForm({
   categories,
   difficulties,
@@ -257,7 +280,8 @@ export default function QuizInputForm({
   const [fitbAnswer, setFitbAnswer] = useState<string>("");
   const [assessmentTitle, setAssessmentTitle] = useState("");
   const [assessmentDescription, setAssessmentDescription] = useState("");
-  const [assessmentSteps, setAssessmentSteps] = useState<string[]>([""]);
+  const [cpSteps, setCpSteps] = useState<CPStep[]>([createDefaultCPStep(1)]);
+  const assessmentSteps = cpSteps.map((s) => s.instruction);
   const [expectedOutcome, setExpectedOutcome] = useState("");
   const [previewTab, setPreviewTab] = useState<"lesson" | "assessment">("lesson");
   const [unitInputTab, setUnitInputTab] = useState<"lesson" | "assessment">("lesson");
@@ -579,16 +603,6 @@ export default function QuizInputForm({
     setCurrentLessonSlide((slideIndex) => slideIndex + 1);
   };
 
-  const handleAddAssessmentStep = () => {
-    setAssessmentSteps((steps) => [...steps, ""]);
-  };
-
-  const handleRemoveAssessmentStep = (stepIndex: number) => {
-    setAssessmentSteps((steps) =>
-      steps.length > 1 ? steps.filter((_, index) => index !== stepIndex) : steps,
-    );
-  };
-
   const handlePreviousLessonSlide = () => {
     setCurrentLessonSlide((slideIndex) => Math.max(0, slideIndex - 1));
   };
@@ -654,8 +668,8 @@ export default function QuizInputForm({
         setSelectedSecId(editingQuiz.sec_id?.toString() ?? "");
         setSelectedUnit(editingQuiz.unit?.toString() ?? "");
         setQuestionText(editingQuiz.question_text ?? "");
-        setAssessmentSteps(
-          getAssessmentSteps(
+        setCpSteps(
+          getAssessmentCPSteps(
             editingQuiz.unit_assessment ?? editingQuiz.quiz_payload?.assessment ?? "",
           ),
         );
@@ -734,7 +748,7 @@ export default function QuizInputForm({
           { left: "", right: "" },
           { left: "", right: "" },
         ]);
-        setAssessmentSteps([""]);
+        setCpSteps([createDefaultCPStep(1)]);
         setAssessmentTitle("");
         setAssessmentDescription("");
         setExpectedOutcome("");
@@ -962,7 +976,7 @@ export default function QuizInputForm({
         { left: "", right: "" },
         { left: "", right: "" },
       ]);
-      setAssessmentSteps([""]);
+      setCpSteps([createDefaultCPStep(1)]);
       setAssessmentTitle("");
       setAssessmentDescription("");
       setExpectedOutcome("");
@@ -1038,7 +1052,7 @@ export default function QuizInputForm({
       setCurrentLessonSlide(0);
       setLessonEditorView("code");
       const assessmentValue = quiz.quiz_payload?.assessment ?? "";
-      setAssessmentSteps(getAssessmentSteps(assessmentValue));
+      setCpSteps(getAssessmentCPSteps(assessmentValue));
       setAssessmentTitle(getAssessmentTitle(assessmentValue));
       setAssessmentDescription(getAssessmentDescription(assessmentValue));
       setExpectedOutcome(getExpectedOutcome(assessmentValue));
@@ -1132,6 +1146,7 @@ export default function QuizInputForm({
           description: assessmentDescription,
           assessment,
           steps: assessmentSteps,
+          cp_steps: cpSteps,
           expected_outcome: expectedOutcome,
         },
       });
@@ -1147,6 +1162,7 @@ export default function QuizInputForm({
         description: assessmentDescription,
         assessment,
         steps: assessmentSteps,
+        cp_steps: cpSteps,
         expected_outcome: expectedOutcome,
       },
     });
@@ -1214,6 +1230,7 @@ export default function QuizInputForm({
       { left: "", right: "" },
       { left: "", right: "" },
     ]);
+    setCpSteps([createDefaultCPStep(1)]);
     setOptionCount(4);
     setCpPromptCount(1);
     setMessage(null);
@@ -2735,106 +2752,24 @@ export default function QuizInputForm({
           </div>
 
           <div hidden={unitInputTab !== "assessment"}>
-          <section className="form-group assessment-editor" aria-labelledby="assessment-heading">
-            <div className="assessment-heading">
-              <h3 id="assessment-heading">Assessment</h3>
-            </div>
-            <div className="assessment-details">
-              <div className="form-group">
-                <label htmlFor="assessment-title">Assessment Title</label>
-                <input
-                  id="assessment-title"
-                  name="assessment_title"
-                  className="form-input"
-                  placeholder="Enter an assessment title."
-                  value={assessmentTitle}
-                  onChange={(event) => setAssessmentTitle(event.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="assessment-description">Assessment Description</label>
-                <textarea
-                  id="assessment-description"
-                  name="assessment_description"
-                  className="assessment-step-input"
-                  rows={3}
-                  placeholder="Describe what learners will do in this assessment."
-                  value={assessmentDescription}
-                  onChange={(event) => setAssessmentDescription(event.target.value)}
-                />
-              </div>
-            </div>
-            <div className="assessment-step-list">
-              {assessmentSteps.map((step, index) => (
-                <div className="assessment-step" key={index}>
-                  <div className="assessment-step-heading">
-                    <label htmlFor={`assessment-step-${index}`}>
-                      Step {index + 1}
-                    </label>
-                    {assessmentSteps.length > 1 && (
-                      <button
-                        type="button"
-                        className="assessment-remove"
-                        onClick={() => handleRemoveAssessmentStep(index)}
-                        title={`Remove step ${index + 1}`}
-                        aria-label={`Remove assessment step ${index + 1}`}
-                      >
-                        -
-                      </button>
-                    )}
-                  </div>
-                  <textarea
-                    id={`assessment-step-${index}`}
-                    aria-label={`Assessment step ${index + 1}`}
-                    className="assessment-step-input"
-                    rows={4}
-                    placeholder="Enter instructions here."
-                    value={step}
-                    onChange={(event) => {
-                      const text = event.target.value;
-                      setAssessmentSteps((steps) =>
-                        steps.map((currentStep, stepIndex) =>
-                          stepIndex === index ? text : currentStep,
-                        ),
-                      );
-                    }}
-                  />
-                </div>
-              ))}
-              <button
-                type="button"
-                className="assessment-add"
-                onClick={handleAddAssessmentStep}
-                title="Add assessment step"
-                aria-label="Add assessment step"
-              >
-                +
-              </button>
-            </div>
-            <input type="hidden" name="assessment" value={assessment} />
-            <input
-              type="hidden"
-              name="assessment_steps"
-              value={JSON.stringify(assessmentSteps)}
+            <AssessmentStepBuilder
+              assessmentTitle={assessmentTitle}
+              setAssessmentTitle={setAssessmentTitle}
+              assessmentDescription={assessmentDescription}
+              setAssessmentDescription={setAssessmentDescription}
+              expectedOutcome={expectedOutcome}
+              setExpectedOutcome={setExpectedOutcome}
+              cpSteps={cpSteps}
+              setCpSteps={setCpSteps}
             />
-          </section>
-          <div className="form-group assessment-outcome">
-            <label htmlFor="expected-outcome">Expected Outcome</label>
-            <textarea
-              id="expected-outcome"
-              name="expected_outcome"
-              className="assessment-step-input"
-              rows={3}
-              placeholder="Enter the expected outcome here."
-              value={expectedOutcome}
-              onChange={(event) => setExpectedOutcome(event.target.value)}
-            />
-          </div>
           </div>
 
           <div
             style={{
-              display: unitInputTab === "lesson" ? "flex" : "none",
+              display:
+                unitInputTab === "lesson" || unitInputTab === "assessment"
+                  ? "flex"
+                  : "none",
               alignItems: "center",
               gap: "10px",
               flexWrap: "wrap",
@@ -2909,35 +2844,12 @@ export default function QuizInputForm({
             />
           </div>
         ) : (
-          <div
-            className="assessment-preview lesson-preview-surface"
-          >
-            {assessmentTitle.trim() ? (
-              <h2>{assessmentTitle}</h2>
-            ) : (
-              <p className="assessment-preview-placeholder">Assessment title</p>
-            )}
-            {assessmentDescription.trim() && (
-              <p className="assessment-preview-description">{assessmentDescription}</p>
-            )}
-            {assessmentSteps.some((step) => step.trim()) ? (
-              <ol className="assessment-preview-steps">
-                {assessmentSteps
-                  .filter((step) => step.trim())
-                  .map((step, index) => <li key={index}>{step}</li>)}
-              </ol>
-            ) : (
-              <p className="assessment-preview-placeholder">
-                Assessment instructions will appear here.
-              </p>
-            )}
-            {expectedOutcome.trim() && (
-              <div className="assessment-preview-outcome">
-                <strong>Expected outcome</strong>
-                <p>{expectedOutcome}</p>
-              </div>
-            )}
-          </div>
+          <AssessmentLivePreview
+            assessmentTitle={assessmentTitle}
+            assessmentDescription={assessmentDescription}
+            expectedOutcome={expectedOutcome}
+            cpSteps={cpSteps}
+          />
         )}
       </div>
 
