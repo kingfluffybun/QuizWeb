@@ -115,20 +115,21 @@ export default async function MaintainerStudioPage() {
           initialStats={initialStats}
           initialSubmissions={initialSubmissions}
           currentUser={currentUserProfile}
-        />
-        <StaffWorkspaceTools
-          categories={workspaceMetadata.categories}
-          difficulties={workspaceMetadata.difficulties}
-          types={workspaceMetadata.types}
-          sections={workspaceMetadata.sections}
-          recentQuizzes={workspaceRecent.quizzes}
-          recentPage={workspaceRecent.currentPage}
-          recentTotalPages={workspaceRecent.totalPages}
-          recentTotalCount={workspaceRecent.totalCount}
-          metrics={workspaceMetrics}
-          pendingQuizzes={workspacePending}
-          canReview={false}
-        />
+        >
+          <StaffWorkspaceTools
+            categories={workspaceMetadata.categories}
+            difficulties={workspaceMetadata.difficulties}
+            types={workspaceMetadata.types}
+            sections={workspaceMetadata.sections}
+            recentQuizzes={workspaceRecent.quizzes}
+            recentPage={workspaceRecent.currentPage}
+            recentTotalPages={workspaceRecent.totalPages}
+            recentTotalCount={workspaceRecent.totalCount}
+            metrics={workspaceMetrics}
+            pendingQuizzes={workspacePending}
+            canReview={staff.role === "admin"}
+          />
+        </MaintainerStudioClient>
       </main>
     </div>
   );

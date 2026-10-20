@@ -23,6 +23,7 @@ import QuizPair from "./components/questions/QuizPair";
 import QuizCP from "./components/questions/QuizCP";
 import LessonCard from "@/app/components/LessonCard";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
+import { validateSingleTabTemplate } from "@/lib/cp-validator";
 import { recordUserActivity } from "@/app/actions/streak";
 import { shuffleItems } from "@/app/quiz/shuffle";
 
@@ -222,7 +223,8 @@ export default function InteractiveQuizClient({
             case "CP": {
                 const targetExpected = currentStep?.expected || (typeof payload.expected === "string" ? payload.expected : "");
                 const ansStr = typeof currentAnswer === "string" ? currentAnswer : "";
-                isCorrect = ansStr.replace(/\s+/g, "") === targetExpected.replace(/\s+/g, "");
+                const cpCheck = validateSingleTabTemplate(ansStr, targetExpected, "html");
+                isCorrect = cpCheck.passed;
 
                 if (isCorrect) {
                     if (cpStepIndex < cpSteps.length - 1) {
@@ -233,6 +235,8 @@ export default function InteractiveQuizClient({
                     } else {
                         setStepMessage(null);
                     }
+                } else {
+                    setStepMessage(cpCheck.message);
                 }
                 break;
             }

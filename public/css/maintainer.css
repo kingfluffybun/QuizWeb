@@ -2409,3 +2409,58 @@ html[data-motion="reduce"] .maintainer-page *::after {
   background: var(--maintainer-brand);
   color: #ffffff;
 }
+
+/* =============================================================================
+   STUDIO VIEW SWITCHER & ACTIVE LAUNCHER INTEGRATION
+   ============================================================================= */
+
+.maintainer-view-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--maintainer-surface-alt);
+  border: 1px solid var(--maintainer-border);
+  border-radius: var(--radius-md);
+}
+
+.maintainer-view-pill {
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--maintainer-text-muted);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--maintainer-transition);
+  white-space: nowrap;
+}
+
+.maintainer-view-pill:hover:not(.active) {
+  color: var(--maintainer-text);
+  background: var(--maintainer-surface-hover);
+}
+
+.maintainer-view-pill.active {
+  background: var(--maintainer-brand);
+  color: #ffffff;
+  box-shadow: var(--maintainer-shadow-xs);
+}
+
+.launcher-card.launcher-card-active,
+.launcher-toolcard.launcher-card-active {
+  border-color: var(--maintainer-brand);
+  box-shadow: var(--maintainer-shadow-md), 0 0 0 2px var(--maintainer-brand-glow);
+}
+
+.maintainer-embedded-workspace {
+  width: 100%;
+  min-width: 0;
+}
+
+.maintainer-embedded-workspace .staff-workspace {
+  margin-top: 0;
+}
+

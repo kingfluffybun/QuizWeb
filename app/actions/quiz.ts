@@ -4,6 +4,12 @@ import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { requireAdmin, requireStaff } from "@/lib/rbac";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import {
+  CodeProblemAssessmentSchema,
+  hasAnyNonEmptyBuffer,
+  wrapCodeProblemAssessmentForStorage,
+  type CPStep,
+} from "@/lib/cp-schema";
 
 const getAssessmentStepsFromForm = (formData: FormData): string[] | null => {
   const rawSteps = formData.get("assessment_steps");
@@ -24,6 +30,96 @@ const getAssessmentStepsFromForm = (formData: FormData): string[] | null => {
 
   const legacyAssessment = String(formData.get("assessment") ?? "").trim();
   return legacyAssessment ? [legacyAssessment] : [];
+};
+
+const buildAssessmentDocumentFromForm = (
+  formData: FormData,
+): { document: string; error?: string } => {
+  const assessmentTitle = String(formData.get("assessment_title") ?? "").trim();
+  const assessmentDescription = String(
+    formData.get("assessment_description") ?? "",
+  ).trim();
+  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
+
+  const rawCpSteps = formData.get("assessment_cp_steps");
+  if (typeof rawCpSteps === "string" && rawCpSteps.trim()) {
+    try {
+      const parsedCpSteps: unknown = JSON.parse(rawCpSteps);
+      if (Array.isArray(parsedCpSteps) && parsedCpSteps.length > 0) {
+        const activeSteps = (parsedCpSteps as CPStep[]).filter(
+          (s) =>
+            s &&
+            typeof s === "object" &&
+            (String(s.instruction ?? "").trim().length > 0 ||
+              (s.expectedTemplate && hasAnyNonEmptyBuffer(s.expectedTemplate))),
+        );
+
+        if (activeSteps.length > 0) {
+          const normalizedSteps: CPStep[] = activeSteps.map((s, idx) => ({
+            stepNumber: idx + 1,
+            instruction: String(s.instruction ?? "").trim(),
+            starterCode: {
+              html: String(s.starterCode?.html ?? ""),
+              css: String(s.starterCode?.css ?? ""),
+              js: String(s.starterCode?.js ?? ""),
+            },
+            expectedTemplate: {
+              html: String(s.expectedTemplate?.html ?? ""),
+              css: String(s.expectedTemplate?.css ?? ""),
+              js: String(s.expectedTemplate?.js ?? ""),
+            },
+            inheritPreviousCode:
+              typeof s.inheritPreviousCode === "boolean"
+                ? s.inheritPreviousCode
+                : idx > 0,
+            ...(s.hint && String(s.hint).trim()
+              ? { hint: String(s.hint).trim() }
+              : {}),
+          }));
+
+          const validation = CodeProblemAssessmentSchema.safeParse({
+            schemaVersion: 2,
+            title: assessmentTitle,
+            description: assessmentDescription,
+            steps: normalizedSteps,
+            expected_outcome: expectedOutcome,
+          });
+
+          if (!validation.success) {
+            return {
+              document: "",
+              error:
+                validation.error.issues[0]?.message ??
+                "Invalid coding assessment step configuration.",
+            };
+          }
+
+          return {
+            document: JSON.stringify(
+              wrapCodeProblemAssessmentForStorage(validation.data),
+            ),
+          };
+        }
+      }
+    } catch {
+      return { document: "", error: "Assessment coding steps JSON is malformed." };
+    }
+  }
+
+  const assessmentSteps = getAssessmentStepsFromForm(formData);
+  if (!assessmentSteps) {
+    return { document: "", error: "Assessment steps are invalid." };
+  }
+
+  return {
+    document: JSON.stringify({
+      title: assessmentTitle,
+      description: assessmentDescription,
+      assessment: assessmentSteps.join("\n\n"),
+      steps: assessmentSteps,
+      expected_outcome: expectedOutcome,
+    }),
+  };
 };
 
 export interface Category {
@@ -335,15 +431,10 @@ export async function saveUnit(_state: unknown, formData: FormData) {
           : {}),
       };
     });
-  const assessmentSteps = getAssessmentStepsFromForm(formData);
-  if (!assessmentSteps) {
-    return { error: "Assessment steps are invalid." };
+  const builtAssessment = buildAssessmentDocumentFromForm(formData);
+  if (builtAssessment.error) {
+    return { error: builtAssessment.error };
   }
-  const assessmentTitle = String(formData.get("assessment_title") ?? "").trim();
-  const assessmentDescription = String(
-    formData.get("assessment_description") ?? "",
-  ).trim();
-  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
   if (
     !lessonTitle ||
     lessonSlides.length === 0 ||
@@ -375,13 +466,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     lesson_slide: lessonSlides,
   });
   const quizDocument = JSON.stringify(parsedQuizJson);
-  const assessmentDocument = JSON.stringify({
-    title: assessmentTitle,
-    description: assessmentDescription,
-    assessment: assessmentSteps.join("\n\n"),
-    steps: assessmentSteps,
-    expected_outcome: expectedOutcome,
-  });
+  const assessmentDocument = builtAssessment.document;
   const session = await auth();
   const authorId = staff.id ? Number(staff.id) : (session?.user?.id ? Number(session.user.id) : null);
   const pendingName = (
@@ -1760,7 +1845,8 @@ export async function updatePendingUnitFromForm(
   pendingId: number,
   formData: FormData,
 ) {
-  if (!(await requireAdmin())) {
+  const staff = await requireStaff();
+  if (!staff) {
     return { error: "Unauthorized" };
   }
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
@@ -1790,15 +1876,10 @@ export async function updatePendingUnitFromForm(
           : {}),
       };
     });
-  const assessmentSteps = getAssessmentStepsFromForm(formData);
-  if (!assessmentSteps) {
-    return { error: "Assessment steps are invalid." };
+  const builtAssessment = buildAssessmentDocumentFromForm(formData);
+  if (builtAssessment.error) {
+    return { error: builtAssessment.error };
   }
-  const assessmentTitle = String(formData.get("assessment_title") ?? "").trim();
-  const assessmentDescription = String(
-    formData.get("assessment_description") ?? "",
-  ).trim();
-  const expectedOutcome = String(formData.get("expected_outcome") ?? "").trim();
   const rawQuizJson = formData.get("quiz_json");
 
   if (
@@ -1823,13 +1904,7 @@ export async function updatePendingUnitFromForm(
 
   const lessonCardJson = JSON.stringify({ lesson_slide: lessonSlides });
   const quizJson = JSON.stringify(quizzes);
-  const assessmentJson = JSON.stringify({
-    title: assessmentTitle,
-    description: assessmentDescription,
-    assessment: assessmentSteps.join("\n\n"),
-    steps: assessmentSteps,
-    expected_outcome: expectedOutcome,
-  });
+  const assessmentJson = builtAssessment.document;
 
   const connection = await db.getConnection();
   try {
@@ -1838,7 +1913,8 @@ export async function updatePendingUnitFromForm(
     const [pendingUpdate] = await connection.query<ResultSetHeader>(
       `UPDATE pending_tbl
        SET unit_title = ?, sec_id = ?, unit_lesson_card_json = ?,
-           unit_quiz_json = ?, unit_assessment_json = ?
+           unit_quiz_json = ?, unit_assessment_json = ?,
+           pending_status = CASE WHEN pending_status = 'rejected' THEN 'pending' ELSE pending_status END
        WHERE pending_id = ?`,
       [
         unitTitle,

@@ -7,7 +7,8 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
-        "db:migrate": "node scripts/migrate.mjs"
+        "db:migrate": "node scripts/migrate.mjs",
+        "test:cp": "node --experimental-strip-types tests/test-cp-engine.ts"
     },
     "dependencies": {
         "@monaco-editor/react": "^4.7.0",
@@ -21,7 +22,8 @@
         "react": "19.2.8",
         "react-dom": "19.2.8",
         "react-google-recaptcha-v3": "^1.11.0",
-        "resend": "^6.25.0"
+        "resend": "^6.25.0",
+        "zod": "^4.6.7"
     },
     "devDependencies": {
         "@types/node": "^20.19.43",
