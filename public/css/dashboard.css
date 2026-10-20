@@ -59,6 +59,12 @@
     grid-area: welcome;
     div { 
         padding: 24px;
+        min-height: 120px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
         border-radius: 12px;
         background-color: var(--primary-color);
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.08), 0px 12px 24px rgba(0, 0, 0, 0.1);
@@ -73,6 +79,14 @@
             -webkit-user-drag: none;
         }
     }
+}
+
+.welcome-banner h1 {
+    line-height: 1.2;
+}
+
+.welcome-banner p {
+    line-height: 1.4;
 }
 
 .dashboard {
@@ -800,6 +814,42 @@ button.quick-action-btn:hover {
     border-color: var(--text-muted);
 }
 
+.skeleton-dashboard-page .skeleton-welcome-title {
+    width: 265px;
+    max-width: 100%;
+    height: clamp(1.5rem, 3.9vw, 2.4rem);
+    font-size: clamp(1.25rem, 3.25vw, 2rem);
+    line-height: 1.2;
+    margin: 0;
+    border-radius: 6px;
+    display: block;
+    background: rgba(255, 255, 255, 0.28);
+    animation: none;
+}
+
+.skeleton-dashboard-page .skeleton-welcome-description {
+    width: 500px;
+    max-width: 100%;
+    height: clamp(1.05rem, 2.45vw, 1.75rem);
+    font-size: clamp(0.75rem, 1.75vw, 1.25rem);
+    line-height: 1.4;
+    margin: 0;
+    border-radius: 4px;
+    display: block;
+    background: rgba(255, 255, 255, 0.28);
+    animation: none;
+}
+
+.skeleton-dashboard-page .skeleton-welcome-art {
+    width: 180px;
+    height: 180px;
+    opacity: 0.6;
+    border-radius: 0;
+    position: absolute !important;
+    right: -8px;
+    bottom: -40px;
+}
+
 /* =============================================================================
    DASHBOARD MOBILE RESPONSIVE BREAKPOINT (< 768px)
    ============================================================================= */
@@ -823,6 +873,7 @@ button.quick-action-btn:hover {
 
     .welcome-banner > div {
         padding: 16px 14px !important;
+        min-height: 104px !important;
         border-radius: 14px !important;
     }
 
@@ -831,9 +882,28 @@ button.quick-action-btn:hover {
         line-height: 1.25 !important;
     }
 
+    .skeleton-dashboard-page .skeleton-welcome-title {
+        font-size: clamp(1.2rem, 5vw, 1.5rem);
+        height: clamp(1.5rem, 6.25vw, 1.875rem);
+        line-height: 1.25;
+    }
+
     .welcome-banner p {
         font-size: 0.85rem !important;
         line-height: 1.4 !important;
+    }
+
+    .skeleton-dashboard-page .skeleton-welcome-description {
+        font-size: 0.85rem;
+        height: 1.19rem;
+        line-height: 1.4;
+    }
+
+    .skeleton-dashboard-page .skeleton-welcome-art {
+        width: 90px;
+        height: 90px;
+        right: -4px;
+        bottom: -20px;
     }
 
     .welcome-banner .cloud-right {

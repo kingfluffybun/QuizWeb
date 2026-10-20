@@ -11,12 +11,12 @@ export default function HomeLoading() {
       <main>
         <div className="dashboard-content">
           {/* 1. Welcome Banner Skeleton */}
-          <div className="welcome-banner skeleton-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
-              <div className="skeleton-shimmer skeleton-line title" style={{ width: 280, height: 32 }} />
-              <div className="skeleton-shimmer skeleton-line" style={{ width: 340, height: 16 }} />
+          <div className="welcome-banner">
+            <div>
+              <h1 className="skeleton-welcome-title" aria-hidden="true" />
+              <p className="skeleton-welcome-description" aria-hidden="true" />
+              <span className="cloud-right skeleton-shimmer skeleton-welcome-art" aria-hidden="true" />
             </div>
-            <div className="skeleton-shimmer skeleton-circle" style={{ width: 90, height: 90, opacity: 0.6 }} />
           </div>
 
           {/* 2. Main Dashboard Cards Grid */}
