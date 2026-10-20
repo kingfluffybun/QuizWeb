@@ -236,10 +236,10 @@ html[data-motion="reduce"] .admin-main *::after {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  display: flex;
+  /* display: flex;
   flex-direction: column;
   gap: 28px;
-  padding: 0;
+  padding: 0; */
 }
 
 .admin-dashboard-container {
@@ -278,7 +278,7 @@ html[data-motion="reduce"] .admin-main *::after {
   font-family: 'Poppins', sans-serif;
   font-size: clamp(1.8rem, 2.5vw, 2.2rem);
   font-weight: 700;
-  color: var(--admin-text-main);
+  color: var(--admin-text-inverse);
   margin: 0;
   letter-spacing: -0.02em;
   display: flex;
@@ -290,7 +290,7 @@ html[data-motion="reduce"] .admin-main *::after {
 .admin-app-layout .admin-header p,
 .admin-header-titles p {
   font-size: 0.95rem;
-  color: var(--admin-text-muted);
+  color: var(--admin-text-inverse);
   margin: 0;
 }
 
