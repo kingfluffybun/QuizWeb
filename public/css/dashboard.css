@@ -969,7 +969,8 @@ button.quick-action-btn:hover {
 
 .skeleton-dashboard-page .skeleton-leaderboard-filter {
     width: 44px;
-    height: 1em;
+    height: 1.2em;
+    margin: 0;
 }
 
 .skeleton-dashboard-page .skeleton-podium-avatar {
@@ -1402,6 +1403,10 @@ button.quick-action-btn:hover {
 
     .podium {
         gap: 8px !important;
+    }
+
+    .skeleton-dashboard-page .leaderboard .podium {
+        margin-top: 5px;
     }
 
     .podium-place {

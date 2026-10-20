@@ -197,7 +197,7 @@ export default function HomeLoading() {
                 <div className="sort-by-time skeleton-leaderboard-filters">
                   {[1, 2, 3, 4].map((filter) => (
                     <label key={filter} aria-hidden="true">
-                      <span className="skeleton-shimmer skeleton-leaderboard-filter" />
+                      <p className="skeleton-shimmer skeleton-leaderboard-filter" />
                     </label>
                   ))}
                 </div>
