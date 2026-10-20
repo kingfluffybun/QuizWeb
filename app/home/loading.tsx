@@ -23,7 +23,7 @@ export default function HomeLoading() {
           <div className="dashboard">
             <div className="two-col-card">
               {/* Lesson Progress Card */}
-              <div className="card">
+              <div className="card skeleton-lesson-progress-card">
                 <div className="card-title">
                   <h2 className="skeleton-shimmer skeleton-lesson-title" aria-hidden="true" />
                   <h2 className="quick-action skeleton-shimmer skeleton-lesson-action" aria-hidden="true" />

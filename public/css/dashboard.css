@@ -862,6 +862,10 @@ button.quick-action-btn:hover {
     bottom: -40px;
 }
 
+.skeleton-dashboard-page .skeleton-lesson-progress-card {
+    min-height: 365px;
+}
+
 .skeleton-dashboard-page .skeleton-lesson-title,
 .skeleton-dashboard-page .skeleton-lesson-action,
 .skeleton-dashboard-page .skeleton-section-title,
