@@ -658,14 +658,6 @@ export default function QuizInputForm({
       return;
     }
 
-    if (queuedQuizzes.length >= 9) {
-      setMessage({
-        type: "error",
-        text: "A unit can hold up to 10 quizzes.",
-      });
-      return;
-    }
-
     const wasPendingUnit = editingQuiz?._pendingUnit;
     const pendingId = editingQuiz?.pending_id;
     const resolvedUnitAssessment = editingQuiz?.unit_assessment;
@@ -705,7 +697,7 @@ export default function QuizInputForm({
 
     const queueMessage = {
       type: "success",
-      text: `Quiz added to unit (${queuedQuizzes.length + 2}/10).`,
+      text: `Quiz added to unit (${queuedQuizzes.length + 2}).`,
     } as const;
     setMessage(queueMessage);
     window.setTimeout(() => {
@@ -3100,11 +3092,9 @@ export default function QuizInputForm({
                       type="button"
                       className="btn-primary queue-button queue-add-button"
                       onClick={handleAddToUnitQueue}
-                      disabled={isPending || queuedQuizzes.length >= 9}
+                      disabled={isPending}
                     >
-                      {queuedQuizzes.length >= 9
-                        ? "Unit Full (10/10)"
-                        : `+ Add Quiz (${queuedQuizzes.length + 1}/10)`}
+                      + Add Quiz
                     </button>
                   </div>
                 </div>
@@ -3117,7 +3107,7 @@ export default function QuizInputForm({
                   onClick={handleAddToUnitQueue}
                   disabled={isPending}
                 >
-                  Add Quiz (1/10)
+                  Add Quiz
                 </button>
               </div>
             )}

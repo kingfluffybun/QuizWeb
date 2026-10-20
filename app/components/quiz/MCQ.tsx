@@ -14,7 +14,15 @@ export default function MCQ ({ quiz, value, onChange, disabled = false }: Questi
             {options.map((option, index) => (
                 <label
                     key={option}
-                    className={selected === index ? "selected" : ""}
+                    className={[
+                        selected === index ? "selected" : "",
+                        disabled && selected === index && index === quiz.quiz_payload.correct_index
+                            ? "answer-correct"
+                            : "",
+                        disabled && selected === index && index !== quiz.quiz_payload.correct_index
+                            ? "answer-incorrect"
+                            : "",
+                    ].filter(Boolean).join(" ")}
                 >
                 <input
                     type="radio"

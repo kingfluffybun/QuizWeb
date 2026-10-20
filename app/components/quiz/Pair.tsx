@@ -34,7 +34,9 @@ export default function PairQuestion({
     const completePair = (left: string, right: string) => {
         if (correctPairs[left] === right) {
             const nextLeft = [...matchedLeft, left];
-            onPairMatched?.();
+            if (nextLeft.length < pairs.length) {
+                onPairMatched?.();
+            }
             setMatchedLeft(nextLeft);
             setMatchedRight((current) => [...current, right]);
             reportProgress(nextLeft);

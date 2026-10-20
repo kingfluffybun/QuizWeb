@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useEffectEvent } from "react";
 import "#css/quiz.css";
 import "#css/nav.css";
 import "#css/sidebar.css"
@@ -20,6 +20,7 @@ type AnswerResult = {
     correct: boolean;
     message: string;
     correctAnswer: string;
+    skipped?: boolean;
 };
 
 type SavedQuestionProgress = {
@@ -71,6 +72,21 @@ function getAnswer(quiz: QuizData) {
                 || "No answer available";
         default:
             return "No answer available";
+    }
+}
+
+function getCorrectValue(quiz: QuizData): AnswerValue {
+    switch (quiz.type_name) {
+        case "MCQ":
+            return quiz.quiz_payload.correct_index;
+        case "FITB":
+            return quiz.quiz_payload.answer ?? "";
+        case "Order":
+            return quiz.quiz_payload.items ?? [];
+        case "Pair":
+            return quiz.quiz_payload.pairs?.length ?? 0;
+        default:
+            return undefined;
     }
 }
 
@@ -176,40 +192,38 @@ export default function QuizLandingClient({
         ? lessonSlideIndex
         : (hasLesson ? lessonSlides.length : 0) + currentIndex;
 
-    const resetState = () => {
-        setValue(undefined);
-        setResult(null);
-    };
-
     const nextQuiz = () => {
         if (lives <= 0 || currentIndex >= quizzes.length - 1) {
             setIsFinished(true);
             return;
         }
 
-        setLessonSlideIndex(0);
-        setCurrentIndex((index) => index + 1);
-        resetState();
+        const nextIndex = currentIndex + 1;
+        const savedProgress = questionProgress[nextIndex];
+        setCurrentIndex(nextIndex);
+        setValue(savedProgress?.value);
+        setResult(savedProgress?.result ?? null);
     };
 
-    const previousQuiz = () => {
-        if (currentIndex > 0) {
-            const previousIndex = currentIndex - 1;
-            const savedProgress = questionProgress[previousIndex];
-            setCurrentIndex(previousIndex);
-            setValue(savedProgress?.value);
-            setResult(savedProgress?.result ?? null);
-            setLessonSlideIndex(0);
+    const handleBack = () => {
+        if (isShowingLesson) {
+            setLessonSlideIndex((index) => Math.max(0, index - 1));
             return;
         }
 
-        if (hasLesson && hasStartedQuiz) {
-            setHasStartedQuiz(false);
-            setLessonSlideIndex(lessonSlides.length - 1);
-            const savedProgress = questionProgress[0];
-            setValue(savedProgress?.value);
-            setResult(savedProgress?.result ?? null);
+        if (currentIndex === 0) {
+            if (hasLesson) {
+                setHasStartedQuiz(false);
+                setLessonSlideIndex(lessonSlides.length - 1);
+            }
+            return;
         }
+
+        const previousIndex = currentIndex - 1;
+        const savedProgress = questionProgress[previousIndex];
+        setCurrentIndex(previousIndex);
+        setValue(savedProgress?.value);
+        setResult(savedProgress?.result ?? null);
     };
 
     const continueQuiz = () => {
@@ -221,6 +235,25 @@ export default function QuizLandingClient({
             playQuizSound("lesson-complete");
         }
         nextQuiz();
+    };
+
+    const skipQuestion = () => {
+        if (!quiz || result || questionProgress[currentIndex]) return;
+
+        const skippedValue = getCorrectValue(quiz);
+        const skippedResult: AnswerResult = {
+            correct: false,
+            skipped: true,
+            message: "Skipped question",
+            correctAnswer: getAnswer(quiz),
+        };
+        setValue(skippedValue);
+        setQuestionProgress((progress) => ({
+            ...progress,
+            [currentIndex]: { value: skippedValue, result: skippedResult },
+        }));
+        setResult(skippedResult);
+        playQuizSound("skipped-answer");
     };
 
     const submitAnswer = () => {
@@ -269,16 +302,64 @@ export default function QuizLandingClient({
         }
     };
 
-    const handleQuestionKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
-            event.preventDefault();
-            if (result) {
-                continueQuiz();
-            } else {
-                submitAnswer();
-            }
+    const handleEnter = useEffectEvent(() => {
+        if (result) {
+            continueQuiz();
+        } else {
+            submitAnswer();
         }
-    };
+    });
+
+    useEffect(() => {
+        const handleMcqKeyDown = (event: KeyboardEvent) => {
+            if (
+                event.key === "Enter" &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey
+            ) {
+                const target = event.target;
+                if (
+                    target instanceof HTMLElement &&
+                    (target.isContentEditable ||
+                        target.closest("button, a, select, input:not([type='radio'])"))
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+                handleEnter();
+                return;
+            }
+
+            if (
+                quiz?.type_name !== "MCQ" ||
+                result ||
+                event.ctrlKey ||
+                event.metaKey ||
+                event.altKey ||
+                !/^[1-5]$/.test(event.key) ||
+                Number(event.key) > (quiz.quiz_payload.options?.length ?? 0)
+            ) {
+                return;
+            }
+
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                (target.isContentEditable ||
+                    target.closest("textarea, select, input:not([type='radio'])"))
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+            setValue(Number(event.key) - 1);
+        };
+
+        window.addEventListener("keydown", handleMcqKeyDown);
+        return () => window.removeEventListener("keydown", handleMcqKeyDown);
+    }, [quiz, result]);
 
     const isPairIncomplete = quiz?.type_name === "Pair"
         && value !== (quiz.quiz_payload.pairs?.length ?? 0);
@@ -396,10 +477,25 @@ export default function QuizLandingClient({
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#EE5555" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart-icon lucide-heart"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>
                         </div>
                     </div>
-                    <div className="progress-container">
-                        {Array.from({ length: totalProgressItems }, (_, index) => (
-                            <div key={index} className={index <= activeProgressIndex ? "active" : ""} />
-                        ))}
+                    <div className="quiz-progress-row">
+                        <button
+                            type="button"
+                            className="quiz-progress-back"
+                            onClick={handleBack}
+                            disabled={isShowingLesson ? lessonSlideIndex === 0 : currentIndex === 0 && !hasLesson}
+                            aria-label={isShowingLesson
+                                ? "Back to previous lesson slide"
+                                : currentIndex === 0 && hasLesson
+                                    ? "Back to lesson"
+                                    : "Back to previous question"}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left preview-icon"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <div className="progress-container">
+                            {Array.from({ length: totalProgressItems }, (_, index) => (
+                                <div key={index} className={index <= activeProgressIndex ? "active" : ""} />
+                            ))}
+                        </div>
                     </div>
                     {accessibilityOpen && (
                         <AccessibilityPanel
@@ -421,7 +517,7 @@ export default function QuizLandingClient({
                             showControls={false}
                         />
                     ) : (
-                        <div className="quiz-container" key={quiz?.quiz_id} onKeyDown={handleQuestionKeyDown}>
+                        <div className="quiz-container" key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}>
                             <h1>{quiz?.question_text ?? "Loading question..."}</h1>
                             {quiz && (
                                 <QuizRender
@@ -438,7 +534,7 @@ export default function QuizLandingClient({
                 </div>
             </main>
 
-            <footer className={result ? (result.correct ? "correct" : "incorrect") : ""}>
+            <footer className={!isShowingLesson && result ? (result.correct ? "correct" : "incorrect") : ""}>
                 <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
                     {/* dito sa div yung message */}
                     {hasLesson && !hasStartedQuiz ? (
@@ -482,16 +578,19 @@ export default function QuizLandingClient({
                             )}
                         </div>
                     ) : <><div className="answer-message row">
-                        <div className="answer-message-icon col">
-                            <svg xmlns="http://www.w3.org/2000/svg" id="wrong" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                            <svg xmlns="http://www.w3.org/2000/svg" id="correct" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+                        <div
+                            key={result ? `${currentIndex}-${result.correct}` : "answer-pending"}
+                            className="answer-message-icon col"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" id="wrong" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" id="correct" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
                         </div>
                         <div id="answer-message-text">
                             <h2>{result?.message}</h2>
-                            {!result?.correct && result && <p><b>Correct Answer:</b> {result.correctAnswer}</p>}
+                            {(!result?.correct || result.skipped) && result && <p><b>Correct Answer:</b> {result.correctAnswer}</p>}
                         </div>
                     </div>
-                    <button className="options" id="skip" onClick={previousQuiz} disabled={!quiz || (currentIndex === 0 && !hasLesson)} > Previous </button>
+                    <button className="options" id="skip" onClick={skipQuestion} disabled={!quiz || Boolean(result)} > Skip </button>
                     <button className="options" id="submit" onClick={result ? continueQuiz : submitAnswer} disabled={!quiz || (!result && isAnswerIncomplete)} > {result ? "Continue" : "Submit"} </button></>}
                 </div>
             </footer>

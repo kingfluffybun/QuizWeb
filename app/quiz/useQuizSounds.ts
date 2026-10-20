@@ -7,6 +7,7 @@ export type QuizSound =
     | "correct-answer2"
     | "correct-answer3"
     | "wrong-answer"
+    | "skipped-answer"
     | "lesson-complete";
 
 const soundFiles: QuizSound[] = [
@@ -14,6 +15,7 @@ const soundFiles: QuizSound[] = [
     "correct-answer2",
     "correct-answer3",
     "wrong-answer",
+    "skipped-answer",
     "lesson-complete",
 ];
 
