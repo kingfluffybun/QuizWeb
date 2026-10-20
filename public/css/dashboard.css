@@ -163,6 +163,10 @@
     justify-content: space-between;
 }
 
+.lesson-progress-details > .row h1 {
+    line-height: 1.2;
+}
+
 .lesson-progress-bar, .unit-progress-bar {
     display: flex;
     height: 16px;
@@ -176,10 +180,13 @@
     h2 {text-wrap: nowrap; margin-bottom: 0; line-height: 1.2;}
     p {line-height: 1.4;}
     .language-icon {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
         aspect-ratio: 1;
         border-radius: 8px;
         background-color: hsl(260, 100%, 70%, 10%);
-        svg {aspect-ratio: 1; width: 28px; height: auto; fill: var(--primary-color);}
+        svg {width: 28px; height: 28px; flex: 0 0 28px; fill: var(--primary-color);}
     }
 }
 
@@ -882,6 +889,7 @@ button.quick-action-btn:hover {
 .skeleton-dashboard-page .skeleton-language-mark {
     width: 28px;
     height: 28px;
+    flex: 0 0 28px;
 }
 
 .skeleton-dashboard-page .skeleton-lesson-copy {
@@ -904,7 +912,8 @@ button.quick-action-btn:hover {
 
 .skeleton-dashboard-page .skeleton-lesson-percent {
     width: 45px;
-    min-height: 1.2em;
+    height: 1.2em;
+    line-height: 1.2;
 }
 
 .skeleton-dashboard-page .skeleton-unit-number {
