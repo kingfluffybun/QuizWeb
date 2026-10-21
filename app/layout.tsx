@@ -7,6 +7,8 @@ import "@/public/css/skeleton.css";
 import AccessibilityInit from "@/app/components/AccessibilityInit";
 import MobileShell from "@/app/components/MobileShell";
 import "@/public/css/mobile-shell.css";
+import { SessionProvider } from "next-auth/react";
+import { auth } from "@/auth";
 
 const poppins = Poppins({
     variable: "--font-poppins",
@@ -54,11 +56,12 @@ const themeInitScript = `
 })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const session = await auth();
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
@@ -66,11 +69,13 @@ export default function RootLayout({
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
             </head>
             <body className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
+                <SessionProvider>
                 <AccessibilityInit />
                 <MobileShell>{children}</MobileShell>
                 <Script id="theme-init" strategy="beforeInteractive">
                     {themeInitScript}
                 </Script>
+                </SessionProvider>
             </body>
         </html>
     )
