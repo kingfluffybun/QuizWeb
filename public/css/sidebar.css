@@ -385,6 +385,9 @@
     .sidebar {
         display: none !important;
     }
+    .skeleton-sidebar {
+        display: none !important;
+    }
 
     /* Suppress desktop navbar header to prevent duplicate headers with MobileShell */
     .dashboard-page > nav,
