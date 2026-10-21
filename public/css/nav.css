@@ -195,6 +195,7 @@
     z-index: 1;
     width: min(100%, 680px);
     max-height: calc(100dvh - 3rem);
+    overflow-x: hidden;
     overflow-y: auto;
     transform: translateY(-50%);
     animation: accessibility-panel-rise 260ms ease-in-out both;

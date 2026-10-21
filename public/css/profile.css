@@ -905,3 +905,226 @@
         height: 34px;
     }
 }
+
+.profile-skeleton .profile-skeleton-heading,
+.profile-skeleton .profile-skeleton-subheading,
+.profile-skeleton .profile-skeleton-name,
+.profile-skeleton .profile-skeleton-handle,
+.profile-skeleton .profile-skeleton-joined,
+.profile-skeleton .profile-skeleton-stat-heading,
+.profile-skeleton .profile-skeleton-stat-heading-icon,
+.profile-skeleton .profile-skeleton-stat-value,
+.profile-skeleton .profile-skeleton-stat-label,
+.profile-skeleton .profile-skeleton-stat-note,
+.profile-skeleton .profile-skeleton-panel-icon,
+.profile-skeleton .profile-skeleton-panel-title,
+.profile-skeleton .profile-skeleton-edit,
+.profile-skeleton .profile-skeleton-activity-icon,
+.profile-skeleton .profile-skeleton-activity-title,
+.profile-skeleton .profile-skeleton-flame,
+.profile-skeleton .profile-skeleton-streak-count,
+.profile-skeleton .profile-skeleton-streak-label,
+.profile-skeleton .profile-skeleton-streak-description,
+.profile-skeleton .profile-skeleton-day,
+.profile-skeleton .profile-skeleton-day-name,
+.profile-skeleton .profile-skeleton-goal-label,
+.profile-skeleton .profile-skeleton-goal-percent,
+.profile-skeleton .profile-skeleton-goal-caption,
+.profile-skeleton .profile-skeleton-link,
+.profile-skeleton .profile-skeleton-details span {
+    display: block;
+}
+
+.profile-skeleton .profile-content {
+    align-self: stretch;
+    padding-top: 6px;
+}
+
+.profile-skeleton .profile-skeleton-heading {
+    width: 180px;
+    height: 1.25em;
+    margin: 0;
+}
+
+.profile-skeleton .profile-skeleton-subheading {
+    width: 260px;
+    max-width: 100%;
+    height: 1em;
+    margin: 8px 0 0;
+}
+
+.profile-skeleton .profile-hero {
+    isolation: isolate;
+    align-self: stretch;
+    width: 100%;
+    max-width: none;
+}
+
+.profile-skeleton .profile-skeleton-avatar {
+    background: linear-gradient(90deg, rgba(255, 255, 255, .28) 20%, rgba(255, 255, 255, .56) 50%, rgba(255, 255, 255, .28) 80%);
+    background-size: 200% 100%;
+}
+
+.profile-skeleton .profile-skeleton-name {
+    width: 180px;
+    max-width: 100%;
+    height: 1.3em;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .2) 20%, rgba(255, 255, 255, .48) 50%, rgba(255, 255, 255, .2) 80%);
+    background-size: 200% 100%;
+}
+
+.profile-skeleton .profile-skeleton-handle {
+    width: 130px;
+    height: .9em;
+    margin-top: 8px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .2) 20%, rgba(255, 255, 255, .48) 50%, rgba(255, 255, 255, .2) 80%);
+    background-size: 200% 100%;
+}
+
+.profile-skeleton .profile-skeleton-joined {
+    width: 120px;
+    height: .8em;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .2) 20%, rgba(255, 255, 255, .48) 50%, rgba(255, 255, 255, .2) 80%);
+    background-size: 200% 100%;
+}
+
+.profile-skeleton .profile-skeleton-stat-heading-icon {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+}
+
+.profile-skeleton .profile-skeleton-stat-heading {
+    width: 110px;
+    height: 1.2em;
+}
+
+.profile-skeleton .profile-skeleton-stat-icon {
+    border-radius: 13px;
+}
+
+.profile-skeleton .profile-skeleton-stat-value {
+    width: 70px;
+    height: 1.2em;
+}
+
+.profile-skeleton .profile-skeleton-stat-label {
+    width: 95px;
+    max-width: 100%;
+    height: .9em;
+}
+
+.profile-skeleton .profile-skeleton-stat-note {
+    width: 60px;
+    height: .8em;
+    margin-left: auto;
+}
+
+.profile-skeleton .profile-skeleton-panel-icon,
+.profile-skeleton .profile-skeleton-activity-icon {
+    flex: 0 0 40px;
+}
+
+.profile-skeleton .profile-skeleton-panel-title {
+    width: 120px;
+    height: 1.2em;
+}
+
+.profile-skeleton .profile-skeleton-edit {
+    pointer-events: none;
+}
+
+.profile-skeleton-details {
+    margin-top: 12px;
+}
+
+.profile-skeleton .profile-skeleton-details dt span {
+    width: 88px;
+    height: 1em;
+}
+
+.profile-skeleton .profile-skeleton-details dd span {
+    width: 130px;
+    max-width: 45vw;
+    height: 1em;
+}
+
+.profile-skeleton .profile-skeleton-link {
+    width: 92px;
+    height: .9em;
+    margin-top: 14px;
+}
+
+.profile-skeleton .profile-skeleton-activity-title {
+    width: 92px;
+    height: 1.2em;
+}
+
+.profile-skeleton .profile-skeleton-flame {
+    flex: 0 0 84px;
+    width: 84px;
+    height: 96px;
+    border-radius: 42% 58% 55% 45%;
+}
+
+.profile-skeleton .profile-skeleton-streak-count {
+    width: 48px;
+    height: 1.1em;
+}
+
+.profile-skeleton .profile-skeleton-streak-label {
+    width: 92px;
+    height: .9em;
+}
+
+.profile-skeleton .profile-skeleton-streak-description {
+    width: 220px;
+    max-width: 100%;
+    height: .8em;
+    margin-top: 8px;
+}
+
+.profile-skeleton .profile-skeleton-day {
+    border-color: transparent;
+}
+
+.profile-skeleton .profile-skeleton-day-name {
+    width: 12px;
+    height: .8em;
+}
+
+.profile-skeleton .profile-skeleton-goal-label {
+    width: 130px;
+    height: .9em;
+}
+
+.profile-skeleton .profile-skeleton-goal-percent {
+    width: 32px;
+    height: .9em;
+}
+
+.profile-skeleton .profile-skeleton-goal-fill {
+    width: 57%;
+    background: var(--primary-color);
+    opacity: .55;
+}
+
+.profile-skeleton .profile-skeleton-goal-caption {
+    width: 180px;
+    max-width: 100%;
+    height: .8em;
+    margin-top: 7px;
+}
+
+@media (max-width: 768px) {
+    .profile-skeleton .profile-skeleton-avatar {
+        flex-basis: 72px;
+    }
+
+    .profile-skeleton .profile-skeleton-flame {
+        flex-basis: 64px;
+        width: 64px;
+        height: 76px;
+    }
+}
