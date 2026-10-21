@@ -487,10 +487,6 @@
     pointer-events: none;
 }
 
-.lesson-slide-layer.is-exiting .lesson-code-frame-controls {
-    visibility: hidden;
-}
-
 .lesson-slide-layer.is-exiting.is-backward {
     animation-name: lesson-slide-exit-right;
 }
