@@ -331,9 +331,6 @@ export default function MaintainerStudioClient({
               {currentUser.role === "admin" ? "Admin Staff" : "Maintainer"}
             </span>
           </div>
-          <p>
-            Welcome, <strong>{currentUser.name}</strong>. Author curriculum units, multi-step coding assessments, track review status, and resubmit rejected items in one unified workspace.
-          </p>
         </div>
         <div className="maintainer-header-actions">
           <div className="maintainer-view-switcher" role="tablist" aria-label="Maintainer studio layout view">
