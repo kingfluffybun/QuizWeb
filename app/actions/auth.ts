@@ -9,7 +9,7 @@ import { sendEmail } from "@/lib/email";
 import { auth, signOut } from "@/auth";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
-export const AVATAR_COLOR_PALETTE = [
+const AVATAR_COLOR_PALETTE = [
     "#FFB3BA", 
     "#FFBFB3", 
     "#FFCBB3", 
