@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { signOutAction } from "@/app/actions/auth";
 
@@ -119,31 +120,23 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
     const currentPageIconRef = useRef<HTMLDivElement>(null);
     const currentPageTitleRef = useRef<HTMLHeadingElement>(null);
     const profileContainerRef = useRef<HTMLDivElement>(null);
+    const { data: session, status } = useSession();
 
     useEffect(() => {
         if (initialRole !== undefined && initialUsername !== undefined && initialEmail !== undefined) return;
-        let isMounted = true;
-        fetch("/api/auth/session")
-            .then((res) => (res.ok ? res.json() : null))
-            .then((session) => {
-                if (!isMounted || !session?.user) return;
-                if (initialRole === undefined) {
-                    setFetchedRole(session.user.role || session.user.user_role || "user");
-                }
-                if (initialUsername === undefined && session.user.name) {
-                    setFetchedUsername(session.user.name);
-                }
-                if (initialEmail === undefined && session.user.email) {
-                    setFetchedEmail(session.user.email);
-                }
-            })
-            .catch(() => {
-                // Silently fallback to unauthenticated/user default
-            });
-        return () => {
-            isMounted = false;
-        };
-    }, [initialEmail, initialRole, initialUsername]);
+        
+        if (status === "loading" || !session?.user) return;
+
+        if (initialRole === undefined) {
+            setFetchedRole(session.user.role || session.user.user_role || "user");
+        }
+        if (initialUsername === undefined && session.user.name) {
+            setFetchedUsername(session.user.name);
+        }
+        if (initialEmail === undefined && session.user.email) {
+            setFetchedEmail(session.user.email);
+        }
+    },[session, status, initialEmail, initialRole, initialUsername])
 
     const effectiveRole = initialRole ?? fetchedRole ?? "user";
     const isAdmin = effectiveRole === "admin";
