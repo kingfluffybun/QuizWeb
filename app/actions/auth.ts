@@ -36,7 +36,7 @@ export const AVATAR_COLOR_PALETTE = [
     "#FFB8C6"
 ] as const;
 
-export function getRandomPaletteColor(): string {
+function getRandomPaletteColor(): string {
     const randomIndex = Math.floor(Math.random() * AVATAR_COLOR_PALETTE.length);
     return AVATAR_COLOR_PALETTE[randomIndex];
 }
@@ -413,7 +413,6 @@ export async function verifyEmail(token: string) {
 
         // Create acc
         const avatarColor = getRandomPaletteColor();
-        console.log("Random Color selected ", avatarColor)
         const [authResult] =
             await connection.query<ResultSetHeader>(
                 `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role, avatar_color) VALUES (?, ?, ?, ?, ?)`,
