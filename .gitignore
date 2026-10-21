@@ -31,6 +31,9 @@
 *.pem
 .agents/
 tests/
+!tests/
+tests/*
+!tests/test-assessment-json-import.ts
 
 # debug
 npm-debug.log*

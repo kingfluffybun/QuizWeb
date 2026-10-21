@@ -43,6 +43,12 @@ export default function PublicNav({ session: initialSession }: PublicNavProps) {
     setAccessibilityClosing(false);
   };
 
+  const getProfileInitial = (name?: string | null, email?: string | null): string => {
+    const fullName = name || email || "";
+    const cleanName = fullName.trim();
+    return cleanName.split(/\s+/)[0]?.charAt(0).toUpperCase() || "P";
+  };
+
   return (
     <nav className={`public-nav${menuOpen ? " menu-open" : ""}`}>
       <div className="col" id="logo-nav">
@@ -83,7 +89,9 @@ export default function PublicNav({ session: initialSession }: PublicNavProps) {
         </div>
         <div>
             {session?.user ? (
-                <Link href="/home"><p>Dashboard</p></Link>
+                <Link href="/home">
+                    <p className="profile">{getProfileInitial(session.user.name, session.user.email)}</p>
+                </Link>
             ) : (
                 <Link href="/login"><p>Get Started</p></Link>
             )}

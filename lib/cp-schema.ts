@@ -96,6 +96,65 @@ export const CodeProblemAssessmentSchema = z
 
 export type CodeProblemAssessment = z.infer<typeof CodeProblemAssessmentSchema>;
 
+const ImportTextSchema = z.string().refine((value) => value.trim().length > 0, {
+  message: "Text is required.",
+});
+
+const ImportFileBuffersSchema = z.strictObject({
+  html: z.string(),
+  css: z.string(),
+  js: z.string(),
+});
+
+const ImportCPStepSchema = z
+  .strictObject({
+    stepNumber: z.number().int().min(1),
+    instruction: ImportTextSchema,
+    starterCode: ImportFileBuffersSchema,
+    expectedTemplate: ImportFileBuffersSchema,
+    inheritPreviousCode: z.boolean(),
+    hint: z.string().optional(),
+  })
+  .superRefine((step, ctx) => {
+    if (!hasAnyNonEmptyBuffer(step.expectedTemplate)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["expectedTemplate"],
+        message: `Step ${step.stepNumber}: At least one tab (index.html, style.css, or script.js) must have a non-empty expected template.`,
+      });
+    }
+
+    for (const key of CP_FILE_KEYS) {
+      if (step.expectedTemplate[key].includes("########")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["expectedTemplate", key],
+          message: `Step ${step.stepNumber} (${CP_FILE_LABELS[key]}): Adjacent '########' wildcards are ambiguous; separate wildcards with literal tokens.`,
+        });
+      }
+    }
+  });
+
+export const CodeProblemAssessmentImportSchema = z
+  .strictObject({
+    schemaVersion: z.literal(2),
+    title: z.string(),
+    description: z.string(),
+    steps: z.array(ImportCPStepSchema).min(1).max(20),
+    expected_outcome: z.string(),
+  })
+  .superRefine((assessment, ctx) => {
+    assessment.steps.forEach((step, index) => {
+      if (step.stepNumber !== index + 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["steps", index, "stepNumber"],
+          message: `Step numbers must be sequential (expected ${index + 1}, got ${step.stepNumber}).`,
+        });
+      }
+    });
+  });
+
 /**
  * Public step payload hydrated to the browser in `/quiz-cp`.
  * Strictly omits `expectedTemplate` so answers are never leaked to the network tab.

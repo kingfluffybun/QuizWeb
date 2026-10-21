@@ -12,6 +12,11 @@ import {
   wrapCodeProblemAssessmentForStorage,
   type CPStep,
 } from "@/lib/cp-schema";
+import {
+  parseAssessmentBulkImport,
+  quizPayloadMatchesType,
+  type AssessmentBulkImport,
+} from "@/lib/assessment-json-import";
 
 function revalidateQuizPaths() {
   try {
@@ -115,6 +120,7 @@ const buildAssessmentDocumentFromForm = (
                 validation.error.issues[0]?.message ??
                 "Invalid coding assessment step configuration.",
             };
+
           }
 
           return {
@@ -144,6 +150,113 @@ const buildAssessmentDocumentFromForm = (
     }),
   };
 };
+
+function readAssessmentBulkImport(
+  formData: FormData,
+): { data: AssessmentBulkImport | null; error?: string } {
+  const rawImport = formData.get("assessment_bulk_import");
+  if (rawImport === null) return { data: null };
+  if (typeof rawImport !== "string") {
+    return { data: null, error: "Bulk assessment JSON must be text." };
+  }
+
+  const result = parseAssessmentBulkImport(rawImport);
+  return result.success
+    ? { data: result.data }
+    : { data: null, error: result.errors.join(" | ") };
+}
+
+function serializeImportedAssessment(
+  assessment: AssessmentBulkImport["unit_assessment_json"],
+): string {
+  const instructions = assessment.steps.map((step) => step.instruction);
+  const lastStep = assessment.steps[assessment.steps.length - 1];
+  const expectedOutcome =
+    assessment.expected_outcome ||
+    lastStep.expectedTemplate.html ||
+    lastStep.expectedTemplate.css ||
+    lastStep.expectedTemplate.js;
+
+  return JSON.stringify({
+    schemaVersion: 2,
+    title: assessment.title,
+    description: assessment.description,
+    assessment: instructions.join("\n\n"),
+    steps: instructions,
+    cp_steps: assessment.steps,
+    expected_outcome: expectedOutcome,
+  });
+}
+
+async function validateImportedQuestionReferences(
+  connection: Awaited<ReturnType<typeof db.getConnection>>,
+  bulkImport: AssessmentBulkImport,
+  unitSectionId: number,
+): Promise<string | null> {
+  const questions = bulkImport.unit_quiz_json;
+  const categoryIds = [...new Set(questions.map((question) => question.cat_id))];
+  const difficultyIds = [
+    ...new Set(questions.map((question) => question.difficulty_id)),
+  ];
+  const typeIds = [...new Set(questions.map((question) => question.quiz_type_id))];
+  const sectionIds = [
+    ...new Set([
+      unitSectionId,
+      ...questions.flatMap((question) =>
+        question.sec_id == null ? [] : [question.sec_id],
+      ),
+    ]),
+  ];
+
+  const selectByIds = async (table: string, column: string, ids: number[]) => {
+    const placeholders = ids.map(() => "?").join(", ");
+    const [rows] = await connection.query<RowDataPacket[]>(
+      `SELECT ${column} FROM ${table} WHERE ${column} IN (${placeholders})`,
+      ids,
+    );
+    return new Set(rows.map((row) => Number(row[column])));
+  };
+
+  const [categories, difficulties, typeRows, sections] = await Promise.all([
+    selectByIds("cat_tbl", "cat_id", categoryIds),
+    selectByIds("difficulty_tbl", "difficulty_id", difficultyIds),
+    connection
+      .query<RowDataPacket[]>(
+        `SELECT quiz_type_id, type_name
+         FROM quiz_type_tbl
+         WHERE quiz_type_id IN (${typeIds.map(() => "?").join(", ")})`,
+        typeIds,
+      )
+      .then(([rows]) => rows),
+    selectByIds("sec_tbl", "sec_id", sectionIds),
+  ]);
+
+  if (categories.size !== categoryIds.length) {
+    return "Bulk import contains an unknown category ID.";
+  }
+  if (difficulties.size !== difficultyIds.length) {
+    return "Bulk import contains an unknown difficulty ID.";
+  }
+  if (sections.size !== sectionIds.length) {
+    return "Bulk import contains an unknown section ID.";
+  }
+
+  const typeNames = new Map(
+    typeRows.map((row) => [Number(row.quiz_type_id), String(row.type_name)]),
+  );
+  if (typeNames.size !== typeIds.length) {
+    return "Bulk import contains an unknown quiz type ID.";
+  }
+  for (let index = 0; index < questions.length; index++) {
+    const question = questions[index];
+    const typeName = typeNames.get(question.quiz_type_id);
+    if (!typeName || !quizPayloadMatchesType(typeName, question.quiz_payload)) {
+      return `Question ${index + 1} payload does not match its quiz type.`;
+    }
+  }
+
+  return null;
+}
 
 export interface Category {
   cat_id: number;
@@ -425,7 +538,8 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   }
 
   const sectionId = formData.get("sec_id") ?? formData.get("unit_sec_id");
-  if (!sectionId) {
+  const sectionIdNumber = Number(sectionId);
+  if (!Number.isInteger(sectionIdNumber) || sectionIdNumber < 1) {
     return { error: "A valid Section ID is required." };
   }
 
@@ -454,8 +568,14 @@ export async function saveUnit(_state: unknown, formData: FormData) {
           : {}),
       };
     });
-  const builtAssessment = buildAssessmentDocumentFromForm(formData);
-  if (builtAssessment.error) {
+  const imported = readAssessmentBulkImport(formData);
+  if (imported.error) {
+    return { error: `Bulk import is invalid: ${imported.error}` };
+  }
+  const builtAssessment = imported.data
+    ? { document: serializeImportedAssessment(imported.data.unit_assessment_json) }
+    : buildAssessmentDocumentFromForm(formData);
+  if ("error" in builtAssessment && builtAssessment.error) {
     return { error: builtAssessment.error };
   }
   if (
@@ -469,17 +589,24 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   }
 
   const rawQuizJson = formData.get("quiz_json");
-  const parsedQuizJson = (() => {
+  let parsedQuizJson: unknown[];
+  if (imported.data) {
+    parsedQuizJson = imported.data.unit_quiz_json;
+  } else {
     if (typeof rawQuizJson !== "string" || !rawQuizJson.trim()) {
-      return [];
+      return { error: "At least one quiz is required before submitting the unit." };
     }
+    let candidate: unknown;
     try {
-      const value = JSON.parse(rawQuizJson);
-      return Array.isArray(value) ? value : [];
+      candidate = JSON.parse(rawQuizJson);
     } catch {
-      return [];
+      return { error: "Queued quiz data is malformed JSON." };
     }
-  })();
+    if (!Array.isArray(candidate)) {
+      return { error: "Queued quiz data must be a JSON array." };
+    }
+    parsedQuizJson = candidate;
+  }
 
   if (parsedQuizJson.length === 0) {
     return { error: "At least one quiz is required before submitting the unit." };
@@ -499,15 +626,29 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     "Contributor"
   ).slice(0, 50);
 
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query<ResultSetHeader>(
+    await connection.beginTransaction();
+    if (imported.data) {
+      const referenceError = await validateImportedQuestionReferences(
+        connection,
+        imported.data,
+        sectionIdNumber,
+      );
+      if (referenceError) {
+        await connection.rollback();
+        return { error: referenceError };
+      }
+    }
+
+    const [result] = await connection.query<ResultSetHeader>(
       `INSERT INTO pending_tbl
        (unit_title, sec_id, unit_lesson_card_json, unit_quiz_json,
         unit_assessment_json, pending_status, pending_note, pending_name, author_id)
              VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
       [
         lessonTitle,
-        sectionId,
+        sectionIdNumber,
         lessonDocument,
         quizDocument,
         assessmentDocument,
@@ -516,6 +657,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
         authorId,
       ],
     );
+    await connection.commit();
 
     return {
       success: true,
@@ -524,8 +666,11 @@ export async function saveUnit(_state: unknown, formData: FormData) {
       message: "Unit submitted for review.",
     };
   } catch (error) {
+    await connection.rollback();
     console.error("Failed to submit unit for review:", error);
     return { error: "An error occurred while submitting the unit for review." };
+  } finally {
+    connection.release();
   }
 }
 
@@ -2094,6 +2239,7 @@ export async function updatePendingUnitFromForm(
   }
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
   const sectionId = formData.get("sec_id");
+  const sectionIdNumber = Number(sectionId);
   const lessonSlides = Array.from(formData.entries())
     .filter(([name]) => /^lesson_text_\d+$/.test(name))
     .sort(
@@ -2119,8 +2265,14 @@ export async function updatePendingUnitFromForm(
           : {}),
       };
     });
-  const builtAssessment = buildAssessmentDocumentFromForm(formData);
-  if (builtAssessment.error) {
+  const imported = readAssessmentBulkImport(formData);
+  if (imported.error) {
+    return { error: `Bulk import is invalid: ${imported.error}` };
+  }
+  const builtAssessment = imported.data
+    ? { document: serializeImportedAssessment(imported.data.unit_assessment_json) }
+    : buildAssessmentDocumentFromForm(formData);
+  if ("error" in builtAssessment && builtAssessment.error) {
     return { error: builtAssessment.error };
   }
   const rawQuizJson = formData.get("quiz_json");
@@ -2128,7 +2280,8 @@ export async function updatePendingUnitFromForm(
   if (
     !pendingId ||
     !unitTitle ||
-    !sectionId ||
+    !Number.isInteger(sectionIdNumber) ||
+    sectionIdNumber < 1 ||
     lessonSlides.length === 0 ||
     lessonSlides.some((slide) => !slide.lesson_text)
   ) {
@@ -2136,10 +2289,20 @@ export async function updatePendingUnitFromForm(
   }
 
   let quizzes: unknown[];
-  try {
-    quizzes = typeof rawQuizJson === "string" ? JSON.parse(rawQuizJson) : [];
-  } catch {
-    return { error: "The queued quiz data is invalid." };
+  if (imported.data) {
+    quizzes = imported.data.unit_quiz_json;
+  } else {
+    let candidate: unknown;
+    try {
+      candidate =
+        typeof rawQuizJson === "string" ? JSON.parse(rawQuizJson) : null;
+    } catch {
+      return { error: "The queued quiz data is malformed JSON." };
+    }
+    if (!Array.isArray(candidate)) {
+      return { error: "Queued quiz data must be a JSON array." };
+    }
+    quizzes = candidate;
   }
   if (!Array.isArray(quizzes) || quizzes.length === 0) {
     return { error: "At least one quiz is required for the unit." };
@@ -2152,6 +2315,17 @@ export async function updatePendingUnitFromForm(
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+    if (imported.data) {
+      const referenceError = await validateImportedQuestionReferences(
+        connection,
+        imported.data,
+        sectionIdNumber,
+      );
+      if (referenceError) {
+        await connection.rollback();
+        return { error: referenceError };
+      }
+    }
 
     const [pendingUpdate] = await connection.query<ResultSetHeader>(
       `UPDATE pending_tbl
@@ -2161,7 +2335,7 @@ export async function updatePendingUnitFromForm(
        WHERE pending_id = ?`,
       [
         unitTitle,
-        sectionId,
+        sectionIdNumber,
         lessonCardJson,
         quizJson,
         assessmentJson,
@@ -2185,7 +2359,7 @@ export async function updatePendingUnitFromForm(
            WHERE unit_id = ?`,
           [
             unitTitle,
-            sectionId,
+            sectionIdNumber,
             lessonCardJson,
             quizJson,
             assessmentJson,
@@ -2208,7 +2382,7 @@ export async function updatePendingUnitFromForm(
            WHERE unit_id = ?`,
           [
             unitTitle,
-            sectionId,
+            sectionIdNumber,
             lessonCardJson,
             quizJson,
             assessmentJson,
@@ -2225,7 +2399,7 @@ export async function updatePendingUnitFromForm(
            WHERE a.unit_id = ?`,
           [
             unitTitle,
-            sectionId,
+            sectionIdNumber,
             lessonCardJson,
             quizJson,
             assessmentJson,

@@ -190,7 +190,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
 
-                    <Leaderboard initialEntries={initialLeaderboardEntries} />
+                    <Leaderboard initialEntries={initialLeaderboardEntries} maxEntries={8} />
                 </div>
             </main>
             

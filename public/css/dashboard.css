@@ -897,8 +897,13 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     margin: 0;
     border-radius: 6px;
     display: block;
-    background: rgba(255, 255, 255, 0.28);
-    animation: none;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.48) 50%,
+        rgba(255, 255, 255, 0.2) 80%
+    );
+    background-size: 200% 100%;
 }
 
 .skeleton-dashboard-page .skeleton-welcome-description {
@@ -910,8 +915,13 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     margin: 0;
     border-radius: 4px;
     display: block;
-    background: rgba(255, 255, 255, 0.28);
-    animation: none;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.48) 50%,
+        rgba(255, 255, 255, 0.2) 80%
+    );
+    background-size: 200% 100%;
 }
 
 .skeleton-dashboard-page .skeleton-welcome-art {
@@ -1312,9 +1322,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
 
     .welcome-banner .cloud-right {
         opacity: 0.25 !important;
-        max-width: 90px !important;
         right: -4px !important;
-        bottom: -20px !important;
     }
 
     .dashboard {
