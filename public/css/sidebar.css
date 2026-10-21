@@ -90,7 +90,10 @@
         font-size: clamp(0.5rem, 1.5vw, 1rem);
         text-wrap: nowrap;
     }
-    &:hover {background-color:var(--border-main);}
+    &:hover {
+        background-color:var(--border-main);
+        p, svg {color: var(--text-main) !important;}
+    }
 }
 
 .profile-logout {
