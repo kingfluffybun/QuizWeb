@@ -5,16 +5,14 @@ import {
   CP_FILE_KEYS,
   CP_FILE_LABELS,
   createEmptyFileBuffers,
-  type CodeProblemAssessment,
   type CPFileBuffers,
   type CPFileKey,
   type CPStep,
 } from "@/lib/cp-schema";
 import {
-  EXAMPLE_HTML_SKELETON_DSL,
-  parseCPMarkdownDsl,
-  serializeCPToMarkdownDsl,
-} from "@/lib/cp-dsl-parser";
+  parseAssessmentBulkImport,
+  type AssessmentBulkImport,
+} from "@/lib/assessment-json-import";
 import {
   validateCodeProblemStep,
   type StepValidationResult,
@@ -48,6 +46,7 @@ interface AssessmentStepBuilderProps {
   setCpSteps: React.Dispatch<React.SetStateAction<CPStep[]>>;
   expectedOutcome: string;
   setExpectedOutcome: (val: string) => void;
+  onImport: (value: AssessmentBulkImport) => string[];
 }
 
 export default function AssessmentStepBuilder({
@@ -59,13 +58,14 @@ export default function AssessmentStepBuilder({
   setCpSteps,
   expectedOutcome,
   setExpectedOutcome,
+  onImport,
 }: AssessmentStepBuilderProps) {
-  const [authoringMode, setAuthoringMode] = useState<"visual" | "dsl">("visual");
+  const [authoringMode, setAuthoringMode] = useState<"visual" | "json">("visual");
   const [activeFileTabByStep, setActiveFileTabByStep] = useState<
     Record<number, CPFileKey>
   >({});
-  const [dslText, setDslText] = useState<string>("");
-  const [dslMessage, setDslMessage] = useState<{
+  const [jsonText, setJsonText] = useState<string>("");
+  const [jsonMessage, setJsonMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
@@ -167,36 +167,32 @@ export default function AssessmentStepBuilder({
     });
   };
 
-  const handleSwitchToDsl = () => {
-    const currentAssessment: CodeProblemAssessment = {
-      schemaVersion: 2,
-      title: assessmentTitle,
-      description: assessmentDescription,
-      steps: cpSteps,
-      expected_outcome: expectedOutcome,
-    };
-    setDslText(serializeCPToMarkdownDsl(currentAssessment));
-    setDslMessage(null);
-    setAuthoringMode("dsl");
-  };
-
-  const handleApplyDsl = (sourceDsl = dslText) => {
-    const result = parseCPMarkdownDsl(sourceDsl);
-    if (!result.success || !result.data) {
-      setDslMessage({
+  const handleApplyJson = (sourceJson = jsonText) => {
+    const result = parseAssessmentBulkImport(sourceJson);
+    if (!result.success) {
+      setJsonMessage({
         type: "error",
         text: result.errors.join(" | "),
       });
       return;
     }
 
-    setAssessmentTitle(result.data.title);
-    setAssessmentDescription(result.data.description);
-    setCpSteps(result.data.steps);
-    setExpectedOutcome(result.data.expected_outcome);
-    setDslMessage({
+    const importErrors = onImport(result.data);
+    if (importErrors.length > 0) {
+      setJsonMessage({
+        type: "error",
+        text: importErrors.join(" | "),
+      });
+      return;
+    }
+
+    setAssessmentTitle(result.data.unit_assessment_json.title);
+    setAssessmentDescription(result.data.unit_assessment_json.description);
+    setCpSteps(result.data.unit_assessment_json.steps);
+    setExpectedOutcome(result.data.unit_assessment_json.expected_outcome);
+    setJsonMessage({
       type: "success",
-      text: `Parsed ${result.data.steps.length} progressive step(s) into the Step Builder!`,
+      text: `Imported the assessment and ${result.data.unit_quiz_json.length} question(s).`,
     });
     setAuthoringMode("visual");
   };
@@ -231,26 +227,29 @@ export default function AssessmentStepBuilder({
             </button>
             <button
               type="button"
-              className={`preview-tab${authoringMode === "dsl" ? " active" : ""}`}
-              onClick={handleSwitchToDsl}
+              className={`preview-tab${authoringMode === "json" ? " active" : ""}`}
+              onClick={() => {
+                setJsonMessage(null);
+                setAuthoringMode("json");
+              }}
               style={{ fontSize: "0.82rem", padding: "6px 12px" }}
             >
-              Bulk Markdown DSL Import
+              Bulk JSON Import
             </button>
           </div>
         </div>
 
-        {dslMessage && (
+        {jsonMessage && (
           <div
-            className={`status-message status-${dslMessage.type}`}
-            role={dslMessage.type === "error" ? "alert" : "status"}
+            className={`status-message status-${jsonMessage.type}`}
+            role={jsonMessage.type === "error" ? "alert" : "status"}
             style={{ marginBottom: "12px" }}
           >
-            {dslMessage.text}
+            {jsonMessage.text}
           </div>
         )}
 
-        {authoringMode === "dsl" ? (
+        {authoringMode === "json" ? (
           <div
             style={{
               display: "flex",
@@ -272,39 +271,52 @@ export default function AssessmentStepBuilder({
               }}
             >
               <span style={{ fontSize: "0.85rem", color: "#475569" }}>
-                Author steps in plain text using <code># Step N</code>,{" "}
-                <code>@instruction:</code>, and{" "}
-                <code>```expected:html</code> blocks. Use <code>####</code> for
-                wildcards.
+                Paste JSON with <code>unit_assessment_json</code> and{" "}
+                <code>unit_quiz_json</code>. JSON strings preserve line breaks
+                and code exactly; encode line breaks as <code>\n</code>.
               </span>
-              <button
-                type="button"
-                className="btn-metrics-action"
-                onClick={() => {
-                  setDslText(EXAMPLE_HTML_SKELETON_DSL);
-                  setDslMessage(null);
-                }}
-                style={{ fontSize: "0.8rem", padding: "5px 10px" }}
-              >
-                Load HTML Skeleton Example
-              </button>
             </div>
             <textarea
-              aria-label="Markdown DSL input"
+              aria-label="Bulk JSON import"
               className="form-textarea"
               rows={16}
               style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.86rem" }}
-              value={dslText}
-              onChange={(e) => setDslText(e.target.value)}
-              placeholder={EXAMPLE_HTML_SKELETON_DSL}
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+              placeholder={`{
+  "unit_assessment_json": {
+    "schemaVersion": 2,
+    "title": "Assessment title",
+    "description": "Assessment description",
+    "steps": [{
+      "stepNumber": 1,
+      "instruction": "Describe the task",
+      "starterCode": { "html": "", "css": "", "js": "" },
+      "expectedTemplate": { "html": "<h1>####</h1>", "css": "", "js": "" },
+      "inheritPreviousCode": false
+    }],
+    "expected_outcome": "<h1>Example</h1>"
+  },
+  "unit_quiz_json": [{
+    "cat_id": 1,
+    "sec_id": 1,
+    "difficulty_id": 1,
+    "quiz_type_id": 1,
+    "question_text": "Question text",
+    "quiz_payload": {
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_index": 0
+    }
+  }]
+}`}
             />
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button
                 type="button"
                 className="btn-primary"
-                onClick={() => handleApplyDsl(dslText)}
+                onClick={() => handleApplyJson(jsonText)}
               >
-                Parse &amp; Apply to Step Builder
+                Validate &amp; Apply JSON
               </button>
             </div>
           </div>
@@ -666,12 +678,6 @@ export default function AssessmentStepBuilder({
           name="assessment_cp_steps"
           value={JSON.stringify(cpSteps)}
         />
-        {authoringMode === "dsl" && (
-          <>
-            <input type="hidden" name="assessment_title" value={assessmentTitle} />
-            <input type="hidden" name="assessment_description" value={assessmentDescription} />
-          </>
-        )}
       </section>
 
       <div className="form-group assessment-outcome">
