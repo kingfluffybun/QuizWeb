@@ -723,12 +723,12 @@
     > svg, p {pointer-events: none;}
     
     /* For draggables */
-    &:hover {
+    /* &:hover {
         /* transform: translateY(-2px);  */
         /* border-color: var(--selected-color);  */
         /* background-color: var(--selected-background-color); 
-        > p, svg {color: var(--selected-color);} */
-    }
+        > p, svg {color: var(--selected-color);} 
+    } */
     &:active {
         border-color: var(--selected-color); 
         background-color: var(--selected-background-color);

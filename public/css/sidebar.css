@@ -68,7 +68,9 @@
 .profile-detail {
     display: flex;
     flex-direction: column;
-    #name, #email {white-space: nowrap;}
+    flex: 1;
+    min-width: 0;
+    #name, #email {white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
     #name {color: var(--text-main); font-size: clamp(0.5rem, 1.50vw, 1rem);}
     #email {color: var(--text-muted); font-size: clamp(0.25rem, 1.25vw, 0.75rem);}
 }
@@ -104,6 +106,7 @@
 .profile-icon {
     aspect-ratio: 1;
     height: 40px; width: auto;
+    flex: 0 0 40px;
     background-color: var(--primary-color);
     border-radius: 999px;
     color: var(--text-inverse);
@@ -115,6 +118,7 @@
 .profile-menu-toggle {
     display: flex;
     align-items: center;
+    position: relative;
     gap: 12px;
     width: 100%;
     padding: 8px;
@@ -129,6 +133,10 @@
     &:hover {
         background-color: var(--border-main);
     }
+    > svg {
+        flex: 0 0 24px;
+    }
+    /* svg {position: absolute; right: 4px;} */
 }
 
 .profile-menu-toggle:focus-visible {
@@ -344,6 +352,15 @@
 
     .toggle-sidebar {
         cursor: pointer;
+    }
+
+    .profile-menu-toggle {
+        justify-content: center;
+        padding: 0;
+        > .profile-detail,
+        > svg {
+            display: none;
+        }
     }
 
     .logo {
