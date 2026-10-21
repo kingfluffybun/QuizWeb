@@ -6,7 +6,9 @@
     grid-template-rows: minmax(0, 1fr) clamp(140px, 2vh, 220px);
     grid-template-columns: 240px auto;
     transition: grid-template-columns 0.2s ease;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     background-color: var(--bg-main);
 }
 
@@ -18,6 +20,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 48px 0;
     gap: 16px;
     
@@ -475,7 +480,6 @@
 
 .lesson-slide-layer.is-entering {
     animation: lesson-slide-enter-right 300ms ease-out both;
-    animation-delay: 200ms;
 }
 
 .lesson-slide-layer.is-entering.is-backward {
@@ -485,10 +489,6 @@
 .lesson-slide-layer.is-exiting {
     animation: lesson-slide-exit-left 300ms ease-in both;
     pointer-events: none;
-}
-
-.lesson-slide-layer.is-exiting .lesson-code-frame-controls {
-    visibility: hidden;
 }
 
 .lesson-slide-layer.is-exiting.is-backward {
@@ -569,7 +569,6 @@
     width: 100%;
     padding: 12px 0;
     /* kailangan naka set talaga as white (hindi var(--bg-card)) */
-    section, iframe {pointer-events: none; user-select: none;}
     iframe {background-color: #fff; outline: 1px solid var(--border-main);}
 }
 
@@ -634,7 +633,6 @@
     height: 100%;
     overflow: hidden;
     border-radius: 0 0 8px 8px;
-    pointer-events: none;
     user-select: none;
     margin-top: -2px;
 }

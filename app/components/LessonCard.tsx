@@ -35,8 +35,20 @@ export function LessonCodeFrame({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const cleanupFrameObservers = useRef<(() => void) | null>(null);
   const editorResizeFrame = useRef<number | null>(null);
+  const editorContentSizeListener = useRef<{ dispose: () => void } | null>(null);
+  const editorWindowResizeListener = useRef<(() => void) | null>(null);
   const [view, setView] = useState<"code" | "result">("code");
   const [editorHeight, setEditorHeight] = useState(180);
+  const [editorFontSize, setEditorFontSize] = useState(16);
+
+  useEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 768px)");
+    const updateFontSize = () => setEditorFontSize(mobileQuery.matches ? 12 : 16);
+
+    updateFontSize();
+    mobileQuery.addEventListener("change", updateFontSize);
+    return () => mobileQuery.removeEventListener("change", updateFontSize);
+  }, []);
 
   const cancelEditorResize = () => {
     if (editorResizeFrame.current !== null) {
@@ -90,6 +102,10 @@ export function LessonCodeFrame({
 
   useEffect(() => () => {
     cleanupFrameObservers.current?.();
+    editorContentSizeListener.current?.dispose();
+    if (editorWindowResizeListener.current) {
+      window.removeEventListener("resize", editorWindowResizeListener.current);
+    }
     cancelEditorResize();
   }, []);
 
@@ -120,25 +136,27 @@ export function LessonCodeFrame({
             const updateHeight = () => {
               cancelEditorResize();
               editorResizeFrame.current = window.requestAnimationFrame(() => {
-                editorResizeFrame.current = window.requestAnimationFrame(() => {
-                  editorResizeFrame.current = null;
-                  if (!editor.getDomNode()?.isConnected || editor.getLayoutInfo().width === 0) return;
-                  setEditorHeight(Math.max(0, editor.getContentHeight()));
-                });
+                editorResizeFrame.current = null;
+                if (!editor.getDomNode()?.isConnected || editor.getLayoutInfo().width === 0) return;
+
+                const maxHeight = Math.max(180, Math.min(360, window.innerHeight * 0.4));
+                setEditorHeight(Math.max(180, Math.min(editor.getContentHeight(), maxHeight)));
               });
             };
 
+            editorContentSizeListener.current = editor.onDidContentSizeChange(updateHeight);
+            editorWindowResizeListener.current = updateHeight;
+            window.addEventListener("resize", updateHeight);
             updateHeight();
-            editor.onDidContentSizeChange(updateHeight);
           }}
           options={{
             readOnly: true,
-            fontSize: 18,
+            fontSize: editorFontSize,
             padding: { top: 24, bottom: 24 },
             minimap: { enabled: false },
             lineNumbers: "on",
             scrollBeyondLastLine: false,
-            wordWrap: "on",
+            wordWrap: "off",
             renderLineHighlight: 'none',
           }}
         />
