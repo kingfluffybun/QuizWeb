@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Sidebar from "@/app/components/Sidebar";
+import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
 import "#css/quiz.css";
 import "#css/nav.css";
 import "#css/sidebar.css";
@@ -68,6 +69,7 @@ const passwordRules = [
 const passwordStrengthColors = ["#333333", "#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
 
 export default function ProfilePage() {
+    const [isProfileLoaded, setIsProfileLoaded] = useState(false);
     const [profile, setProfile] = useState<ProfileDetails>(defaultProfile);
     const [draft, setDraft] = useState<ProfileDetails>(defaultProfile);
     const [isEditing, setIsEditing] = useState(false);
@@ -77,16 +79,29 @@ export default function ProfilePage() {
     const [newPassword, setNewPassword] = useState("");
 
     useEffect(() => {
-        try {
-            const savedProfile = localStorage.getItem("quizweb-profile-details");
-            if (!savedProfile) return;
-            const parsedProfile = JSON.parse(savedProfile) as Partial<ProfileDetails>;
-            const loadedProfile = { ...defaultProfile, ...parsedProfile };
-            setProfile(loadedProfile);
-            setDraft(loadedProfile);
-        } catch {
-            localStorage.removeItem("quizweb-profile-details");
-        }
+        let isMounted = true;
+        const loadProfile = async () => {
+            await Promise.resolve();
+            try {
+                const savedProfile = localStorage.getItem("quizweb-profile-details");
+                if (savedProfile) {
+                    const parsedProfile = JSON.parse(savedProfile) as Partial<ProfileDetails>;
+                    const loadedProfile = { ...defaultProfile, ...parsedProfile };
+                    if (isMounted) {
+                        setProfile(loadedProfile);
+                        setDraft(loadedProfile);
+                    }
+                }
+            } catch {
+                localStorage.removeItem("quizweb-profile-details");
+            } finally {
+                if (isMounted) setIsProfileLoaded(true);
+            }
+        };
+        void loadProfile();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     const handleSave = (event: FormEvent<HTMLFormElement>) => {
@@ -144,6 +159,10 @@ export default function ProfilePage() {
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase() ?? "")
         .join("");
+
+    if (!isProfileLoaded) {
+        return <ProfileSkeleton />;
+    }
 
     return (
         <div className="quiz-page profile-page">
