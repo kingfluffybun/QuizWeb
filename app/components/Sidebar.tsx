@@ -245,11 +245,11 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
 
                             <p>Learn</p>
                         </Link>
-                        <div className="sidebar-option">
+                        <Link href="/cheat-sheet" className={`sidebar-option${isRouteActive(pathname, ["/cheat-sheet"]) ? " active" : ""}`}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-notebook-text"><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9.5 8h5"/><path d="M9.5 12H16"/><path d="M9.5 16H14"/></svg>
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"> <path d="M18 1.5C19.3807 1.5 20.5 2.61929 20.5 4V20C20.5 21.3807 19.3807 22.5 18 22.5H6C4.61929 22.5 3.5 21.3807 3.5 20V18.5H6V17.5H3.5V14.5H6V13.5H3.5V10.5H6V9.5H3.5V6.5H6V5.5H3.5V4C3.5 2.61929 4.61929 1.5 6 1.5H18ZM9.5 15.5V16.5H14V15.5H9.5ZM9.5 12.5H16V11.5H9.5V12.5ZM9.5 8.5H14.5V7.5H9.5V8.5Z" fill="currentColor"/> </svg>
                             <p>Cheat Sheet {/* <span className="sidebar-coming-soon">Soon</span> */} </p>
-                        </div>
+                        </Link>
                         <Link
                             href="/test"
                             aria-current={isRouteActive(pathname, ["/test"]) ? "page" : undefined}
