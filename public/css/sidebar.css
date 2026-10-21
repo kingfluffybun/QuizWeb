@@ -136,6 +136,12 @@
     > svg {
         flex: 0 0 24px;
     }
+    > .lucide-chevron-up {
+        transition: transform 200ms ease;
+    }
+    &[aria-expanded="true"] > .lucide-chevron-up {
+        transform: rotate(180deg);
+    }
     /* svg {position: absolute; right: 4px;} */
 }
 
