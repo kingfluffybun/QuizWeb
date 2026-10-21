@@ -123,6 +123,22 @@
     min-width: 0;
 }
 
+.quiz-progress-row > .quiz-progress-bar {
+    display: block;
+    height: 12px;
+    overflow: hidden;
+    border-radius: 1000px;
+    background-color: var(--border-main);
+}
+
+.quiz-progress-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--primary-color);
+    transition: width 300ms ease;
+}
+
 .quiz-page .quiz-navigation > .quiz-close-button:hover,
 .quiz-page .quiz-navigation > .quiz-settings-button:hover,
 .quiz-progress-back:not(:disabled):hover {
@@ -235,7 +251,7 @@
 
 .quiz-page .available-units {
     width: 100%;
-    max-width: 1080px;
+    max-width: 1440px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -330,6 +346,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-direction: column;
     gap: 16px;
     padding: 16px;
     background: var(--bg-card);
@@ -470,6 +487,10 @@
     pointer-events: none;
 }
 
+.lesson-slide-layer.is-exiting .lesson-code-frame-controls {
+    visibility: hidden;
+}
+
 .lesson-slide-layer.is-exiting.is-backward {
     animation-name: lesson-slide-exit-right;
 }
@@ -525,7 +546,7 @@
     text-align: left;
     white-space: pre-wrap;
     line-height: 1.5;
-    font-size: clamp(1rem, 2vw, 1.5rem);
+    text-align: justify;
 }
 
 .lesson-card .lesson-slide-title {

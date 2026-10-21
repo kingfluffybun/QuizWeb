@@ -534,10 +534,27 @@ export default function QuizLandingClient({
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left preview-icon"><path d="m15 18-6-6 6-6"/></svg>
                         </button>
-                        <div className="progress-container">
-                            {Array.from({ length: totalProgressItems }, (_, index) => (
-                                <div key={index} className={index <= activeProgressIndex ? "active" : ""} />
-                            ))}
+                        <div
+                            className="progress-container quiz-progress-bar"
+                            role="progressbar"
+                            aria-label="Quiz progress"
+                            aria-valuemin={0}
+                            aria-valuemax={Math.max(totalProgressItems, 1)}
+                            aria-valuenow={Math.min(activeProgressIndex + 1, totalProgressItems)}
+                            aria-valuetext={
+                                totalProgressItems > 0
+                                    ? `Item ${Math.min(activeProgressIndex + 1, totalProgressItems)} of ${totalProgressItems}`
+                                    : "No progress items"
+                            }
+                        >
+                            <span
+                                className="quiz-progress-bar-fill"
+                                style={{
+                                    width: `${totalProgressItems > 0
+                                        ? Math.min(100, ((activeProgressIndex + 1) / totalProgressItems) * 100)
+                                        : 0}%`,
+                                }}
+                            />
                         </div>
                     </div>
                     {accessibilityOpen && (
