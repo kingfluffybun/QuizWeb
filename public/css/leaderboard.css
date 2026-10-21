@@ -56,25 +56,26 @@
 }
 
 .leaderboard-page .leaderboard .podium {
+    --podium-first-color: var(--primary-color);
+    --podium-second-color: #b895fe;
+    --podium-third-color: #d5c0fe;
     position: relative;
     width: 100%;
     max-width: 1080px;
     min-width: 0;
     margin-inline: auto;
-    padding-top: 48px;
+    padding-top: 60px;
     .podium-place {
-        &#first-place {height: 228px; background-color: var(--primary-color);}
-        &#second-place {height: 188px; background-color: #b895fe;}
-        &#third-place {height: 148px; background-color: #d5c0fe;}
+        &#first-place {height: 228px; background-color: var(--podium-first-color);}
+        &#second-place {height: 188px; background-color: var(--podium-second-color);}
+        &#third-place {height: 148px; background-color: var(--podium-third-color);}
         h1 {font-size: clamp(3rem, 5vw, 3.75rem);}
     }
 }
 
 [data-theme="dark"] .leaderboard-page .leaderboard .podium {
-    .podium-place {
-        &#second-place {background-color: #8055ba;}
-        &#third-place {background-color: #60438e;}
-    }
+    --podium-second-color: #8055ba;
+    --podium-third-color: #60438e;
 }
 
 .leaderboard-page .leaderboard .podium-stage::before {

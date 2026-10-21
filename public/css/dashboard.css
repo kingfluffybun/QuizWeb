@@ -587,9 +587,13 @@ button.quick-action-btn:hover {
 }
 
 .podium {
+    --podium-first-color: var(--primary-color);
+    --podium-second-color: #b895fe;
+    --podium-third-color: #d5c0fe;
     display: flex;
     align-items: flex-end;
     gap: 12px;
+    padding-top: 36px;
     .podium-place-container {
         display: flex;
         flex-direction: column;
@@ -616,29 +620,55 @@ button.quick-action-btn:hover {
                 background-color: var(--primary-color);
                 p {color: var(--text-inverse); font-size: clamp(0.25rem, 1.25vw, 0.75rem); text-wrap: nowrap;}
             }
+            .crown, .medal {
+                position: absolute;
+                top: -24px;           
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+        }
+        &.first-place .player-icon {
+            border-color: var(--podium-first-color);
+            .crown {color: var(--podium-first-color);}
+            .podium-player-xp {background-color: var(--podium-first-color);}
+        }
+        &.second-place .player-icon {
+            border-color: var(--podium-second-color);
+            .medal {color: var(--podium-second-color);}
+            .podium-player-xp {background-color: var(--podium-second-color);}
+        }
+        &.third-place .player-icon {
+            border-color: var(--podium-third-color);
+            .medal {color: var(--podium-third-color);}
+            .podium-player-xp {background-color: var(--podium-third-color);}
         }
     }
-    .podium-place {
+    .podium-place { 
         display: flex;
         justify-content: center;
         align-items: flex-start;
         width: 100%;
         border-radius: 16px 16px 0 0;
         padding: 12px 24px;
-        h1 {font-size: clamp(2.5rem, 4.5vw, 3.25rem); color: var(--text-inverse);}
-        &#first-place {height: 180px; background-color: var(--primary-color);}
-        &#second-place {height: 140px; background-color: #b895fe;}
-        &#third-place {height: 100px; background-color: #d5c0fe;}
+        h1 {font-size: clamp(2rem, 4vw, 2.75rem); color: var(--text-inverse);}
+        &#first-place {height: 180px; background-color: var(--podium-first-color);}
+        &#second-place {height: 140px; background-color: var(--podium-second-color);}
+        &#third-place {height: 100px; background-color: var(--podium-third-color);}
         
     }
 }
 
+html[data-theme="dark"] .dashboard-page:not(.leaderboard-page) .podium {
+    --podium-second-color: #8055ba;
+    --podium-third-color: #60438e;
+}
+
 html[data-theme="dark"] .dashboard-page .podium-place#second-place {
-    background-color: #8055ba;
+    background-color: var(--podium-second-color);
 }
 
 html[data-theme="dark"] .dashboard-page .podium-place#third-place {
-    background-color: #60438e;
+    background-color: var(--podium-third-color);
 }
 
 .leaderboard-player {
