@@ -382,6 +382,7 @@ export async function verifyEmail(token: string) {
 
         // Create acc
         const avatarColor = getRandomPaletteColor();
+        console.log("Random Color selected ", avatarColor)
         const [authResult] =
             await connection.query<ResultSetHeader>(
                 `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role, avatar_color) VALUES (?, ?, ?, ?, ?)`,
