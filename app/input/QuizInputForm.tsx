@@ -23,7 +23,15 @@ import AssessmentStepBuilder, {
   AssessmentLivePreview,
   createDefaultCPStep,
 } from "./AssessmentStepBuilder";
-import { unwrapCodeProblemAssessment, type CPStep } from "@/lib/cp-schema";
+import {
+  unwrapCodeProblemAssessment,
+  type CodeProblemAssessment,
+  type CPStep,
+} from "@/lib/cp-schema";
+import {
+  quizPayloadMatchesType,
+  type AssessmentBulkImport,
+} from "@/lib/assessment-json-import";
 
 export interface SavedLessonSlide {
   lesson_text?: string;
@@ -329,6 +337,9 @@ export default function QuizInputForm({
   const [selectedSecId, setSelectedSecId] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
   const [queuedQuizzes, setQueuedQuizzes] = useState<QueuedQuizEntry[]>([]);
+  const [bulkImport, setBulkImport] = useState<AssessmentBulkImport | null>(
+    null,
+  );
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
   const [fitbAnswer, setFitbAnswer] = useState<string>("");
@@ -475,6 +486,52 @@ export default function QuizInputForm({
     (t) => t.quiz_type_id.toString() === selectedTypeId,
   );
   const selectedTypeName = selectedType ? selectedType.type_name : "";
+
+  const handleBulkImport = (value: AssessmentBulkImport): string[] => {
+    const errors: string[] = [];
+    value.unit_quiz_json.forEach((quiz, index) => {
+      const questionNumber = index + 1;
+      const type = types.find(
+        (entry) => entry.quiz_type_id === quiz.quiz_type_id,
+      );
+
+      if (!categories.some((entry) => entry.cat_id === quiz.cat_id)) {
+        errors.push(`Question ${questionNumber}: unknown cat_id ${quiz.cat_id}.`);
+      }
+      if (!difficulties.some((entry) => entry.difficulty_id === quiz.difficulty_id)) {
+        errors.push(
+          `Question ${questionNumber}: unknown difficulty_id ${quiz.difficulty_id}.`,
+        );
+      }
+      if (
+        quiz.sec_id != null &&
+        !sections.some((entry) => entry.sec_id === quiz.sec_id)
+      ) {
+        errors.push(`Question ${questionNumber}: unknown sec_id ${quiz.sec_id}.`);
+      }
+      if (!type) {
+        errors.push(
+          `Question ${questionNumber}: unknown quiz_type_id ${quiz.quiz_type_id}.`,
+        );
+      } else if (!quizPayloadMatchesType(type.type_name, quiz.quiz_payload)) {
+        errors.push(
+          `Question ${questionNumber}: quiz_payload does not match type ${type.type_name}.`,
+        );
+      }
+    });
+
+    if (errors.length > 0) return errors;
+
+    setBulkImport(value);
+    setQueuedQuizzes(
+      value.unit_quiz_json.map(({ sec_id, ...question }) => ({
+        ...question,
+        ...(sec_id == null ? {} : { sec_id }),
+      })),
+    );
+    setCurrentPendingQuizIndex(0);
+    return [];
+  };
 
   const buildCurrentQuizEntry = () => {
     const form = document.getElementById("unit-form") as HTMLFormElement | null;
@@ -648,6 +705,28 @@ export default function QuizInputForm({
     ];
   };
 
+  const createAssessmentImportJson = (
+    importedAssessment: CodeProblemAssessment,
+  ) => {
+    const questions = buildQuizBatch(buildCurrentQuizEntry()).map((quiz) => ({
+      cat_id: quiz.cat_id,
+      ...(quiz.sec_id == null ? {} : { sec_id: quiz.sec_id }),
+      difficulty_id: quiz.difficulty_id,
+      quiz_type_id: quiz.quiz_type_id,
+      question_text: quiz.question_text,
+      quiz_payload: quiz.quiz_payload,
+    }));
+
+    return JSON.stringify(
+      {
+        unit_assessment_json: importedAssessment,
+        unit_quiz_json: questions,
+      },
+      null,
+      2,
+    );
+  };
+
   const handleAddToUnitQueue = () => {
     const nextEntry = buildCurrentQuizEntry();
     if (!nextEntry) {
@@ -663,6 +742,7 @@ export default function QuizInputForm({
     const resolvedUnitAssessment = editingQuiz?.unit_assessment;
     const currentQuizId = editingQuiz?.quiz_id;
 
+    setBulkImport(null);
     setQueuedQuizzes((prev) => [...prev, nextEntry]);
     setQuestionText("");
     setMcqOptions(["", "", "", ""]);
@@ -1106,10 +1186,30 @@ export default function QuizInputForm({
       }
     });
     const currentEntry = buildCurrentQuizEntry();
-    const unitQuizBatch = buildQuizBatch(currentEntry);
+    const submittedBulkImport = bulkImport
+      ? {
+          unit_assessment_json: {
+            schemaVersion: 2 as const,
+            title: assessmentTitle,
+            description: assessmentDescription,
+            steps: cpSteps,
+            expected_outcome: expectedOutcome,
+          },
+          unit_quiz_json: bulkImport.unit_quiz_json,
+        }
+      : null;
+    const unitQuizBatch = submittedBulkImport
+      ? submittedBulkImport.unit_quiz_json
+      : buildQuizBatch(currentEntry);
 
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
+    }
+    if (submittedBulkImport) {
+      formData.set(
+        "assessment_bulk_import",
+        JSON.stringify(submittedBulkImport),
+      );
     }
 
     try {
@@ -1159,6 +1259,7 @@ export default function QuizInputForm({
       setOptionCount(4);
       setCpPromptCount(1);
       setQueuedQuizzes([]);
+      setBulkImport(null);
       setCurrentPendingQuizIndex(0);
 
       // Refresh list and metrics
@@ -1175,6 +1276,7 @@ export default function QuizInputForm({
   };
 
   const handleEdit = (quiz: RecentQuizItem) => {
+    setBulkImport(null);
     if (quiz.type_name === "Unit") {
       const pendingQuizzes = Array.isArray(quiz.quiz_payload?.quizzes)
         ? quiz.quiz_payload.quizzes
@@ -1350,6 +1452,7 @@ export default function QuizInputForm({
   const handleNextPendingQuiz = () => {
     if (queuedQuizzes.length === 0) return;
 
+    setBulkImport(null);
     const currentEntry = buildCurrentQuizEntry();
     const nextQuiz = queuedQuizzes[0];
     if (currentEntry) {
@@ -1369,6 +1472,7 @@ export default function QuizInputForm({
 
   const handlePreviousPendingQuiz = () => {
     if (queuedQuizzes.length === 0) return;
+    setBulkImport(null);
     const currentEntry = buildCurrentQuizEntry();
     const previousQuiz = queuedQuizzes[queuedQuizzes.length - 1];
     if (currentEntry) {
@@ -1389,6 +1493,7 @@ export default function QuizInputForm({
   };
 
   const handleCancelEdit = () => {
+    setBulkImport(null);
     setEditingQuiz(null);
     setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
     setSelectedCatId(categories[0]?.cat_id?.toString() ?? "");
@@ -3130,6 +3235,8 @@ export default function QuizInputForm({
               setExpectedOutcome={setExpectedOutcome}
               cpSteps={cpSteps}
               setCpSteps={setCpSteps}
+              onImport={handleBulkImport}
+              createImportJson={createAssessmentImportJson}
             />
           </div>
 
