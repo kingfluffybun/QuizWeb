@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useRef, useState } from "react";
+import { getLeaderboardEntries, type LeaderboardEntry, type LeaderboardPeriod } from "@/app/actions/leaderboard";
 
-type LeaderboardPeriod = "daily" | "weekly" | "monthly" | "all-time";
+interface LeaderboardProps {
+    initialEntries: LeaderboardEntry[];
+    showPeriodTitle?: boolean;
+}
 
 const periodTitles: Record<LeaderboardPeriod, string> = {
     daily: "Daily Leaderboard",
@@ -11,12 +15,48 @@ const periodTitles: Record<LeaderboardPeriod, string> = {
     "all-time": "All-Time Leaderboard",
 };
 
-interface LeaderboardProps {
-    showPeriodTitle?: boolean;
-}
+const periodOptions: { period: LeaderboardPeriod; title: string }[] = [
+    { period: "daily", title: "Day" },
+    { period: "weekly", title: "Week" },
+    { period: "monthly", title: "Month" },
+    { period: "all-time", title: "All Time" },
+];
 
-export default function Leaderboard({ showPeriodTitle = false }: LeaderboardProps) {
+export default function Leaderboard({ initialEntries, showPeriodTitle = false }: LeaderboardProps) {
     const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
+    const [entries, setEntries] = useState(initialEntries);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+    const requestId = useRef(0);
+
+    const changePeriod = async (nextPeriod: LeaderboardPeriod) => {
+        setPeriod(nextPeriod);
+        setIsLoading(true);
+        setError("");
+        const currentRequestId = ++requestId.current;
+
+        try {
+            const nextEntries = await getLeaderboardEntries(nextPeriod);
+            if (currentRequestId === requestId.current) {
+                setEntries(nextEntries);
+            }
+        } catch (err) {
+            console.error("Failed to load leaderboard:", err);
+            if (currentRequestId === requestId.current) {
+                setError("Unable to load the leaderboard. Please try again.");
+            }
+        } finally {
+            if (currentRequestId === requestId.current) {
+                setIsLoading(false);
+            }
+        }
+    };
+
+    const podium = [
+        { entry: entries[1], place: 2, placeId: "second-place" },
+        { entry: entries[0], place: 1, placeId: "first-place" },
+        { entry: entries[2], place: 3, placeId: "third-place" },
+    ].filter(({ entry }) => entry !== undefined);
 
     return (
         <div className="leaderboard" id="leaderboard">
@@ -34,99 +74,56 @@ export default function Leaderboard({ showPeriodTitle = false }: LeaderboardProp
                         )}
                     </div>
                     <div className="sort-by-time">
-                        <input type="radio" name="leaderboard-time" id="lb-daily" checked={period === "daily"} onChange={() => setPeriod("daily")} />
-                        <label htmlFor="lb-daily"><p>Day</p></label>
-                        <input type="radio" name="leaderboard-time" id="lb-weekly" checked={period === "weekly"} onChange={() => setPeriod("weekly")} />
-                        <label htmlFor="lb-weekly"><p>Week</p></label>
-                        <input type="radio" name="leaderboard-time" id="lb-monthly" checked={period === "monthly"} onChange={() => setPeriod("monthly")} />
-                        <label htmlFor="lb-monthly"><p>Month</p></label>
-                        <input type="radio" name="leaderboard-time" id="lb-alltime" checked={period === "all-time"} onChange={() => setPeriod("all-time")} />
-                        <label htmlFor="lb-alltime"><p>All Time</p></label>
+                        {periodOptions.map(({ period: optionPeriod, title }) => {
+                            const id = `lb-${optionPeriod}`;
+                            return (
+                                <Fragment key={optionPeriod}>
+                                    <input
+                                        type="radio"
+                                        name="leaderboard-time"
+                                        id={id}
+                                        checked={period === optionPeriod}
+                                        onChange={() => void changePeriod(optionPeriod)}
+                                    />
+                                    <label htmlFor={id}><p>{title}</p></label>
+                                </Fragment>
+                            );
+                        })}
                     </div>
                 </div>
-                <div className="podium-stage">
-                    <div className="podium">
-                        <div className="podium-place-container">
-                            <div className="player-icon">
-                                <div className="podium-player-xp"><p>200 XP</p></div>
+                {error && <p role="alert">{error}</p>}
+                {isLoading && <p aria-live="polite">Loading leaderboard...</p>}
+                {entries.length === 0 ? (
+                    <p>No XP earned for this period yet.</p>
+                ) : (
+                    <>
+                        <div className="podium-stage">
+                            <div className="podium">
+                                {podium.map(({ entry, place, placeId }) => (
+                                    <div className="podium-place-container" key={entry.userId}>
+                                        <div className="player-icon">
+                                            <div className="podium-player-xp"><p>{entry.xp.toLocaleString()} XP</p></div>
+                                        </div>
+                                        <p id="player-name">{entry.username}</p>
+                                        <div className="podium-place" id={placeId}><h1>{place}</h1></div>
+                                    </div>
+                                ))}
                             </div>
-                            <p id="player-name">Jerald A.</p>
-                            <div className="podium-place" id="second-place"><h1>2</h1></div>
                         </div>
-                        <div className="podium-place-container">
-                            <div className="player-icon">
-                                <div className="podium-player-xp"><p>300 XP</p></div>
-                            </div>
-                            <p id="player-name">Talon G.</p>
-                            <div className="podium-place" id="first-place"><h1>1</h1></div>
+                        <div className="leaderboard-placement">
+                            {entries.slice(3).map((entry, index) => (
+                                <div className="leaderboard-player row" id="nth-place" key={entry.userId}>
+                                    <div className="player-details row">
+                                        <p>{index + 4}</p>
+                                        <div className="player-icon"></div>
+                                        <p id="player-name">{entry.username}</p>
+                                    </div>
+                                    <p>{entry.xp.toLocaleString()} XP</p>
+                                </div>
+                            ))}
                         </div>
-                        <div className="podium-place-container">
-                            <div className="player-icon">
-                                <div className="podium-player-xp"><p>150 XP</p></div>
-                            </div>
-                            <p id="player-name">Caitlyn H.</p>
-                            <div className="podium-place" id="third-place"><h1>3</h1></div>
-                        </div>
-                    </div>
-                </div>
-                <div className="leaderboard-placement">
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>4</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Clarence Luna</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>5</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Kevenly Luistro</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>6</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Ricky Parica</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>7</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Harvy Bautista</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>8</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Jomari Wamil</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>9</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Christian Panti</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                    <div className="leaderboard-player row" id="nth-place">
-                        <div className="player-details row">
-                            <p>10</p>
-                            <div className="player-icon"></div>
-                            <p id="player-name">Rommel</p>
-                        </div>
-                        <p>100 XP</p>
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
         </div>
     );
