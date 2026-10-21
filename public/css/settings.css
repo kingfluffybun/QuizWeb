@@ -217,6 +217,7 @@ html[data-motion="reduce"] .settings-main *::after {
       .range-slider {
         flex: 1;
         width: 100%;
+        min-width: 0;
         height: 6px;
         appearance: none;
         -webkit-appearance: none;
@@ -343,6 +344,15 @@ html[data-motion="reduce"] .settings-main *::after {
       }
     }
   }
+}
+
+.accessibility-dialog-card .toggle-row > label.switch {
+  width: 50px !important;
+  min-width: 50px;
+  max-width: 50px;
+  height: 28px !important;
+  max-height: 28px !important;
+  flex: 0 0 50px;
 }
 
 @media (max-width: 600px) {
