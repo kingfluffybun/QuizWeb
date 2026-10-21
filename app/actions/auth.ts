@@ -8,6 +8,7 @@ import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
 import { auth, signOut } from "@/auth";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import { getRandomPaletteColor } from "@/src/utils/avatarColors";
 
 function hashToken(raw: string): string {
     return crypto.createHash("sha256").update(raw).digest("hex");
@@ -380,12 +381,13 @@ export async function verifyEmail(token: string) {
         }
 
         // Create acc
-        const [authResult] = 
+        const avatarColor = getRandomPaletteColor();
+        const [authResult] =
             await connection.query<ResultSetHeader>(
-                `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role) VALUES (?, ?, ?, ?)`,
-                [pendingUser.email, pendingUser.password_hash, 1, "user"]
+                `INSERT INTO user_auth_tbl (email, password_hash, is_email_verified, user_role, avatar_color) VALUES (?, ?, ?, ?, ?)`,
+                [pendingUser.email, pendingUser.password_hash, 1, "user", avatarColor]
             );
-        
+
         const newUserId = authResult.insertId;
 
         // Create player
