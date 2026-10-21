@@ -328,7 +328,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Practice Arena</span>
             </Link>
-            <Link href="/home#leaderboard" className="mobile-drawer-link">
+            <Link href="/leaderboard" className={`mobile-drawer-link${isActiveRoute(pathname, "/leaderboard") ? " active" : ""}`}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2" />
                 <path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2" />

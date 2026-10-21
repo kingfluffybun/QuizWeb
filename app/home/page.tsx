@@ -4,6 +4,7 @@ import Image from "next/image";
 import "#css/dashboard.css";
 import "#css/sidebar.css"
 import Sidebar from "@/app/components/Sidebar";
+import Leaderboard from "@/app/components/Leaderboard";
 import StreakCalendar from "./StreakCalendar";
 import { getUserStreakData } from "@/app/actions/streak";
 
@@ -187,107 +188,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* Leaderboard */}
-                    <div className="leaderboard" id="leaderboard">
-                        <div className="card">
-                            <div>
-                                <div className="card-title">
-                                    <h2>Leaderboard</h2>
-                                </div>
-                                <div className="sort-by-time">
-                                    <input type="radio" name="leaderboard-time" id="lb-daily" defaultChecked />
-                                    <label htmlFor="lb-daily"><p>Day</p></label>
-                                    <input type="radio" name="leaderboard-time" id="lb-weekly" />
-                                    <label htmlFor="lb-weekly"><p>Week</p></label>
-                                    <input type="radio" name="leaderboard-time" id="lb-monthly" />
-                                    <label htmlFor="lb-monthly"><p>Month</p></label>
-                                    <input type="radio" name="leaderboard-time" id="lb-alltime" />
-                                    <label htmlFor="lb-alltime"><p>All Time</p></label>
-                                </div>
-                            </div>
-                            <div className="podium">
-                                <div className="podium-place-container">
-                                    <div className="player-icon">
-                                        <div className="podium-player-xp"><p>200 XP</p></div>
-                                    </div>
-                                    <div className="podium-place" id="second-place"><h1>2</h1></div>
-                                    <p id="player-name">Jerald A.</p>
-                                </div>
-                                <div className="podium-place-container">   
-                                    <div className="player-icon">
-                                        <div className="podium-player-xp"><p>300 XP</p></div>
-                                    </div>
-                                    <div className="podium-place" id="first-place"><h1>1</h1></div>
-                                    <p id="player-name">Talon G.</p>
-                                </div>
-                                <div className="podium-place-container">
-                                    <div className="player-icon">
-                                        <div className="podium-player-xp"><p>150 XP</p></div>
-                                    </div>
-                                    <div className="podium-place" id="third-place"><h1>3</h1></div>
-                                    <p id="player-name">Caitlyn H.</p>
-                                </div>
-                            </div>
-                            <div className="leaderboard-placement">
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>4</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Clarence Luna</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>5</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Kevenly Luistro</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>6</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Ricky Parica</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>7</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Harvy Bautista</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>8</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Jomari Wamil</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>9</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Christian Panti</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                                <div className="leaderboard-player row" id="nth-place">
-                                    <div className="player-details row">
-                                        <p>10</p>
-                                        <div className="player-icon"></div>
-                                        <p id="player-name">Rommel</p>
-                                    </div>
-                                    <p>100 XP</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <Leaderboard />
                 </div>
             </main>
             

@@ -64,7 +64,7 @@ export default function PublicNav({ session: initialSession }: PublicNavProps) {
 
       <div className={`nav-options${menuOpen ? " is-open" : ""}`}>
         <div><Link href="/learn"><p>Learn</p></Link></div>
-        <div><Link href="/home#leaderboard"><p>Leaderboard</p></Link></div>
+        <div><Link href="/leaderboard"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
         {/* <div><Link href="/settings"><p>Settings</p></Link></div> */}
         <div className="nav-a11y-item">

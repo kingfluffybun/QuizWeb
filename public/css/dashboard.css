@@ -528,6 +528,35 @@ button.quick-action-btn:hover {
     gap: 24px;
 }
 
+.leaderboard-header .leaderboard-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.leaderboard-header .leaderboard-heading > h2.card-title {
+    flex: 0 0 auto;
+    margin-bottom: 0 !important;
+}
+
+.leaderboard-header .leaderboard-heading.dashboard-leaderboard-title {
+    margin-bottom: 12px !important;
+}
+
+.dashboard-page:not(.leaderboard-page) .leaderboard-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dashboard-page:not(.leaderboard-page) .leaderboard-header .leaderboard-heading,
+.dashboard-page:not(.leaderboard-page) .leaderboard-header .sort-by-time {
+    flex: none;
+    width: 100%;
+}
+
 .sort-by-time {
     display: flex;
     background-color: hsl(260, 100%, 70%, 10%);
@@ -547,6 +576,7 @@ button.quick-action-btn:hover {
         flex: 1 0;
         white-space: nowrap;
         cursor: pointer;
+        user-select: none;
         transition: background-color 0.2s, color 0.2s;
     }
 
@@ -569,9 +599,10 @@ button.quick-action-btn:hover {
         .skeleton-podium-name {
             padding: 8px 0;
             line-height: 1.2;
+            color: var(--text-main);
         }
         .player-icon {
-            margin-bottom: 24px; 
+            margin-bottom: 12px;
             width: 64px;
             position: relative;
             border-width: 3px;
@@ -593,7 +624,7 @@ button.quick-action-btn:hover {
         align-items: flex-start;
         width: 100%;
         border-radius: 16px 16px 0 0;
-        padding: 24px;
+        padding: 12px 24px;
         h1 {font-size: clamp(2.5rem, 4.5vw, 3.25rem); color: var(--text-inverse);}
         &#first-place {height: 180px; background-color: var(--primary-color);}
         &#second-place {height: 140px; background-color: #b895fe;}
@@ -602,15 +633,30 @@ button.quick-action-btn:hover {
     }
 }
 
+html[data-theme="dark"] .dashboard-page .podium-place#second-place {
+    background-color: #8055ba;
+}
+
+html[data-theme="dark"] .dashboard-page .podium-place#third-place {
+    background-color: #60438e;
+}
+
 .leaderboard-player {
-    padding: 4px 0;
+    padding: 8px 24px;
     justify-content: space-between;
-    p {text-wrap: nowrap;}
+    border-bottom: 2px solid var(--border-main);
+    transition: 200ms all ease;
+    p {text-wrap: nowrap; color: var(--text-main);}
     .player-details {
         gap: 16px;
         p:first-child {text-align: right; width: 16px;}
-        
     }
+    &:last-child {border: none;}
+    &:hover {background-color: var(--border-main);}
+}
+
+.leaderboard-placement {
+    margin-inline: -24px;
 }
 
 .player-icon {
@@ -1399,6 +1445,14 @@ button.quick-action-btn:hover {
         position: static !important;
     }
 
+    .leaderboard-placement {
+        margin-inline: -14px;
+    }
+
+    .leaderboard-player {
+        padding-inline: 14px;
+    }
+
     .sort-by-time {
         padding: 4px !important;
     }
@@ -1429,7 +1483,7 @@ button.quick-action-btn:hover {
 
     .podium-place-container .player-icon {
         width: 44px !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 10px !important;
     }
 
     .podium-player-xp {
