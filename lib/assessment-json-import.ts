@@ -105,7 +105,8 @@ const AssessmentQuestionSchema = z
   })
   .passthrough()
   .superRefine((question, ctx) => {
-    const hasChoiceList = Array.isArray(question.choices);
+    const choices = question.choices;
+    const hasChoiceList = Array.isArray(choices);
     const hasLegacyOptions = typeof question.correct_index === "number";
 
     if (
@@ -119,7 +120,7 @@ const AssessmentQuestionSchema = z
         });
       }
 
-      if (hasChoiceList && question.choices.length < 2) {
+      if (hasChoiceList && choices.length < 2) {
         ctx.addIssue({
           code: "custom",
           path: ["choices"],
@@ -128,7 +129,7 @@ const AssessmentQuestionSchema = z
       }
     }
 
-    if (question.type === "matching" && (!question.choices || question.choices.length < 2)) {
+    if (question.type === "matching" && (!choices || choices.length < 2)) {
       ctx.addIssue({
         code: "custom",
         path: ["choices"],
@@ -136,10 +137,7 @@ const AssessmentQuestionSchema = z
       });
     }
 
-    if (
-      question.type === "ordering" &&
-      (!question.choices || question.choices.length < 2)
-    ) {
+    if (question.type === "ordering" && (!choices || choices.length < 2)) {
       ctx.addIssue({
         code: "custom",
         path: ["choices"],
@@ -234,7 +232,7 @@ export const UnitBulkImportSchema = z
     unit: UnitMetadataSchema,
     lessons: z.array(UnitLessonSchema).min(1),
     assessments: z.array(UnitAssessmentSchema).optional().default([]),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
