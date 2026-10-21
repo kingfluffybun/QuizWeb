@@ -1384,6 +1384,10 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     }
 
     /* Lesson Progress Card */
+    .skeleton-dashboard-page .skeleton-lesson-progress-card {
+        min-height: 0;
+    }
+
     .current-lesson {
         gap: 8px !important;
     }
