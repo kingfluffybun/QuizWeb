@@ -284,6 +284,34 @@
     }
 }
 
+@media (max-width: 767px) {
+    .accessibility-dialog,
+    .accessibility-dialog.settings-main {
+        padding: 12px;
+    }
+
+    .accessibility-dialog.settings-main {
+        justify-items: center !important;
+    }
+
+    .accessibility-dialog.settings-main .accessibility-dialog-card {
+        position: fixed !important;
+        top: 12px;
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto !important;
+        max-width: none !important;
+        max-height: none;
+        transform: none;
+        animation-name: accessibility-panel-rise-mobile;
+    }
+
+    .accessibility-dialog.settings-main.is-closing .accessibility-dialog-card {
+        animation-name: accessibility-panel-fall-mobile;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .accessibility-dialog-card {
         animation: none;
