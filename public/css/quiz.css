@@ -260,6 +260,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 0 24px;
 }
 
 .available-units-heading {
@@ -407,6 +408,7 @@
     justify-content: center;
     min-height: 48px;
     padding: 0 16px;
+    height: 100%;
     border: 2px solid var(--border-main);
     border-radius: 14px;
     background: var(--bg-card);
@@ -428,7 +430,6 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    min-width: 180px;
     min-height: 56px;
     padding: 0 24px;
     border: none;
@@ -547,11 +548,18 @@
 }
 
 .lesson-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     width: 100%;
     text-align: left;
     white-space: pre-wrap;
     line-height: 1.5;
-    text-align: justify;
+    text-align: left;
+}
+
+.lesson-card-text > p {
+    margin: 0;
 }
 
 .lesson-card .lesson-slide-title {

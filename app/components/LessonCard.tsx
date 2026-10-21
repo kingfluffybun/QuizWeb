@@ -26,6 +26,10 @@ type LessonCodeFrameProps = {
   toggleable?: boolean;
 };
 
+function splitLessonSentences(text: string) {
+  return text.split(/(?<=[.!?])\s+/u).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
 export function LessonCodeFrame({
   className,
   title,
@@ -220,7 +224,13 @@ export default function LessonCard({
       )}
       <div className="lesson-text-container">
         {slide.lesson_title && <h1 className="lesson-slide-title">{slide.lesson_title}</h1>}
-        {slide.lesson_text && <p className="lesson-card-text">{slide.lesson_text}</p>}
+        {slide.lesson_text && (
+          <div className="lesson-card-text">
+            {splitLessonSentences(slide.lesson_text).map((sentence, index) => (
+              <p key={`${index}-${sentence}`}>{sentence}</p>
+            ))}
+          </div>
+        )}
       </div>
       {showControls && visibleSlides.length > 1 && (
         <div className="lesson-slide-controls">

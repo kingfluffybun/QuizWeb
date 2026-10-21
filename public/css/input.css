@@ -206,11 +206,17 @@ textarea {
   font-size: 1.25rem;
 }
 .lesson-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
   white-space: pre-wrap;
   line-height: 1.6;
   text-align: left;
   font-size: 1rem;
+}
+.lesson-card-text > p {
+  margin: 0;
 }
 .assessment-preview {
   align-items: stretch;
