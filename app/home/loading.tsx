@@ -26,8 +26,8 @@ export default function HomeLoading() {
           {/* 1. Welcome Banner Skeleton */}
           <div className="welcome-banner">
             <div>
-              <h1 className="skeleton-welcome-title" aria-hidden="true" />
-              <p className="skeleton-welcome-description" aria-hidden="true" />
+              <h1 className="skeleton-shimmer skeleton-welcome-title" aria-hidden="true" />
+              <p className="skeleton-shimmer skeleton-welcome-description" aria-hidden="true" />
               <span className="cloud-right skeleton-shimmer skeleton-welcome-art" aria-hidden="true" />
             </div>
           </div>
@@ -202,24 +202,30 @@ export default function HomeLoading() {
                   ))}
                 </div>
               </div>
-              <div className="podium">
-                {[
-                  { place: "second-place", width: "60px" },
-                  { place: "first-place", width: "70px" },
-                  { place: "third-place", width: "60px" },
-                ].map(({ place, width }) => (
-                  <div className="podium-place-container" key={place}>
-                    <div className="player-icon skeleton-shimmer skeleton-podium-avatar">
-                      <div className="podium-player-xp">
-                        <span className="skeleton-shimmer skeleton-podium-xp" style={{ width }} />
+              <div className="podium-stage">
+                <div className="podium">
+                  {[
+                    { place: "second-place", width: "60px" },
+                    { place: "first-place", width: "70px" },
+                    { place: "third-place", width: "60px" },
+                  ].map(({ place, width }) => (
+                    <div className={`podium-place-container ${place}`} key={place}>
+                      <div className="player-icon skeleton-podium-avatar">
+                        <span
+                          className={`skeleton-shimmer skeleton-podium-emblem ${place === "first-place" ? "skeleton-podium-crown" : "skeleton-podium-medal"}`}
+                          aria-hidden="true"
+                        />
+                        <div className="podium-player-xp">
+                          <span className="skeleton-shimmer skeleton-podium-xp" style={{ width }} />
+                        </div>
+                      </div>
+                      <p className="skeleton-shimmer skeleton-podium-name" aria-hidden="true" />
+                      <div className="podium-place skeleton-shimmer skeleton-podium-base" id={place}>
+                        <h1 className="skeleton-shimmer skeleton-podium-rank" aria-hidden="true" />
                       </div>
                     </div>
-                    <div className="podium-place skeleton-shimmer" id={place}>
-                      <h1 className="skeleton-shimmer skeleton-podium-rank" aria-hidden="true" />
-                    </div>
-                    <p className="skeleton-shimmer skeleton-podium-name" aria-hidden="true" />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
               <div className="leaderboard-placement">
                 {Array.from({ length: 7 }, (_, index) => index + 4).map((place) => (

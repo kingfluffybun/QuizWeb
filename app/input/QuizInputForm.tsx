@@ -75,6 +75,37 @@ export interface QuizPayload {
   [key: string]: unknown;
 }
 
+function PreviewHeightTransition({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setHeight(entry.contentRect.height);
+    });
+    observer.observe(content);
+    setHeight(content.getBoundingClientRect().height);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      className="lesson-preview-height"
+      style={{ height: height === null ? "auto" : `${height}px` }}
+    >
+      <div ref={contentRef}>{children}</div>
+    </div>
+  );
+}
+
 export interface RecentQuizItem {
   quiz_id: number;
   unit_id?: number;
@@ -2064,6 +2095,7 @@ export default function QuizInputForm({
         )}
       </section>
 
+      <div className="unit-preview-workspace">
       {/* Form Section */}
       <div id="quiz-form" className="admin-card unit-authoring-card">
         <div
@@ -2214,7 +2246,7 @@ export default function QuizInputForm({
               <h3>Lesson slide</h3>
               <button
                 type="button"
-                className="btn-add-option lesson-slide-add"
+                className="authoring-action-button authoring-action-button-primary lesson-slide-add"
                 onClick={handleAddLessonSlide}
                 title="Add lesson slide"
                 aria-label="Add lesson slide"
@@ -2419,7 +2451,7 @@ export default function QuizInputForm({
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <button
                   type="button"
-                  className="btn-primary lesson-slide-nav-button"
+                  className="authoring-action-button authoring-action-button-primary lesson-slide-nav-button"
                   onClick={handlePreviousLessonSlide}
                   disabled={currentLessonSlide === 0}
                 >
@@ -2427,7 +2459,7 @@ export default function QuizInputForm({
                 </button>
                 <button
                   type="button"
-                  className="btn-primary lesson-slide-nav-button"
+                  className="authoring-action-button authoring-action-button-primary lesson-slide-nav-button"
                   onClick={handleNextLessonSlide}
                   disabled={currentLessonSlide === lessonSlides.length - 1}
                 >
@@ -2441,12 +2473,7 @@ export default function QuizInputForm({
                 {lessonSlides.length > 1 && (
                   <button
                     type="button"
-                    className="btn-secondary"
-                    style={{
-                      padding: "6px 14px",
-                      fontSize: "0.85rem",
-                      color: "var(--admin-danger, #ef4444)",
-                    }}
+                    className="authoring-action-button authoring-action-button-danger"
                     onClick={() => handleRemoveLessonSlide(currentLessonSlide)}
                   >
                     Remove Slide
@@ -2454,8 +2481,7 @@ export default function QuizInputForm({
                 )}
                 <button
                   type="button"
-                  className="btn-primary"
-                  style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+                  className="authoring-action-button authoring-action-button-primary"
                   onClick={handleAddLessonSlide}
                 >
                   + Add Slide
@@ -3158,7 +3184,7 @@ export default function QuizInputForm({
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <button
                       type="button"
-                      className="btn-primary queue-button pending-quiz-nav-button"
+                      className="authoring-action-button authoring-action-button-primary pending-quiz-nav-button"
                       onClick={handlePreviousPendingQuiz}
                       disabled={isPending || queuedQuizzes.length === 0}
                     >
@@ -3166,7 +3192,7 @@ export default function QuizInputForm({
                     </button>
                     <button
                       type="button"
-                      className="btn-primary queue-button pending-quiz-nav-button"
+                      className="authoring-action-button authoring-action-button-primary pending-quiz-nav-button"
                       onClick={handleNextPendingQuiz}
                       disabled={isPending || queuedQuizzes.length === 0}
                     >
@@ -3181,12 +3207,7 @@ export default function QuizInputForm({
                     {queuedQuizzes.length > 0 && (
                       <button
                         type="button"
-                        className="btn-secondary"
-                        style={{
-                          padding: "8px 14px",
-                          fontSize: "0.85rem",
-                          color: "var(--admin-danger, #ef4444)",
-                        }}
+                        className="authoring-action-button authoring-action-button-danger"
                         onClick={handleRemoveCurrentQuiz}
                         disabled={isPending}
                       >
@@ -3195,7 +3216,7 @@ export default function QuizInputForm({
                     )}
                     <button
                       type="button"
-                      className="btn-primary queue-button queue-add-button"
+                      className="authoring-action-button authoring-action-button-primary"
                       onClick={handleAddToUnitQueue}
                       disabled={isPending}
                     >
@@ -3208,11 +3229,11 @@ export default function QuizInputForm({
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button
                   type="button"
-                  className="btn-primary queue-button queue-add-button"
+                  className="authoring-action-button authoring-action-button-primary"
                   onClick={handleAddToUnitQueue}
                   disabled={isPending}
                 >
-                  Add Quiz
+                  + Add Quiz
                 </button>
               </div>
             )}
@@ -3274,7 +3295,6 @@ export default function QuizInputForm({
               className="btn-delete"
               onClick={handleCancelEdit}
               disabled={isPending}
-              style={{ marginTop: "10px", marginLeft: "10px" }}
             >
               Cancel
             </button>
@@ -3307,26 +3327,29 @@ export default function QuizInputForm({
             </button>
           </div>
         </div>
-        {previewTab === "lesson" ? (
-          <div>
-            <LessonCard
-              title={unitTitle}
-              slides={lessonSlides.map((slide) => ({
-                ...(slide.title !== undefined ? { lesson_title: slide.title } : {}),
-                lesson_text: slide.text,
-                ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
-              }))}
-              className="lesson-preview-surface"
+        <PreviewHeightTransition>
+          {previewTab === "lesson" ? (
+            <div>
+              <LessonCard
+                title={unitTitle}
+                slides={lessonSlides.map((slide) => ({
+                  ...(slide.title !== undefined ? { lesson_title: slide.title } : {}),
+                  lesson_text: slide.text,
+                  ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
+                }))}
+                className="lesson-preview-surface"
+              />
+            </div>
+          ) : (
+            <AssessmentLivePreview
+              assessmentTitle={assessmentTitle}
+              assessmentDescription={assessmentDescription}
+              expectedOutcome={expectedOutcome}
+              cpSteps={cpSteps}
             />
-          </div>
-        ) : (
-          <AssessmentLivePreview
-            assessmentTitle={assessmentTitle}
-            assessmentDescription={assessmentDescription}
-            expectedOutcome={expectedOutcome}
-            cpSteps={cpSteps}
-          />
-        )}
+          )}
+        </PreviewHeightTransition>
+      </div>
       </div>
 
       {/* List Section */}
@@ -3339,7 +3362,6 @@ export default function QuizInputForm({
               alignItems: "center",
               borderBottom: "2px solid #e0e0e0",
               paddingBottom: "10px",
-              marginBottom: "20px",
               flexWrap: "wrap",
               gap: "12px",
             }}

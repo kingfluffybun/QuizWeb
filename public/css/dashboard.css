@@ -897,8 +897,13 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     margin: 0;
     border-radius: 6px;
     display: block;
-    background: rgba(255, 255, 255, 0.28);
-    animation: none;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.48) 50%,
+        rgba(255, 255, 255, 0.2) 80%
+    );
+    background-size: 200% 100%;
 }
 
 .skeleton-dashboard-page .skeleton-welcome-description {
@@ -910,8 +915,13 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     margin: 0;
     border-radius: 4px;
     display: block;
-    background: rgba(255, 255, 255, 0.28);
-    animation: none;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.2) 20%,
+        rgba(255, 255, 255, 0.48) 50%,
+        rgba(255, 255, 255, 0.2) 80%
+    );
+    background-size: 200% 100%;
 }
 
 .skeleton-dashboard-page .skeleton-welcome-art {
@@ -1031,8 +1041,47 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     background-color: var(--border-main);
 }
 
+.skeleton-dashboard-page .podium-stage,
+.skeleton-dashboard-page .podium {
+    width: 100%;
+}
+
+.skeleton-dashboard-page .podium-place-container.second-place {
+    flex-grow: 1.06;
+}
+
+.skeleton-dashboard-page .skeleton-podium-emblem {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    width: 32px;
+    height: 24px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+}
+
+.skeleton-dashboard-page .skeleton-podium-crown {
+    height: 16px;
+    border-radius: 4px 4px 2px 2px;
+}
+
+.skeleton-dashboard-page .skeleton-podium-medal {
+    width: 22px;
+    height: 26px;
+}
+
 .skeleton-dashboard-page .skeleton-podium-xp {
     height: 0.8em;
+}
+
+.skeleton-dashboard-page .skeleton-podium-base {
+    background-image: linear-gradient(
+        90deg,
+        rgba(153, 102, 255, 0.12) 20%,
+        rgba(153, 102, 255, 0.28) 50%,
+        rgba(153, 102, 255, 0.12) 80%
+    );
+    background-size: 200% 100%;
 }
 
 .skeleton-dashboard-page .skeleton-podium-rank {
@@ -1312,9 +1361,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
 
     .welcome-banner .cloud-right {
         opacity: 0.25 !important;
-        max-width: 90px !important;
         right: -4px !important;
-        bottom: -20px !important;
     }
 
     .dashboard {

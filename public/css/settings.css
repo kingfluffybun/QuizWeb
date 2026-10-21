@@ -1,7 +1,7 @@
 :root {
   --settings-primary: #9966FF;
   --settings-primary-hover: #7D3FFF;
-  --settings-bg: #f4f7ff;
+  --settings-bg: var(--bg-main, #fcfbff);
   --settings-card-bg: #ffffff;
   --settings-text-main: #333333;
   --settings-text-muted: #888888;
@@ -12,7 +12,6 @@
 /* 1. Explicit Dark Mode */
 [data-theme="dark"] {
   --settings-primary: #a377ff; 
-  --settings-bg: #0f0f13;
   --settings-card-bg: #1c1c24;
   --settings-text-main: #fcfbff;
   --settings-text-muted: #a0a0b0;
@@ -23,7 +22,6 @@
 @media (prefers-color-scheme: dark) {
   [data-theme="system"] {
     --settings-primary: #a377ff; 
-    --settings-bg: #0f0f13;
     --settings-card-bg: #1c1c24;
     --settings-text-main: #fcfbff;
     --settings-text-muted: #a0a0b0;
