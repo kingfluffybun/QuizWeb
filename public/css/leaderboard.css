@@ -10,7 +10,7 @@
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: 24px;
+    padding: 24px 0;
     box-sizing: border-box;
 
     > h1 {
@@ -61,7 +61,7 @@
     --podium-third-color: #d5c0fe;
     position: relative;
     width: 100%;
-    max-width: 1080px;
+    max-width: 1024px;
     min-width: 0;
     margin-inline: auto;
     padding-top: 60px;
