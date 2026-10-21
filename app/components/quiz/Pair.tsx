@@ -96,11 +96,12 @@ export default function PairQuestion({
     return (
         <div className={`options-container row${disabled ? " is-locked" : ""}`} id="pair">
             <div className="pair-left-column col">
-                {leftItems.map((item) => (
+                {leftItems.map((item, index) => (
                     <label
                         key={item}
                         htmlFor={`pair-left-${item}`}
                         className={matchedLeft.includes(item) ? "pair-option-disabled" : ""}
+                        style={{ gridRow: index + 1, gridColumn: 1 }}
                     >
                         <input
                             id={`pair-left-${item}`}
@@ -117,11 +118,12 @@ export default function PairQuestion({
                 ))}
             </div>
             <div className="pair-right-column col">
-                {rightItems.map((item) => (
+                {rightItems.map((item, index) => (
                     <label
                         key={item}
                         htmlFor={`pair-right-${item}`}
                         className={matchedRight.includes(item) ? "pair-option-disabled" : ""}
+                        style={{ gridRow: index + 1, gridColumn: 2 }}
                     >
                         <input
                             id={`pair-right-${item}`}
