@@ -1322,9 +1322,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
 
     .welcome-banner .cloud-right {
         opacity: 0.25 !important;
-        max-width: 90px !important;
         right: -4px !important;
-        bottom: -20px !important;
     }
 
     .dashboard {
