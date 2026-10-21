@@ -23,7 +23,11 @@ import AssessmentStepBuilder, {
   AssessmentLivePreview,
   createDefaultCPStep,
 } from "./AssessmentStepBuilder";
-import { unwrapCodeProblemAssessment, type CPStep } from "@/lib/cp-schema";
+import {
+  unwrapCodeProblemAssessment,
+  type CodeProblemAssessment,
+  type CPStep,
+} from "@/lib/cp-schema";
 import {
   quizPayloadMatchesType,
   type AssessmentBulkImport,
@@ -699,6 +703,28 @@ export default function QuizInputForm({
       currentEntry,
       ...queuedQuizzes.slice(0, insertionIndex),
     ];
+  };
+
+  const createAssessmentImportJson = (
+    importedAssessment: CodeProblemAssessment,
+  ) => {
+    const questions = buildQuizBatch(buildCurrentQuizEntry()).map((quiz) => ({
+      cat_id: quiz.cat_id,
+      ...(quiz.sec_id == null ? {} : { sec_id: quiz.sec_id }),
+      difficulty_id: quiz.difficulty_id,
+      quiz_type_id: quiz.quiz_type_id,
+      question_text: quiz.question_text,
+      quiz_payload: quiz.quiz_payload,
+    }));
+
+    return JSON.stringify(
+      {
+        unit_assessment_json: importedAssessment,
+        unit_quiz_json: questions,
+      },
+      null,
+      2,
+    );
   };
 
   const handleAddToUnitQueue = () => {
@@ -3210,6 +3236,7 @@ export default function QuizInputForm({
               cpSteps={cpSteps}
               setCpSteps={setCpSteps}
               onImport={handleBulkImport}
+              createImportJson={createAssessmentImportJson}
             />
           </div>
 

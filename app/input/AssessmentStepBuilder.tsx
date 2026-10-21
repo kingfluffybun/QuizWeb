@@ -5,6 +5,7 @@ import {
   CP_FILE_KEYS,
   CP_FILE_LABELS,
   createEmptyFileBuffers,
+  type CodeProblemAssessment,
   type CPFileBuffers,
   type CPFileKey,
   type CPStep,
@@ -47,6 +48,7 @@ interface AssessmentStepBuilderProps {
   expectedOutcome: string;
   setExpectedOutcome: (val: string) => void;
   onImport: (value: AssessmentBulkImport) => string[];
+  createImportJson: (assessment: CodeProblemAssessment) => string;
 }
 
 export default function AssessmentStepBuilder({
@@ -59,12 +61,14 @@ export default function AssessmentStepBuilder({
   expectedOutcome,
   setExpectedOutcome,
   onImport,
+  createImportJson,
 }: AssessmentStepBuilderProps) {
   const [authoringMode, setAuthoringMode] = useState<"visual" | "json">("visual");
   const [activeFileTabByStep, setActiveFileTabByStep] = useState<
     Record<number, CPFileKey>
   >({});
   const [jsonText, setJsonText] = useState<string>("");
+  const [jsonEdited, setJsonEdited] = useState(false);
   const [jsonMessage, setJsonMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -194,6 +198,7 @@ export default function AssessmentStepBuilder({
       type: "success",
       text: `Imported the assessment and ${result.data.unit_quiz_json.length} question(s).`,
     });
+    setJsonEdited(false);
     setAuthoringMode("visual");
   };
 
@@ -229,6 +234,17 @@ export default function AssessmentStepBuilder({
               type="button"
               className={`preview-tab${authoringMode === "json" ? " active" : ""}`}
               onClick={() => {
+                if (!jsonEdited) {
+                  setJsonText(
+                    createImportJson({
+                      schemaVersion: 2,
+                      title: assessmentTitle,
+                      description: assessmentDescription,
+                      steps: cpSteps,
+                      expected_outcome: expectedOutcome,
+                    }),
+                  );
+                }
                 setJsonMessage(null);
                 setAuthoringMode("json");
               }}
@@ -282,7 +298,10 @@ export default function AssessmentStepBuilder({
               rows={16}
               style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.86rem" }}
               value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
+              onChange={(e) => {
+                setJsonText(e.target.value);
+                setJsonEdited(true);
+              }}
               placeholder={`{
   "unit_assessment_json": {
     "schemaVersion": 2,
