@@ -115,14 +115,20 @@ textarea {
   align-self: start;
   position: sticky;
   top: 24px;
+  display: flex;
+  flex-direction: column;
   max-height: calc(100vh - 48px);
-  overflow-y: auto;
+  overflow: hidden;
 }
 .lesson-preview-height {
-  overflow: hidden;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   transition: height 500ms ease;
 }
 .lesson-preview-heading {
+  flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -689,8 +695,12 @@ textarea {
   .lesson-preview-card {
     position: static;
     max-height: none;
-    overflow-y: visible;
+    overflow: visible;
     margin: 24px 0;
+  }
+  .lesson-preview-height {
+    flex: 0 0 auto;
+    overflow: visible;
   }
   .unit-editor-card {
     margin-bottom: 24px;
