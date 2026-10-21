@@ -22,6 +22,16 @@ const periodOptions: { period: LeaderboardPeriod; title: string }[] = [
     { period: "all-time", title: "All Time" },
 ];
 
+function getProfileInitials(username: string): string {
+    return username
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((namePart) => Array.from(namePart)[0]?.toLocaleUpperCase() ?? "")
+        .join("");
+}
+
 export default function Leaderboard({ initialEntries, showPeriodTitle = false }: LeaderboardProps) {
     const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
     const [entries, setEntries] = useState(initialEntries);
@@ -101,7 +111,12 @@ export default function Leaderboard({ initialEntries, showPeriodTitle = false }:
                             <div className="podium">
                                 {podium.map(({ entry, place, placeId }) => (
                                     <div className="podium-place-container" key={entry.userId}>
-                                        <div className="player-icon">
+                                        <div
+                                            className="player-icon"
+                                            aria-label={`${entry.username}'s profile`}
+                                            style={{ display: "grid", placeItems: "center", color: "white", fontWeight: 700, backgroundColor: "var(--primary-color)" }}
+                                        >
+                                            {getProfileInitials(entry.username)}
                                             <div className="podium-player-xp"><p>{entry.xp.toLocaleString()} XP</p></div>
                                         </div>
                                         <p id="player-name">{entry.username}</p>
@@ -115,7 +130,13 @@ export default function Leaderboard({ initialEntries, showPeriodTitle = false }:
                                 <div className="leaderboard-player row" id="nth-place" key={entry.userId}>
                                     <div className="player-details row">
                                         <p>{index + 4}</p>
-                                        <div className="player-icon"></div>
+                                        <div
+                                            className="player-icon"
+                                            aria-label={`${entry.username}'s profile`}
+                                            style={{ display: "grid", placeItems: "center", color: "white", fontWeight: 700, backgroundColor: "var(--primary-color)" }}
+                                        >
+                                            {getProfileInitials(entry.username)}
+                                        </div>
                                         <p id="player-name">{entry.username}</p>
                                     </div>
                                     <p>{entry.xp.toLocaleString()} XP</p>
