@@ -1,10 +1,10 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
-import { getLeaderboardEntries, type LeaderboardEntry, type LeaderboardPeriod } from "@/app/actions/leaderboard";
+import { Fragment, useState } from "react";
+import type { LeaderboardEntriesByPeriod, LeaderboardPeriod } from "@/app/actions/leaderboard";
 
 interface LeaderboardProps {
-    initialEntries: LeaderboardEntry[];
+    entriesByPeriod: LeaderboardEntriesByPeriod;
     maxEntries?: number;
     showPeriodTitle?: boolean;
 }
@@ -24,38 +24,16 @@ const periodOptions: { period: LeaderboardPeriod; title: string }[] = [
 ];
 
 export default function Leaderboard({
-    initialEntries,
+    entriesByPeriod,
     maxEntries,
     showPeriodTitle = false,
 }: LeaderboardProps) {
     const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
-    const [entries, setEntries] = useState(initialEntries);
-    const [, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
-    const requestId = useRef(0);
+    const entries = entriesByPeriod[period];
     const visibleEntries = maxEntries === undefined ? entries : entries.slice(0, maxEntries);
 
-    const changePeriod = async (nextPeriod: LeaderboardPeriod) => {
+    const changePeriod = (nextPeriod: LeaderboardPeriod) => {
         setPeriod(nextPeriod);
-        setIsLoading(true);
-        setError("");
-        const currentRequestId = ++requestId.current;
-
-        try {
-            const nextEntries = await getLeaderboardEntries(nextPeriod);
-            if (currentRequestId === requestId.current) {
-                setEntries(nextEntries);
-            }
-        } catch (err) {
-            console.error("Failed to load leaderboard:", err);
-            if (currentRequestId === requestId.current) {
-                setError("Unable to load the leaderboard. Please try again.");
-            }
-        } finally {
-            if (currentRequestId === requestId.current) {
-                setIsLoading(false);
-            }
-        }
     };
 
     const podium = [
@@ -94,7 +72,7 @@ export default function Leaderboard({
                                         name="leaderboard-time"
                                         id={id}
                                         checked={period === optionPeriod}
-                                        onChange={() => void changePeriod(optionPeriod)}
+                                        onChange={() => changePeriod(optionPeriod)}
                                     />
                                     <label htmlFor={id}><p>{title}</p></label>
                                 </Fragment>
@@ -102,7 +80,6 @@ export default function Leaderboard({
                         })}
                     </div>
                 </div>
-                {error && <p role="alert">{error}</p>}
                 <div className="podium-stage">
                     <div className="podium">
                         {podium.map(({ entry, rank, rankClass, rankLabel }) => (
@@ -142,6 +119,7 @@ export default function Leaderboard({
                                 )}
                                 <div className="podium-place" id={rankClass}>
                                     <h1>{rankLabel}</h1>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width={rank === 1 ? 72 : 48} height={rank === 1 ? 72 : 48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trophy preview-icon"><path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"/><path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2"/><path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3"/></svg>
                                 </div>
                             </div>
                         ))}
