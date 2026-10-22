@@ -1656,10 +1656,17 @@ footer.incorrect {
     /* Pair: keep both columns visible side by side so no vertical scrolling is needed */
     .options-container#pair {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-        align-items: start !important;
-        gap: 10px !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-auto-rows: auto !important;
+        align-content: start !important;
+        align-items: stretch !important;
+        justify-items: stretch !important;
+        column-gap: 10px !important;
+        row-gap: 10px !important;
+        flex: 1 1 auto !important;
         width: 100% !important;
+        max-width: 100% !important;
+        margin-inline: 0 !important;
     }
 
     .pair-left-column .options,
@@ -1680,38 +1687,65 @@ footer.incorrect {
     }
 
     .pair-left-column, .pair-right-column {
-        width: 100% !important;
-        gap: 8px !important;
+        display: contents !important;
     }
 
     .pair-left-column > label, .pair-right-column > label {
         max-height: none !important;
         height: auto !important;
+        width: 100% !important;
+        align-self: stretch !important;
+    }
+
+    .pair-left-column > label > .options,
+    .pair-right-column > label > .options {
+        width: 100% !important;
+        height: 100% !important;
     }
 
     .options-container#order {
         width: 100% !important;
-        gap: 8px !important;
+        gap: 0 !important;
     }
 
     .order-number {
-        gap: 6px !important;
-    }
-
-    .order-number > div {
-        max-height: none !important;
-        min-height: 48px !important;
-        height: auto !important;
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
     }
 
     .order-options {
         gap: 6px !important;
+        min-width: 0 !important;
+        margin-left: 56px !important;
+        counter-reset: order-option;
     }
 
     .order-options > .options {
         min-height: 48px !important;
         max-height: none !important;
         height: auto !important;
+        position: relative;
+        counter-increment: order-option;
+    }
+
+    .order-options > .options::before {
+        content: counter(order-option) ".";
+        position: absolute;
+        top: 50%;
+        right: calc(100% + 18px);
+        width: 32px;
+        transform: translateY(-50%);
+        color: var(--text-main);
+        font-family: var(--font-poppins), 'Poppins', sans-serif;
+        font-size: clamp(0.75rem, 2vw, 1.25rem);
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        pointer-events: none;
     }
 
     .options-container#ftb {
