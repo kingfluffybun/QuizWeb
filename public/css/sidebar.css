@@ -110,7 +110,7 @@
     aspect-ratio: 1;
     height: 40px; width: auto;
     flex: 0 0 40px;
-    background-color: var(--primary-color);
+    /* background-color: var(--primary-color); */
     border-radius: 999px;
     color: var(--text-inverse);
     display: grid;
