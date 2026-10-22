@@ -363,10 +363,13 @@ button.quick-action-btn:hover {
 }
 
 .day {
+    position: relative;
     width: 100%;
     height: auto;
     aspect-ratio: 2/1;
     p {
+        position: relative;
+        z-index: 10;
         color: var(--text-muted); 
         background-color: hsl(260, 100%, 70%, 10%);
         padding: 8px;
@@ -376,16 +379,57 @@ button.quick-action-btn:hover {
     }
 }
 
-.day.active {
-    p {color: var(--text-inverse); background-color: var(--primary-color);}
+.day.active p,
+.day.active-start p,
+.day.active-middle p,
+.day.active-end p {
+    color: var(--text-inverse);
+    background-color: var(--primary-color);
 }
 
-.day.today:not(.active) p {
+.day.active::after,
+.day.active-start::after,
+.day.active-middle::after,
+.day.active-end::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    background-color: var(--primary-color);
+    height: 100%;
+}
+
+.day.active::after {
+    left: 0;
+    width: 100%;
+    border-radius: 999px;
+}
+
+.day.active-start::after {
+    left: 0;
+    width: calc(100% + 12px);
+    border-radius: 999px 0 0 999px;
+}
+
+.day.active-middle::after {
+    left: -12px;
+    width: calc(100% + 24px);
+}
+
+.day.active-end::after {
+    left: -12px;
+    width: calc(100% + 12px);
+    border-radius: 0 999px 999px 0;
+}
+
+.day.today:not(.active):not(.active-start):not(.active-middle):not(.active-end) p {
     outline: 2px dashed var(--primary-color);
     background-color: transparent;
 }
 
-.day.today.active p {
+.day.today.active p,
+.day.today.active-start p,
+.day.today.active-middle p,
+.day.today.active-end p {
     box-shadow: 0 0 0 2px var(--primary-color);
 }
 
@@ -439,7 +483,7 @@ button.quick-action-btn:hover {
     background-color: hsl(260, 100%, 70%, 10%);
     svg {display: none; color: var(--text-inverse);}
     &.active {background-color: #FF7504; svg {display: flex;}}
-    &.today {background-color: transparent; border: 2px dashed var(--primary-color);}
+    &.today {background-color: transparent; border: 2px dashed #FF7504;}
 }
 
 /* Daily Goal */

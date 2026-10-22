@@ -279,13 +279,31 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
 
                     {/* Month Days */}
                     {monthDays.map((dayNum) => {
-                        const isActive =
-                            activeDaysMonth === `${viewYear}-${viewMonth}` &&
-                            activeDays.includes(dayNum);
+                        const isActiveMonth = activeDaysMonth === `${viewYear}-${viewMonth}`;
+                        const isActive = isActiveMonth && activeDays.includes(dayNum);
                         const isToday = isCurrentViewMonth && dayNum === todayDayNum;
+                        const dayOfWeek = (firstDayOfWeek + dayNum - 1) % 7;
+                        const hasActivePreviousDay =
+                            isActive &&
+                            dayOfWeek !== 0 &&
+                            activeDays.includes(dayNum - 1);
+                        const hasActiveNextDay =
+                            isActive &&
+                            dayOfWeek !== 6 &&
+                            activeDays.includes(dayNum + 1);
 
                         let dayClasses = "day col";
-                        if (isActive) dayClasses += " active";
+                        if (isActive) {
+                            if (hasActivePreviousDay && hasActiveNextDay) {
+                                dayClasses += " active-middle";
+                            } else if (hasActiveNextDay) {
+                                dayClasses += " active-start";
+                            } else if (hasActivePreviousDay) {
+                                dayClasses += " active-end";
+                            } else {
+                                dayClasses += " active";
+                            }
+                        }
                         if (isToday) dayClasses += " today";
 
                         const dateString = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
