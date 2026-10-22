@@ -104,11 +104,13 @@ export default function DailyGoalCard({ initialData }: { initialData: DailyGoalD
                         <div className="graph-y-axis">
                             {DAY_LABELS.map((day, index) => (
                                 <div key={day}>
-                                    <div
-                                        className="graph-y-bar"
-                                        style={{ height: `${getBarHeight(goalData.weekXp[index])}px` }}
-                                        title={`${goalData.weekXp[index]} XP on ${goalData.weekDates[index]}`}
-                                    />
+                                    {goalData.weekXp[index] > 0 && (
+                                        <div
+                                            className="graph-y-bar"
+                                            style={{ height: `${getBarHeight(goalData.weekXp[index])}px` }}
+                                            title={`${goalData.weekXp[index]} XP on ${goalData.weekDates[index]}`}
+                                        />
+                                    )}
                                     <p>{day}</p>
                                 </div>
                             ))}

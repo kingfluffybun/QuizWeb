@@ -25,16 +25,55 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
 
     const filteredUnits = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
-        return units.filter((unit) => {
-            const unitSec = unit.sec_num != null ? String(unit.sec_num).trim() : "";
-            const matchesSection =
-                selectedSection === "all" || unitSec === selectedSection;
-            const matchesSearch =
-                !q ||
-                unit.unit_title.toLowerCase().includes(q) ||
-                (unitSec ? `section ${unitSec}`.toLowerCase().includes(q) : false);
-            return matchesSection && matchesSearch;
-        });
+        const compareNumbers = (a?: string | number | null, b?: string | number | null) => {
+            const aNumber = Number(a);
+            const bNumber = Number(b);
+            const aIsNumber = a != null && a !== "" && Number.isFinite(aNumber);
+            const bIsNumber = b != null && b !== "" && Number.isFinite(bNumber);
+
+            if (aIsNumber && bIsNumber) return aNumber - bNumber;
+            if (aIsNumber) return -1;
+            if (bIsNumber) return 1;
+            return String(a ?? "").localeCompare(String(b ?? ""), undefined, {
+                numeric: true,
+                sensitivity: "base",
+            });
+        };
+        const categoryOrder: Record<string, number> = {
+            html: 0,
+            css: 1,
+            js: 2,
+            javascript: 2,
+        };
+
+        return units
+            .filter((unit) => {
+                const unitSec = unit.sec_num != null ? String(unit.sec_num).trim() : "";
+                const matchesSection =
+                    selectedSection === "all" || unitSec === selectedSection;
+                const matchesSearch =
+                    !q ||
+                    unit.unit_title.toLowerCase().includes(q) ||
+                    (unitSec ? `section ${unitSec}`.toLowerCase().includes(q) : false);
+                return matchesSection && matchesSearch;
+            })
+            .sort((a, b) => {
+                const categoryA = (a.category_name ?? "").trim().toLowerCase();
+                const categoryB = (b.category_name ?? "").trim().toLowerCase();
+                const categoryComparison =
+                    (categoryOrder[categoryA] ?? Number.MAX_SAFE_INTEGER) -
+                    (categoryOrder[categoryB] ?? Number.MAX_SAFE_INTEGER);
+
+                return (
+                    categoryComparison ||
+                    compareNumbers(a.sec_num, b.sec_num) ||
+                    compareNumbers(a.unit_number, b.unit_number) ||
+                    a.unit_title.localeCompare(b.unit_title, undefined, {
+                        numeric: true,
+                        sensitivity: "base",
+                    })
+                );
+            });
     }, [units, selectedSection, searchQuery]);
 
     return (
