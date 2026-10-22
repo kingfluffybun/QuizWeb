@@ -23,11 +23,17 @@ export default async function DashboardPage() {
         getLeaderboardEntriesByPeriod(),
         getDailyGoalData(),
     ]);
-    const firstName = session.user.name?.trim().split(/\s+/)[0] || "User";
+    const username =
+        session.user.name?.trim() || session.user.email?.split("@")[0] || "User";
+    const firstName = username.split(/\s+/)[0] || "User";
 
     return (
         <div className="dashboard-page">
-            <Sidebar />
+            <Sidebar
+                role={session.user.role ?? session.user.user_role ?? "user"}
+                username={username}
+                email={session.user.email ?? ""}
+            />
             <main>
                 <div className="dashboard-content">
                     <div className="welcome-banner">

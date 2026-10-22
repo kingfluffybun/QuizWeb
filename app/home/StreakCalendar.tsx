@@ -22,6 +22,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const [activeDaysMonth, setActiveDaysMonth] = useState(
         `${initialData.targetYear}-${initialData.targetMonth}`,
     );
+    const [clientToday, setClientToday] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
 
     // Sync client local date if different from server fallback
@@ -32,6 +33,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
             const month = String(now.getMonth() + 1).padStart(2, "0");
             const day = String(now.getDate()).padStart(2, "0");
             const localDate = `${year}-${month}-${day}`;
+            setClientToday(localDate);
 
             if (localDate !== initialData.todayDate) {
                 startTransition(async () => {
@@ -102,11 +104,14 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const monthDays = Array.from({ length: totalDaysInMonth }, (_, i) => i + 1);
 
     const isCurrentViewMonth = (() => {
-        const [todayYearStr, todayMonthStr] = streakData.todayDate.split("-");
+        if (!clientToday) return false;
+        const [todayYearStr, todayMonthStr] = clientToday.split("-");
         return Number(todayYearStr) === viewYear && Number(todayMonthStr) === viewMonth;
     })();
 
-    const todayDayNum = isCurrentViewMonth ? Number(streakData.todayDate.slice(8, 10)) : null;
+    const todayDayNum = isCurrentViewMonth && clientToday
+        ? Number(clientToday.slice(8, 10))
+        : null;
 
     // Motivational text
     const motivationMessage = (() => {
@@ -158,15 +163,16 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                     {/* Streak Week indicators */}
                     <div className="streak-week">
                         {streakData.weekDays.map((day) => {
+                            const isToday = clientToday !== null && day.date === clientToday;
                             let dayClasses = "streak-day row";
                             if (day.isActive) {
                                 dayClasses += " active";
-                            } else if (day.isToday) {
+                            } else if (isToday) {
                                 dayClasses += " today";
                             }
 
                             const tooltip = `${day.dayName} (${day.date}): ${
-                                day.isActive ? "Completed" : day.isToday ? "Today (Not finished yet)" : "No activity"
+                                day.isActive ? "Completed" : isToday ? "Today (Not finished yet)" : "No activity"
                             }`;
 
                             return (
