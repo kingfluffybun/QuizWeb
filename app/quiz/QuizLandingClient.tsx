@@ -15,7 +15,10 @@ import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { recordUserActivity } from "@/app/actions/streak";
-import { calculateEarnedXp } from "@/lib/xp-calculation";
+import {
+  calculateXpBreakdown,
+  type XpCalculationBreakdown,
+} from "@/lib/xp-calculation";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 
 type AnswerResult = {
@@ -211,6 +214,8 @@ export default function QuizLandingClient({
   const [score, setScore] = useState(0);
   const [earnedXp, setEarnedXp] = useState(0);
   const [correctStreak, setCorrectStreak] = useState(0);
+  const [lastXpBreakdown, setLastXpBreakdown] =
+    useState<XpCalculationBreakdown | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const [hasStartedQuiz, setHasStartedQuiz] = useState(
     initialQuizzes === undefined,
@@ -335,6 +340,7 @@ export default function QuizLandingClient({
     }));
     setResult(skippedResult);
     setCorrectStreak(0);
+    setLastXpBreakdown(calculateXpBreakdown(false, quiz.difficulty_id, 0));
     playQuizSound("skipped-answer");
   };
 
@@ -357,14 +363,18 @@ export default function QuizLandingClient({
       setScore((currentScore) => currentScore + 1);
       const nextStreak = correctStreak + 1;
       setCorrectStreak(nextStreak);
-      setEarnedXp(
-        (total) =>
-          total + calculateEarnedXp(true, quiz.difficulty_id, nextStreak),
+      const breakdown = calculateXpBreakdown(
+        true,
+        quiz.difficulty_id,
+        nextStreak,
       );
+      setLastXpBreakdown(breakdown);
+      setEarnedXp((total) => total + breakdown.earnedXp);
     } else {
       playQuizSound("wrong-answer");
       setLives((currentLives) => Math.max(0, currentLives - 1));
       setCorrectStreak(0);
+      setLastXpBreakdown(calculateXpBreakdown(false, quiz.difficulty_id, 0));
     }
   };
 
@@ -390,14 +400,18 @@ export default function QuizLandingClient({
         setScore((currentScore) => currentScore + 1);
         const nextStreak = correctStreak + 1;
         setCorrectStreak(nextStreak);
-        setEarnedXp(
-          (total) =>
-            total + calculateEarnedXp(true, quiz.difficulty_id, nextStreak),
+        const breakdown = calculateXpBreakdown(
+          true,
+          quiz.difficulty_id,
+          nextStreak,
         );
+        setLastXpBreakdown(breakdown);
+        setEarnedXp((total) => total + breakdown.earnedXp);
       } else {
         playQuizSound("wrong-answer");
         setLives((currentLives) => Math.max(0, currentLives - 1));
         setCorrectStreak(0);
+        setLastXpBreakdown(calculateXpBreakdown(false, quiz.difficulty_id, 0));
       }
     }
   };
@@ -804,22 +818,48 @@ export default function QuizLandingClient({
               )}
             />
           ) : (
-            <div
-              className="quiz-container"
-              key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}
-            >
-              <h1>{quiz?.question_text ?? "Loading question..."}</h1>
-              {quiz && (
-                <QuizRender
-                  quiz={quiz}
-                  value={value}
-                  onChange={handleAnswerChange}
-                  disabled={areChoicesLocked}
-                  onPairMatched={() => playQuizSound("correct-answer1")}
-                  onIncorrectPair={() => playQuizSound("wrong-answer")}
-                />
-              )}
-            </div>
+            <>
+              <section className="xp-tracker" aria-label="XP tracker" aria-live="polite">
+                <div className="xp-tracker-stat">
+                  <span>Total XP</span>
+                  <strong>{Number(earnedXp.toFixed(2))} XP</strong>
+                </div>
+                <div className="xp-tracker-stat">
+                  <span>Correct streak</span>
+                  <strong>{correctStreak}</strong>
+                </div>
+                <div className="xp-tracker-detail">
+                  <span>Latest answer</span>
+                  {lastXpBreakdown ? (
+                    lastXpBreakdown.isCorrect ? (
+                      <strong>
+                        {lastXpBreakdown.baseXp} base × {lastXpBreakdown.difficultyMultiplier} difficulty × {lastXpBreakdown.streakMultiplier.toFixed(1)} streak = {Number(lastXpBreakdown.earnedXp.toFixed(2))} XP
+                      </strong>
+                    ) : (
+                      <strong>Incorrect: 0 XP · streak reset</strong>
+                    )
+                  ) : (
+                    <strong>Awaiting first answer</strong>
+                  )}
+                </div>
+              </section>
+              <div
+                className="quiz-container"
+                key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}
+              >
+                <h1>{quiz?.question_text ?? "Loading question..."}</h1>
+                {quiz && (
+                  <QuizRender
+                    quiz={quiz}
+                    value={value}
+                    onChange={handleAnswerChange}
+                    disabled={areChoicesLocked}
+                    onPairMatched={() => playQuizSound("correct-answer1")}
+                    onIncorrectPair={() => playQuizSound("wrong-answer")}
+                  />
+                )}
+              </div>
+            </>
           )}
         </div>
       </main>
