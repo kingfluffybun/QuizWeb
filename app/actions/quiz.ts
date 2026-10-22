@@ -701,7 +701,9 @@ export interface AvailableUnit {
   pending_id: number;
   unit_id: number;
   unit_title: string;
+  category_name?: string;
   sec_num?: string;
+  unit_number?: number | string | null;
   quiz_count: number;
   has_coding_assessment?: boolean;
 }
@@ -816,8 +818,9 @@ export async function getCodeProblems(unitId?: number): Promise<CodeProblem[]> {
 
 export async function getAvailableUnits(): Promise<AvailableUnit[]> {
   try {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT p.pending_id, u.unit_id, u.unit_title, s.sec_num,
+    const [[rows], [categories]] = await Promise.all([
+      db.query<RowDataPacket[]>(
+        `SELECT p.pending_id, u.unit_id, u.unit_title, s.sec_num,
               u.unit_quiz_json, u.unit_assessment_json
        FROM unit_approved_tbl a
        JOIN pending_tbl p ON p.pending_id = a.pending_id
@@ -825,16 +828,27 @@ export async function getAvailableUnits(): Promise<AvailableUnit[]> {
        LEFT JOIN sec_tbl s ON s.sec_id = u.sec_id
        WHERE p.pending_status = 'approved'
        ORDER BY u.unit_id DESC`,
+      ),
+      db.query<RowDataPacket[]>("SELECT cat_id, cat_name FROM cat_tbl"),
+    ]);
+    const categoryNames = new Map<number, string>(
+      categories.map((category) => [Number(category.cat_id), String(category.cat_name)]),
     );
 
     return rows.map((row) => {
       const quizzes = parseJsonColumn(row.unit_quiz_json);
       const assessment = parseJsonColumn(row.unit_assessment_json);
+      const firstQuiz = Array.isArray(quizzes) ? quizzes[0] : undefined;
       return {
         pending_id: Number(row.pending_id),
         unit_id: Number(row.unit_id),
         unit_title: String(row.unit_title),
+        category_name:
+          firstQuiz?.cat_id != null
+            ? categoryNames.get(Number(firstQuiz.cat_id))
+            : undefined,
         sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
+        unit_number: firstQuiz?.unit ?? null,
         quiz_count: Array.isArray(quizzes) ? quizzes.length : 0,
         has_coding_assessment: Boolean(unwrapCodeProblemAssessment(assessment)),
       };
