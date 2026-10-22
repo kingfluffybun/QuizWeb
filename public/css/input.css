@@ -83,7 +83,6 @@ textarea {
   max-width: 1480px;
   box-sizing: border-box;
   margin: var(--studio-space-6) auto;
-  padding: 0 var(--studio-space-6);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--studio-space-6);
@@ -266,9 +265,9 @@ textarea {
   background: #f8fafc;
   color: var(--input-muted);
   min-height: 180px;
-  display: grid;
-  place-items: center;
-  text-align: center;
+  display: flex;
+  width:100%;
+  justify-content: center;
 }
 .lesson-preview-card .lesson-preview-surface.lesson-card-empty > p {
   width: 100%;
@@ -1365,7 +1364,7 @@ textarea {
   accent-color: var(--selected-color);
 }
 .btn-primary {
-  background-color: var(--primary-color);
+  background-color: var(--selected-color);
   height: 100%;
   color: #ffffff;
   font-family: "Poppins", sans-serif;
