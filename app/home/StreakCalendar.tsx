@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
     type StreakData,
     getMonthActivity,
-    recordUserActivity,
     getUserStreakData,
 } from "@/app/actions/streak";
 
@@ -24,9 +22,6 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const [activeDaysMonth, setActiveDaysMonth] = useState(
         `${initialData.targetYear}-${initialData.targetMonth}`,
     );
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-    const [isLogging, setIsLogging] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
 
     // Sync client local date if different from server fallback
@@ -100,33 +95,6 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
         });
     }, [streakData.todayDate]);
 
-    const handleManualCheckIn = async () => {
-        setIsLogging(true);
-        setFeedbackMessage(null);
-
-        try {
-            const res = await recordUserActivity({
-                type: "daily_checkin",
-                xp: 10,
-                date: streakData.todayDate,
-            });
-
-            if (res.success) {
-                const fresh = await getUserStreakData(viewYear, viewMonth, streakData.todayDate);
-                setStreakData(fresh);
-                setActiveDays(fresh.activeDatesInMonth);
-                setActiveDaysMonth(`${viewYear}-${viewMonth}`);
-                setFeedbackMessage("Daily streak recorded! +10 XP earned.");
-            } else {
-                setFeedbackMessage(res.error || "Failed to log activity.");
-            }
-        } catch {
-            setFeedbackMessage("An unexpected error occurred.");
-        } finally {
-            setIsLogging(false);
-        }
-    };
-
     // Calculate calendar grid metrics for viewYear & viewMonth
     const firstDayOfWeek = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();
     const totalDaysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
@@ -157,7 +125,9 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
         <div className="card" id="streak-calendar">
             <div className="card-title">
                 <h2>Streak Calendar</h2>
-                <button type="button" className="quick-action quick-action-btn" onClick={() => setIsDetailsOpen(true)} aria-label="View streak details" > <h2 className="quick-action">View Details</h2> </button>
+                <button type="button" className="quick-action quick-action-btn" aria-label="View streak details">
+                    <h2 className="quick-action">View Details</h2>
+                </button>
             </div>
             <div className="calendar-container">
                 {/* Left column: streak summary & current week */}
@@ -308,92 +278,6 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                 </div>
             </div>
 
-            {/* Streak Details Modal */}
-            {isDetailsOpen && (
-                <div
-                    className="streak-modal-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="streak-modal-title"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) setIsDetailsOpen(false);
-                    }}
-                >
-                    <div className="streak-modal-card">
-                        <div className="streak-modal-header">
-                            <h2 id="streak-modal-title">Streak & Activity Overview</h2>
-                            <button
-                                type="button"
-                                className="streak-modal-close"
-                                onClick={() => setIsDetailsOpen(false)}
-                                aria-label="Close dialog"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <div className="streak-stats-grid">
-                            <div className="streak-stat-item">
-                                <span className="streak-stat-value">{streakData.currentStreak}</span>
-                                <span className="streak-stat-label">Current Streak</span>
-                            </div>
-                            <div className="streak-stat-item">
-                                <span className="streak-stat-value">{streakData.longestStreak}</span>
-                                <span className="streak-stat-label">Longest Streak</span>
-                            </div>
-                            <div className="streak-stat-item">
-                                <span className="streak-stat-value">{streakData.totalActiveDays}</span>
-                                <span className="streak-stat-label">Total Days Active</span>
-                            </div>
-                        </div>
-
-                        <div className="streak-status-banner">
-                            {streakData.todayCompleted ? (
-                                <p className="streak-status-success">
-                                    &#10004; You have completed practice today ({streakData.todayDate})!
-                                </p>
-                            ) : (
-                                <p className="streak-status-pending">
-                                    You haven&apos;t recorded a lesson or quiz yet today ({streakData.todayDate}).
-                                </p>
-                            )}
-                        </div>
-
-                        {feedbackMessage && (
-                            <div className="streak-feedback-message">
-                                <p>{feedbackMessage}</p>
-                            </div>
-                        )}
-
-                        <div className="streak-modal-actions">
-                            {!streakData.todayCompleted && (
-                                <button
-                                    type="button"
-                                    className="streak-action-btn primary"
-                                    onClick={handleManualCheckIn}
-                                    disabled={isLogging}
-                                >
-                                    {isLogging ? "Recording..." : "Check In Today (+10 XP)"}
-                                </button>
-                            )}
-                            <Link
-                                href="/learn"
-                                className="streak-action-btn secondary"
-                                onClick={() => setIsDetailsOpen(false)}
-                            >
-                                Start a Lesson
-                            </Link>
-                            <button
-                                type="button"
-                                className="streak-action-btn tertiary"
-                                onClick={() => setIsDetailsOpen(false)}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
