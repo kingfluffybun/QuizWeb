@@ -438,7 +438,7 @@ button.quick-action-btn:hover {
     border-radius: 999px;
     background-color: hsl(260, 100%, 70%, 10%);
     svg {display: none; color: var(--text-inverse);}
-    &.active {background-color: var(--primary-color); svg {display: flex;}}
+    &.active {background-color: #FF7504; svg {display: flex;}}
     &.today {background-color: transparent; border: 2px dashed var(--primary-color);}
 }
 
@@ -650,16 +650,19 @@ button.quick-action-btn:hover {
     }
     .podium-place { 
         display: flex;
-        justify-content: center;
-        align-items: flex-start;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
         width: 100%;
         border-radius: 16px 16px 0 0;
         padding: 12px 24px;
+        padding-bottom: 0;
+        border-bottom: 4px solid var(--text-inverse);
         h1 {font-size: clamp(1rem, 3vw, 1.75rem); color: var(--text-inverse);}
-        &#first-place {height: 180px; background-color: var(--podium-first-color);}
+        svg {aspect-ratio: 1; height: 48px; color: var(--text-inverse); margin-bottom: -4px;}
+        &#first-place {height: 180px; background-color: var(--podium-first-color); svg {height: 72px; margin-bottom: -6px;}}
         &#second-place {height: 140px; background-color: var(--podium-second-color);}
         &#third-place {height: 100px; background-color: var(--podium-third-color);}
-        
     }
 }
 

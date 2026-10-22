@@ -20,6 +20,7 @@ export default async function DashboardPage() {
         getUserStreakData(),
         getLeaderboardEntriesByPeriod(),
     ]);
+    const firstName = session.user.name?.trim().split(/\s+/)[0] || "User";
 
     return (
         <div className="dashboard-page">
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
                 <div className="dashboard-content">
                     <div className="welcome-banner">
                         <div>
-                            <h1>Welcome, {session?.user?.name || 'User'}</h1>
+                            <h1>Welcome, {firstName}</h1>
                             <p>Your daily goal is waiting — jump in and earn some XP!</p>
                             <Image src="/assets/landing-page/Clouds-right.svg" width={180} height={180} alt="" className="cloud-right"/>
                         </div>
