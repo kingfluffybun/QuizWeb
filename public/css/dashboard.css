@@ -372,7 +372,6 @@ button.quick-action-btn:hover {
         aspect-ratio: 1/1;
         border-radius: 999px;
         text-align: center;
-        transition: all 0.15s ease;
     }
 }
 
