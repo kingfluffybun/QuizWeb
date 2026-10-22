@@ -7,7 +7,7 @@ import Sidebar from "@/app/components/Sidebar";
 import Leaderboard from "@/app/components/Leaderboard";
 import StreakCalendar from "./StreakCalendar";
 import { getUserStreakData } from "@/app/actions/streak";
-import { getLeaderboardEntries } from "@/app/actions/leaderboard";
+import { getLeaderboardEntriesByPeriod } from "@/app/actions/leaderboard";
 
 export default async function DashboardPage() {
     const session = await auth();
@@ -16,8 +16,10 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    const streakData = await getUserStreakData();
-    const initialLeaderboardEntries = await getLeaderboardEntries("daily");
+    const [streakData, leaderboardEntriesByPeriod] = await Promise.all([
+        getUserStreakData(),
+        getLeaderboardEntriesByPeriod(),
+    ]);
 
     return (
         <div className="dashboard-page">
@@ -190,7 +192,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
 
-                    <Leaderboard initialEntries={initialLeaderboardEntries} maxEntries={8} />
+                    <Leaderboard entriesByPeriod={leaderboardEntriesByPeriod} maxEntries={8} />
                 </div>
             </main>
             

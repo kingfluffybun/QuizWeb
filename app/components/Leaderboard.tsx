@@ -1,10 +1,10 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
-import { getLeaderboardEntries, type LeaderboardEntry, type LeaderboardPeriod } from "@/app/actions/leaderboard";
+import { Fragment, useState } from "react";
+import type { LeaderboardEntriesByPeriod, LeaderboardPeriod } from "@/app/actions/leaderboard";
 
 interface LeaderboardProps {
-    initialEntries: LeaderboardEntry[];
+    entriesByPeriod: LeaderboardEntriesByPeriod;
     maxEntries?: number;
     showPeriodTitle?: boolean;
 }
@@ -24,38 +24,16 @@ const periodOptions: { period: LeaderboardPeriod; title: string }[] = [
 ];
 
 export default function Leaderboard({
-    initialEntries,
+    entriesByPeriod,
     maxEntries,
     showPeriodTitle = false,
 }: LeaderboardProps) {
     const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
-    const [entries, setEntries] = useState(initialEntries);
-    const [, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
-    const requestId = useRef(0);
+    const entries = entriesByPeriod[period];
     const visibleEntries = maxEntries === undefined ? entries : entries.slice(0, maxEntries);
 
-    const changePeriod = async (nextPeriod: LeaderboardPeriod) => {
+    const changePeriod = (nextPeriod: LeaderboardPeriod) => {
         setPeriod(nextPeriod);
-        setIsLoading(true);
-        setError("");
-        const currentRequestId = ++requestId.current;
-
-        try {
-            const nextEntries = await getLeaderboardEntries(nextPeriod);
-            if (currentRequestId === requestId.current) {
-                setEntries(nextEntries);
-            }
-        } catch (err) {
-            console.error("Failed to load leaderboard:", err);
-            if (currentRequestId === requestId.current) {
-                setError("Unable to load the leaderboard. Please try again.");
-            }
-        } finally {
-            if (currentRequestId === requestId.current) {
-                setIsLoading(false);
-            }
-        }
     };
 
     const podium = [
@@ -94,7 +72,7 @@ export default function Leaderboard({
                                         name="leaderboard-time"
                                         id={id}
                                         checked={period === optionPeriod}
-                                        onChange={() => void changePeriod(optionPeriod)}
+                                        onChange={() => changePeriod(optionPeriod)}
                                     />
                                     <label htmlFor={id}><p>{title}</p></label>
                                 </Fragment>
@@ -102,7 +80,6 @@ export default function Leaderboard({
                         })}
                     </div>
                 </div>
-                {error && <p role="alert">{error}</p>}
                 <div className="podium-stage">
                     <div className="podium">
                         {podium.map(({ entry, rank, rankClass, rankLabel }) => (

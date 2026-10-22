@@ -516,6 +516,7 @@ button.quick-action-btn:hover {
             left: 0;
             right: 0;
             background-color: var(--primary-color);
+            border-radius: 999px 999px 0 0;
         }
     }
 }
