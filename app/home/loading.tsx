@@ -31,6 +31,11 @@ export default function HomeLoading() {
               <span className="cloud-right skeleton-shimmer skeleton-welcome-art" aria-hidden="true" />
             </div>
           </div>
+          <nav className="dashboard-mobile-jumpbar" aria-hidden="true">
+            {["Overview", "Streak", "Leaderboard"].map((section) => (
+              <span className="dashboard-jump-pill skeleton-shimmer" key={section} />
+            ))}
+          </nav>
 
           {/* 2. Main Dashboard Cards Grid */}
           <div className="dashboard">

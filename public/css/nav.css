@@ -100,9 +100,11 @@
             background-color: var(--primary-color);
             border-radius: 999px;
             color: var(--text-inverse);
-            display: grid;
-            place-items: center;
-            span {font-size: 1rem; font-weight: 700;};
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            /* span {font-size: 1rem; font-weight: 800;}; */
         }
     }
 }
@@ -193,6 +195,7 @@
     z-index: 1;
     width: min(100%, 680px);
     max-height: calc(100dvh - 3rem);
+    overflow-x: hidden;
     overflow-y: auto;
     transform: translateY(-50%);
     animation: accessibility-panel-rise 260ms ease-in-out both;

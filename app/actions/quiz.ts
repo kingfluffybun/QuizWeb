@@ -854,6 +854,29 @@ function parseJsonColumn(value: unknown) {
   }
 }
 
+function getLessonTitlesFromDocument(value: unknown): string[] {
+  if (!value || typeof value !== "object") return [];
+
+  const lessonCard = value as Record<string, unknown>;
+  const slides = Array.isArray(lessonCard.lesson_slide)
+    ? lessonCard.lesson_slide
+    : Array.isArray(lessonCard.lesson_slides)
+      ? lessonCard.lesson_slides
+      : [];
+  const titles = slides.flatMap((slide) => {
+    if (!slide || typeof slide !== "object") return [];
+    const slideRecord = slide as Record<string, unknown>;
+    const title = slideRecord.lesson_title ?? slideRecord.title;
+    return typeof title === "string" ? [title] : [];
+  });
+
+  if (typeof lessonCard.lesson_title === "string") {
+    titles.push(lessonCard.lesson_title);
+  }
+
+  return titles;
+}
+
 export async function deleteUnit(unitId: number) {
   if (!(await requireAdmin())) {
     return { error: "Unauthorized" };
@@ -1330,13 +1353,9 @@ export async function getPaginatedRecentQuizzes(
         }
         if (
           search &&
-          ![
-            unit.question_text,
-            unit.cat_name,
-            unit.difficulty_name,
-            unit.type_name,
-            String(unit.quiz_payload.pending_name ?? ""),
-          ].some((v) => v?.toLowerCase().includes(search))
+          !getLessonTitlesFromDocument(unit.quiz_payload.lesson_card).some(
+            (title) => title.toLowerCase().includes(search),
+          )
         ) {
           return false;
         }
@@ -1389,9 +1408,9 @@ export async function getPaginatedRecentQuizzes(
     if (filters.search?.trim()) {
       const search = `%${filters.search.trim()}%`;
       where.push(
-        "(q.question_text LIKE ? OR c.cat_name LIKE ? OR t.type_name LIKE ? OR d.difficulty_name LIKE ?)",
+        "CASE WHEN JSON_VALID(q.quiz_payload) THEN JSON_SEARCH(q.quiz_payload, 'one', ?, NULL, '$.lesson_card.lesson_title', '$.lesson_card.lesson_slide[*].lesson_title', '$.lesson_card.lesson_slide[*].title', '$.lesson_card.lesson_slides[*].lesson_title', '$.lesson_card.lesson_slides[*].title') ELSE NULL END IS NOT NULL",
       );
-      params.push(search, search, search, search);
+      params.push(search);
     }
     if (filters.category) {
       where.push("c.cat_name = ?");
@@ -1927,7 +1946,9 @@ export async function getPendingQuizzes(statusFilter = "pending") {
 }
 
 export async function getPendingQuizById(pendingId: number) {
-  if (!pendingId) return undefined;
+  if (!Number.isInteger(pendingId) || pendingId < 1) {
+    return { error: "A valid pending unit ID is required." };
+  }
 
   try {
     const [rows] = await db.query<PendingUnit[]>(
@@ -1987,7 +2008,9 @@ export async function getPendingQuizById(pendingId: number) {
       }
     }
 
-    if (!quiz) return undefined;
+    if (!quiz) {
+      return { error: "The pending unit was not found." };
+    }
     const lessonCard = parseJsonColumn(quiz.unit_lesson_card_json);
     const unitQuizJson = parseJsonColumn(quiz.unit_quiz_json);
     const assessment = parseJsonColumn(quiz.unit_assessment_json);
@@ -1995,18 +2018,24 @@ export async function getPendingQuizById(pendingId: number) {
     const firstQuiz = quizzes[0] ?? {};
 
     return {
-      ...quiz,
+      pending_id: Number(quiz.pending_id),
+      unit_id: quiz.unit_id == null ? undefined : Number(quiz.unit_id),
+      unit_title: String(quiz.unit_title ?? ""),
+      sec_id: Number(quiz.sec_id),
       sec_num: quiz.sec_num != null ? String(quiz.sec_num) : undefined,
+      pending_status: String(quiz.pending_status ?? ""),
+      pending_name: String(quiz.pending_name ?? ""),
+      pending_note: quiz.pending_note ?? null,
       unit_lesson_card_json: lessonCard,
       unit_quiz_json: quizzes,
       unit_assessment_json: assessment,
-      question_text: quiz.unit_title,
+      question_text: String(quiz.unit_title ?? ""),
       cat_name: "",
-      difficulty_name: quiz.pending_status,
+      difficulty_name: String(quiz.pending_status ?? ""),
       type_name: "Unit",
       quiz_payload: {
         ...(firstQuiz?.quiz_payload ?? {}),
-        title: quiz.unit_title,
+        title: String(quiz.unit_title ?? ""),
         lesson_card: lessonCard,
         quizzes,
         assessment,
@@ -2014,7 +2043,7 @@ export async function getPendingQuizById(pendingId: number) {
     };
   } catch (error) {
     console.error("Failed to fetch pending quiz:", error);
-    return undefined;
+    return { error: "The pending unit could not be fetched." };
   }
 }
 

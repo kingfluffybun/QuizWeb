@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import type { AdminUserRecord } from "@/app/actions/admin";
 
+const USERS_PER_PAGE = 6;
+
 export interface AdminUserTableProps {
   users: AdminUserRecord[];
   currentAdminId: number;
@@ -25,19 +27,31 @@ export default function AdminUserTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [passwordFilter, setPasswordFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(users.length / USERS_PER_PAGE));
+  const visiblePage = Math.min(currentPage, totalPages);
+  const visibleUsers = users.slice(
+    (visiblePage - 1) * USERS_PER_PAGE,
+    visiblePage * USERS_PER_PAGE,
+  );
+  const firstVisibleUser = users.length === 0 ? 0 : (visiblePage - 1) * USERS_PER_PAGE + 1;
+  const lastVisibleUser = Math.min(visiblePage * USERS_PER_PAGE, users.length);
 
   const handleQueryChange = (val: string) => {
     setSearchQuery(val);
+    setCurrentPage(1);
     onFilterChange(val, roleFilter, passwordFilter);
   };
 
   const handleRoleChange = (val: string) => {
     setRoleFilter(val);
+    setCurrentPage(1);
     onFilterChange(searchQuery, val, passwordFilter);
   };
 
   const handlePasswordChange = (val: string) => {
     setPasswordFilter(val);
+    setCurrentPage(1);
     onFilterChange(searchQuery, roleFilter, val);
   };
 
@@ -111,7 +125,7 @@ export default function AdminUserTable({
                 </td>
               </tr>
             ) : (
-              users.map((user) => {
+              visibleUsers.map((user) => {
                 const isSelf = user.user_id === currentAdminId;
                 const isOAuthWithoutPass = !user.has_password;
                 const isAdmin = user.user_role === "admin";
@@ -222,6 +236,36 @@ export default function AdminUserTable({
           </tbody>
         </table>
       </div>
+      {users.length > USERS_PER_PAGE && (
+        <nav className="admin-user-pagination" aria-label="User table pagination">
+          <span className="admin-user-pagination-status" aria-live="polite">
+            Showing {firstVisibleUser}–{lastVisibleUser} of {users.length} users
+          </span>
+          <div className="admin-user-pagination-controls">
+            <button
+              type="button"
+              className="admin-btn admin-btn-sm admin-btn-secondary"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={visiblePage === 1}
+            >
+              Previous
+            </button>
+            <span className="admin-user-pagination-page">
+              Page {visiblePage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="admin-btn admin-btn-sm admin-btn-secondary"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+              disabled={visiblePage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

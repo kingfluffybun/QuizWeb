@@ -327,9 +327,9 @@ export default function MaintainerStudioClient({
         <div className="maintainer-header-text">
           <div className="maintainer-title-row">
             <h1>Maintainer Studio</h1>
-            <span className="maintainer-role-pill">
+            {/* <span className="maintainer-role-pill">
               {currentUser.role === "admin" ? "Admin Staff" : "Maintainer"}
-            </span>
+            </span> */}
           </div>
         </div>
         <div className="maintainer-header-actions">
@@ -406,7 +406,7 @@ export default function MaintainerStudioClient({
               <path d="M12 5v14" />
               <path d="M5 12h14" />
             </svg>
-            <span>New Unit / Question</span>
+            <span style={{whiteSpace: "nowrap"}}>New Unit</span>
           </button>
         </div>
       </header>
@@ -441,7 +441,7 @@ export default function MaintainerStudioClient({
           <div className="stat-card-body">
             <span className="stat-card-label">Total Submissions</span>
             <span className="stat-card-value">{stats.total}</span>
-            <span className="stat-card-hint">All authored items</span>
+            {/* <span className="stat-card-hint">All authored items</span> */}
           </div>
         </div>
 
@@ -467,7 +467,7 @@ export default function MaintainerStudioClient({
           <div className="stat-card-body">
             <span className="stat-card-label">Approved</span>
             <span className="stat-card-value">{stats.approved}</span>
-            <span className="stat-card-hint">Published to learners</span>
+            {/* <span className="stat-card-hint">Published to learners</span> */}
           </div>
         </div>
 
@@ -493,7 +493,7 @@ export default function MaintainerStudioClient({
           <div className="stat-card-body">
             <span className="stat-card-label">Pending Review</span>
             <span className="stat-card-value">{stats.pending}</span>
-            <span className="stat-card-hint">In admin review queue</span>
+            {/* <span className="stat-card-hint">In admin review queue</span> */}
           </div>
         </div>
 
@@ -520,7 +520,7 @@ export default function MaintainerStudioClient({
           <div className="stat-card-body">
             <span className="stat-card-label">Action Needed</span>
             <span className="stat-card-value">{stats.rejected}</span>
-            <span className="stat-card-hint">Revisions requested</span>
+            {/* <span className="stat-card-hint">Revisions requested</span> */}
           </div>
         </div>
       </section>

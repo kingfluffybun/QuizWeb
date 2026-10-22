@@ -30,7 +30,7 @@ export default function Leaderboard({
 }: LeaderboardProps) {
     const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
     const [entries, setEntries] = useState(initialEntries);
-    const [isLoading, setIsLoading] = useState(false);
+    const [, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const requestId = useRef(0);
     const visibleEntries = maxEntries === undefined ? entries : entries.slice(0, maxEntries);
@@ -62,7 +62,7 @@ export default function Leaderboard({
         { entry: visibleEntries[1], rank: 2, rankClass: "second-place", rankLabel: "2nd" },
         { entry: visibleEntries[0], rank: 1, rankClass: "first-place", rankLabel: "1st" },
         { entry: visibleEntries[2], rank: 3, rankClass: "third-place", rankLabel: "3rd" },
-    ].filter(({ entry }) => entry !== undefined);
+    ];
 
     return (
         <div className="leaderboard" id="leaderboard">
@@ -103,16 +103,19 @@ export default function Leaderboard({
                     </div>
                 </div>
                 {error && <p role="alert">{error}</p>}
-                {isLoading && <p aria-live="polite">Loading leaderboard...</p>}
-                {visibleEntries.length === 0 ? (
-                    <p>No XP earned for this period yet.</p>
-                ) : (
-                    <>
-                        <div className="podium-stage">
-                            <div className="podium">
-                                {podium.map(({ entry, rank, rankClass, rankLabel }) => (
-                                    <div className={`podium-place-container ${rankClass}`} key={entry.userId}>
-                                        <div className="player-icon" aria-label={`${entry.username}'s profile picture`}>
+                <div className="podium-stage">
+                    <div className="podium">
+                        {podium.map(({ entry, rank, rankClass, rankLabel }) => (
+                            <div
+                                className={`podium-place-container ${rankClass}${entry ? "" : " podium-place-empty"}`}
+                                key={rank}
+                            >
+                                {entry && (
+                                    <>
+                                        <div
+                                            className="player-icon"
+                                            aria-label={`${entry.username}'s profile picture`}
+                                        >
                                             {rank === 1 ? (
                                                 <span className="crown" aria-hidden="true">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,28 +133,35 @@ export default function Leaderboard({
                                                     </svg>
                                                 </span>
                                             )}
-                                            <div className="podium-player-xp"><p>{entry.xp.toLocaleString()} XP</p></div>
+                                            <div className="podium-player-xp">
+                                                <p>{entry.xp.toLocaleString()} XP</p>
+                                            </div>
                                         </div>
                                         <p id="player-name">{entry.username}</p>
-                                        <div className="podium-place" id={rankClass}><h1>{rankLabel}</h1></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="leaderboard-placement">
-                            {visibleEntries.slice(3).map((entry, index) => (
-                                <div className="leaderboard-player row" id="nth-place" key={entry.userId}>
-                                    <div className="player-details row">
-                                        <p>{index + 4}</p>
-                                        <div className="player-icon" aria-label={`${entry.username}'s profile picture`} />
-                                        <p id="player-name">{entry.username}</p>
-                                    </div>
-                                    <p>{entry.xp.toLocaleString()} XP</p>
+                                    </>
+                                )}
+                                <div className="podium-place" id={rankClass}>
+                                    <h1>{rankLabel}</h1>
                                 </div>
-                            ))}
-                        </div>
-                    </>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                {visibleEntries.length === 0 && (
+                    <p>No XP earned for this period yet.</p>
                 )}
+                <div className="leaderboard-placement">
+                    {visibleEntries.slice(3).map((entry, index) => (
+                        <div className="leaderboard-player row" id="nth-place" key={entry.userId}>
+                            <div className="player-details row">
+                                <p>{index + 4}</p>
+                                <div className="player-icon" aria-label={`${entry.username}'s profile picture`} />
+                                <p id="player-name">{entry.username}</p>
+                            </div>
+                            <p>{entry.xp.toLocaleString()} XP</p>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );

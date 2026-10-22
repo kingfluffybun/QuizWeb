@@ -5,15 +5,10 @@ import {
   CP_FILE_KEYS,
   CP_FILE_LABELS,
   createEmptyFileBuffers,
-  type CodeProblemAssessment,
   type CPFileBuffers,
   type CPFileKey,
   type CPStep,
 } from "@/lib/cp-schema";
-import {
-  parseAssessmentBulkImport,
-  type AssessmentBulkImport,
-} from "@/lib/assessment-json-import";
 import {
   validateCodeProblemStep,
   type StepValidationResult,
@@ -47,8 +42,6 @@ interface AssessmentStepBuilderProps {
   setCpSteps: React.Dispatch<React.SetStateAction<CPStep[]>>;
   expectedOutcome: string;
   setExpectedOutcome: (val: string) => void;
-  onImport: (value: AssessmentBulkImport) => string[];
-  createImportJson: (assessment: CodeProblemAssessment) => string;
 }
 
 export default function AssessmentStepBuilder({
@@ -60,19 +53,10 @@ export default function AssessmentStepBuilder({
   setCpSteps,
   expectedOutcome,
   setExpectedOutcome,
-  onImport,
-  createImportJson,
 }: AssessmentStepBuilderProps) {
-  const [authoringMode, setAuthoringMode] = useState<"visual" | "json">("visual");
   const [activeFileTabByStep, setActiveFileTabByStep] = useState<
     Record<number, CPFileKey>
   >({});
-  const [jsonText, setJsonText] = useState<string>("");
-  const [jsonEdited, setJsonEdited] = useState(false);
-  const [jsonMessage, setJsonMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   const plainSteps = cpSteps.map((s) => s.instruction);
   const joinedAssessment = plainSteps
@@ -171,37 +155,6 @@ export default function AssessmentStepBuilder({
     });
   };
 
-  const handleApplyJson = (sourceJson = jsonText) => {
-    const result = parseAssessmentBulkImport(sourceJson);
-    if (!result.success) {
-      setJsonMessage({
-        type: "error",
-        text: result.errors.join(" | "),
-      });
-      return;
-    }
-
-    const importErrors = onImport(result.data);
-    if (importErrors.length > 0) {
-      setJsonMessage({
-        type: "error",
-        text: importErrors.join(" | "),
-      });
-      return;
-    }
-
-    setAssessmentTitle(result.data.unit_assessment_json.title);
-    setAssessmentDescription(result.data.unit_assessment_json.description);
-    setCpSteps(result.data.unit_assessment_json.steps);
-    setExpectedOutcome(result.data.unit_assessment_json.expected_outcome);
-    setJsonMessage({
-      type: "success",
-      text: `Imported the assessment and ${result.data.unit_quiz_json.length} question(s).`,
-    });
-    setJsonEdited(false);
-    setAuthoringMode("visual");
-  };
-
   return (
     <>
       <section
@@ -221,127 +174,9 @@ export default function AssessmentStepBuilder({
           <h3 id="assessment-heading" style={{ margin: 0 }}>
             Multi-Step Code Problem Assessment
           </h3>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className={`preview-tab${authoringMode === "visual" ? " active" : ""}`}
-              onClick={() => setAuthoringMode("visual")}
-              style={{ fontSize: "0.82rem", padding: "6px 12px" }}
-            >
-              Visual Step Builder ({cpSteps.length})
-            </button>
-            <button
-              type="button"
-              className={`preview-tab${authoringMode === "json" ? " active" : ""}`}
-              onClick={() => {
-                if (!jsonEdited) {
-                  setJsonText(
-                    createImportJson({
-                      schemaVersion: 2,
-                      title: assessmentTitle,
-                      description: assessmentDescription,
-                      steps: cpSteps,
-                      expected_outcome: expectedOutcome,
-                    }),
-                  );
-                }
-                setJsonMessage(null);
-                setAuthoringMode("json");
-              }}
-              style={{ fontSize: "0.82rem", padding: "6px 12px" }}
-            >
-              Bulk JSON Import
-            </button>
-          </div>
         </div>
 
-        {jsonMessage && (
-          <div
-            className={`status-message status-${jsonMessage.type}`}
-            role={jsonMessage.type === "error" ? "alert" : "status"}
-            style={{ marginBottom: "12px" }}
-          >
-            {jsonMessage.text}
-          </div>
-        )}
-
-        {authoringMode === "json" ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-              padding: "14px",
-              border: "1px solid var(--border-main, #cbd5e1)",
-              borderRadius: "10px",
-              background: "var(--bg-card, #f8fafc)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "8px",
-              }}
-            >
-              <span style={{ fontSize: "0.85rem", color: "#475569" }}>
-                Paste JSON with <code>unit_assessment_json</code> and{" "}
-                <code>unit_quiz_json</code>. JSON strings preserve line breaks
-                and code exactly; encode line breaks as <code>\n</code>.
-              </span>
-            </div>
-            <textarea
-              aria-label="Bulk JSON import"
-              className="form-textarea"
-              rows={16}
-              style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.86rem" }}
-              value={jsonText}
-              onChange={(e) => {
-                setJsonText(e.target.value);
-                setJsonEdited(true);
-              }}
-              placeholder={`{
-  "unit_assessment_json": {
-    "schemaVersion": 2,
-    "title": "Assessment title",
-    "description": "Assessment description",
-    "steps": [{
-      "stepNumber": 1,
-      "instruction": "Describe the task",
-      "starterCode": { "html": "", "css": "", "js": "" },
-      "expectedTemplate": { "html": "<h1>####</h1>", "css": "", "js": "" },
-      "inheritPreviousCode": false
-    }],
-    "expected_outcome": "<h1>Example</h1>"
-  },
-  "unit_quiz_json": [{
-    "cat_id": 1,
-    "sec_id": 1,
-    "difficulty_id": 1,
-    "quiz_type_id": 1,
-    "question_text": "Question text",
-    "quiz_payload": {
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correct_index": 0
-    }
-  }]
-}`}
-            />
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => handleApplyJson(jsonText)}
-              >
-                Validate &amp; Apply JSON
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="assessment-details">
+        <div className="assessment-details">
               <div className="form-group">
                 <label htmlFor="assessment-title">Assessment Title</label>
                 <input
@@ -682,8 +517,6 @@ export default function AssessmentStepBuilder({
                 + Add Step {cpSteps.length + 1} (Carry Forward Template)
               </button>
             </div>
-          </>
-        )}
 
         {/* Hidden inputs for form submission compatibility */}
         <input type="hidden" name="assessment" value={joinedAssessment} />

@@ -71,6 +71,10 @@ export const AssessmentBulkImportSchema = z.strictObject({
   unit_quiz_json: z.array(QuizImportEntrySchema).min(1),
 });
 
+const AssessmentOnlyImportSchema = z.strictObject({
+  unit_assessment_json: CodeProblemAssessmentImportSchema,
+});
+
 export const AssessmentChoiceSchema = z
   .object({
     id: z.string().optional(),
@@ -241,6 +245,9 @@ export const UnitBulkEntrySchema = UnitBulkImportSchema;
 
 export type QuizImportEntry = z.infer<typeof QuizImportEntrySchema>;
 export type AssessmentBulkImport = z.infer<typeof AssessmentBulkImportSchema>;
+export type AssessmentOnlyImport = z.infer<
+  typeof AssessmentOnlyImportSchema
+>["unit_assessment_json"];
 export type UnitLesson = z.infer<typeof UnitLessonSchema>;
 export type UnitMetadata = z.infer<typeof UnitMetadataSchema>;
 export type UnitAssessmentQuestion = z.infer<typeof UnitAssessmentQuestionSchema>;
@@ -249,6 +256,15 @@ export type UnitBulkImport = z.infer<typeof UnitBulkImportSchema>;
 
 export type AssessmentBulkImportResult =
   | { success: true; data: AssessmentBulkImport }
+  | { success: false; errors: string[] };
+
+export type AssessmentOnlyImportResult =
+  | { success: true; data: AssessmentOnlyImport }
+  | { success: false; errors: string[] };
+
+export type AssessmentImportResult =
+  | { success: true; mode: "assessment-only"; data: AssessmentOnlyImport }
+  | { success: true; mode: "full"; data: AssessmentBulkImport }
   | { success: false; errors: string[] };
 
 export type UnitBulkImportResult =
@@ -279,6 +295,78 @@ export function parseAssessmentBulkImport(
   }
 
   return { success: true, data: result.data };
+}
+
+export function parseAssessmentOnlyImport(
+  rawText: string,
+): AssessmentOnlyImportResult {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(rawText);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Invalid JSON document.";
+    return { success: false, errors: [`JSON syntax error: ${message}`] };
+  }
+
+  const result = AssessmentOnlyImportSchema.safeParse(candidate);
+  if (!result.success) {
+    return {
+      success: false,
+      errors: result.error.issues.map((issue) => {
+        const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+        return `${path}${issue.message}`;
+      }),
+    };
+  }
+
+  return { success: true, data: result.data.unit_assessment_json };
+}
+
+export function parseAssessmentImport(
+  rawText: string,
+): AssessmentImportResult {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(rawText);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Invalid JSON document.";
+    return { success: false, errors: [`JSON syntax error: ${message}`] };
+  }
+
+  if (
+    candidate &&
+    typeof candidate === "object" &&
+    !Array.isArray(candidate) &&
+    Object.hasOwn(candidate, "unit_quiz_json")
+  ) {
+    const result = AssessmentBulkImportSchema.safeParse(candidate);
+    return result.success
+      ? { success: true, mode: "full", data: result.data }
+      : {
+          success: false,
+          errors: result.error.issues.map((issue) => {
+            const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+            return `${path}${issue.message}`;
+          }),
+        };
+  }
+
+  const result = AssessmentOnlyImportSchema.safeParse(candidate);
+  return result.success
+    ? {
+        success: true,
+        mode: "assessment-only",
+        data: result.data.unit_assessment_json,
+      }
+    : {
+        success: false,
+        errors: result.error.issues.map((issue) => {
+          const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+          return `${path}${issue.message}`;
+        }),
+      };
 }
 
 export function parseUnitBulkImport(rawText: string): UnitBulkImportResult {

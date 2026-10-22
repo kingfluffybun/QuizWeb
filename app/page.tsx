@@ -4,12 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import "#css/landing-page.css";
 import "#css/nav.css";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import PublicNav from "@/app/components/publicNav";
 import * as Assets from "@/app/actions/animation/svg_assets";
 
 export default function Home() {
     const [menuOpen] = useState(false);
+    const session = useSession();
 
     useEffect(() => {
         const bodyOverflow = document.body.style.overflow;
@@ -26,7 +28,13 @@ export default function Home() {
         };
     }, [menuOpen]);
 
-    return (
+    useEffect(() => {
+        if (session?.data?.user) {
+            window.location.href = "/home";
+        }
+    }, [session]);
+
+  return (
         <>
         <PublicNav />
         <section className="hero">
