@@ -24,6 +24,7 @@ import QuizCP from "./components/questions/QuizCP";
 import LessonCard from "@/app/components/LessonCard";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { validateSingleTabTemplate } from "@/lib/cp-validator";
+import { calculateEarnedXp } from "@/lib/xp-calculation";
 import { recordUserActivity } from "@/app/actions/streak";
 import { shuffleItems } from "@/app/quiz/shuffle";
 
@@ -124,18 +125,20 @@ export default function InteractiveQuizClient({
     const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
+    const [earnedXp, setEarnedXp] = useState(0);
+    const [correctStreak, setCorrectStreak] = useState(0);
     const [status, setStatus] = useState<QuizStatus>("idle");
 
     useEffect(() => {
-        if (status === "finished" && lives > 0) {
+        if (status === "finished") {
             recordUserActivity({
                 type: "quiz",
-                xp: Math.max(10, score * 10),
+                xp: Math.round(earnedXp),
             }).catch((e) => {
                 console.error("Failed to record activity:", e);
             });
         }
-    }, [status, lives, score]);
+    }, [status, earnedXp]);
 
     const [cpStepIndex, setCpStepIndex] = useState(0);
     const [stepMessage, setStepMessage] = useState<string | null>(null);
@@ -251,12 +254,16 @@ export default function InteractiveQuizClient({
                 playQuizSound("correct-answer2");
             }
             setScore((prev) => prev + 1);
+            const nextStreak = correctStreak + 1;
+            setCorrectStreak(nextStreak);
+            setEarnedXp((total) => total + calculateEarnedXp(true, activeQuiz.difficulty_id, nextStreak));
             setStatus("correct");
         } else {
             if (["MCQ", "FITB", "Order", "Pair"].includes(activeQuizType)) {
                 playQuizSound("wrong-answer");
             }
             setLives((prev) => Math.max(0, prev - 1));
+            setCorrectStreak(0);
             setStatus("incorrect");
         }
     };
