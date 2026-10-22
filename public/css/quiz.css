@@ -358,6 +358,7 @@
     background: var(--bg-card);
     border: 2px solid var(--border-main);
     border-radius: 12px;
+    width: 100%;
 }
 
 .available-unit-info {
@@ -400,6 +401,7 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+    width: 100%;
 }
 
 .available-unit-cp-link {
