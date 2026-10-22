@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     type StreakData,
-    getMonthActivity,
-    recordUserActivity,
     getUserStreakData,
 } from "@/app/actions/streak";
 
@@ -20,112 +17,52 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const [streakData, setStreakData] = useState<StreakData>(initialData);
     const [viewYear, setViewYear] = useState<number>(initialData.targetYear);
     const [viewMonth, setViewMonth] = useState<number>(initialData.targetMonth);
-    const [activeDays, setActiveDays] = useState<number[]>(initialData.activeDatesInMonth);
-    const [activeDaysMonth, setActiveDaysMonth] = useState(
-        `${initialData.targetYear}-${initialData.targetMonth}`,
-    );
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-    const [isLogging, setIsLogging] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-    const [isPending, startTransition] = useTransition();
+    const [clientToday, setClientToday] = useState<string | null>(null);
+    const activeDates = useMemo(() => new Set(streakData.allActiveDates), [streakData.allActiveDates]);
 
     // Sync client local date if different from server fallback
     useEffect(() => {
-        try {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, "0");
-            const day = String(now.getDate()).padStart(2, "0");
-            const localDate = `${year}-${month}-${day}`;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const localDate = `${year}-${month}-${day}`;
+        setClientToday(localDate);
 
-            if (localDate !== initialData.todayDate) {
-                startTransition(async () => {
-                    const freshData = await getUserStreakData(viewYear, viewMonth, localDate);
-                    setStreakData(freshData);
-                    setActiveDays(freshData.activeDatesInMonth);
-                    setActiveDaysMonth(`${viewYear}-${viewMonth}`);
+        if (localDate !== initialData.todayDate) {
+            getUserStreakData(undefined, undefined, localDate)
+                .then(setStreakData)
+                .catch((error: unknown) => {
+                    console.error("Failed to refresh local streak data:", error);
                 });
-            }
-        } catch {
-            // Ignore date parsing errors
         }
-    }, [initialData.todayDate, viewYear, viewMonth]);
+    }, [initialData.todayDate]);
 
-    const handlePrevMonth = useCallback(async () => {
+    const handlePrevMonth = useCallback(() => {
+        const [todayYearStr, todayMonthStr] = (clientToday ?? streakData.todayDate).split("-");
         const nextMonth = viewMonth === 1 ? 12 : viewMonth - 1;
         const nextYear = viewMonth === 1 ? viewYear - 1 : viewYear;
 
         setViewYear(nextYear);
         setViewMonth(nextMonth);
+    }, [clientToday, streakData.todayDate]);
 
-        startTransition(async () => {
-            const res = await getMonthActivity(nextYear, nextMonth);
-            if (res.success) {
-                setActiveDays(res.activeDays);
-                setActiveDaysMonth(`${nextYear}-${nextMonth}`);
-            }
-        });
-    }, [viewMonth, viewYear]);
-
-    const handleNextMonth = useCallback(async () => {
+    const handleNextMonth = useCallback(() => {
         const nextMonth = viewMonth === 12 ? 1 : viewMonth + 1;
         const nextYear = viewMonth === 12 ? viewYear + 1 : viewYear;
-
+        
         setViewYear(nextYear);
         setViewMonth(nextMonth);
-
-        startTransition(async () => {
-            const res = await getMonthActivity(nextYear, nextMonth);
-            if (res.success) {
-                setActiveDays(res.activeDays);
-                setActiveDaysMonth(`${nextYear}-${nextMonth}`);
-            }
-        });
     }, [viewMonth, viewYear]);
 
-    const handleTodayView = useCallback(async () => {
+    const handleTodayView = useCallback(() => {
         const [todayYearStr, todayMonthStr] = streakData.todayDate.split("-");
         const tYear = Number(todayYearStr);
         const tMonth = Number(todayMonthStr);
 
         setViewYear(tYear);
         setViewMonth(tMonth);
-
-        startTransition(async () => {
-            const res = await getMonthActivity(tYear, tMonth);
-            if (res.success) {
-                setActiveDays(res.activeDays);
-                setActiveDaysMonth(`${tYear}-${tMonth}`);
-            }
-        });
     }, [streakData.todayDate]);
-
-    const handleManualCheckIn = async () => {
-        setIsLogging(true);
-        setFeedbackMessage(null);
-
-        try {
-            const res = await recordUserActivity({
-                type: "daily_checkin",
-                xp: 10,
-                date: streakData.todayDate,
-            });
-
-            if (res.success) {
-                const fresh = await getUserStreakData(viewYear, viewMonth, streakData.todayDate);
-                setStreakData(fresh);
-                setActiveDays(fresh.activeDatesInMonth);
-                setActiveDaysMonth(`${viewYear}-${viewMonth}`);
-                setFeedbackMessage("Daily streak recorded! +10 XP earned.");
-            } else {
-                setFeedbackMessage(res.error || "Failed to log activity.");
-            }
-        } catch {
-            setFeedbackMessage("An unexpected error occurred.");
-        } finally {
-            setIsLogging(false);
-        }
-    };
 
     // Calculate calendar grid metrics for viewYear & viewMonth
     const firstDayOfWeek = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();
@@ -134,11 +71,14 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const monthDays = Array.from({ length: totalDaysInMonth }, (_, i) => i + 1);
 
     const isCurrentViewMonth = (() => {
+        if (!clientToday) return false;
         const [todayYearStr, todayMonthStr] = streakData.todayDate.split("-");
         return Number(todayYearStr) === viewYear && Number(todayMonthStr) === viewMonth;
     })();
 
-    const todayDayNum = isCurrentViewMonth ? Number(streakData.todayDate.slice(8, 10)) : null;
+    const todayDayNum = isCurrentViewMonth && clientToday
+        ? Number(clientToday.slice(8, 10))
+        : null;
 
     // Motivational text
     const motivationMessage = (() => {
@@ -157,7 +97,9 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
         <div className="card" id="streak-calendar">
             <div className="card-title">
                 <h2>Streak Calendar</h2>
-                <button type="button" className="quick-action quick-action-btn" onClick={() => setIsDetailsOpen(true)} aria-label="View streak details" > <h2 className="quick-action">View Details</h2> </button>
+                <button type="button" className="quick-action quick-action-btn" aria-label="View streak details">
+                    <h2 className="quick-action">View Details</h2>
+                </button>
             </div>
             <div className="calendar-container">
                 {/* Left column: streak summary & current week */}
@@ -188,15 +130,16 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                     {/* Streak Week indicators */}
                     <div className="streak-week">
                         {streakData.weekDays.map((day) => {
+                            const isToday = clientToday !== null && day.date === clientToday;
                             let dayClasses = "streak-day row";
                             if (day.isActive) {
                                 dayClasses += " active";
-                            } else if (day.isToday) {
+                            } else if (isToday) {
                                 dayClasses += " today";
                             }
 
                             const tooltip = `${day.dayName} (${day.date}): ${
-                                day.isActive ? "Completed" : day.isToday ? "Today (Not finished yet)" : "No activity"
+                                day.isActive ? "Completed" : isToday ? "Today (Not finished yet)" : "No activity"
                             }`;
 
                             return (
@@ -246,7 +189,6 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                                 type="button"
                                 className="calendar-nav-btn"
                                 onClick={handlePrevMonth}
-                                disabled={isPending}
                                 aria-label="Previous month"
                                 title="Previous month"
                             >
@@ -256,7 +198,6 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                                 type="button"
                                 className="calendar-nav-btn"
                                 onClick={handleNextMonth}
-                                disabled={isPending}
                                 aria-label="Next month"
                                 title="Next month"
                             >
@@ -279,16 +220,33 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
 
                     {/* Month Days */}
                     {monthDays.map((dayNum) => {
-                        const isActive =
-                            activeDaysMonth === `${viewYear}-${viewMonth}` &&
-                            activeDays.includes(dayNum);
+                        const dateString = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+                        const isActive = activeDates.has(dateString);
                         const isToday = isCurrentViewMonth && dayNum === todayDayNum;
+                        const dayOfWeek = (firstDayOfWeek + dayNum - 1) % 7;
+                        const hasActivePreviousDay =
+                            isActive &&
+                            dayOfWeek !== 0 &&
+                            activeDates.has(`${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum - 1).padStart(2, "0")}`);
+                        const hasActiveNextDay =
+                            isActive &&
+                            dayOfWeek !== 6 &&
+                            activeDates.has(`${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum + 1).padStart(2, "0")}`);
 
                         let dayClasses = "day col";
-                        if (isActive) dayClasses += " active";
+                        if (isActive) {
+                            if (hasActivePreviousDay && hasActiveNextDay) {
+                                dayClasses += " active-middle";
+                            } else if (hasActiveNextDay) {
+                                dayClasses += " active-start";
+                            } else if (hasActivePreviousDay) {
+                                dayClasses += " active-end";
+                            } else {
+                                dayClasses += " active";
+                            }
+                        }
                         if (isToday) dayClasses += " today";
 
-                        const dateString = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
                         const titleText = `${MONTH_NAMES[viewMonth - 1]} ${dayNum}, ${viewYear}${
                             isActive ? " · Completed" : isToday ? " · Today" : ""
                         }`;
@@ -308,92 +266,6 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                 </div>
             </div>
 
-            {/* Streak Details Modal */}
-            {isDetailsOpen && (
-                <div
-                    className="streak-modal-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="streak-modal-title"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) setIsDetailsOpen(false);
-                    }}
-                >
-                    <div className="streak-modal-card">
-                        <div className="streak-modal-header">
-                            <h2 id="streak-modal-title">Streak & Activity Overview</h2>
-                            <button
-                                type="button"
-                                className="streak-modal-close"
-                                onClick={() => setIsDetailsOpen(false)}
-                                aria-label="Close dialog"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <div className="streak-stats-grid">
-                            <div className="streak-stat-item">
-                                <span className="streak-stat-value">{streakData.currentStreak}</span>
-                                <span className="streak-stat-label">Current Streak</span>
-                            </div>
-                            <div className="streak-stat-item">
-                                <span className="streak-stat-value">{streakData.longestStreak}</span>
-                                <span className="streak-stat-label">Longest Streak</span>
-                            </div>
-                            <div className="streak-stat-item">
-                                <span className="streak-stat-value">{streakData.totalActiveDays}</span>
-                                <span className="streak-stat-label">Total Days Active</span>
-                            </div>
-                        </div>
-
-                        <div className="streak-status-banner">
-                            {streakData.todayCompleted ? (
-                                <p className="streak-status-success">
-                                    &#10004; You have completed practice today ({streakData.todayDate})!
-                                </p>
-                            ) : (
-                                <p className="streak-status-pending">
-                                    You haven&apos;t recorded a lesson or quiz yet today ({streakData.todayDate}).
-                                </p>
-                            )}
-                        </div>
-
-                        {feedbackMessage && (
-                            <div className="streak-feedback-message">
-                                <p>{feedbackMessage}</p>
-                            </div>
-                        )}
-
-                        <div className="streak-modal-actions">
-                            {!streakData.todayCompleted && (
-                                <button
-                                    type="button"
-                                    className="streak-action-btn primary"
-                                    onClick={handleManualCheckIn}
-                                    disabled={isLogging}
-                                >
-                                    {isLogging ? "Recording..." : "Check In Today (+10 XP)"}
-                                </button>
-                            )}
-                            <Link
-                                href="/learn"
-                                className="streak-action-btn secondary"
-                                onClick={() => setIsDetailsOpen(false)}
-                            >
-                                Start a Lesson
-                            </Link>
-                            <button
-                                type="button"
-                                className="streak-action-btn tertiary"
-                                onClick={() => setIsDetailsOpen(false)}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
