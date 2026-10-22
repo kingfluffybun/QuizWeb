@@ -12,11 +12,15 @@ export interface LeaderboardEntry {
     xp: number;
 }
 
+export type LeaderboardEntriesByPeriod = Record<LeaderboardPeriod, LeaderboardEntry[]>;
+
 interface LeaderboardRow extends RowDataPacket {
     user_id: number;
     username: string;
     xp: number | string;
 }
+
+const periods: LeaderboardPeriod[] = ["daily", "weekly", "monthly", "all-time"];
 
 const periodConditions: Record<LeaderboardPeriod, string> = {
     daily: "a.activity_date = CURDATE()",
@@ -25,14 +29,9 @@ const periodConditions: Record<LeaderboardPeriod, string> = {
     "all-time": "1 = 1",
 };
 
-export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<LeaderboardEntry[]> {
+async function getEntriesForPeriod(period: LeaderboardPeriod): Promise<LeaderboardEntry[]> {
     if (!Object.hasOwn(periodConditions, period)) {
         throw new Error("Invalid leaderboard period");
-    }
-
-    const session = await auth();
-    if (!session?.user?.id) {
-        throw new Error("Authentication required to view the leaderboard");
     }
 
     const [rows] = await db.query<LeaderboardRow[]>(
@@ -50,4 +49,30 @@ export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<
         username: row.username,
         xp: Number(row.xp),
     }));
+}
+
+async function requireAuthenticatedUser(): Promise<void> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        throw new Error("Authentication required to view the leaderboard");
+    }
+}
+
+export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<LeaderboardEntry[]> {
+    await requireAuthenticatedUser();
+    return getEntriesForPeriod(period);
+}
+
+export async function getLeaderboardEntriesByPeriod(): Promise<LeaderboardEntriesByPeriod> {
+    await requireAuthenticatedUser();
+    const [daily, weekly, monthly, allTime] = await Promise.all(
+        periods.map((period) => getEntriesForPeriod(period))
+    );
+
+    return {
+        daily,
+        weekly,
+        monthly,
+        "all-time": allTime,
+    };
 }

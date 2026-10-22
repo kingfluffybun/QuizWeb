@@ -41,7 +41,9 @@ export async function getDailyGoalData(): Promise<DailyGoalData> {
             `SELECT DATE_FORMAT(activity_date, '%Y-%m-%d') AS activity_date,
                     SUM(xp_earned) AS xp
              FROM user_activity_tbl
-             WHERE user_id = ? AND activity_date BETWEEN ? AND ?
+             WHERE user_id = ?
+               AND activity_type <> 'daily_checkin'
+               AND activity_date BETWEEN ? AND ?
              GROUP BY activity_date`,
             [userId, weekDates[0], weekDates[6]],
         );

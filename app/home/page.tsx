@@ -7,7 +7,7 @@ import Sidebar from "@/app/components/Sidebar";
 import Leaderboard from "@/app/components/Leaderboard";
 import StreakCalendar from "./StreakCalendar";
 import { getUserStreakData } from "@/app/actions/streak";
-import { getLeaderboardEntries } from "@/app/actions/leaderboard";
+import { getLeaderboardEntriesByPeriod } from "@/app/actions/leaderboard";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import DailyGoalCard from "./DailyGoalCard";
 
@@ -18,9 +18,12 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    const streakData = await getUserStreakData();
-    const initialLeaderboardEntries = await getLeaderboardEntries("daily");
-    const dailyGoalData = await getDailyGoalData();
+    const [streakData, leaderboardEntriesByPeriod, dailyGoalData] = await Promise.all([
+        getUserStreakData(),
+        getLeaderboardEntriesByPeriod(),
+        getDailyGoalData(),
+    ]);
+    const firstName = session.user.name?.trim().split(/\s+/)[0] || "User";
 
     return (
         <div className="dashboard-page">
@@ -29,7 +32,7 @@ export default async function DashboardPage() {
                 <div className="dashboard-content">
                     <div className="welcome-banner">
                         <div>
-                            <h1>Welcome, {session?.user?.name || 'User'}</h1>
+                            <h1>Welcome, {firstName}</h1>
                             <p>Your daily goal is waiting — jump in and earn some XP!</p>
                             <Image src="/assets/landing-page/Clouds-right.svg" width={180} height={180} alt="" className="cloud-right"/>
                         </div>
@@ -125,7 +128,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
 
-                    <Leaderboard initialEntries={initialLeaderboardEntries} maxEntries={8} />
+                    <Leaderboard entriesByPeriod={leaderboardEntriesByPeriod} maxEntries={8} />
                 </div>
             </main>
             

@@ -5,31 +5,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import AccessibilityPanel from "../settings/AccessibilityPanel";
 
-interface PublicNavProps {
-  session?: { user?: { name?: string | null; email?: string | null } } | null;
-}
-
-export default function PublicNav({ session: initialSession }: PublicNavProps) {
+export default function PublicNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
-  const [session, setSession] = useState(initialSession ?? null);
-
-  useEffect(() => {
-    if (initialSession !== undefined) return;
-    let isMounted = true;
-    fetch("/api/auth/session")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (isMounted && data && typeof data === "object" && data.user) {
-          setSession(data);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, [initialSession]);
 
   const openAccessibility = () => {
     setAccessibilityClosing(false);
@@ -41,12 +20,6 @@ export default function PublicNav({ session: initialSession }: PublicNavProps) {
   const finishClosingAccessibility = () => {
     setAccessibilityOpen(false);
     setAccessibilityClosing(false);
-  };
-
-  const getProfileInitial = (name?: string | null, email?: string | null): string => {
-    const fullName = name || email || "";
-    const cleanName = fullName.trim();
-    return cleanName.split(/\s+/)[0]?.charAt(0).toUpperCase() || "P";
   };
 
   return (
@@ -87,15 +60,7 @@ export default function PublicNav({ session: initialSession }: PublicNavProps) {
             <p>Accessibility</p>
           </button>
         </div>
-        <div>
-            {session?.user ? (
-                <Link href="/home">
-                    <p className="profile">{getProfileInitial(session.user.name, session.user.email)}</p>
-                </Link>
-            ) : (
-                <Link href="/login"><p>Get Started</p></Link>
-            )}
-        </div>
+        <div><Link href="/login"><p>Get Started</p></Link></div>
       </div>
 
       <div className="accessibility">
