@@ -43,49 +43,6 @@ function payloadSummary(quiz: PendingQuiz) {
   return quiz.type_name === "FITB" ? "Answer included" : "Details included";
 }
 
-function PayloadPreview({ quiz }: { quiz: PendingQuiz }) {
-  const payload = quiz.quiz_payload;
-
-  if (quiz.type_name === "MCQ" && payload.options) {
-    return (
-      <div>
-        <strong>Options:</strong>
-        {payload.options.map((option, index) => (
-          <div className="quiz-payload-option" key={index}>
-            <span>{index + 1}. {option}</span>
-            {payload.correct_index === index && <span className="correct-text">(Correct)</span>}
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (quiz.type_name === "FITB") {
-    return <div><strong>Correct Answer:</strong> <span className="correct-text">{payload.answer}</span></div>;
-  }
-  if (quiz.type_name === "Order" && payload.items) {
-    return <div><strong>Correct Order:</strong>{payload.items.map((item, index) => <div className="quiz-payload-option" key={index}>{index + 1}. {item}</div>)}</div>;
-  }
-  if (quiz.type_name === "Pair" && payload.pairs) {
-    return <div><strong>Matching Pairs:</strong>{payload.pairs.map((pair, index) => <div className="quiz-payload-option" key={index}><code>{pair.left}</code> &harr; <code>{pair.right}</code></div>)}</div>;
-  }
-  if (quiz.type_name === "CP" && payload.steps) {
-    return (
-      <div className="cp-payload-steps">
-        {payload.steps.map((step, index) => (
-          <div className="cp-payload-step" key={index}>
-            <strong>Step {index + 1}</strong>
-            <div><b>Instruction:</b> {step.prompt}</div>
-            {step.template && <pre>{step.template}</pre>}
-            <div><b>Expected Output:</b></div>
-            <pre className="cp-expected-output">{step.expected}</pre>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return <div>{payload.title ?? "No payload details available."}</div>;
-}
-
 export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: PendingQuiz[] }) {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState(initialQuizzes);
@@ -162,14 +119,8 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
     setIsPending(false);
   };
 
-  const viewQuiz = () => {
-    window.location.href = "http://localhost:3000/test";
-  };
-
   return (
-    <section className="admin-card incoming-admin-card recent-quizzes-card" onClick={(event) => {
-      if ((event.target as Element).closest(".btn-preview")) viewQuiz();
-    }}>
+    <section className="admin-card incoming-admin-card recent-quizzes-card">
       <div className="incoming-card-header recent-card-header">
         <div>
           <h2>Pending Quizzes</h2>
@@ -186,9 +137,8 @@ export default function IncomingQuizCard({ initialQuizzes }: { initialQuizzes: P
       <div className="incoming-quiz-list recent-quizzes-scroll">
         {visibleQuizzes.map((quiz) => (
           <article className="incoming-quiz-item quiz-list-item" key={quiz.pending_id}>
-            <div className="incoming-quiz-title-row"><h3>{quiz.question_text}</h3><div className="recent-quiz-actions"><span className="btn-preview" title="Quiz content shown below" aria-label="Quiz content shown below">{icon(<><path d="M2.062 12.348a1 1 0 0 0 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></>)}</span><button type="button" className="btn-edit" onClick={() => void editQuiz(quiz)} disabled={isPending} title="Edit quiz" aria-label="Edit quiz">{icon(<><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></>)}</button><button type="button" className="btn-delete" onClick={() => void removeQuiz(quiz)} disabled={isPending} title="Delete quiz" aria-label="Delete quiz">{icon(<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 2 2 2v2" /><path d="M10 11v6M14 11v6" /></>)}</button></div></div>
+            <div className="incoming-quiz-title-row"><h3>{quiz.question_text}</h3><div className="recent-quiz-actions"><button type="button" className="btn-edit" onClick={() => void editQuiz(quiz)} disabled={isPending} title="Edit quiz" aria-label="Edit quiz">{icon(<><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></>)}</button><button type="button" className="btn-delete" onClick={() => void removeQuiz(quiz)} disabled={isPending} title="Delete quiz" aria-label="Delete quiz">{icon(<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 2 2 2v2" /><path d="M10 11v6M14 11v6" /></>)}</button></div></div>
             <div className="quiz-badge-row"><div className="badge-id-container"><button type="button" className={`badge badge-id ${copiedId === quiz.pending_id ? "copied" : ""}`} onClick={() => copyId(quiz.pending_id)} title="Click to copy Pending ID" aria-label={`Copy Pending ID ${quiz.pending_id}`}>{copiedId === quiz.pending_id ? "Copied!" : `ID: #${quiz.pending_id}`}</button><button type="button" className={`badge-id-filter-btn ${idFilter.replace(/^#/, "") === quiz.pending_id.toString() ? "filtered" : ""}`} onClick={() => { setIdFilter(idFilter.replace(/^#/, "") === quiz.pending_id.toString() ? "" : quiz.pending_id.toString()); setPage(1); }} title="Filter by this Pending ID" aria-label={`Filter by Pending ID ${quiz.pending_id}`}>{icon(<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>)}</button></div><span className={`badge pending-list-status ${quiz.pending_status}`}>{quiz.pending_status}</span>{quiz.pending_status === "rejected" && <button type="button" className="pending-note-toggle" onClick={() => setViewedNoteId(viewedNoteId === quiz.pending_id ? null : quiz.pending_id)}>{viewedNoteId === quiz.pending_id ? "Hide Note" : "View Note"}</button>}<span className="badge badge-diff">{quiz.difficulty_name}</span><span className="badge badge-cat">{quiz.cat_name}</span>{quiz.sec_num && <span className="badge badge-type">Section {quiz.sec_num}</span>}<span className="badge badge-type">{quiz.type_name}</span><span className="badge badge-metric-tag">{payloadSummary(quiz)}</span></div>
-            <div className="incoming-quiz-details quiz-payload-preview"><PayloadPreview quiz={quiz} /></div>
             {quiz.pending_status === "rejected" && viewedNoteId === quiz.pending_id && <div className="incoming-rejection-notes"><strong>Reviewer notes:</strong> {quiz.pending_note ?? "No reviewer note has been added yet."}</div>}
           </article>
         ))}

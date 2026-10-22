@@ -25,10 +25,11 @@ import AssessmentStepBuilder, {
 } from "./AssessmentStepBuilder";
 import {
   unwrapCodeProblemAssessment,
-  type CodeProblemAssessment,
   type CPStep,
 } from "@/lib/cp-schema";
 import {
+  parseAssessmentBulkImport,
+  parseAssessmentImport,
   quizPayloadMatchesType,
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
@@ -64,14 +65,16 @@ export interface QuizPayload {
     [key: string]: unknown;
   };
   lesson_text?: string;
-  assessment?: {
-    assessment?: string;
-    title?: string;
-    description?: string;
-    steps?: string[];
-    expected_outcome?: string;
-    [key: string]: unknown;
-  };
+  assessment?:
+    | string
+    | {
+        assessment?: string;
+        title?: string;
+        description?: string;
+        steps?: string[];
+        expected_outcome?: string;
+        [key: string]: unknown;
+      };
   [key: string]: unknown;
 }
 
@@ -121,6 +124,22 @@ export interface RecentQuizItem {
   type_name?: string;
   question_text?: string;
   quiz_payload?: QuizPayload | null;
+}
+
+function getLessonTitles(quiz: RecentQuizItem): string[] {
+  const lessonCard = quiz.quiz_payload?.lesson_card;
+  if (!lessonCard) return [];
+
+  const slides = lessonCard.lesson_slide ?? lessonCard.lesson_slides ?? [];
+  const titles = slides
+    .map((slide) => slide.lesson_title ?? slide.title)
+    .filter((title): title is string => typeof title === "string");
+
+  if (typeof lessonCard.lesson_title === "string") {
+    titles.push(lessonCard.lesson_title);
+  }
+
+  return titles;
 }
 
 export interface EditingQuizItem extends Omit<RecentQuizItem, "quiz_id"> {
@@ -243,16 +262,50 @@ export default function QuizInputForm({
   const [editingQuiz, setEditingQuiz] = useState<EditingQuizItem | null>(
     initialEditingQuiz ?? null,
   );
+  const hasEnteredEditSession = useRef(Boolean(initialEditingQuiz));
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     if (initialEditingQuiz || typeof window === "undefined") return;
 
     const loadPendingQuiz = (pendingId: string | null) => {
       if (!pendingId) return;
-      window.sessionStorage.removeItem("quizweb-edit-pending-id");
-      void getPendingQuizById(Number(pendingId)).then((quiz) => {
-        if (quiz) handleEdit(quiz as unknown as RecentQuizItem);
-      });
+      const parsedPendingId = Number(pendingId);
+      if (!Number.isInteger(parsedPendingId) || parsedPendingId < 1) {
+        window.sessionStorage.removeItem("quizweb-edit-pending-id");
+        setMessage({ type: "error", text: "The pending unit ID is invalid." });
+        return;
+      }
+
+      void getPendingQuizById(parsedPendingId)
+        .then((quiz) => {
+          window.sessionStorage.removeItem("quizweb-edit-pending-id");
+          if (!quiz || "error" in quiz) {
+            setMessage({
+              type: "error",
+              text:
+                quiz && "error" in quiz
+                  ? quiz.error ?? "The pending unit could not be loaded."
+                  : `Could not load pending unit ${parsedPendingId}. It may have been deleted or is no longer available.`,
+            });
+            return;
+          }
+          handleEdit(quiz as unknown as RecentQuizItem);
+        })
+        .catch((error: unknown) => {
+          window.sessionStorage.removeItem("quizweb-edit-pending-id");
+          console.error("Failed to load pending unit for editing:", error);
+          setMessage({
+            type: "error",
+            text:
+              error instanceof Error
+                ? `The pending unit could not be loaded: ${error.message}`
+                : "The pending unit could not be loaded. Please try again.",
+          });
+        });
     };
     const handleEditRequest = (event: Event) => {
       loadPendingQuiz((event as CustomEvent<string>).detail);
@@ -310,17 +363,12 @@ export default function QuizInputForm({
       window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
     };
   }, [initialEditingQuiz, types]);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [idFilter, setIdFilter] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [sectionFilter, setSectionFilter] = useState<string>("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("id_desc");
   const [optionCount, setOptionCount] = useState(4);
   const [orderItems, setOrderItems] = useState<string[]>(["", "", "", ""]);
@@ -368,9 +416,12 @@ export default function QuizInputForm({
   const [selectedSecId, setSelectedSecId] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
   const [queuedQuizzes, setQueuedQuizzes] = useState<QueuedQuizEntry[]>([]);
-  const [bulkImport, setBulkImport] = useState<AssessmentBulkImport | null>(
-    null,
-  );
+  const [originalUnitQuizzes, setOriginalUnitQuizzes] = useState<
+    QueuedQuizEntry[]
+  >([]);
+  const [preserveQuizDataOnSave, setPreserveQuizDataOnSave] = useState(false);
+  const [fullJsonImport, setFullJsonImport] =
+    useState<AssessmentBulkImport | null>(null);
   const [mcqOptions, setMcqOptions] = useState<string[]>(["", "", "", ""]);
   const [mcqCorrectIndex, setMcqCorrectIndex] = useState<number>(0);
   const [fitbAnswer, setFitbAnswer] = useState<string>("");
@@ -380,7 +431,14 @@ export default function QuizInputForm({
   const assessmentSteps = cpSteps.map((s) => s.instruction);
   const [expectedOutcome, setExpectedOutcome] = useState("");
   const [previewTab, setPreviewTab] = useState<"lesson" | "assessment">("lesson");
-  const [unitInputTab, setUnitInputTab] = useState<"lesson" | "assessment">("lesson");
+  const [unitInputTab, setUnitInputTab] = useState<
+    "lesson" | "quiz" | "assessment" | "import"
+  >("lesson");
+  const [importJsonText, setImportJsonText] = useState("");
+  const [importJsonMessage, setImportJsonMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const assessment = assessmentSteps
     .map((step) => step.trim())
     .filter(Boolean)
@@ -414,7 +472,6 @@ export default function QuizInputForm({
     categoryFilter !== "" ||
     sectionFilter !== "" ||
     difficultyFilter !== "" ||
-    typeFilter !== "" ||
     sortBy !== "id_desc";
 
   const activeFilterCount =
@@ -423,7 +480,6 @@ export default function QuizInputForm({
     (categoryFilter !== "" ? 1 : 0) +
     (sectionFilter !== "" ? 1 : 0) +
     (difficultyFilter !== "" ? 1 : 0) +
-    (typeFilter !== "" ? 1 : 0) +
     (sortBy !== "id_desc" ? 1 : 0);
 
   const handleClearFilters = () => {
@@ -432,7 +488,6 @@ export default function QuizInputForm({
     setCategoryFilter("");
     setSectionFilter("");
     setDifficultyFilter("");
-    setTypeFilter("");
     setSortBy("id_desc");
   };
 
@@ -446,11 +501,10 @@ export default function QuizInputForm({
       }
       if (searchFilter.trim() !== "") {
         const query = searchFilter.toLowerCase().trim();
-        const matchesText = quiz.question_text?.toLowerCase().includes(query);
-        const matchesCat = quiz.cat_name?.toLowerCase().includes(query);
-        const matchesType = quiz.type_name?.toLowerCase().includes(query);
-        const matchesDiff = quiz.difficulty_name?.toLowerCase().includes(query);
-        if (!matchesText && !matchesCat && !matchesType && !matchesDiff) {
+        const matchesLessonTitle = getLessonTitles(quiz).some((title) =>
+          title.toLowerCase().includes(query),
+        );
+        if (!matchesLessonTitle) {
           return false;
         }
       }
@@ -470,12 +524,6 @@ export default function QuizInputForm({
       ) {
         return false;
       }
-      if (
-        typeFilter !== "" &&
-        quiz.type_name?.toLowerCase() !== typeFilter.toLowerCase()
-      ) {
-        return false;
-      }
       return true;
     })
     .sort((a, b) => {
@@ -484,10 +532,6 @@ export default function QuizInputForm({
           return a.quiz_id - b.quiz_id;
         case "id_desc":
           return b.quiz_id - a.quiz_id;
-        case "text_asc":
-          return (a.question_text || "").localeCompare(b.question_text || "");
-        case "text_desc":
-          return (b.question_text || "").localeCompare(a.question_text || "");
         case "diff_asc": {
           const rank: Record<string, number> = {
             Beginner: 1,
@@ -518,50 +562,122 @@ export default function QuizInputForm({
   );
   const selectedTypeName = selectedType ? selectedType.type_name : "";
 
-  const handleBulkImport = (value: AssessmentBulkImport): string[] => {
-    const errors: string[] = [];
-    value.unit_quiz_json.forEach((quiz, index) => {
-      const questionNumber = index + 1;
+  const handleApplyImportJson = () => {
+    const result = parseAssessmentImport(importJsonText);
+    if (!result.success) {
+      setImportJsonMessage({
+        type: "error",
+        text: result.errors.join(" | "),
+      });
+      return;
+    }
+
+    if (result.mode === "assessment-only") {
+      if (!editingQuiz?._pendingUnit) {
+        setImportJsonMessage({
+          type: "error",
+          text: "For a new unit, include both unit_assessment_json and unit_quiz_json. Assessment-only JSON is for editing an existing unit.",
+        });
+        return;
+      }
+
+      setFullJsonImport(null);
+      setPreserveQuizDataOnSave(true);
+      setAssessmentFields(result.data);
+      setImportJsonMessage({
+        type: "success",
+        text: `Loaded ${result.data.steps.length} assessment step(s). The existing quiz questions were left unchanged.`,
+      });
+      return;
+    }
+
+    if (editingQuiz?._pendingUnit) {
+      setImportJsonMessage({
+        type: "error",
+        text: "This unit already has quiz questions. Import assessment-only JSON here to keep its existing quizzes unchanged.",
+      });
+      return;
+    }
+
+    const importErrors: string[] = [];
+    result.data.unit_quiz_json.forEach((quiz, index) => {
+      const number = index + 1;
       const type = types.find(
         (entry) => entry.quiz_type_id === quiz.quiz_type_id,
       );
-
       if (!categories.some((entry) => entry.cat_id === quiz.cat_id)) {
-        errors.push(`Question ${questionNumber}: unknown cat_id ${quiz.cat_id}.`);
+        importErrors.push(`Question ${number}: unknown cat_id ${quiz.cat_id}.`);
       }
-      if (!difficulties.some((entry) => entry.difficulty_id === quiz.difficulty_id)) {
-        errors.push(
-          `Question ${questionNumber}: unknown difficulty_id ${quiz.difficulty_id}.`,
+      if (
+        !difficulties.some(
+          (entry) => entry.difficulty_id === quiz.difficulty_id,
+        )
+      ) {
+        importErrors.push(
+          `Question ${number}: unknown difficulty_id ${quiz.difficulty_id}.`,
         );
       }
       if (
         quiz.sec_id != null &&
         !sections.some((entry) => entry.sec_id === quiz.sec_id)
       ) {
-        errors.push(`Question ${questionNumber}: unknown sec_id ${quiz.sec_id}.`);
+        importErrors.push(`Question ${number}: unknown sec_id ${quiz.sec_id}.`);
       }
       if (!type) {
-        errors.push(
-          `Question ${questionNumber}: unknown quiz_type_id ${quiz.quiz_type_id}.`,
+        importErrors.push(
+          `Question ${number}: unknown quiz_type_id ${quiz.quiz_type_id}.`,
         );
       } else if (!quizPayloadMatchesType(type.type_name, quiz.quiz_payload)) {
-        errors.push(
-          `Question ${questionNumber}: quiz_payload does not match type ${type.type_name}.`,
+        importErrors.push(
+          `Question ${number}: quiz_payload does not match type ${type.type_name}.`,
         );
       }
     });
+    if (importErrors.length > 0) {
+      setImportJsonMessage({
+        type: "error",
+        text: importErrors.join(" | "),
+      });
+      return;
+    }
 
-    if (errors.length > 0) return errors;
-
-    setBulkImport(value);
+    const importedAssessment = result.data.unit_assessment_json;
+    setAssessmentFields(importedAssessment);
+    const [firstQuiz, ...remainingQuizzes] = result.data.unit_quiz_json;
     setQueuedQuizzes(
-      value.unit_quiz_json.map(({ sec_id, ...question }) => ({
+      remainingQuizzes.map(({ sec_id, ...question }) => ({
         ...question,
         ...(sec_id == null ? {} : { sec_id }),
       })),
     );
     setCurrentPendingQuizIndex(0);
-    return [];
+    setFullJsonImport(result.data);
+    setPreserveQuizDataOnSave(false);
+    setOriginalUnitQuizzes([]);
+    const firstQuizType = types.find(
+      (type) => type.quiz_type_id === firstQuiz.quiz_type_id,
+    );
+    const { sec_id: firstQuizSectionId, ...firstQuizWithoutSection } =
+      firstQuiz;
+    setEditingQuiz({
+      ...firstQuizWithoutSection,
+      ...(firstQuizSectionId == null ? {} : { sec_id: firstQuizSectionId }),
+      type_name: firstQuizType?.type_name ?? "",
+      _queuedUnitQuiz: true,
+    });
+    setImportJsonMessage({
+      type: "success",
+      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s) and ${importedAssessment.steps.length} assessment step(s). Review and edit both before submitting.`,
+    });
+  };
+
+  const setAssessmentFields = (
+    importedAssessment: AssessmentBulkImport["unit_assessment_json"],
+  ) => {
+    setAssessmentTitle(importedAssessment.title);
+    setAssessmentDescription(importedAssessment.description);
+    setCpSteps(importedAssessment.steps);
+    setExpectedOutcome(importedAssessment.expected_outcome);
   };
 
   const buildCurrentQuizEntry = () => {
@@ -626,6 +742,9 @@ export default function QuizInputForm({
       return makeBase(qText, {
         options: options.map((opt, i) => opt || `Option ${i + 1}`),
         correct_index: correct,
+        ...(typeof editingQuiz?.quiz_payload?.assessment === "string"
+          ? { assessment: editingQuiz.quiz_payload.assessment }
+          : {}),
       });
     }
 
@@ -728,34 +847,19 @@ export default function QuizInputForm({
 
     const quizCount = queuedQuizzes.length + 1;
     const activeQuizIndex = currentPendingQuizIndex % quizCount;
-    const insertionIndex = queuedQuizzes.length - activeQuizIndex;
-    return [
-      ...queuedQuizzes.slice(insertionIndex),
-      currentEntry,
-      ...queuedQuizzes.slice(0, insertionIndex),
+    const queueStartIndex =
+      queuedQuizzes.length === 0
+        ? 0
+        : (queuedQuizzes.length - activeQuizIndex) % queuedQuizzes.length;
+    const orderedQueuedQuizzes = [
+      ...queuedQuizzes.slice(queueStartIndex),
+      ...queuedQuizzes.slice(0, queueStartIndex),
     ];
-  };
-
-  const createAssessmentImportJson = (
-    importedAssessment: CodeProblemAssessment,
-  ) => {
-    const questions = buildQuizBatch(buildCurrentQuizEntry()).map((quiz) => ({
-      cat_id: quiz.cat_id,
-      ...(quiz.sec_id == null ? {} : { sec_id: quiz.sec_id }),
-      difficulty_id: quiz.difficulty_id,
-      quiz_type_id: quiz.quiz_type_id,
-      question_text: quiz.question_text,
-      quiz_payload: quiz.quiz_payload,
-    }));
-
-    return JSON.stringify(
-      {
-        unit_assessment_json: importedAssessment,
-        unit_quiz_json: questions,
-      },
-      null,
-      2,
-    );
+    return [
+      ...orderedQueuedQuizzes.slice(0, activeQuizIndex),
+      currentEntry,
+      ...orderedQueuedQuizzes.slice(activeQuizIndex),
+    ];
   };
 
   const handleAddToUnitQueue = () => {
@@ -773,7 +877,6 @@ export default function QuizInputForm({
     const resolvedUnitAssessment = editingQuiz?.unit_assessment;
     const currentQuizId = editingQuiz?.quiz_id;
 
-    setBulkImport(null);
     setQueuedQuizzes((prev) => [...prev, nextEntry]);
     setQuestionText("");
     setMcqOptions(["", "", "", ""]);
@@ -898,7 +1001,6 @@ export default function QuizInputForm({
           category: categoryFilter,
           section: sectionFilter,
           difficulty: difficultyFilter,
-          type: typeFilter,
         });
         setRecentQuizzes(result.quizzes as RecentQuizItem[]);
         setCurrentPage(result.currentPage);
@@ -914,7 +1016,6 @@ export default function QuizInputForm({
       categoryFilter,
       sectionFilter,
       difficultyFilter,
-      typeFilter,
     ],
   );
 
@@ -930,13 +1031,22 @@ export default function QuizInputForm({
 
   useEffect(() => {
     if (types.length > 0 && !hasInitializedType.current) {
-      setSelectedTypeId(types[0].quiz_type_id.toString());
+      startTransition(() => {
+        setSelectedTypeId(types[0].quiz_type_id.toString());
+        if (categories.length > 0)
+          setSelectedCatId(categories[0].cat_id.toString());
+        if (difficulties.length > 0)
+          setSelectedDiffId(difficulties[0].difficulty_id.toString());
+      });
       hasInitializedType.current = true;
     }
-  }, [types]);
+  }, [types, categories, difficulties]);
 
   // Synchronize live authoring telemetry states with editing state
   useEffect(() => {
+    if (!editingQuiz && !hasEnteredEditSession.current) return;
+    if (editingQuiz) hasEnteredEditSession.current = true;
+
     startTransition(() => {
       if (editingQuiz) {
         setSelectedTypeId(editingQuiz.quiz_type_id?.toString() ?? "");
@@ -1057,12 +1167,6 @@ export default function QuizInputForm({
     );
   };
 
-  const handleQuickFilterType = (typeName: string) => {
-    setTypeFilter((prev) =>
-      prev.toLowerCase() === typeName.toLowerCase() ? "" : typeName,
-    );
-  };
-
   const handleQuickFilterDifficulty = (diffName: string) => {
     setDifficultyFilter((prev) =>
       prev.toLowerCase() === diffName.toLowerCase() ? "" : diffName,
@@ -1110,41 +1214,35 @@ export default function QuizInputForm({
       const matchesCat =
         !categoryFilter ||
         row.cat_name.toLowerCase() === categoryFilter.toLowerCase();
-      const matchesType =
-        !typeFilter || row.type_name.toLowerCase() === typeFilter.toLowerCase();
       const matchesDiff =
         !difficultyFilter ||
         row.difficulty_name.toLowerCase() === difficultyFilter.toLowerCase();
 
-      // Category Card: counts matching active Type and Difficulty
-      // e.g. clicking MCQ adjusts HTML, CSS, JS to show MCQ counts
-      if (matchesType && matchesDiff) {
+      // Category counts reflect the active difficulty filter.
+      if (matchesDiff) {
         catCounts[row.cat_name] = (catCounts[row.cat_name] || 0) + row.count;
       }
 
-      // Type Card: counts matching active Category and Difficulty
-      // e.g. clicking CSS adjusts MCQ, FITB, Order, Pair, CP to show CSS counts
+      // Type counts reflect active category and difficulty filters.
       if (matchesCat && matchesDiff) {
         typeCounts[row.type_name] =
           (typeCounts[row.type_name] || 0) + row.count;
       }
 
-      // Difficulty Card: counts matching active Category and Type
-      // e.g. clicking CSS adjusts Beginner, Intermediate, Advanced to show CSS counts
-      // e.g. clicking CSS + MCQ adjusts to show CSS MCQ difficulty counts
-      if (matchesCat && matchesType) {
+      // Difficulty counts reflect the active category filter.
+      if (matchesCat) {
         diffCounts[row.difficulty_name] =
           (diffCounts[row.difficulty_name] || 0) + row.count;
       }
 
       // Overall count matching all selected filters
-      if (matchesCat && matchesType && matchesDiff) {
+      if (matchesCat && matchesDiff) {
         filteredTotal += row.count;
       }
     }
 
     const hasFacetFilter = Boolean(
-      categoryFilter || typeFilter || difficultyFilter,
+      categoryFilter || difficultyFilter,
     );
 
     return {
@@ -1162,7 +1260,6 @@ export default function QuizInputForm({
     types,
     difficulties,
     categoryFilter,
-    typeFilter,
     difficultyFilter,
   ]);
 
@@ -1216,31 +1313,42 @@ export default function QuizInputForm({
         formData.set(`lesson_code_${index}`, slide.code);
       }
     });
-    const currentEntry = buildCurrentQuizEntry();
-    const submittedBulkImport = bulkImport
-      ? {
-          unit_assessment_json: {
-            schemaVersion: 2 as const,
-            title: assessmentTitle,
-            description: assessmentDescription,
-            steps: cpSteps,
-            expected_outcome: expectedOutcome,
-          },
-          unit_quiz_json: bulkImport.unit_quiz_json,
-        }
-      : null;
-    const unitQuizBatch = submittedBulkImport
-      ? submittedBulkImport.unit_quiz_json
-      : buildQuizBatch(currentEntry);
-
+    const unitQuizBatch = preserveQuizDataOnSave
+      ? originalUnitQuizzes
+      : buildQuizBatch(buildCurrentQuizEntry());
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
     }
-    if (submittedBulkImport) {
-      formData.set(
-        "assessment_bulk_import",
-        JSON.stringify(submittedBulkImport),
+    if (fullJsonImport) {
+      const submittedImport = {
+        unit_assessment_json: {
+          schemaVersion: 2,
+          title: assessmentTitle,
+          description: assessmentDescription,
+          steps: cpSteps,
+          expected_outcome: expectedOutcome,
+        },
+        unit_quiz_json: unitQuizBatch.map((quiz) => ({
+          cat_id: quiz.cat_id ?? 0,
+          ...(quiz.sec_id == null ? {} : { sec_id: quiz.sec_id }),
+          difficulty_id: quiz.difficulty_id ?? 0,
+          quiz_type_id: Number(quiz.quiz_type_id ?? 0),
+          question_text: quiz.question_text ?? "",
+          quiz_payload: quiz.quiz_payload ?? {},
+        })),
+      };
+      const validation = parseAssessmentBulkImport(
+        JSON.stringify(submittedImport),
       );
+      if (!validation.success) {
+        setMessage({
+          type: "error",
+          text: `Imported quiz and assessment data is invalid: ${validation.errors.join(" | ")}`,
+        });
+        setIsPending(false);
+        return;
+      }
+      formData.set("assessment_bulk_import", JSON.stringify(submittedImport));
     }
 
     try {
@@ -1290,8 +1398,12 @@ export default function QuizInputForm({
       setOptionCount(4);
       setCpPromptCount(1);
       setQueuedQuizzes([]);
-      setBulkImport(null);
+      setOriginalUnitQuizzes([]);
+      setPreserveQuizDataOnSave(false);
+      setFullJsonImport(null);
       setCurrentPendingQuizIndex(0);
+      setImportJsonText("");
+      setImportJsonMessage(null);
 
       // Refresh list and metrics
       await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
@@ -1307,11 +1419,15 @@ export default function QuizInputForm({
   };
 
   const handleEdit = (quiz: RecentQuizItem) => {
-    setBulkImport(null);
+    setMessage(null);
+    setFullJsonImport(null);
+    setPreserveQuizDataOnSave(false);
+    setOriginalUnitQuizzes([]);
     if (quiz.type_name === "Unit") {
       const pendingQuizzes = Array.isArray(quiz.quiz_payload?.quizzes)
         ? quiz.quiz_payload.quizzes
         : [];
+      setOriginalUnitQuizzes(pendingQuizzes);
       const firstQuiz: QueuedQuizEntry = pendingQuizzes[0] ?? {
         cat_id: categories[0]?.cat_id,
         difficulty_id: difficulties[0]?.difficulty_id,
@@ -1483,7 +1599,6 @@ export default function QuizInputForm({
   const handleNextPendingQuiz = () => {
     if (queuedQuizzes.length === 0) return;
 
-    setBulkImport(null);
     const currentEntry = buildCurrentQuizEntry();
     const nextQuiz = queuedQuizzes[0];
     if (currentEntry) {
@@ -1503,7 +1618,6 @@ export default function QuizInputForm({
 
   const handlePreviousPendingQuiz = () => {
     if (queuedQuizzes.length === 0) return;
-    setBulkImport(null);
     const currentEntry = buildCurrentQuizEntry();
     const previousQuiz = queuedQuizzes[queuedQuizzes.length - 1];
     if (currentEntry) {
@@ -1523,18 +1637,66 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
+  const handleSelectPendingQuiz = (targetIndex: number) => {
+    const quizCount = queuedQuizzes.length + 1;
+    const activeIndex = currentPendingQuizIndex % quizCount;
+    if (targetIndex < 0 || targetIndex >= quizCount || targetIndex === activeIndex) {
+      return;
+    }
+
+    const currentEntry = buildCurrentQuizEntry();
+    let orderedQuizzes: (QueuedQuizEntry | null)[];
+    if (currentEntry) {
+      orderedQuizzes = buildQuizBatch(currentEntry);
+    } else {
+      const queueStartIndex =
+        queuedQuizzes.length === 0
+          ? 0
+          : (queuedQuizzes.length - activeIndex) % queuedQuizzes.length;
+      const orderedQueuedQuizzes = [
+        ...queuedQuizzes.slice(queueStartIndex),
+        ...queuedQuizzes.slice(0, queueStartIndex),
+      ];
+      orderedQuizzes = [
+        ...orderedQueuedQuizzes.slice(0, activeIndex),
+        null,
+        ...orderedQueuedQuizzes.slice(activeIndex),
+      ];
+    }
+
+    const selectedQuiz = orderedQuizzes[targetIndex];
+    if (!selectedQuiz) return;
+
+    const nextQueuedQuizzes = [
+      ...orderedQuizzes.slice(targetIndex + 1),
+      ...orderedQuizzes.slice(0, targetIndex),
+    ].filter((quiz): quiz is QueuedQuizEntry => quiz !== null);
+
+    setQueuedQuizzes(nextQueuedQuizzes);
+    setCurrentPendingQuizIndex(targetIndex);
+    loadQueuedQuiz(selectedQuiz);
+    setMessage(null);
+  };
+
   const handleCancelEdit = () => {
-    setBulkImport(null);
+    setFullJsonImport(null);
+    setPreserveQuizDataOnSave(false);
+    setOriginalUnitQuizzes([]);
+    setQueuedQuizzes([]);
+    setCurrentPendingQuizIndex(0);
     setEditingQuiz(null);
     setSelectedTypeId(types[0]?.quiz_type_id.toString() ?? "");
     setSelectedCatId(categories[0]?.cat_id?.toString() ?? "");
     setSelectedDiffId(difficulties[0]?.difficulty_id?.toString() ?? "");
     setSelectedSecId("");
+    setSelectedUnit("");
     setQuestionText("");
     setUnitTitle("");
     setLessonSlides([{ text: "" }]);
     setCurrentLessonSlide(0);
     setLessonEditorView("code");
+    setUnitInputTab("lesson");
+    setPreviewTab("lesson");
     setMcqOptions(["", "", "", ""]);
     setMcqCorrectIndex(0);
     setFitbAnswer("");
@@ -1545,7 +1707,12 @@ export default function QuizInputForm({
       { left: "", right: "" },
       { left: "", right: "" },
     ]);
+    setAssessmentTitle("");
+    setAssessmentDescription("");
     setCpSteps([createDefaultCPStep(1)]);
+    setExpectedOutcome("");
+    setImportJsonText("");
+    setImportJsonMessage(null);
     setOptionCount(4);
     setCpPromptCount(1);
     setMessage(null);
@@ -1724,7 +1891,7 @@ export default function QuizInputForm({
                     <span>
                       Filtered:{" "}
                       <strong>
-                        {[categoryFilter, typeFilter, difficultyFilter]
+                        {[categoryFilter, difficultyFilter]
                           .filter(Boolean)
                           .join(" • ")}
                       </strong>
@@ -1733,7 +1900,6 @@ export default function QuizInputForm({
                       type="button"
                       onClick={() => {
                         setCategoryFilter("");
-                        setTypeFilter("");
                         setDifficultyFilter("");
                       }}
                       className="metric-reset-link"
@@ -1776,8 +1942,8 @@ export default function QuizInputForm({
             <div className="metric-card">
               <div className="metric-card-header">
                 <span className="metric-card-label">
-                  {typeFilter || difficultyFilter
-                    ? `Tracks in ${[typeFilter, difficultyFilter].filter(Boolean).join(" • ")}`
+                  {difficultyFilter
+                    ? `Tracks in ${difficultyFilter}`
                     : "Curriculum Tracks"}
                 </span>
                 <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -1830,7 +1996,7 @@ export default function QuizInputForm({
               </div>
             </div>
 
-            {/* Card 3: Question Formats (Types) */}
+            {/* Card 3: Question Formats */}
             <div className="metric-card">
               <div className="metric-card-header">
                 <span className="metric-card-label">
@@ -1838,30 +2004,18 @@ export default function QuizInputForm({
                     ? `Formats in ${[categoryFilter, difficultyFilter].filter(Boolean).join(" • ")}`
                     : "Question Formats"}
                 </span>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                  {typeFilter ? "Click to clear" : "Click to filter"}
-                </span>
               </div>
               <div className="metric-chip-wrap">
                 {types.map((t) => {
-                  const isFiltered =
-                    typeFilter.toLowerCase() === t.type_name.toLowerCase();
                   const count = facetedMetrics.typeCounts[t.type_name] ?? 0;
                   return (
-                    <button
+                    <span
                       key={t.quiz_type_id}
-                      type="button"
-                      className={`metric-chip ${isFiltered ? "active" : ""} ${count === 0 ? "dimmed" : ""}`}
-                      onClick={() => handleQuickFilterType(t.type_name)}
-                      title={
-                        isFiltered
-                          ? `Clear ${t.type_name} filter`
-                          : `Filter by ${t.type_name}`
-                      }
+                      className={`metric-chip ${count === 0 ? "dimmed" : ""}`}
                     >
                       <span>{t.type_name}</span>
                       <span className="metric-chip-count">{count}</span>
-                    </button>
+                    </span>
                   );
                 })}
               </div>
@@ -1871,8 +2025,8 @@ export default function QuizInputForm({
             <div className="metric-card">
               <div className="metric-card-header">
                 <span className="metric-card-label">
-                  {categoryFilter || typeFilter
-                    ? `Difficulty in ${[categoryFilter, typeFilter].filter(Boolean).join(" • ")}`
+                  {categoryFilter
+                    ? `Difficulty in ${categoryFilter}`
                     : "Difficulty Balance"}
                 </span>
                 <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -2142,7 +2296,6 @@ export default function QuizInputForm({
               background: "rgba(37, 99, 235, 0.08)",
               border: "1.5px solid rgba(37, 99, 235, 0.3)",
               fontSize: "0.84rem",
-              marginBottom: "16px",
             }}
           >
             <span>
@@ -2177,9 +2330,17 @@ export default function QuizInputForm({
               : editingQuiz?.quiz_id ?? "new"
           }
           onSubmit={handleSubmit}
-          noValidate={queuedQuizzes.length > 0}
+          noValidate
         >
           <input type="hidden" name="quiz_json" value={JSON.stringify(queuedQuizzes)} />
+          {message && (
+            <div
+              className={`status-message status-${message.type}`}
+              role={message.type === "error" ? "alert" : "status"}
+            >
+              {message.text}
+            </div>
+          )}
           <div className="preview-tabs unit-input-tabs" role="group" aria-label="Unit input section">
             <button
               type="button"
@@ -2190,8 +2351,17 @@ export default function QuizInputForm({
                 setPreviewTab("lesson");
               }}
             >
-              Lesson ({lessonSlides.length} slide{lessonSlides.length === 1 ? "" : "s"}
-              {queuedQuizzes.length > 0 ? ` • ${queuedQuizzes.length} queued` : ""})
+              Lesson ({lessonSlides.length} slide{lessonSlides.length === 1 ? "" : "s"})
+            </button>
+            <button
+              type="button"
+              className={`preview-tab${unitInputTab === "quiz" ? " active" : ""}`}
+              aria-pressed={unitInputTab === "quiz"}
+              onClick={() => {
+                setUnitInputTab("quiz");
+              }}
+            >
+              Quiz ({queuedQuizzes.length + 1} question{queuedQuizzes.length === 0 ? "" : "s"})
             </button>
             <button
               type="button"
@@ -2202,7 +2372,15 @@ export default function QuizInputForm({
                 setPreviewTab("assessment");
               }}
             >
-              Coding Assessment ({cpSteps.length} step{cpSteps.length === 1 ? "" : "s"})
+              Assessment ({cpSteps.length} step{cpSteps.length === 1 ? "" : "s"})
+            </button>
+            <button
+              type="button"
+              className={`preview-tab${unitInputTab === "import" ? " active" : ""}`}
+              aria-pressed={unitInputTab === "import"}
+              onClick={() => setUnitInputTab("import")}
+            >
+              Import JSON
             </button>
           </div>
           <div hidden={unitInputTab !== "lesson"}>
@@ -2218,27 +2396,6 @@ export default function QuizInputForm({
               onChange={(event) => setUnitTitle(event.target.value)}
               required
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="cat_id">Category</label>
-            <select
-              id="cat_id"
-              name="cat_id"
-              className="form-select"
-              required
-              value={selectedCatId}
-              onChange={(e) => setSelectedCatId(e.target.value)}
-            >
-              <option value="" disabled>
-                Select Category
-              </option>
-              {categories.map((cat) => (
-                <option key={cat.cat_id} value={cat.cat_id.toString()}>
-                  {cat.cat_name}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="lesson-slide-section">
@@ -2490,6 +2647,47 @@ export default function QuizInputForm({
             </div>
           </div>
 
+          </div>
+          <div hidden={unitInputTab !== "quiz"}>
+          {preserveQuizDataOnSave && (
+            <div
+              className="status-message status-success"
+              role="status"
+              style={{ marginBottom: "16px" }}
+            >
+              Assessment-only import is active. The unit&apos;s saved quiz data
+              will remain unchanged.
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ marginLeft: "10px" }}
+                onClick={() => setPreserveQuizDataOnSave(false)}
+              >
+                Enable quiz edits for this save
+              </button>
+            </div>
+          )}
+          <div className="form-group">
+            <label htmlFor="cat_id">Category</label>
+            <select
+              id="cat_id"
+              name="cat_id"
+              className="form-select"
+              required
+              value={selectedCatId}
+              onChange={(e) => setSelectedCatId(e.target.value)}
+            >
+              <option value="" disabled>
+                Select Category
+              </option>
+              {categories.map((cat) => (
+                <option key={cat.cat_id} value={cat.cat_id.toString()}>
+                  {cat.cat_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="form-group">
             <label htmlFor="difficulty_id">Difficulty</label>
             <select
@@ -2571,7 +2769,9 @@ export default function QuizInputForm({
                 setOptionCount(4);
               }}
             >
-              {types.filter((t) => t.type_name !== "CP").map((t) => (
+              {types
+                .filter((t) => t.type_name !== "CP" || t.type_name === selectedTypeName)
+                .map((t) => (
                 <option key={t.quiz_type_id} value={t.quiz_type_id}>
                   {t.type_name} (
                   {t.type_name === "MCQ"
@@ -2585,7 +2785,7 @@ export default function QuizInputForm({
                             : t.type_name}
                   )
                 </option>
-              ))}
+                ))}
             </select>
           </div>
 
@@ -3159,12 +3359,7 @@ export default function QuizInputForm({
                         fontWeight: idx === currentPendingQuizIndex ? 700 : 500,
                       }}
                       onClick={() => {
-                        if (idx === currentPendingQuizIndex) return;
-                        if (idx > currentPendingQuizIndex) {
-                          handleNextPendingQuiz();
-                        } else {
-                          handlePreviousPendingQuiz();
-                        }
+                        handleSelectPendingQuiz(idx);
                       }}
                     >
                       Quiz {idx + 1}
@@ -3239,11 +3434,6 @@ export default function QuizInputForm({
             )}
           </div>
 
-          {message && (editingQuiz?._pendingUnit || editingQuiz?._queuedUnitQuiz) && (
-            <div className={`status-message status-${message.type}`}>
-              {message.text}
-            </div>
-          )}
           </div>
 
           <div hidden={unitInputTab !== "assessment"}>
@@ -3256,21 +3446,128 @@ export default function QuizInputForm({
               setExpectedOutcome={setExpectedOutcome}
               cpSteps={cpSteps}
               setCpSteps={setCpSteps}
-              onImport={handleBulkImport}
-              createImportJson={createAssessmentImportJson}
             />
+          </div>
+
+          <div hidden={unitInputTab !== "import"} className="form-group">
+            <h3>Import JSON</h3>
+            <p>
+              {editingQuiz?._pendingUnit ? (
+                <>
+                  This unit already has quizzes. Paste JSON containing only{" "}
+                  <code>unit_assessment_json</code> to replace its assessment
+                  while keeping its quiz questions unchanged.
+                </>
+              ) : (
+                <>
+                  For a new unit, include both <code>unit_assessment_json</code>{" "}
+                  and <code>unit_quiz_json</code>. Both will load into the form
+                  for review and editing before submission.
+                </>
+              )}
+            </p>
+            <textarea
+              aria-label="Import assessment JSON"
+              className="form-textarea"
+              rows={18}
+              style={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: "0.86rem",
+              }}
+              value={importJsonText}
+              onChange={(event) => {
+                setImportJsonText(event.target.value);
+                setImportJsonMessage(null);
+              }}
+              placeholder={editingQuiz?._pendingUnit ? `{
+  "unit_assessment_json": {
+    "schemaVersion": 2,
+    "title": "Assessment title",
+    "description": "Assessment description",
+    "steps": [{
+      "stepNumber": 1,
+      "instruction": "Describe the task",
+      "starterCode": { "html": "", "css": "", "js": "" },
+      "expectedTemplate": { "html": "<h1>####</h1>", "css": "", "js": "" },
+      "inheritPreviousCode": false
+    }],
+    "expected_outcome": "<h1>Example</h1>"
+  }
+}` : `{
+  "unit_assessment_json": {
+    "schemaVersion": 2,
+    "title": "Assessment title",
+    "description": "Assessment description",
+    "steps": [{
+      "stepNumber": 1,
+      "instruction": "Describe the task",
+      "starterCode": { "html": "", "css": "", "js": "" },
+      "expectedTemplate": { "html": "<h1>####</h1>", "css": "", "js": "" },
+      "inheritPreviousCode": false
+    }],
+    "expected_outcome": "<h1>Example</h1>"
+  },
+  "unit_quiz_json": [{
+    "cat_id": 1,
+    "sec_id": 1,
+    "difficulty_id": 1,
+    "quiz_type_id": 1,
+    "question_text": "Question text",
+    "quiz_payload": {
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_index": 0
+    }
+  }]
+}`}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+                marginTop: "10px",
+              }}
+            >
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleApplyImportJson}
+              >
+                Validate &amp; Load
+              </button>
+            </div>
+            {importJsonMessage && (
+              <div
+                className={`status-message status-${importJsonMessage.type}`}
+                role={importJsonMessage.type === "error" ? "alert" : "status"}
+              >
+                {importJsonMessage.text}
+                {importJsonMessage.type === "success" && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ marginTop: "10px" }}
+                    onClick={() => {
+                      setUnitInputTab("assessment");
+                      setPreviewTab("assessment");
+                    }}
+                  >
+                    Review Assessment
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div
             style={{
               display:
-                unitInputTab === "lesson" || unitInputTab === "assessment"
+                unitInputTab !== "import"
                   ? "flex"
                   : "none",
               alignItems: "center",
               gap: "10px",
               flexWrap: "wrap",
-              marginTop: "10px",
             }}
           >
             <button
@@ -3337,6 +3634,9 @@ export default function QuizInputForm({
                   lesson_text: slide.text,
                   ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
                 }))}
+                slideIndex={currentLessonSlide}
+                onSlideIndexChange={setCurrentLessonSlide}
+                showControls={false}
                 className="lesson-preview-surface"
               />
             </div>
@@ -3422,8 +3722,6 @@ export default function QuizInputForm({
                 >
                   <option value="id_desc">ID: High to Low (Newest)</option>
                   <option value="id_asc">ID: Low to High (Oldest)</option>
-                  <option value="text_asc">Question: A → Z</option>
-                  <option value="text_desc">Question: Z → A</option>
                   <option value="diff_asc">Difficulty: Easy → Hard</option>
                   <option value="diff_desc">Difficulty: Hard → Easy</option>
                 </select>
@@ -3540,34 +3838,16 @@ export default function QuizInputForm({
                   </button>
                 </span>
               )}
-              {typeFilter !== "" && (
-                <span className="active-filter-tag">
-                  Type: {typeFilter}
-                  <button
-                    type="button"
-                    className="active-filter-tag-close"
-                    onClick={() => setTypeFilter("")}
-                    title="Remove type filter"
-                    aria-label="Remove type filter"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
               {sortBy !== "id_desc" && (
                 <span className="active-filter-tag">
                   Sort:{" "}
                   {sortBy === "id_asc"
                     ? "Oldest First"
-                    : sortBy === "text_asc"
-                      ? "A → Z"
-                      : sortBy === "text_desc"
-                        ? "Z → A"
-                        : sortBy === "diff_asc"
-                          ? "Easy → Hard"
-                          : sortBy === "diff_desc"
-                            ? "Hard → Easy"
-                            : sortBy}
+                    : sortBy === "diff_asc"
+                      ? "Easy → Hard"
+                      : sortBy === "diff_desc"
+                        ? "Hard → Easy"
+                        : sortBy}
                   <button
                     type="button"
                     className="active-filter-tag-close"
@@ -3664,10 +3944,10 @@ export default function QuizInputForm({
                   </div>
                 </div>
 
-                {/* Search Prompt Text Filter */}
+                {/* Lesson Title Search */}
                 <div className="filter-group">
                   <span className="filter-group-title">
-                    Search Prompt / Text
+                    Search Lesson Title
                   </span>
                   <div
                     style={{
@@ -3680,9 +3960,9 @@ export default function QuizInputForm({
                       type="text"
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
-                      placeholder="Search question text..."
+                      placeholder="Search lesson title..."
                       className="filter-input"
-                      aria-label="Search by prompt text"
+                      aria-label="Search by lesson title"
                     />
                     {searchFilter && (
                       <button
@@ -3767,23 +4047,6 @@ export default function QuizInputForm({
                   </select>
                 </div>
 
-                {/* Type Filter */}
-                <div className="filter-group">
-                  <span className="filter-group-title">Quiz Type</span>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="filter-select"
-                    aria-label="Filter by quiz type"
-                  >
-                    <option value="">All Types</option>
-                    {types.map((t) => (
-                      <option key={t.quiz_type_id} value={t.type_name}>
-                        {t.type_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
           )}
@@ -3824,6 +4087,10 @@ export default function QuizInputForm({
             >
               {filteredQuizzes.map((quiz) => {
                 const payload = quiz.quiz_payload;
+                const unitAssessment =
+                  payload?.assessment && typeof payload.assessment === "object"
+                    ? payload.assessment
+                    : undefined;
                 return (
                   <div
                     key={quiz.quiz_id}
@@ -3867,7 +4134,7 @@ export default function QuizInputForm({
                           type="button"
                           className="btn-preview"
                           onClick={() =>
-                            router.push(`/test?unitId=${quiz.quiz_id}`)
+                            router.push(`/quiz?unitId=${quiz.quiz_id}`)
                           }
                           title={`Preview Question (ID: #${quiz.quiz_id})`}
                           aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
@@ -4105,225 +4372,19 @@ export default function QuizInputForm({
                               ? payload.quizzes.length
                               : 0} quizzes
                           </span>
-                          {Array.isArray(payload?.assessment?.cp_steps) &&
-                            payload.assessment.cp_steps.length > 0 && (
+                          {Array.isArray(unitAssessment?.cp_steps) &&
+                            unitAssessment.cp_steps.length > 0 && (
                               <span
                                 className="badge badge-metric-tag"
                                 title="Coding Problem steps"
                               >
-                                {payload.assessment.cp_steps.length} CP step
-                                {payload.assessment.cp_steps.length === 1 ? "" : "s"}
+                                {unitAssessment.cp_steps.length} CP step
+                                {unitAssessment.cp_steps.length === 1 ? "" : "s"}
                               </span>
                             )}
                         </>
                       )}
                     </div>
-                    {payload && (
-                      <div className="quiz-payload-preview">
-                        {/* MCQ Rendering */}
-                        {quiz.type_name === "MCQ" && payload.options && (
-                          <div>
-                            <strong>Options:</strong>
-                            {payload.options.map((opt: string, i: number) => {
-                              const isCorrect = payload.correct_index === i;
-                              return (
-                                <div key={i} className="quiz-payload-option">
-                                  <span>
-                                    {i + 1}. {opt}
-                                  </span>
-                                  {isCorrect && (
-                                    <span className="correct-text">
-                                      (Correct)
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* FITB Rendering */}
-                        {quiz.type_name === "FITB" && (
-                          <div>
-                            <strong>Correct Answer:</strong>{" "}
-                            <span className="correct-text">
-                              {payload.answer}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Order Rendering */}
-                        {quiz.type_name === "Order" && payload.items && (
-                          <div>
-                            <strong>Correct Order:</strong>
-                            {payload.items.map((item: string, i: number) => (
-                              <div
-                                key={i}
-                                style={{
-                                  margin: "4px 0",
-                                }}
-                              >
-                                {i + 1}. {item}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Pair Rendering */}
-                        {quiz.type_name === "Pair" && payload.pairs && (
-                          <div>
-                            <strong>Matching Pairs:</strong>
-                            {payload.pairs.map((pair: { left: string; right: string }, i: number) => (
-                              <div
-                                key={i}
-                                style={{
-                                  margin: "4px 0",
-                                }}
-                              >
-                                <code>{pair.left}</code> &harr;{" "}
-                                <code>{pair.right}</code>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* CP Rendering */}
-                        {quiz.type_name === "CP" && (
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "8px",
-                            }}
-                          >
-                            {payload.steps && payload.steps.length > 0 ? (
-                              payload.steps.map((step: { prompt?: string; template?: string; expected?: string }, sIdx: number) => (
-                                <div
-                                  key={sIdx}
-                                  style={{
-                                    backgroundColor: "#f8fafc",
-                                    border: "1px solid #cbd5e1",
-                                    padding: "10px 12px",
-                                    borderRadius: "8px",
-                                    margin: "2px 0",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontWeight: "700",
-                                      marginBottom: "4px",
-                                      color: "#1e293b",
-                                    }}
-                                  >
-                                    Step {sIdx + 1}
-                                  </div>
-                                  <div>
-                                    <strong>Instruction:</strong> {step.prompt}
-                                  </div>
-                                  {step.template && (
-                                    <div style={{ marginTop: "6px" }}>
-                                      <strong>Initial Code Template:</strong>
-                                      <pre
-                                        style={{
-                                          margin: "2px 0 0 0",
-                                          backgroundColor: "#f1f5f9",
-                                          padding: "6px",
-                                          borderRadius: "4px",
-                                          fontSize: "0.8rem",
-                                          overflowX: "auto",
-                                        }}
-                                      >
-                                        {step.template}
-                                      </pre>
-                                    </div>
-                                  )}
-                                  <div style={{ marginTop: "6px" }}>
-                                    <strong>Expected Output:</strong>
-                                    <pre
-                                      style={{
-                                        margin: "2px 0 0 0",
-                                        backgroundColor: "#e2f0d9",
-                                        padding: "6px",
-                                        borderRadius: "4px",
-                                        fontSize: "0.8rem",
-                                        overflowX: "auto",
-                                      }}
-                                    >
-                                      {step.expected}
-                                    </pre>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div>
-                                <div>
-                                  <strong>Template:</strong>
-                                  <pre
-                                    style={{
-                                      margin: "4px 0",
-                                      backgroundColor: "#eee",
-                                      padding: "6px",
-                                      borderRadius: "4px",
-                                      fontSize: "0.8rem",
-                                      overflowX: "auto",
-                                    }}
-                                  >
-                                    {payload.template}
-                                  </pre>
-                                </div>
-                                <div>
-                                  <strong>Expected Output:</strong>
-                                  <pre
-                                    style={{
-                                      margin: "4px 0",
-                                      backgroundColor: "#e2f0d9",
-                                      padding: "6px",
-                                      borderRadius: "4px",
-                                      fontSize: "0.8rem",
-                                      overflowX: "auto",
-                                    }}
-                                  >
-                                    {payload.expected}
-                                  </pre>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {quiz.type_name === "Unit" && (
-                          <div>
-                            <div>
-                              <strong>Lesson Text:</strong>{" "}
-                              {payload?.lesson_card?.lesson_slide?.[0]
-                                ?.lesson_text ??
-                                payload?.lesson_card?.lesson_card?.lesson_text ??
-                                payload?.lesson_card?.lesson_text ??
-                                ""}
-                            </div>
-                            <div>
-                              <strong>Assessment:</strong>{" "}
-                              {String(
-                                payload?.assessment?.assessment_title ||
-                                  payload?.assessment?.assessment ||
-                                  "None"
-                              )}
-                              {Array.isArray(payload?.assessment?.cp_steps) &&
-                                payload.assessment.cp_steps.length > 0 &&
-                                ` (${payload.assessment.cp_steps.length} interactive coding step${
-                                  payload.assessment.cp_steps.length === 1 ? "" : "s"
-                                })`}
-                            </div>
-                            <div>
-                              <strong>Quizzes:</strong>{" "}
-                              {Array.isArray(payload?.quizzes)
-                                ? payload.quizzes.length
-                                : 0} quizzes
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}

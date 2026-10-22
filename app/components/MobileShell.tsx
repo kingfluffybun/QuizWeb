@@ -10,7 +10,6 @@ import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 const EXCLUDED_PREFIXES = [
   "/login",
   "/verify-email",
-  "/test",
   "/quiz",
   "/quiz-cp",
   "/about",
@@ -318,7 +317,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Unit Quiz</span>
             </Link>
-            <Link href="/test" className="mobile-drawer-link">
+            <Link href="/quiz" className={`mobile-drawer-link${isActiveRoute(pathname, "/quiz") ? " active" : ""}`}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
                 <path d="M12 7a5 5 0 1 0 5 5" />

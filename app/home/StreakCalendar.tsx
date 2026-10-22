@@ -21,6 +21,9 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const [viewYear, setViewYear] = useState<number>(initialData.targetYear);
     const [viewMonth, setViewMonth] = useState<number>(initialData.targetMonth);
     const [activeDays, setActiveDays] = useState<number[]>(initialData.activeDatesInMonth);
+    const [activeDaysMonth, setActiveDaysMonth] = useState(
+        `${initialData.targetYear}-${initialData.targetMonth}`,
+    );
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isLogging, setIsLogging] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -40,6 +43,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                     const freshData = await getUserStreakData(viewYear, viewMonth, localDate);
                     setStreakData(freshData);
                     setActiveDays(freshData.activeDatesInMonth);
+                    setActiveDaysMonth(`${viewYear}-${viewMonth}`);
                 });
             }
         } catch {
@@ -58,6 +62,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
             const res = await getMonthActivity(nextYear, nextMonth);
             if (res.success) {
                 setActiveDays(res.activeDays);
+                setActiveDaysMonth(`${nextYear}-${nextMonth}`);
             }
         });
     }, [viewMonth, viewYear]);
@@ -73,6 +78,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
             const res = await getMonthActivity(nextYear, nextMonth);
             if (res.success) {
                 setActiveDays(res.activeDays);
+                setActiveDaysMonth(`${nextYear}-${nextMonth}`);
             }
         });
     }, [viewMonth, viewYear]);
@@ -89,6 +95,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
             const res = await getMonthActivity(tYear, tMonth);
             if (res.success) {
                 setActiveDays(res.activeDays);
+                setActiveDaysMonth(`${tYear}-${tMonth}`);
             }
         });
     }, [streakData.todayDate]);
@@ -108,6 +115,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                 const fresh = await getUserStreakData(viewYear, viewMonth, streakData.todayDate);
                 setStreakData(fresh);
                 setActiveDays(fresh.activeDatesInMonth);
+                setActiveDaysMonth(`${viewYear}-${viewMonth}`);
                 setFeedbackMessage("Daily streak recorded! +10 XP earned.");
             } else {
                 setFeedbackMessage(res.error || "Failed to log activity.");
@@ -271,7 +279,9 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
 
                     {/* Month Days */}
                     {monthDays.map((dayNum) => {
-                        const isActive = activeDays.includes(dayNum);
+                        const isActive =
+                            activeDaysMonth === `${viewYear}-${viewMonth}` &&
+                            activeDays.includes(dayNum);
                         const isToday = isCurrentViewMonth && dayNum === todayDayNum;
 
                         let dayClasses = "day col";

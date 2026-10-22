@@ -54,10 +54,12 @@ const incorrectMessages = ["Hard luck!", "That’s incorrect.", "Not quite right
 function LessonSlideTransition({
     slideIndex,
     slideCount,
+    slideHasCode,
     renderSlide,
 }: {
     slideIndex: number;
     slideCount: number;
+    slideHasCode: (index: number) => boolean;
     renderSlide: (index: number) => ReactNode;
 }) {
     const [activeSlideIndex, setActiveSlideIndex] = useState(slideIndex);
@@ -76,12 +78,15 @@ function LessonSlideTransition({
             {Array.from({ length: slideCount }, (_, index) => {
                 const isEntering = incomingSlideIndex === index;
                 const isExiting = incomingSlideIndex !== null && activeSlideIndex === index;
+                const isExitingToText = isExiting
+                    && incomingSlideIndex !== null
+                    && !slideHasCode(incomingSlideIndex);
                 const isHidden = !isEntering && !isExiting && index !== activeSlideIndex;
 
                 return (
                     <div
                         key={`slide-${index}`}
-                        className={`lesson-slide-layer${isEntering ? " is-entering" : ""}${isExiting ? " is-exiting" : ""}${isMovingBackward && (isEntering || isExiting) ? " is-backward" : ""}${isHidden ? " is-hidden" : ""}`}
+                        className={`lesson-slide-layer${isEntering ? " is-entering" : ""}${isExiting ? " is-exiting" : ""}${isExitingToText ? " is-exiting-to-text" : ""}${isMovingBackward && (isEntering || isExiting) ? " is-backward" : ""}${isHidden ? " is-hidden" : ""}`}
                         aria-hidden={isHidden || isExiting}
                         onAnimationEnd={isEntering ? (event) => finishTransition(index, event) : undefined}
                     >
@@ -571,6 +576,7 @@ export default function QuizLandingClient({
                         <LessonSlideTransition
                             slideIndex={lessonSlideIndex}
                             slideCount={lessonSlides.length}
+                            slideHasCode={(index) => Boolean(lessonSlides[index]?.lesson_code)}
                             renderSlide={(slideIndex) => (
                                 <LessonCard
                                     key={`${selectedQuiz?.quiz_id ?? currentIndex}-${slideIndex}`}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import type { QuizData } from "@/app/quiz/types";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
@@ -58,6 +59,10 @@ export default async function QuizPage({
     searchParams: Promise<{ quizId?: string; unitId?: string; source?: string }>;
 }) {
     const { quizId, unitId, source } = await searchParams;
+    if (!quizId && !unitId) {
+        redirect("/learn");
+    }
+
     const selectedUnitId = unitId ? Number(unitId) : null;
     const selectedQuizId = quizId ? Number(quizId) : null;
     const selectedUnit = selectedUnitId

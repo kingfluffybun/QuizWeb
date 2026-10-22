@@ -6,7 +6,9 @@
     grid-template-rows: minmax(0, 1fr) clamp(140px, 2vh, 220px);
     grid-template-columns: 240px auto;
     transition: grid-template-columns 0.2s ease;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     background-color: var(--bg-main);
 }
 
@@ -18,6 +20,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: 48px 0;
     gap: 16px;
     
@@ -255,6 +260,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 0 24px;
 }
 
 .available-units-heading {
@@ -352,6 +358,7 @@
     background: var(--bg-card);
     border: 2px solid var(--border-main);
     border-radius: 12px;
+    width: 100%;
 }
 
 .available-unit-info {
@@ -394,6 +401,7 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+    width: 100%;
 }
 
 .available-unit-cp-link {
@@ -402,6 +410,7 @@
     justify-content: center;
     min-height: 48px;
     padding: 0 16px;
+    height: 100%;
     border: 2px solid var(--border-main);
     border-radius: 14px;
     background: var(--bg-card);
@@ -423,7 +432,6 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    min-width: 180px;
     min-height: 56px;
     padding: 0 24px;
     border: none;
@@ -487,6 +495,10 @@
     pointer-events: none;
 }
 
+.lesson-slide-layer.is-exiting-to-text .lesson-code-frame-controls-pill {
+    visibility: hidden;
+}
+
 .lesson-slide-layer.is-exiting.is-backward {
     animation-name: lesson-slide-exit-right;
 }
@@ -538,11 +550,18 @@
 }
 
 .lesson-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     width: 100%;
     text-align: left;
     white-space: pre-wrap;
     line-height: 1.5;
-    text-align: justify;
+    text-align: left;
+}
+
+.lesson-card-text > p {
+    margin: 0;
 }
 
 .lesson-card .lesson-slide-title {
@@ -565,7 +584,6 @@
     width: 100%;
     padding: 12px 0;
     /* kailangan naka set talaga as white (hindi var(--bg-card)) */
-    section, iframe {pointer-events: none; user-select: none;}
     iframe {background-color: #fff; outline: 1px solid var(--border-main);}
 }
 
@@ -630,7 +648,6 @@
     height: 100%;
     overflow: hidden;
     border-radius: 0 0 8px 8px;
-    pointer-events: none;
     user-select: none;
     margin-top: -2px;
 }
@@ -1641,10 +1658,17 @@ footer.incorrect {
     /* Pair: keep both columns visible side by side so no vertical scrolling is needed */
     .options-container#pair {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-        align-items: start !important;
-        gap: 10px !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-auto-rows: auto !important;
+        align-content: start !important;
+        align-items: stretch !important;
+        justify-items: stretch !important;
+        column-gap: 10px !important;
+        row-gap: 10px !important;
+        flex: 1 1 auto !important;
         width: 100% !important;
+        max-width: 100% !important;
+        margin-inline: 0 !important;
     }
 
     .pair-left-column .options,
@@ -1665,38 +1689,65 @@ footer.incorrect {
     }
 
     .pair-left-column, .pair-right-column {
-        width: 100% !important;
-        gap: 8px !important;
+        display: contents !important;
     }
 
     .pair-left-column > label, .pair-right-column > label {
         max-height: none !important;
         height: auto !important;
+        width: 100% !important;
+        align-self: stretch !important;
+    }
+
+    .pair-left-column > label > .options,
+    .pair-right-column > label > .options {
+        width: 100% !important;
+        height: 100% !important;
     }
 
     .options-container#order {
         width: 100% !important;
-        gap: 8px !important;
+        gap: 0 !important;
     }
 
     .order-number {
-        gap: 6px !important;
-    }
-
-    .order-number > div {
-        max-height: none !important;
-        min-height: 48px !important;
-        height: auto !important;
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
     }
 
     .order-options {
         gap: 6px !important;
+        min-width: 0 !important;
+        margin-left: 56px !important;
+        counter-reset: order-option;
     }
 
     .order-options > .options {
         min-height: 48px !important;
         max-height: none !important;
         height: auto !important;
+        position: relative;
+        counter-increment: order-option;
+    }
+
+    .order-options > .options::before {
+        content: counter(order-option) ".";
+        position: absolute;
+        top: 50%;
+        right: calc(100% + 18px);
+        width: 32px;
+        transform: translateY(-50%);
+        color: var(--text-main);
+        font-family: var(--font-poppins), 'Poppins', sans-serif;
+        font-size: clamp(0.75rem, 2vw, 1.25rem);
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        pointer-events: none;
     }
 
     .options-container#ftb {
