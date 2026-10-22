@@ -506,6 +506,26 @@ html[data-motion="reduce"] .admin-main *::after {
   gap: 20px;
 }
 
+.admin-user-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-user-pagination-status,
+.admin-user-pagination-page {
+  color: var(--admin-text-muted);
+  font-size: 0.88rem;
+}
+
+.admin-user-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .admin-toolbar,
 .admin-table-toolbar {
   display: flex;

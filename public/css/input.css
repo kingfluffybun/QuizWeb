@@ -1365,7 +1365,7 @@ textarea {
   accent-color: var(--selected-color);
 }
 .btn-primary {
-  background-color: var(--selected-color);
+  background-color: var(--primary-color);
   height: 100%;
   color: #ffffff;
   font-family: "Poppins", sans-serif;
@@ -1427,7 +1427,7 @@ textarea {
 }
 .authoring-action-button-primary {
   border-bottom: 4px solid #6b36da;
-  background-color: var(--selected-color);
+  background-color: var(--primary-color);
   color: #ffffff;
 }
 .authoring-action-button-primary:hover:not(:disabled) {
