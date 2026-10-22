@@ -487,6 +487,18 @@ button.quick-action-btn:hover {
     p {width: 40px; text-align: right; padding: 4px 8px;}
 }
 
+.daily-goal-chart .graph-x-axis:nth-child(-n + 3) p {
+    transform: translate(-8px, -4px);
+}
+
+.daily-goal-chart .graph-x-axis:nth-child(2) p {
+    transform: translate(-7px, -2px);
+}
+
+.daily-goal-chart .graph-x-axis:nth-child(3) p {
+    transform: translate(-6.5px, -2px);
+}
+
 .x-axis-line {
     width: 100%;
     height: 2px;
@@ -509,12 +521,15 @@ button.quick-action-btn:hover {
         flex: 1;
         > .graph-y-bar {
             position: absolute;
+            display: block;
             width: 20px;
             height: 148px;
             bottom: calc(100% + 16px);
             margin: 0 auto;
             left: 0;
             right: 0;
+            padding: 0;
+            flex: none;
             background-color: var(--primary-color);
         }
     }
