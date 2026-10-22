@@ -179,6 +179,26 @@ small {
 
 body {background-color: var(--bg-main);}
 
+.root-route-loading {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: var(--bg-main);
+}
+
+.root-route-loading__spinner {
+    width: 6rem;
+    height: 6rem;
+    border: 8px solid var(--border-main);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: root-route-loading-spin 0.8s linear infinite;
+}
+
+@keyframes root-route-loading-spin {
+    to { transform: rotate(360deg); }
+}
+
 input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
 select,
 textarea {
