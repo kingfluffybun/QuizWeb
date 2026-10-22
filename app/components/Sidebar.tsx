@@ -21,6 +21,7 @@ export interface SidebarProps {
     role?: string;
     username?: string;
     email?: string;
+    avatarColor?: string;
 }
 
 /**
@@ -110,7 +111,7 @@ function getRouteIcon(pathname: string) {
     return null;
 }
 
-export default function Sidebar({ role: initialRole, username: initialUsername, email: initialEmail }: SidebarProps = {}) {
+export default function Sidebar({ role: initialRole, username: initialUsername, email: initialEmail, avatarColor }: SidebarProps = {}) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [fetchedRole, setFetchedRole] = useState<string | undefined>(undefined);
     const [fetchedUsername, setFetchedUsername] = useState<string | undefined>(undefined);
@@ -153,6 +154,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
         .join("");
     const displayEmail = initialEmail ?? fetchedEmail ?? null;
     const routeIcon = getRouteIcon(pathname);
+    const avaColor = avatarColor;
 
     useEffect(() => {
         const activeOption = document.querySelector("#quiz-sidebar .sidebar-option.active");
@@ -269,7 +271,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 aria-controls="profile-menu"
                                 onClick={() => setIsProfileMenuOpen((open) => !open)}
                             >
-                                <span className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></span>
+                                <span className="profile-icon" aria-hidden="true" style={{backgroundColor: avatarColor ? avatarColor : '#ccc'}}><span>{profileInitial}</span></span>
                                 <div className="profile-detail">
                                     <p id="name">{firstName}</p>
                                     <p id="email">{displayEmail}</p>
@@ -290,7 +292,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 }}
                             >
                                 <div className="profile-header">
-                                    <div className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></div>
+                                    <div className="profile-icon" aria-hidden="true" style={{backgroundColor: avaColor}}><span>{profileInitial}</span></div>
                                     <div className="profile-detail">
                                         <p id="name">{displayName}</p>
                                         <p id="email">{displayEmail}</p>
