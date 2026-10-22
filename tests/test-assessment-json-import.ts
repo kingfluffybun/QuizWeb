@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  parseAssessmentImport,
+  parseAssessmentOnlyImport,
   parseAssessmentBulkImport,
   quizPayloadMatchesType,
 } from "../lib/assessment-json-import";
@@ -94,6 +96,48 @@ assert.equal(
 );
 assert.equal(
   parseAssessmentBulkImport("{").success,
+  false,
+);
+
+const assessmentOnly = parseAssessmentOnlyImport(
+  JSON.stringify({
+    unit_assessment_json: validImport.unit_assessment_json,
+  }),
+);
+assert.equal(assessmentOnly.success, true);
+if (assessmentOnly.success) {
+  assert.equal(assessmentOnly.data.title, "HTML assessment");
+  assert.equal(assessmentOnly.data.steps.length, 1);
+}
+
+const assessmentOnlyWithQuizField = parseAssessmentOnlyImport(
+  JSON.stringify({
+    unit_assessment_json: validImport.unit_assessment_json,
+    unit_quiz_json: "ignored quiz data",
+  }),
+);
+assert.equal(assessmentOnlyWithQuizField.success, false);
+const inferredAssessmentOnly = parseAssessmentImport(
+  JSON.stringify({
+    unit_assessment_json: validImport.unit_assessment_json,
+  }),
+);
+assert.equal(
+  inferredAssessmentOnly.success && inferredAssessmentOnly.mode,
+  "assessment-only",
+);
+const inferredFullImport = parseAssessmentImport(JSON.stringify(validImport));
+assert.equal(
+  inferredFullImport.success && inferredFullImport.mode,
+  "full",
+);
+assert.equal(
+  parseAssessmentImport(
+    JSON.stringify({
+      unit_assessment_json: validImport.unit_assessment_json,
+      unexpected: true,
+    }),
+  ).success,
   false,
 );
 

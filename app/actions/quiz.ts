@@ -1927,7 +1927,9 @@ export async function getPendingQuizzes(statusFilter = "pending") {
 }
 
 export async function getPendingQuizById(pendingId: number) {
-  if (!pendingId) return undefined;
+  if (!Number.isInteger(pendingId) || pendingId < 1) {
+    return { error: "A valid pending unit ID is required." };
+  }
 
   try {
     const [rows] = await db.query<PendingUnit[]>(
@@ -1987,7 +1989,9 @@ export async function getPendingQuizById(pendingId: number) {
       }
     }
 
-    if (!quiz) return undefined;
+    if (!quiz) {
+      return { error: "The pending unit was not found." };
+    }
     const lessonCard = parseJsonColumn(quiz.unit_lesson_card_json);
     const unitQuizJson = parseJsonColumn(quiz.unit_quiz_json);
     const assessment = parseJsonColumn(quiz.unit_assessment_json);
@@ -1995,18 +1999,24 @@ export async function getPendingQuizById(pendingId: number) {
     const firstQuiz = quizzes[0] ?? {};
 
     return {
-      ...quiz,
+      pending_id: Number(quiz.pending_id),
+      unit_id: quiz.unit_id == null ? undefined : Number(quiz.unit_id),
+      unit_title: String(quiz.unit_title ?? ""),
+      sec_id: Number(quiz.sec_id),
       sec_num: quiz.sec_num != null ? String(quiz.sec_num) : undefined,
+      pending_status: String(quiz.pending_status ?? ""),
+      pending_name: String(quiz.pending_name ?? ""),
+      pending_note: quiz.pending_note ?? null,
       unit_lesson_card_json: lessonCard,
       unit_quiz_json: quizzes,
       unit_assessment_json: assessment,
-      question_text: quiz.unit_title,
+      question_text: String(quiz.unit_title ?? ""),
       cat_name: "",
-      difficulty_name: quiz.pending_status,
+      difficulty_name: String(quiz.pending_status ?? ""),
       type_name: "Unit",
       quiz_payload: {
         ...(firstQuiz?.quiz_payload ?? {}),
-        title: quiz.unit_title,
+        title: String(quiz.unit_title ?? ""),
         lesson_card: lessonCard,
         quizzes,
         assessment,
@@ -2014,7 +2024,7 @@ export async function getPendingQuizById(pendingId: number) {
     };
   } catch (error) {
     console.error("Failed to fetch pending quiz:", error);
-    return undefined;
+    return { error: "The pending unit could not be fetched." };
   }
 }
 

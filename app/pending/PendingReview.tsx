@@ -49,16 +49,16 @@ export default function PendingReview({
     const idStr = String(pendingId);
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("quizweb-edit-pending-id", idStr);
-      window.dispatchEvent(
-        new CustomEvent("quizweb-edit-pending", { detail: idStr }),
-      );
       const formEl =
         document.getElementById("quiz-form") ||
         document.getElementById("quiz-workspace");
       if (formEl) {
+        window.dispatchEvent(
+          new CustomEvent("quizweb-edit-pending", { detail: idStr }),
+        );
         formEl.scrollIntoView({ behavior: "smooth" });
       } else {
-        router.push("/input");
+        router.push(`/input?pending_id=${encodeURIComponent(idStr)}`);
       }
     }
   };
