@@ -535,28 +535,7 @@ export default function QuizLandingClient({
                 Start Coding Assessment
               </Link>
             )}
-            <button
-              className="options"
-              id={lives > 0 && hasCodingAssessment ? undefined : "submit"}
-              type="button"
-              onClick={() => window.location.reload()}
-              style={
-                lives > 0 && hasCodingAssessment
-                  ? {
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "14px auto 0",
-                      minHeight: "54px",
-                      width: "240px",
-                      borderRadius: "16px",
-                      fontSize: "1.1rem",
-                    }
-                  : undefined
-              }
-            >
-              Play Again
-            </button>
+            <button className="options" id={lives > 0 && hasCodingAssessment ? undefined : "submit"} type="button" onClick={() => window.location.reload()} style={ lives > 0 && hasCodingAssessment ? { display: "flex", alignItems: "center", justifyContent: "center", margin: "14px auto 0", minHeight: "54px", width: "240px", borderRadius: "16px", fontSize: "1.1rem", } : undefined } > Play Again </button>
             <Link href={backHref} className="options back-to-input-btn">
               {backLabel}
             </Link>
@@ -572,30 +551,9 @@ export default function QuizLandingClient({
       <main>
         <div className="quiz-header">
           <div className="quiz-navigation">
-            <button
-              type="button"
-              className="quiz-settings-button"
-              data-accessibility-trigger
-              aria-label={
-                accessibilityOpen
-                  ? "Close accessibility options"
-                  : "Open accessibility options"
-              }
-              onClick={
-                accessibilityOpen ? closeAccessibility : openAccessibility
-              }
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" > <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" /> </svg>
-            </button>
+            <button type="button" className="quiz-settings-button" data-accessibility-trigger aria-label={ accessibilityOpen ? "Close accessibility options" : "Open accessibility options" } onClick={ accessibilityOpen ? closeAccessibility : openAccessibility } > <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" > <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" /> </svg> </button>
             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings-icon lucide-settings" > <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" /> </svg>
-            <button
-              type="button"
-              className="quiz-close-button"
-              aria-label="Close quiz"
-              onClick={() => router.push("/home")}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" > <path d="M18 6 6 18" /> <path d="m6 6 12 12" /> </svg>
-            </button>
+            <button type="button" className="quiz-close-button" aria-label="Close quiz" onClick={() => router.push("/home")} > <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" > <path d="M18 6 6 18" /> <path d="m6 6 12 12" /> </svg> </button>
             {hasLesson && selectedQuiz?.unit_title && (
               <h1 className="quiz-unit-title">{selectedQuiz.unit_title}</h1>
             )}
@@ -608,25 +566,7 @@ export default function QuizLandingClient({
             </div>
           </div>
           <div className="quiz-progress-row">
-            <button
-              type="button"
-              className="quiz-progress-back"
-              onClick={handleBack}
-              disabled={
-                isShowingLesson
-                  ? lessonSlideIndex === 0
-                  : currentIndex === 0 && !hasLesson
-              }
-              aria-label={
-                isShowingLesson
-                  ? "Back to previous lesson slide"
-                  : currentIndex === 0 && hasLesson
-                    ? "Back to lesson"
-                    : "Back to previous question"
-              }
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left preview-icon" > <path d="m15 18-6-6 6-6" /> </svg>
-            </button>
+            <button type="button" className="quiz-progress-back" onClick={handleBack} disabled={ isShowingLesson ? lessonSlideIndex === 0 : currentIndex === 0 && !hasLesson } aria-label={ isShowingLesson ? "Back to previous lesson slide" : currentIndex === 0 && hasLesson ? "Back to lesson" : "Back to previous question" } > <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left preview-icon" > <path d="m15 18-6-6 6-6" /> </svg> </button>
             <div
               className="progress-container quiz-progress-bar"
               role="progressbar"
@@ -771,48 +711,11 @@ export default function QuizLandingClient({
           {/* dito sa div yung message */}
           {hasLesson && !hasStartedQuiz ? (
             <div className="lesson-footer-controls">
-              <button
-                type="button"
-                className="options"
-                id="skip"
-                onClick={() =>
-                  setLessonSlideIndex((index) => Math.max(0, index - 1))
-                }
-                disabled={lessonSlideIndex === 0}
-                aria-label="Previous lesson slide"
-              >
-                Previous
-              </button>
+              <button type="button" className="options" id="skip" onClick={() => setLessonSlideIndex((index) => Math.max(0, index - 1)) } disabled={lessonSlideIndex === 0} aria-label="Previous lesson slide" > Previous </button>
               {lessonSlideIndex === lessonSlides.length - 1 ? (
-                <button
-                  type="button"
-                  className="options"
-                  id="submit"
-                  onClick={() => {
-                    if (isLessonOnlyUnit) {
-                      playQuizSound("lesson-complete");
-                      router.push("/learn");
-                    } else {
-                      setHasStartedQuiz(true);
-                    }
-                  }}
-                >
-                  {isLessonOnlyUnit ? "Finish Lesson" : "Start Quiz"}
-                </button>
+                <button type="button" className="options" id="submit" onClick={() => { if (isLessonOnlyUnit) { playQuizSound("lesson-complete"); router.push("/learn"); } else { setHasStartedQuiz(true); } }} > {isLessonOnlyUnit ? "Finish Lesson" : "Start Quiz"} </button>
               ) : (
-                <button
-                  type="button"
-                  className="options"
-                  id="submit"
-                  onClick={() =>
-                    setLessonSlideIndex((index) =>
-                      Math.min(lessonSlides.length - 1, index + 1),
-                    )
-                  }
-                  aria-label="Next lesson slide"
-                >
-                  Next
-                </button>
+                <button type="button" className="options" id="submit" onClick={() => setLessonSlideIndex((index) => Math.min(lessonSlides.length - 1, index + 1), ) } aria-label="Next lesson slide" > Next </button>
               )}
             </div>
           ) : (
@@ -838,24 +741,8 @@ export default function QuizLandingClient({
                   )}
                 </div>
               </div>
-              <button
-                className="options"
-                id="skip"
-                onClick={skipQuestion}
-                disabled={!quiz || Boolean(result)}
-              >
-                {" "}
-                Skip{" "}
-              </button>
-              <button
-                className="options"
-                id="submit"
-                onClick={result ? continueQuiz : submitAnswer}
-                disabled={!quiz || (!result && isAnswerIncomplete)}
-              >
-                {" "}
-                {result ? "Continue" : "Submit"}{" "}
-              </button>
+              <button className="options" id="skip" onClick={skipQuestion} disabled={!quiz || Boolean(result)} > {" "} Skip{" "} </button>
+              <button className="options" id="submit" onClick={result ? continueQuiz : submitAnswer} disabled={!quiz || (!result && isAnswerIncomplete)} > {" "} {result ? "Continue" : "Submit"}{" "} </button>
             </>
           )}
         </div>
