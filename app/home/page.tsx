@@ -8,6 +8,8 @@ import Leaderboard from "@/app/components/Leaderboard";
 import StreakCalendar from "./StreakCalendar";
 import { getUserStreakData } from "@/app/actions/streak";
 import { getLeaderboardEntriesByPeriod } from "@/app/actions/leaderboard";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
+import DailyGoalCard from "./DailyGoalCard";
 
 export default async function DashboardPage() {
     const session = await auth();
@@ -16,9 +18,10 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    const [streakData, leaderboardEntriesByPeriod] = await Promise.all([
+    const [streakData, leaderboardEntriesByPeriod, dailyGoalData] = await Promise.all([
         getUserStreakData(),
         getLeaderboardEntriesByPeriod(),
+        getDailyGoalData(),
     ]);
     const firstName = session.user.name?.trim().split(/\s+/)[0] || "User";
 
@@ -110,75 +113,7 @@ export default async function DashboardPage() {
                                     </div>
                                 </div> */}
                             </div>
-                            <div className="card">
-                                <div className="card-title">
-                                    <h2>Daily Goal</h2>
-                                    <h2 className="quick-action">Edit Goal</h2>
-                                </div>
-                                <div className="daily-goal-xp">
-                                    <p>XP Progress</p>
-                                    <div className="daily-progress-bar-container row">
-                                        <div className="daily-progress-bar">
-                                            <div className="progress-bar-fill" style={{width: "50%"}}></div>
-                                        </div>
-                                        <div><p>15/30</p></div>
-                                    </div>
-                                    <div className="daily-prograss-graph">
-                                        <div className="graph-x-axis-container">
-                                            <div className="graph-x-axis">
-                                                <p>40</p>
-                                                <div className="x-axis-line"></div>
-                                            </div>
-                                            <div className="graph-x-axis">
-                                                <p>30</p>
-                                                <div className="x-axis-line"></div>
-                                            </div>
-                                            <div className="graph-x-axis">
-                                                <p>20</p>
-                                                <div className="x-axis-line"></div>
-                                            </div>
-                                            <div className="graph-x-axis">
-                                                <p>10</p>
-                                                <div className="x-axis-line"></div>
-                                            </div>
-                                            <div className="graph-x-axis">
-                                                <p>0</p>
-                                                <div className="x-axis-line"></div>
-                                            </div>
-                                        </div>
-                                        <div className="graph-y-axis">
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>Su</p>
-                                            </div>
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>Mo</p>
-                                            </div>
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>Tu</p>
-                                            </div>
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>We</p>
-                                            </div>
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>Th</p>
-                                            </div>
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>Fr</p>
-                                            </div>
-                                            <div>
-                                                <div className="graph-y-bar"></div>
-                                                <p>Sa</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <DailyGoalCard initialData={dailyGoalData} />
                         </div>
 
                         {/* Streak */}
