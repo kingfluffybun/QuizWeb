@@ -571,7 +571,7 @@ export default function QuizLandingClient({
                     )}
                 </div>
 
-                <div style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
+                <div className="quiz-content-region" style={{ maxWidth: "1080px", display: "flex", flexDirection: "column", gap: "20px", flex: "1", minHeight: "0" }}>
                     {hasLesson && !hasStartedQuiz ? (
                         <LessonSlideTransition
                             slideIndex={lessonSlideIndex}

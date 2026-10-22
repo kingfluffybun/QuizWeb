@@ -127,12 +127,12 @@
 
   /* Single-column main content wrapper */
   .mobile-shell-content {
-    flex: 1;
+    flex: 1 0 auto;
     min-height: 0;
     width: 100%;
     min-width: 0;
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /* Fixed Bottom Navigation Bar */

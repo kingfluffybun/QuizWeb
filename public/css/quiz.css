@@ -1544,6 +1544,11 @@ footer.incorrect {
         -webkit-overflow-scrolling: touch;
     }
 
+    .quiz-page:not(.quiz-no-footer-page) > main > .quiz-content-region {
+        flex: 0 0 auto !important;
+        min-height: auto !important;
+    }
+
     .quiz-page main > div {
         width: 100% !important;
         max-width: 100% !important;
@@ -1568,6 +1573,22 @@ footer.incorrect {
     }
 
     /* Lesson Slide Cards on Mobile */
+    .lesson-slide-transition {
+        grid-template: auto / minmax(0, 1fr) !important;
+        flex: 0 0 auto !important;
+        min-height: auto !important;
+        overflow-x: clip !important;
+        overflow-y: visible !important;
+    }
+
+    .lesson-slide-layer {
+        height: auto !important;
+    }
+
+    .lesson-slide-layer.is-hidden {
+        display: none !important;
+    }
+
     .lesson-card {
         flex-direction: column !important;
         gap: 14px !important;
