@@ -435,7 +435,12 @@ export async function verifyEmail(token: string) {
 }
 
 // Req OTP
-export async function reqPassReset(email: string) {
+export async function reqPassReset(emailInput: string | FormData) {
+    const email =
+        typeof emailInput === "object" && emailInput !== null && "get" in emailInput
+            ? (emailInput.get("email") as string)
+            : emailInput;
+
     if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         return { error: "Please enter a valid email address." };
     }
@@ -458,6 +463,7 @@ export async function reqPassReset(email: string) {
         );
 
         if (users.length === 0) {
+            console.warn(`[reqPassReset] No verified user found in user_auth_tbl for: ${normalizedEmail}`);
             return { success: true, message: genericMessage };
         }
 
@@ -471,7 +477,7 @@ export async function reqPassReset(email: string) {
         const username = player?.[0]?.username || "User";
 
         // Generate OTP
-        const rawOtp = String(randomInt(100000, 999999));
+        const rawOtp = String(randomInt(100000, 1000000));
         const hashedOtp = hashToken(rawOtp);
 
         // Expire 5 mins
