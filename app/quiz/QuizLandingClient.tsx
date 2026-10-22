@@ -197,6 +197,7 @@ export default function QuizLandingClient({
 
     useEffect(() => {
         if (isFinished) {
+            console.log("Total XP accumulated:", Math.round(earnedXp));
             recordUserActivity({
                 type: "quiz",
                 xp: Math.round(earnedXp),
@@ -462,6 +463,7 @@ export default function QuizLandingClient({
                     <div className="quiz-complete-card">
                         <h1>{lives === 0 ? "Game Over" : "Quiz Complete!"}</h1>
                         <h2>Score: {score} / {quizzes.length}</h2>
+                        <p className="quiz-completion-xp">XP Earned: {Math.round(earnedXp)}</p>
                         <p className="quiz-completion-message">
                             {lives === 0
                                 ? "You ran out of lives. Try again to sharpen your skills!"

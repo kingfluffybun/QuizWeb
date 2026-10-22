@@ -227,7 +227,13 @@
 
 .quiz-complete-card h2 {
     color: var(--primary-color);
-    margin-bottom: 24px;
+    margin-bottom: 8px;
+}
+
+.quiz-completion-xp {
+    color: var(--primary-color);
+    font-weight: 700;
+    margin: 0 0 24px;
 }
 
 .quiz-completion-message {
