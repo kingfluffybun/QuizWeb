@@ -266,9 +266,8 @@
 
 .calendar-nav-btn {
     background: var(--bg-card);
-    border: 1px solid var(--border-main);
-    color: var(--text-main);
-    border-radius: 6px;
+    color: var(--text-muted);
+    border: none;
     width: 26px;
     height: 26px;
     display: inline-flex;
@@ -280,7 +279,6 @@
 }
 
 .calendar-nav-btn:hover:not(:disabled) {
-    background: hsl(260, 100%, 70%, 15%);
     border-color: var(--primary-color);
     color: var(--primary-color);
 }
@@ -321,32 +319,6 @@ button.quick-action-btn:hover {
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-.calendar-nav-btn {
-    background: var(--bg-card);
-    border: 1px solid var(--border-main);
-    color: var(--text-muted);
-    border-radius: 6px;
-    width: 26px;
-    height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 10px;
-    transition: all 0.15s ease;
-}
-
-.calendar-nav-btn:hover:not(:disabled) {
-    background: hsl(260, 100%, 70%, 15%);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-.calendar-nav-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
 }
 
 button.quick-action-btn {
