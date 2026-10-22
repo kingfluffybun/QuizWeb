@@ -478,7 +478,6 @@ body {
   display: grid;
   gap: 16px;
   min-height: 0;
-  margin-top: 24px;
   overflow-y: auto;
   padding-right: 10px;
 }

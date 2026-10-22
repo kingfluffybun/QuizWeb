@@ -59,61 +59,6 @@ const icon = (children: ReactNode) => (
   </svg>
 );
 
-function QuizPayloadPreview({ quiz }: { quiz: Quiz }) {
-  const payload = quiz.quiz_payload;
-
-  if (quiz.type_name === "MCQ" && payload.options) {
-    return (
-      <div>
-        <strong>Options:</strong>
-        {payload.options.map((option, index) => (
-          <div key={index} className="quiz-payload-option">
-            <span>{index + 1}. {option}</span>
-            {payload.correct_index === index && <span className="correct-text">(Correct)</span>}
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (quiz.type_name === "FITB") {
-    return <div><strong>Correct Answer:</strong> <span className="correct-text">{payload.answer}</span></div>;
-  }
-  if (quiz.type_name === "Order" && payload.items) {
-    return <div><strong>Correct Order:</strong>{payload.items.map((item, index) => <div key={index} className="quiz-payload-option">{index + 1}. {item}</div>)}</div>;
-  }
-  if (quiz.type_name === "Pair" && payload.pairs) {
-    return <div><strong>Matching Pairs:</strong>{payload.pairs.map((pair, index) => <div key={index} className="quiz-payload-option"><code>{pair.left}</code> &harr; <code>{pair.right}</code></div>)}</div>;
-  }
-  if (quiz.type_name === "CP" && payload.steps) {
-    return <div className="cp-payload-step-list cp-payload-steps">{payload.steps.map((step, index) => <div className="cp-payload-step" key={index}><strong>Step {index + 1}</strong><div><b>Instruction:</b> {step.prompt}</div>{step.template && <pre>{step.template}</pre>}<div><b>Expected Output:</b></div><pre className="cp-expected-output">{step.expected}</pre></div>)}</div>;
-  }
-  if (quiz.type_name === "Unit") {
-    const lessonCard = payload.lesson_card as { lesson_slide?: Array<{ lesson_title?: string; lesson_text?: string }> } | undefined;
-    const slides = Array.isArray(lessonCard?.lesson_slide) ? lessonCard.lesson_slide : [];
-    const unitQuizzes = Array.isArray(payload.quizzes) ? (payload.quizzes as Array<{ question_text?: string }>) : [];
-    const assessment = payload.assessment as { title?: string; steps?: unknown[] } | undefined;
-    const assessmentStepCount = Array.isArray(assessment?.steps) ? assessment.steps.length : 0;
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <div>
-          <strong>Unit Contents:</strong> {slides.length} Lesson Slide{slides.length === 1 ? "" : "s"} &bull; {unitQuizzes.length} Quiz{unitQuizzes.length === 1 ? "" : "zes"} &bull; {assessmentStepCount} Assessment Step{assessmentStepCount === 1 ? "" : "s"}
-        </div>
-        {unitQuizzes.length > 0 && (
-          <div>
-            <strong>Quizzes:</strong>
-            {unitQuizzes.map((q, idx) => (
-              <div key={idx} className="quiz-payload-option">
-                <span>Quiz {idx + 1}: {q.question_text || "Untitled Question"}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-  return <div>{payload.title ?? "No payload details available."}</div>;
-}
-
 export default function RecentQuizzesCard({
   initialQuizzes,
   initialPage,
@@ -340,12 +285,11 @@ export default function RecentQuizzesCard({
           const payload = quiz.quiz_payload ?? {};
           return <div key={quiz.quiz_id} className="quiz-list-item">
             <div className="recent-quiz-title-row"><div className="quiz-list-question">{quiz.type_name === "CP" && payload.title ? payload.title : quiz.question_text}</div><div className="recent-quiz-actions">
-              <button type="button" className="btn-preview" onClick={() => router.push(`/test?quizId=${quiz.quiz_id}`)} title={`Preview Question (ID: #${quiz.quiz_id})`} aria-label={`Preview Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></>)}</button>
+              <button type="button" className="btn-preview" onClick={() => router.push(`/quiz?quizId=${quiz.quiz_id}`)} title={`Preview Question (ID: #${quiz.quiz_id})`} aria-label={`Preview Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></>)}</button>
               <button type="button" className="btn-edit" onClick={() => void editQuestion(quiz)} title={`Edit ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`} aria-label={`Edit ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}>{icon(<><path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" /><path d="m16 5 3 3" /></>)}</button>
               <button type="button" className="btn-delete" onClick={() => void deleteQuestion(quiz.quiz_id)} disabled={isPending} title={`Delete Question (ID: #${quiz.quiz_id})`} aria-label={`Delete Question (ID: #${quiz.quiz_id})`}>{icon(<><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 2 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></>)}</button>
             </div></div>
             <div className="quiz-badge-row"><div className="badge-id-container"><button type="button" className={`badge badge-id ${copiedId === quiz.quiz_id ? "copied" : ""}`} onClick={() => copyId(quiz.quiz_id)} title="Click to copy Question ID">{copiedId === quiz.quiz_id ? "Copied!" : `ID: #${quiz.quiz_id}`}</button><button type="button" className="badge-id-filter-btn" onClick={() => toggleIdFilter(quiz.quiz_id)} title="Filter by this Question ID" aria-label="Filter by this Question ID">{icon(<><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>)}</button></div><span className="badge badge-cat">{quiz.cat_name}</span>{quiz.sec_num && <span className="badge badge-type">Section {quiz.sec_num}</span>}<span className="badge badge-diff">{quiz.difficulty_name}</span><span className="badge badge-type">{quiz.type_name}</span>{quiz.type_name === "CP" && <span className="badge badge-metric-tag">{payload.steps?.length ?? 0} steps</span>}</div>
-            <div className="quiz-payload-preview"><QuizPayloadPreview quiz={quiz} /></div>
           </div>;
         })}
       </div>}

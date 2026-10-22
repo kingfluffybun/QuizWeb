@@ -126,6 +126,22 @@ export interface RecentQuizItem {
   quiz_payload?: QuizPayload | null;
 }
 
+function getLessonTitles(quiz: RecentQuizItem): string[] {
+  const lessonCard = quiz.quiz_payload?.lesson_card;
+  if (!lessonCard) return [];
+
+  const slides = lessonCard.lesson_slide ?? lessonCard.lesson_slides ?? [];
+  const titles = slides
+    .map((slide) => slide.lesson_title ?? slide.title)
+    .filter((title): title is string => typeof title === "string");
+
+  if (typeof lessonCard.lesson_title === "string") {
+    titles.push(lessonCard.lesson_title);
+  }
+
+  return titles;
+}
+
 export interface EditingQuizItem extends Omit<RecentQuizItem, "quiz_id"> {
   quiz_id?: number;
   unit_id?: number;
@@ -353,7 +369,6 @@ export default function QuizInputForm({
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [sectionFilter, setSectionFilter] = useState<string>("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("id_desc");
   const [optionCount, setOptionCount] = useState(4);
   const [orderItems, setOrderItems] = useState<string[]>(["", "", "", ""]);
@@ -457,7 +472,6 @@ export default function QuizInputForm({
     categoryFilter !== "" ||
     sectionFilter !== "" ||
     difficultyFilter !== "" ||
-    typeFilter !== "" ||
     sortBy !== "id_desc";
 
   const activeFilterCount =
@@ -466,7 +480,6 @@ export default function QuizInputForm({
     (categoryFilter !== "" ? 1 : 0) +
     (sectionFilter !== "" ? 1 : 0) +
     (difficultyFilter !== "" ? 1 : 0) +
-    (typeFilter !== "" ? 1 : 0) +
     (sortBy !== "id_desc" ? 1 : 0);
 
   const handleClearFilters = () => {
@@ -475,7 +488,6 @@ export default function QuizInputForm({
     setCategoryFilter("");
     setSectionFilter("");
     setDifficultyFilter("");
-    setTypeFilter("");
     setSortBy("id_desc");
   };
 
@@ -489,11 +501,10 @@ export default function QuizInputForm({
       }
       if (searchFilter.trim() !== "") {
         const query = searchFilter.toLowerCase().trim();
-        const matchesText = quiz.question_text?.toLowerCase().includes(query);
-        const matchesCat = quiz.cat_name?.toLowerCase().includes(query);
-        const matchesType = quiz.type_name?.toLowerCase().includes(query);
-        const matchesDiff = quiz.difficulty_name?.toLowerCase().includes(query);
-        if (!matchesText && !matchesCat && !matchesType && !matchesDiff) {
+        const matchesLessonTitle = getLessonTitles(quiz).some((title) =>
+          title.toLowerCase().includes(query),
+        );
+        if (!matchesLessonTitle) {
           return false;
         }
       }
@@ -513,12 +524,6 @@ export default function QuizInputForm({
       ) {
         return false;
       }
-      if (
-        typeFilter !== "" &&
-        quiz.type_name?.toLowerCase() !== typeFilter.toLowerCase()
-      ) {
-        return false;
-      }
       return true;
     })
     .sort((a, b) => {
@@ -527,10 +532,6 @@ export default function QuizInputForm({
           return a.quiz_id - b.quiz_id;
         case "id_desc":
           return b.quiz_id - a.quiz_id;
-        case "text_asc":
-          return (a.question_text || "").localeCompare(b.question_text || "");
-        case "text_desc":
-          return (b.question_text || "").localeCompare(a.question_text || "");
         case "diff_asc": {
           const rank: Record<string, number> = {
             Beginner: 1,
@@ -1000,7 +1001,6 @@ export default function QuizInputForm({
           category: categoryFilter,
           section: sectionFilter,
           difficulty: difficultyFilter,
-          type: typeFilter,
         });
         setRecentQuizzes(result.quizzes as RecentQuizItem[]);
         setCurrentPage(result.currentPage);
@@ -1016,7 +1016,6 @@ export default function QuizInputForm({
       categoryFilter,
       sectionFilter,
       difficultyFilter,
-      typeFilter,
     ],
   );
 
@@ -1168,12 +1167,6 @@ export default function QuizInputForm({
     );
   };
 
-  const handleQuickFilterType = (typeName: string) => {
-    setTypeFilter((prev) =>
-      prev.toLowerCase() === typeName.toLowerCase() ? "" : typeName,
-    );
-  };
-
   const handleQuickFilterDifficulty = (diffName: string) => {
     setDifficultyFilter((prev) =>
       prev.toLowerCase() === diffName.toLowerCase() ? "" : diffName,
@@ -1221,41 +1214,35 @@ export default function QuizInputForm({
       const matchesCat =
         !categoryFilter ||
         row.cat_name.toLowerCase() === categoryFilter.toLowerCase();
-      const matchesType =
-        !typeFilter || row.type_name.toLowerCase() === typeFilter.toLowerCase();
       const matchesDiff =
         !difficultyFilter ||
         row.difficulty_name.toLowerCase() === difficultyFilter.toLowerCase();
 
-      // Category Card: counts matching active Type and Difficulty
-      // e.g. clicking MCQ adjusts HTML, CSS, JS to show MCQ counts
-      if (matchesType && matchesDiff) {
+      // Category counts reflect the active difficulty filter.
+      if (matchesDiff) {
         catCounts[row.cat_name] = (catCounts[row.cat_name] || 0) + row.count;
       }
 
-      // Type Card: counts matching active Category and Difficulty
-      // e.g. clicking CSS adjusts MCQ, FITB, Order, Pair, CP to show CSS counts
+      // Type counts reflect active category and difficulty filters.
       if (matchesCat && matchesDiff) {
         typeCounts[row.type_name] =
           (typeCounts[row.type_name] || 0) + row.count;
       }
 
-      // Difficulty Card: counts matching active Category and Type
-      // e.g. clicking CSS adjusts Beginner, Intermediate, Advanced to show CSS counts
-      // e.g. clicking CSS + MCQ adjusts to show CSS MCQ difficulty counts
-      if (matchesCat && matchesType) {
+      // Difficulty counts reflect the active category filter.
+      if (matchesCat) {
         diffCounts[row.difficulty_name] =
           (diffCounts[row.difficulty_name] || 0) + row.count;
       }
 
       // Overall count matching all selected filters
-      if (matchesCat && matchesType && matchesDiff) {
+      if (matchesCat && matchesDiff) {
         filteredTotal += row.count;
       }
     }
 
     const hasFacetFilter = Boolean(
-      categoryFilter || typeFilter || difficultyFilter,
+      categoryFilter || difficultyFilter,
     );
 
     return {
@@ -1273,7 +1260,6 @@ export default function QuizInputForm({
     types,
     difficulties,
     categoryFilter,
-    typeFilter,
     difficultyFilter,
   ]);
 
@@ -1651,6 +1637,47 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
+  const handleSelectPendingQuiz = (targetIndex: number) => {
+    const quizCount = queuedQuizzes.length + 1;
+    const activeIndex = currentPendingQuizIndex % quizCount;
+    if (targetIndex < 0 || targetIndex >= quizCount || targetIndex === activeIndex) {
+      return;
+    }
+
+    const currentEntry = buildCurrentQuizEntry();
+    let orderedQuizzes: (QueuedQuizEntry | null)[];
+    if (currentEntry) {
+      orderedQuizzes = buildQuizBatch(currentEntry);
+    } else {
+      const queueStartIndex =
+        queuedQuizzes.length === 0
+          ? 0
+          : (queuedQuizzes.length - activeIndex) % queuedQuizzes.length;
+      const orderedQueuedQuizzes = [
+        ...queuedQuizzes.slice(queueStartIndex),
+        ...queuedQuizzes.slice(0, queueStartIndex),
+      ];
+      orderedQuizzes = [
+        ...orderedQueuedQuizzes.slice(0, activeIndex),
+        null,
+        ...orderedQueuedQuizzes.slice(activeIndex),
+      ];
+    }
+
+    const selectedQuiz = orderedQuizzes[targetIndex];
+    if (!selectedQuiz) return;
+
+    const nextQueuedQuizzes = [
+      ...orderedQuizzes.slice(targetIndex + 1),
+      ...orderedQuizzes.slice(0, targetIndex),
+    ].filter((quiz): quiz is QueuedQuizEntry => quiz !== null);
+
+    setQueuedQuizzes(nextQueuedQuizzes);
+    setCurrentPendingQuizIndex(targetIndex);
+    loadQueuedQuiz(selectedQuiz);
+    setMessage(null);
+  };
+
   const handleCancelEdit = () => {
     setFullJsonImport(null);
     setPreserveQuizDataOnSave(false);
@@ -1864,7 +1891,7 @@ export default function QuizInputForm({
                     <span>
                       Filtered:{" "}
                       <strong>
-                        {[categoryFilter, typeFilter, difficultyFilter]
+                        {[categoryFilter, difficultyFilter]
                           .filter(Boolean)
                           .join(" • ")}
                       </strong>
@@ -1873,7 +1900,6 @@ export default function QuizInputForm({
                       type="button"
                       onClick={() => {
                         setCategoryFilter("");
-                        setTypeFilter("");
                         setDifficultyFilter("");
                       }}
                       className="metric-reset-link"
@@ -1916,8 +1942,8 @@ export default function QuizInputForm({
             <div className="metric-card">
               <div className="metric-card-header">
                 <span className="metric-card-label">
-                  {typeFilter || difficultyFilter
-                    ? `Tracks in ${[typeFilter, difficultyFilter].filter(Boolean).join(" • ")}`
+                  {difficultyFilter
+                    ? `Tracks in ${difficultyFilter}`
                     : "Curriculum Tracks"}
                 </span>
                 <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -1970,7 +1996,7 @@ export default function QuizInputForm({
               </div>
             </div>
 
-            {/* Card 3: Question Formats (Types) */}
+            {/* Card 3: Question Formats */}
             <div className="metric-card">
               <div className="metric-card-header">
                 <span className="metric-card-label">
@@ -1978,30 +2004,18 @@ export default function QuizInputForm({
                     ? `Formats in ${[categoryFilter, difficultyFilter].filter(Boolean).join(" • ")}`
                     : "Question Formats"}
                 </span>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                  {typeFilter ? "Click to clear" : "Click to filter"}
-                </span>
               </div>
               <div className="metric-chip-wrap">
                 {types.map((t) => {
-                  const isFiltered =
-                    typeFilter.toLowerCase() === t.type_name.toLowerCase();
                   const count = facetedMetrics.typeCounts[t.type_name] ?? 0;
                   return (
-                    <button
+                    <span
                       key={t.quiz_type_id}
-                      type="button"
-                      className={`metric-chip ${isFiltered ? "active" : ""} ${count === 0 ? "dimmed" : ""}`}
-                      onClick={() => handleQuickFilterType(t.type_name)}
-                      title={
-                        isFiltered
-                          ? `Clear ${t.type_name} filter`
-                          : `Filter by ${t.type_name}`
-                      }
+                      className={`metric-chip ${count === 0 ? "dimmed" : ""}`}
                     >
                       <span>{t.type_name}</span>
                       <span className="metric-chip-count">{count}</span>
-                    </button>
+                    </span>
                   );
                 })}
               </div>
@@ -2011,8 +2025,8 @@ export default function QuizInputForm({
             <div className="metric-card">
               <div className="metric-card-header">
                 <span className="metric-card-label">
-                  {categoryFilter || typeFilter
-                    ? `Difficulty in ${[categoryFilter, typeFilter].filter(Boolean).join(" • ")}`
+                  {categoryFilter
+                    ? `Difficulty in ${categoryFilter}`
                     : "Difficulty Balance"}
                 </span>
                 <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
@@ -2282,7 +2296,6 @@ export default function QuizInputForm({
               background: "rgba(37, 99, 235, 0.08)",
               border: "1.5px solid rgba(37, 99, 235, 0.3)",
               fontSize: "0.84rem",
-              marginBottom: "16px",
             }}
           >
             <span>
@@ -3346,12 +3359,7 @@ export default function QuizInputForm({
                         fontWeight: idx === currentPendingQuizIndex ? 700 : 500,
                       }}
                       onClick={() => {
-                        if (idx === currentPendingQuizIndex) return;
-                        if (idx > currentPendingQuizIndex) {
-                          handleNextPendingQuiz();
-                        } else {
-                          handlePreviousPendingQuiz();
-                        }
+                        handleSelectPendingQuiz(idx);
                       }}
                     >
                       Quiz {idx + 1}
@@ -3560,7 +3568,6 @@ export default function QuizInputForm({
               alignItems: "center",
               gap: "10px",
               flexWrap: "wrap",
-              marginTop: "10px",
             }}
           >
             <button
@@ -3627,6 +3634,9 @@ export default function QuizInputForm({
                   lesson_text: slide.text,
                   ...(slide.code !== undefined ? { lesson_code: slide.code } : {}),
                 }))}
+                slideIndex={currentLessonSlide}
+                onSlideIndexChange={setCurrentLessonSlide}
+                showControls={false}
                 className="lesson-preview-surface"
               />
             </div>
@@ -3712,8 +3722,6 @@ export default function QuizInputForm({
                 >
                   <option value="id_desc">ID: High to Low (Newest)</option>
                   <option value="id_asc">ID: Low to High (Oldest)</option>
-                  <option value="text_asc">Question: A → Z</option>
-                  <option value="text_desc">Question: Z → A</option>
                   <option value="diff_asc">Difficulty: Easy → Hard</option>
                   <option value="diff_desc">Difficulty: Hard → Easy</option>
                 </select>
@@ -3830,34 +3838,16 @@ export default function QuizInputForm({
                   </button>
                 </span>
               )}
-              {typeFilter !== "" && (
-                <span className="active-filter-tag">
-                  Type: {typeFilter}
-                  <button
-                    type="button"
-                    className="active-filter-tag-close"
-                    onClick={() => setTypeFilter("")}
-                    title="Remove type filter"
-                    aria-label="Remove type filter"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
               {sortBy !== "id_desc" && (
                 <span className="active-filter-tag">
                   Sort:{" "}
                   {sortBy === "id_asc"
                     ? "Oldest First"
-                    : sortBy === "text_asc"
-                      ? "A → Z"
-                      : sortBy === "text_desc"
-                        ? "Z → A"
-                        : sortBy === "diff_asc"
-                          ? "Easy → Hard"
-                          : sortBy === "diff_desc"
-                            ? "Hard → Easy"
-                            : sortBy}
+                    : sortBy === "diff_asc"
+                      ? "Easy → Hard"
+                      : sortBy === "diff_desc"
+                        ? "Hard → Easy"
+                        : sortBy}
                   <button
                     type="button"
                     className="active-filter-tag-close"
@@ -3954,10 +3944,10 @@ export default function QuizInputForm({
                   </div>
                 </div>
 
-                {/* Search Prompt Text Filter */}
+                {/* Lesson Title Search */}
                 <div className="filter-group">
                   <span className="filter-group-title">
-                    Search Prompt / Text
+                    Search Lesson Title
                   </span>
                   <div
                     style={{
@@ -3970,9 +3960,9 @@ export default function QuizInputForm({
                       type="text"
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
-                      placeholder="Search question text..."
+                      placeholder="Search lesson title..."
                       className="filter-input"
-                      aria-label="Search by prompt text"
+                      aria-label="Search by lesson title"
                     />
                     {searchFilter && (
                       <button
@@ -4057,23 +4047,6 @@ export default function QuizInputForm({
                   </select>
                 </div>
 
-                {/* Type Filter */}
-                <div className="filter-group">
-                  <span className="filter-group-title">Quiz Type</span>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="filter-select"
-                    aria-label="Filter by quiz type"
-                  >
-                    <option value="">All Types</option>
-                    {types.map((t) => (
-                      <option key={t.quiz_type_id} value={t.type_name}>
-                        {t.type_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
           )}
@@ -4161,7 +4134,7 @@ export default function QuizInputForm({
                           type="button"
                           className="btn-preview"
                           onClick={() =>
-                            router.push(`/test?unitId=${quiz.quiz_id}`)
+                            router.push(`/quiz?unitId=${quiz.quiz_id}`)
                           }
                           title={`Preview Question (ID: #${quiz.quiz_id})`}
                           aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
@@ -4412,212 +4385,6 @@ export default function QuizInputForm({
                         </>
                       )}
                     </div>
-                    {payload && (
-                      <div className="quiz-payload-preview">
-                        {/* MCQ Rendering */}
-                        {quiz.type_name === "MCQ" && payload.options && (
-                          <div>
-                            <strong>Options:</strong>
-                            {payload.options.map((opt: string, i: number) => {
-                              const isCorrect = payload.correct_index === i;
-                              return (
-                                <div key={i} className="quiz-payload-option">
-                                  <span>
-                                    {i + 1}. {opt}
-                                  </span>
-                                  {isCorrect && (
-                                    <span className="correct-text">
-                                      (Correct)
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* FITB Rendering */}
-                        {quiz.type_name === "FITB" && (
-                          <div>
-                            <strong>Correct Answer:</strong>{" "}
-                            <span className="correct-text">
-                              {payload.answer}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Order Rendering */}
-                        {quiz.type_name === "Order" && payload.items && (
-                          <div>
-                            <strong>Correct Order:</strong>
-                            {payload.items.map((item: string, i: number) => (
-                              <div
-                                key={i}
-                                style={{
-                                  margin: "4px 0",
-                                }}
-                              >
-                                {i + 1}. {item}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Pair Rendering */}
-                        {quiz.type_name === "Pair" && payload.pairs && (
-                          <div>
-                            <strong>Matching Pairs:</strong>
-                            {payload.pairs.map((pair: { left: string; right: string }, i: number) => (
-                              <div
-                                key={i}
-                                style={{
-                                  margin: "4px 0",
-                                }}
-                              >
-                                <code>{pair.left}</code> &harr;{" "}
-                                <code>{pair.right}</code>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* CP Rendering */}
-                        {quiz.type_name === "CP" && (
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "8px",
-                            }}
-                          >
-                            {payload.steps && payload.steps.length > 0 ? (
-                              payload.steps.map((step: { prompt?: string; template?: string; expected?: string }, sIdx: number) => (
-                                <div
-                                  key={sIdx}
-                                  style={{
-                                    backgroundColor: "#f8fafc",
-                                    border: "1px solid #cbd5e1",
-                                    padding: "10px 12px",
-                                    borderRadius: "8px",
-                                    margin: "2px 0",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontWeight: "700",
-                                      marginBottom: "4px",
-                                      color: "#1e293b",
-                                    }}
-                                  >
-                                    Step {sIdx + 1}
-                                  </div>
-                                  <div>
-                                    <strong>Instruction:</strong> {step.prompt}
-                                  </div>
-                                  {step.template && (
-                                    <div style={{ marginTop: "6px" }}>
-                                      <strong>Initial Code Template:</strong>
-                                      <pre
-                                        style={{
-                                          margin: "2px 0 0 0",
-                                          backgroundColor: "#f1f5f9",
-                                          padding: "6px",
-                                          borderRadius: "4px",
-                                          fontSize: "0.8rem",
-                                          overflowX: "auto",
-                                        }}
-                                      >
-                                        {step.template}
-                                      </pre>
-                                    </div>
-                                  )}
-                                  <div style={{ marginTop: "6px" }}>
-                                    <strong>Expected Output:</strong>
-                                    <pre
-                                      style={{
-                                        margin: "2px 0 0 0",
-                                        backgroundColor: "#e2f0d9",
-                                        padding: "6px",
-                                        borderRadius: "4px",
-                                        fontSize: "0.8rem",
-                                        overflowX: "auto",
-                                      }}
-                                    >
-                                      {step.expected}
-                                    </pre>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div>
-                                <div>
-                                  <strong>Template:</strong>
-                                  <pre
-                                    style={{
-                                      margin: "4px 0",
-                                      backgroundColor: "#eee",
-                                      padding: "6px",
-                                      borderRadius: "4px",
-                                      fontSize: "0.8rem",
-                                      overflowX: "auto",
-                                    }}
-                                  >
-                                    {payload.template}
-                                  </pre>
-                                </div>
-                                <div>
-                                  <strong>Expected Output:</strong>
-                                  <pre
-                                    style={{
-                                      margin: "4px 0",
-                                      backgroundColor: "#e2f0d9",
-                                      padding: "6px",
-                                      borderRadius: "4px",
-                                      fontSize: "0.8rem",
-                                      overflowX: "auto",
-                                    }}
-                                  >
-                                    {payload.expected}
-                                  </pre>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {quiz.type_name === "Unit" && (
-                          <div>
-                            <div>
-                              <strong>Lesson Text:</strong>{" "}
-                              {payload?.lesson_card?.lesson_slide?.[0]
-                                ?.lesson_text ??
-                                payload?.lesson_card?.lesson_card?.lesson_text ??
-                                payload?.lesson_card?.lesson_text ??
-                                ""}
-                            </div>
-                            <div>
-                              <strong>Assessment:</strong>{" "}
-                              {String(
-                                unitAssessment?.assessment_title ||
-                                  unitAssessment?.assessment ||
-                                  "None"
-                              )}
-                              {Array.isArray(unitAssessment?.cp_steps) &&
-                                unitAssessment.cp_steps.length > 0 &&
-                                ` (${unitAssessment.cp_steps.length} interactive coding step${
-                                  unitAssessment.cp_steps.length === 1 ? "" : "s"
-                                })`}
-                            </div>
-                            <div>
-                              <strong>Quizzes:</strong>{" "}
-                              {Array.isArray(payload?.quizzes)
-                                ? payload.quizzes.length
-                                : 0} quizzes
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
