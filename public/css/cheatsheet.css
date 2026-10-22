@@ -4,8 +4,9 @@
 
 .cheatsheet-content {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1440px;
     margin-inline: auto;
+    padding: 0 24px;
 }
 
 .cheatsheet-heading {
