@@ -15,6 +15,7 @@ import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { recordUserActivity } from "@/app/actions/streak";
+import { calculateEarnedXp } from "@/lib/xp-calculation";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 
 type AnswerResult = {
@@ -185,6 +186,8 @@ export default function QuizLandingClient({
     const [result, setResult] = useState<AnswerResult | null>(null);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
+    const [earnedXp, setEarnedXp] = useState(0);
+    const [correctStreak, setCorrectStreak] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
@@ -193,15 +196,15 @@ export default function QuizLandingClient({
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
 
     useEffect(() => {
-        if (isFinished && lives > 0) {
+        if (isFinished) {
             recordUserActivity({
                 type: "quiz",
-                xp: Math.max(10, score * 10),
+                xp: Math.round(earnedXp),
             }).catch((e) => {
                 console.error("Failed to record activity:", e);
             });
         }
-    }, [isFinished, lives, score]);
+    }, [isFinished, earnedXp]);
 
     const openAccessibility = () => {
         setAccessibilityClosing(false);
@@ -301,6 +304,7 @@ export default function QuizLandingClient({
             [currentIndex]: { value: skippedValue, result: skippedResult },
         }));
         setResult(skippedResult);
+        setCorrectStreak(0);
         playQuizSound("skipped-answer");
     };
 
@@ -321,9 +325,15 @@ export default function QuizLandingClient({
                 playQuizSound("correct-answer2");
             }
             setScore((currentScore) => currentScore + 1);
+            const nextStreak = correctStreak + 1;
+            setCorrectStreak(nextStreak);
+            setEarnedXp((total) =>
+                total + calculateEarnedXp(true, quiz.difficulty_id, nextStreak),
+            );
         } else {
             playQuizSound("wrong-answer");
             setLives((currentLives) => Math.max(0, currentLives - 1));
+            setCorrectStreak(0);
         }
     };
 
@@ -343,9 +353,16 @@ export default function QuizLandingClient({
             if (nextResult.correct) {
                 playQuizSound("correct-answer2");
                 setScore((currentScore) => currentScore + 1);
+                const nextStreak = correctStreak + 1;
+                setCorrectStreak(nextStreak);
+                setEarnedXp((total) =>
+                    total +
+                    calculateEarnedXp(true, quiz.difficulty_id, nextStreak),
+                );
             } else {
                 playQuizSound("wrong-answer");
                 setLives((currentLives) => Math.max(0, currentLives - 1));
+                setCorrectStreak(0);
             }
         }
     };
