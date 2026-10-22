@@ -244,7 +244,7 @@
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: var(--maintainer-space-7) var(--maintainer-space-7) var(--maintainer-space-10);
+  padding-top: 0;
   display: flex;
   flex-direction: column;
   gap: var(--maintainer-space-8);
@@ -484,7 +484,6 @@
   border-radius: var(--radius-lg);
   padding: var(--maintainer-space-6);
   display: flex;
-  flex-direction: column;
   gap: var(--maintainer-space-3);
   box-shadow: var(--maintainer-shadow-sm);
   transition: var(--maintainer-transition);
@@ -584,8 +583,9 @@
 
 .stat-card-body {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .stat-counter-number {
@@ -1586,8 +1586,8 @@ html[data-motion="reduce"] .maintainer-page *::after {
   position: relative;
   background: var(--maintainer-surface);
   border: 1.5px solid var(--maintainer-border);
-  border-radius: var(--radius-xl);
-  padding: var(--maintainer-space-7);
+  border-radius: 24px;
+  padding: var(--maintainer-space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1618,7 +1618,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .maintainer-title-row h1 {
@@ -1629,6 +1629,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   margin: 0;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .maintainer-header-text p {
@@ -1748,7 +1749,6 @@ html[data-motion="reduce"] .maintainer-page *::after {
   place-items: center;
   flex-shrink: 0;
   transition: var(--maintainer-transition);
-  margin-bottom: 8px;
 }
 
 .stat-card.stat-card-total .stat-card-icon {

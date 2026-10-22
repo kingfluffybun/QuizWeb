@@ -94,8 +94,8 @@ export default async function AdminPage() {
       />
       <main className="admin-main">
         <div className="admin-container">
-          <header className="admin-header">
-            <div>
+          <header className="admin-header admin-dashboard-header">
+            <div className="admin-dashboard-header-content">
               <div className="admin-header-title-row">
                 <h1 className="admin-header-title">Admin Dashboard</h1>
                 <span className="admin-header-badge">Privileged Staff Area</span>

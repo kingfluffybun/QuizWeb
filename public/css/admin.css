@@ -14,7 +14,7 @@
   --admin-primary-glow: rgba(153, 102, 255, 0.25);
 
   /* Surface & Background */
-  --admin-bg: #f4f7ff;
+  --admin-bg: #fcfbff;
   --admin-card-bg: #ffffff;
   --admin-card-subtle: #faf8ff;
   --admin-table-hover: rgba(153, 102, 255, 0.04);
@@ -23,7 +23,7 @@
 
   /* Typography */
   --admin-text-main: #1e1b2e;
-  --admin-text-muted: #6b7280;
+  --admin-text-muted: #666;
   --admin-text-faint: #9ca3af;
   --admin-text-inverse: #ffffff;
 
@@ -88,8 +88,8 @@
   --admin-border-subtle: #363649;
 
   --admin-text-main: #fcfbff;
-  --admin-text-muted: #a0a0b0;
-  --admin-text-faint: #6b7280;
+  --admin-text-muted: #666;
+  --admin-text-faint: #666;
 
   --admin-role-admin-bg: #78350f;
   --admin-role-admin-text: #fef3c7;
@@ -210,7 +210,7 @@ html[data-motion="reduce"] .admin-main *::after {
   width: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 40px 32px 80px;
+  padding: 24px;
   overflow-y: auto;
   font-family: 'Montserrat', sans-serif;
   color: var(--admin-text-main);
@@ -252,6 +252,34 @@ html[data-motion="reduce"] .admin-main *::after {
   flex-wrap: wrap;
 }
 
+.admin-app-layout .admin-dashboard-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 140px;
+  margin-bottom: 4px;
+  padding: 24px;
+  overflow: hidden;
+  color: var(--admin-text-main);
+  background: var(--admin-card-bg);
+  border: 1.5px solid var(--admin-border);
+  border-radius: var(--admin-radius-xl);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-app-layout .admin-dashboard-header::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  content: "";
+  background: linear-gradient(90deg, #2563eb, #818cf8, #9966ff);
+}
+
+.admin-dashboard-header-content {
+  min-width: 0;
+}
+
 .admin-header-title-row,
 .admin-header-titles {
   display: flex;
@@ -275,12 +303,20 @@ html[data-motion="reduce"] .admin-main *::after {
   gap: 12px;
 }
 
+.admin-app-layout .admin-dashboard-header .admin-header-title {
+  color: var(--admin-text-main);
+}
+
 .admin-header-subtitle,
 .admin-app-layout .admin-header p,
 .admin-header-titles p {
   font-size: 0.95rem;
   color: var(--admin-text-inverse);
   margin: 0;
+}
+
+.admin-app-layout .admin-dashboard-header .admin-header-subtitle {
+  color: var(--admin-text-muted);
 }
 
 .admin-header-badge {
@@ -316,24 +352,54 @@ html[data-motion="reduce"] .admin-main *::after {
 }
 
 .admin-stat-card {
+  --admin-stat-accent: #9966ff;
+  --admin-stat-accent-soft: rgba(153, 102, 255, 0.12);
   background: var(--admin-card-bg);
-  border: 1px solid var(--admin-border);
-  border-radius: var(--admin-radius-lg);
-  padding: 22px 24px;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 20px;
+  padding: 24px;
   box-shadow: var(--admin-shadow-sm);
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
   overflow: hidden;
 }
 
+.admin-stat-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  content: "";
+  background: var(--admin-stat-accent);
+}
+
+.admin-stat-card.stat-total {
+  --admin-stat-accent: #4f46e5;
+  --admin-stat-accent-soft: rgba(79, 70, 229, 0.1);
+}
+
+.admin-stat-card.stat-pending {
+  --admin-stat-accent: #d97706;
+  --admin-stat-accent-soft: rgba(217, 119, 6, 0.1);
+}
+
+.admin-stat-card.stat-users {
+  --admin-stat-accent: #2563eb;
+  --admin-stat-accent-soft: rgba(37, 99, 235, 0.1);
+}
+
+.admin-stat-card.stat-contributors {
+  --admin-stat-accent: #059669;
+  --admin-stat-accent-soft: rgba(5, 150, 105, 0.1);
+}
+
 .admin-stat-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: var(--admin-shadow-md);
-  border-color: var(--admin-primary);
+  border-color: var(--admin-stat-accent);
 }
 
 .admin-stat-top {
@@ -352,6 +418,20 @@ html[data-motion="reduce"] .admin-main *::after {
   background: var(--admin-primary-light);
   color: var(--admin-primary);
   flex-shrink: 0;
+}
+
+.admin-stat-card .admin-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--admin-stat-accent-soft);
+  color: var(--admin-stat-accent);
+}
+
+.admin-stat-card .admin-stat-icon svg {
+  display: block;
+  width: 22px;
+  height: 22px;
 }
 
 .admin-stat-icon-purple {
@@ -409,25 +489,33 @@ html[data-motion="reduce"] .admin-main *::after {
 
 .admin-stat-details {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   min-width: 0;
 }
 
 .admin-stat-value {
   font-family: 'Poppins', sans-serif;
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 2.5rem;
+  font-weight: 800;
   color: var(--admin-text-main);
   line-height: 1.1;
   margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.admin-stat-card .admin-stat-value {
+  color: var(--admin-stat-accent);
 }
 
 .admin-stat-label {
-  font-size: 0.88rem;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--admin-text-muted);
   margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* -----------------------------------------------------------------------------
@@ -469,7 +557,6 @@ html[data-motion="reduce"] .admin-main *::after {
 .admin-tab-btn.active {
   background: var(--admin-primary);
   color: var(--admin-text-inverse);
-  box-shadow: 0 4px 14px var(--admin-primary-glow);
 }
 
 .admin-tab-badge {
@@ -504,6 +591,26 @@ html[data-motion="reduce"] .admin-main *::after {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.admin-user-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-user-pagination-status,
+.admin-user-pagination-page {
+  color: var(--admin-text-muted);
+  font-size: 0.88rem;
+}
+
+.admin-user-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .admin-toolbar,
@@ -1782,6 +1889,11 @@ html[data-motion="reduce"] .admin-main *::after {
   .admin-header-bar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .admin-app-layout .admin-dashboard-header {
+    min-height: 0;
+    padding: 24px;
   }
 
   .admin-toolbar,

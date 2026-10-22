@@ -56,6 +56,18 @@
     border-radius: 12px;
 }
 
+.leaderboard-page .leaderboard .podium-place-empty .player-icon {
+    opacity: 0.5;
+}
+
+.leaderboard-page .leaderboard .podium-place-empty #player-name {
+    color: var(--text-muted);
+}
+
+.leaderboard-page .leaderboard .podium-place-empty .podium-player-xp {
+    background-color: var(--border-main);
+}
+
 .leaderboard-page .leaderboard .podium {
     --podium-first-color: var(--primary-color);
     --podium-second-color: #b895fe;
