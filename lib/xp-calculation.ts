@@ -19,9 +19,7 @@ export function calculateXpBreakdown(
   currentStreak: number,
 ): XpCalculationBreakdown {
   const difficultyMultiplier = difficultyMultipliers[difficultyId ?? 0] ?? 1;
-  const streakMultiplier = isCorrect
-    ? 1 + (currentStreak - 1) * 0.1
-    : 1;
+  const streakMultiplier = isCorrect ? 1 + (currentStreak - 1) * 0.1 : 1;
 
   return {
     isCorrect,

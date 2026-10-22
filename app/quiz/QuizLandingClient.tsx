@@ -819,7 +819,11 @@ export default function QuizLandingClient({
             />
           ) : (
             <>
-              <section className="xp-tracker" aria-label="XP tracker" aria-live="polite">
+              <section
+                className="xp-tracker"
+                aria-label="XP tracker"
+                aria-live="polite"
+              >
                 <div className="xp-tracker-stat">
                   <span>Total XP</span>
                   <strong>{Number(earnedXp.toFixed(2))} XP</strong>
@@ -833,7 +837,10 @@ export default function QuizLandingClient({
                   {lastXpBreakdown ? (
                     lastXpBreakdown.isCorrect ? (
                       <strong>
-                        {lastXpBreakdown.baseXp} base × {lastXpBreakdown.difficultyMultiplier} difficulty × {lastXpBreakdown.streakMultiplier.toFixed(1)} streak = {Number(lastXpBreakdown.earnedXp.toFixed(2))} XP
+                        {lastXpBreakdown.baseXp} base ×{" "}
+                        {lastXpBreakdown.difficultyMultiplier} difficulty ×{" "}
+                        {lastXpBreakdown.streakMultiplier.toFixed(1)} streak ={" "}
+                        {Number(lastXpBreakdown.earnedXp.toFixed(2))} XP
                       </strong>
                     ) : (
                       <strong>Incorrect: 0 XP · streak reset</strong>
