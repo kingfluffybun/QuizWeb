@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import PublicNav from "@/app/components/publicNav";
 import * as Assets from "@/app/actions/animation/svg_assets";
 
-export default async function Home() {
+export default function Home() {
     const [menuOpen] = useState(false);
     const session = useSession();
 

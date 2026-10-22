@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { signOutAction } from "@/app/actions/auth";
 
@@ -110,7 +109,7 @@ function getRouteIcon(pathname: string) {
     return null;
 }
 
-export default function Sidebar({ role: initialRole, username: initialUsername, email: initialEmail, avatarColor }: SidebarProps = {}) {
+export default function Sidebar({ role: initialRole, username: initialUsername, email: initialEmail }: SidebarProps = {}) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [fetchedRole, setFetchedRole] = useState<string | undefined>(undefined);
     const [fetchedUsername, setFetchedUsername] = useState<string | undefined>(undefined);
@@ -120,23 +119,31 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
     const currentPageIconRef = useRef<HTMLDivElement>(null);
     const currentPageTitleRef = useRef<HTMLHeadingElement>(null);
     const profileContainerRef = useRef<HTMLDivElement>(null);
-    const { data: session, status } = useSession();
 
     useEffect(() => {
         if (initialRole !== undefined && initialUsername !== undefined && initialEmail !== undefined) return;
-        
-        if (status === "loading" || !session?.user) return;
-
-        if (initialRole === undefined) {
-            setFetchedRole(session.user.role || session.user.user_role || "user");
-        }
-        if (initialUsername === undefined && session.user.name) {
-            setFetchedUsername(session.user.name);
-        }
-        if (initialEmail === undefined && session.user.email) {
-            setFetchedEmail(session.user.email);
-        }
-    },[session, status, initialEmail, initialRole, initialUsername])
+        let isMounted = true;
+        fetch("/api/auth/session")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((session) => {
+                if (!isMounted || !session?.user) return;
+                if (initialRole === undefined) {
+                    setFetchedRole(session.user.role || session.user.user_role || "user");
+                }
+                if (initialUsername === undefined && session.user.name) {
+                    setFetchedUsername(session.user.name);
+                }
+                if (initialEmail === undefined && session.user.email) {
+                    setFetchedEmail(session.user.email);
+                }
+            })
+            .catch(() => {
+                // Silently fallback to unauthenticated/user default
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [initialEmail, initialRole, initialUsername]);
 
     const effectiveRole = initialRole ?? fetchedRole ?? "user";
     const isAdmin = effectiveRole === "admin";
@@ -153,7 +160,6 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
         .join("");
     const displayEmail = initialEmail ?? fetchedEmail ?? null;
     const routeIcon = getRouteIcon(pathname);
-    const avaColor = avatarColor;
 
     useEffect(() => {
         const activeOption = document.querySelector("#quiz-sidebar .sidebar-option.active");
@@ -270,7 +276,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 aria-controls="profile-menu"
                                 onClick={() => setIsProfileMenuOpen((open) => !open)}
                             >
-                                <span className="profile-icon" aria-hidden="true" style={{backgroundColor: avatarColor ? avatarColor : '#ccc'}}><span>{profileInitial}</span></span>
+                                <span className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></span>
                                 <div className="profile-detail">
                                     <p id="name">{firstName}</p>
                                     <p id="email">{displayEmail}</p>
@@ -291,7 +297,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 }}
                             >
                                 <div className="profile-header">
-                                    <div className="profile-icon" aria-hidden="true" style={{backgroundColor: avaColor}}><span>{profileInitial}</span></div>
+                                    <div className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></div>
                                     <div className="profile-detail">
                                         <p id="name">{displayName}</p>
                                         <p id="email">{displayEmail}</p>

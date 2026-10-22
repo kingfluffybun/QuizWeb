@@ -5,6 +5,7 @@ declare module "next-auth" {
   interface User {
     role?: string;
     user_role?: string;
+    user_color?: string;
   }
 
   // 2. Extend the Session interface so session.user includes these properties
@@ -12,6 +13,7 @@ declare module "next-auth" {
     user: {
       role?: string;
       user_role?: string;
+      user_color?: string;
     } & DefaultSession["user"];
   }
 }
@@ -21,5 +23,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: string;
     user_role?: string;
+    user_color?: string;
   }
 }
