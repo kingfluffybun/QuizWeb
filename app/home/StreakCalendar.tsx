@@ -17,6 +17,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const [streakData, setStreakData] = useState<StreakData>(initialData);
     const [viewYear, setViewYear] = useState<number>(initialData.targetYear);
     const [viewMonth, setViewMonth] = useState<number>(initialData.targetMonth);
+    const [clientToday, setClientToday] = useState<string | null>(null);
     const activeDates = useMemo(() => new Set(streakData.allActiveDates), [streakData.allActiveDates]);
 
     // Sync client local date if different from server fallback
@@ -26,6 +27,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
         const month = String(now.getMonth() + 1).padStart(2, "0");
         const day = String(now.getDate()).padStart(2, "0");
         const localDate = `${year}-${month}-${day}`;
+        setClientToday(localDate);
 
         if (localDate !== initialData.todayDate) {
             getUserStreakData(undefined, undefined, localDate)
@@ -37,17 +39,18 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     }, [initialData.todayDate]);
 
     const handlePrevMonth = useCallback(() => {
+        const [todayYearStr, todayMonthStr] = (clientToday ?? streakData.todayDate).split("-");
         const nextMonth = viewMonth === 1 ? 12 : viewMonth - 1;
         const nextYear = viewMonth === 1 ? viewYear - 1 : viewYear;
 
         setViewYear(nextYear);
         setViewMonth(nextMonth);
-    }, [viewMonth, viewYear]);
+    }, [clientToday, streakData.todayDate]);
 
     const handleNextMonth = useCallback(() => {
         const nextMonth = viewMonth === 12 ? 1 : viewMonth + 1;
         const nextYear = viewMonth === 12 ? viewYear + 1 : viewYear;
-
+        
         setViewYear(nextYear);
         setViewMonth(nextMonth);
     }, [viewMonth, viewYear]);
@@ -64,17 +67,17 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     // Calculate calendar grid metrics for viewYear & viewMonth
     const firstDayOfWeek = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();
     const totalDaysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
-    const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, "0")}-`;
     const emptySlots = Array.from({ length: firstDayOfWeek });
     const monthDays = Array.from({ length: totalDaysInMonth }, (_, i) => i + 1);
 
     const isCurrentViewMonth = (() => {
+        if (!clientToday) return false;
         const [todayYearStr, todayMonthStr] = streakData.todayDate.split("-");
         return Number(todayYearStr) === viewYear && Number(todayMonthStr) === viewMonth;
     })();
 
-    const todayDayNum = isCurrentViewMonth
-        ? Number(streakData.todayDate.slice(8, 10))
+    const todayDayNum = isCurrentViewMonth && clientToday
+        ? Number(clientToday.slice(8, 10))
         : null;
 
     // Motivational text
@@ -127,7 +130,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                     {/* Streak Week indicators */}
                     <div className="streak-week">
                         {streakData.weekDays.map((day) => {
-                            const isToday = day.date === streakData.todayDate;
+                            const isToday = clientToday !== null && day.date === clientToday;
                             let dayClasses = "streak-day row";
                             if (day.isActive) {
                                 dayClasses += " active";
@@ -217,20 +220,18 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
 
                     {/* Month Days */}
                     {monthDays.map((dayNum) => {
-                        const dateString = `${monthPrefix}${String(dayNum).padStart(2, "0")}`;
+                        const dateString = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
                         const isActive = activeDates.has(dateString);
                         const isToday = isCurrentViewMonth && dayNum === todayDayNum;
                         const dayOfWeek = (firstDayOfWeek + dayNum - 1) % 7;
                         const hasActivePreviousDay =
                             isActive &&
                             dayOfWeek !== 0 &&
-                            dayNum > 1 &&
-                            activeDates.has(`${monthPrefix}${String(dayNum - 1).padStart(2, "0")}`);
+                            activeDates.has(`${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum - 1).padStart(2, "0")}`);
                         const hasActiveNextDay =
                             isActive &&
                             dayOfWeek !== 6 &&
-                            dayNum < totalDaysInMonth &&
-                            activeDates.has(`${monthPrefix}${String(dayNum + 1).padStart(2, "0")}`);
+                            activeDates.has(`${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum + 1).padStart(2, "0")}`);
 
                         let dayClasses = "day col";
                         if (isActive) {
