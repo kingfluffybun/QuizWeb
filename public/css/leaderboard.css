@@ -53,7 +53,7 @@
     overflow: hidden;
     width: 100%;
     container-type: inline-size;
-    border-radius: 12px;
+    border-radius: 12 12px 0px 0px;
 }
 
 .leaderboard-page .leaderboard .podium-place-empty .player-icon {
