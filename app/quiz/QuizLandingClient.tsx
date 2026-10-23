@@ -197,6 +197,9 @@ export default function QuizLandingClient({
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
     const [questionProgress, setQuestionProgress] = useState<Record<number, SavedQuestionProgress>>({});
+    const [missedQuestionIndexes, setMissedQuestionIndexes] = useState<Set<number>>(
+        () => new Set(),
+    );
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
     const completionRecorded = useRef(false);
@@ -382,6 +385,7 @@ export default function QuizLandingClient({
             ...progress,
             [activeQuizIndex]: { value: skippedValue, result: skippedResult },
         }));
+        setMissedQuestionIndexes((missed) => new Set(missed).add(activeQuizIndex));
         setResult(skippedResult);
         setCurrentStreak(0);
         persistStreak(0, bestStreak);
@@ -412,9 +416,11 @@ export default function QuizLandingClient({
             }
             if (!previousProgress?.result.correct) {
                 setScore((currentScore) => currentScore + 1);
-                setBaseXp((earnedXp) =>
-                    earnedXp + calculateEarnedXp(true, quiz.difficulty_id),
-                );
+                if (!missedQuestionIndexes.has(activeQuizIndex)) {
+                    setBaseXp((earnedXp) =>
+                        earnedXp + calculateEarnedXp(true, quiz.difficulty_id),
+                    );
+                }
             }
             const nextStreak = currentStreak + 1;
             const nextBestStreak = Math.max(bestStreak, nextStreak);
@@ -422,6 +428,7 @@ export default function QuizLandingClient({
             setBestStreak(nextBestStreak);
             persistStreak(nextStreak, nextBestStreak);
         } else {
+            setMissedQuestionIndexes((missed) => new Set(missed).add(activeQuizIndex));
             if (!skipped) {
                 playQuizSound("wrong-answer");
                 const nextLives = Math.max(0, lives - 1);
