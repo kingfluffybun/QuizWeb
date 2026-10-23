@@ -263,17 +263,38 @@ export async function recordUserActivity(options?: {
     }
 
     const activityType = options?.type ?? "quiz";
-    const xpEarned = typeof options?.xp === "number" ? Math.max(0, options.xp) : 10;
+    const xpEarned = typeof options?.xp === "number" ? Math.max(0, options.xp) : 4;
     const activityDate = (options?.date && /^\d{4}-\d{2}-\d{2}$/.test(options.date))
         ? options.date
         : new Date().toISOString().slice(0, 10);
 
     try {
-        await db.query<ResultSetHeader>(
-            `INSERT INTO user_activity_tbl (user_id, activity_date, activity_type, xp_earned) 
-             VALUES (?, ?, ?, ?)`,
-            [userId, activityDate, activityType, xpEarned]
-        );
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await connection.query<ResultSetHeader>(
+                `INSERT INTO user_activity_tbl (user_id, activity_date, activity_type, xp_earned)
+                 VALUES (?, ?, ?, ?)`,
+                [userId, activityDate, activityType, xpEarned],
+            );
+            await connection.query<ResultSetHeader>(
+                `UPDATE player_tbl
+                 SET xp = (
+                         SELECT COALESCE(SUM(activity.xp_earned), 0)
+                         FROM user_activity_tbl activity
+                         WHERE activity.user_id = player_tbl.user_id
+                     ),
+                     last_quiz_date = IF(? = 'quiz', ?, last_quiz_date)
+                 WHERE user_id = ?`,
+                [activityType, activityDate, userId],
+            );
+            await connection.commit();
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
 
         const streakData = await getUserStreakData(undefined, undefined, activityDate);
         return {
@@ -287,3 +308,94 @@ export async function recordUserActivity(options?: {
     }
 }
 
+function isValidQuizStreak(currentStreak: number, bestStreak: number): boolean {
+    return Number.isSafeInteger(currentStreak)
+        && Number.isSafeInteger(bestStreak)
+        && currentStreak >= 0
+        && bestStreak >= currentStreak;
+}
+
+export async function updatePlayerQuizStreak(
+    currentStreak: number,
+    bestStreak: number,
+): Promise<{ success: boolean; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: "Authentication required to save quiz streak" };
+    }
+
+    const userId = Number(session.user.id);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+        return { success: false, error: "Invalid user session" };
+    }
+    if (!isValidQuizStreak(currentStreak, bestStreak)) {
+        return { success: false, error: "Invalid quiz streak values" };
+    }
+
+    try {
+        await db.query<ResultSetHeader>(
+            `UPDATE player_tbl
+             SET current_streak = ?, max_streak = GREATEST(max_streak, ?)
+             WHERE user_id = ?`,
+            [currentStreak, bestStreak, userId],
+        );
+        return { success: true };
+    } catch (err) {
+        console.error("Failed to update player quiz streak:", err);
+        return { success: false, error: "Failed to save quiz streak" };
+    }
+}
+
+export async function recordQuizCompletion(options: {
+    xpEarned: number;
+    currentStreak: number;
+    bestStreak: number;
+}): Promise<{ success: boolean; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { success: false, error: "Authentication required to save quiz results" };
+    }
+
+    const userId = Number(session.user.id);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+        return { success: false, error: "Invalid user session" };
+    }
+    if (
+        !Number.isSafeInteger(options.xpEarned)
+        || options.xpEarned < 0
+        || !isValidQuizStreak(options.currentStreak, options.bestStreak)
+    ) {
+        return { success: false, error: "Invalid quiz result values" };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query<ResultSetHeader>(
+            `INSERT INTO user_activity_tbl (user_id, activity_date, activity_type, xp_earned)
+             VALUES (?, CURRENT_DATE, 'quiz', ?)`,
+            [userId, options.xpEarned],
+        );
+        await connection.query<ResultSetHeader>(
+            `UPDATE player_tbl
+             SET xp = (
+                     SELECT COALESCE(SUM(activity.xp_earned), 0)
+                     FROM user_activity_tbl activity
+                     WHERE activity.user_id = player_tbl.user_id
+                 ),
+                 current_streak = ?,
+                 max_streak = GREATEST(max_streak, ?),
+                 last_quiz_date = CURRENT_DATE
+             WHERE user_id = ?`,
+            [options.currentStreak, options.bestStreak, userId],
+        );
+        await connection.commit();
+        return { success: true };
+    } catch (err) {
+        await connection.rollback();
+        console.error("Failed to record quiz completion:", err);
+        return { success: false, error: "Failed to save quiz results" };
+    } finally {
+        connection.release();
+    }
+}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useEffectEvent } from "react";
+import { useState, useEffect, useEffectEvent, useRef } from "react";
 import type { AnimationEvent, ReactNode } from "react";
 import "#css/quiz.css";
 import "#css/nav.css";
@@ -14,8 +14,12 @@ import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
-import { recordUserActivity } from "@/app/actions/streak";
+import {
+    recordQuizCompletion,
+    updatePlayerQuizStreak,
+} from "@/app/actions/streak";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
+import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
 
 type AnswerResult = {
     correct: boolean;
@@ -180,28 +184,69 @@ export default function QuizLandingClient({
     const { quizzes: allQuizzes } = useQuizData();
     const quizzes = initialQuizzes ?? allQuizzes;
     const selectedQuizzes = quizzes as UnitQuizData[];
+    const [questionOrder, setQuestionOrder] = useState<number[] | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [value, setValue] = useState<AnswerValue>(undefined);
     const [result, setResult] = useState<AnswerResult | null>(null);
     const [lives, setLives] = useState(5);
     const [score, setScore] = useState(0);
+    const [baseXp, setBaseXp] = useState(0);
+    const [currentStreak, setCurrentStreak] = useState(0);
+    const [bestStreak, setBestStreak] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
     const [questionProgress, setQuestionProgress] = useState<Record<number, SavedQuestionProgress>>({});
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+    const completionRecorded = useRef(false);
+    const allQuestionsCorrect = quizzes.length > 0 && score === quizzes.length;
+    const totalQuizXp = calculateQuizXp(baseXp, allQuestionsCorrect, currentStreak);
 
     useEffect(() => {
-        if (isFinished && lives > 0) {
-            recordUserActivity({
-                type: "quiz",
-                xp: Math.max(10, score * 10),
-            }).catch((e) => {
-                console.error("Failed to record activity:", e);
-            });
-        }
-    }, [isFinished, lives, score]);
+        if (!hasStartedQuiz) return;
+        updatePlayerQuizStreak(0, 0).then((response) => {
+            if (!response.success) {
+                console.error("Failed to reset player quiz streak:", response.error);
+            }
+        }).catch((error) => {
+            console.error("Failed to reset player quiz streak:", error);
+        });
+    }, [hasStartedQuiz]);
+
+    useEffect(() => {
+        if (!isFinished || completionRecorded.current) return;
+
+        completionRecorded.current = true;
+        recordQuizCompletion({
+            xpEarned: totalQuizXp,
+            currentStreak,
+            bestStreak,
+        }).then((response) => {
+            if (!response.success) {
+                console.error("Failed to record quiz completion:", response.error);
+                return;
+            }
+        }).catch((error) => {
+            console.error("Failed to record quiz completion:", error);
+        });
+    }, [isFinished, totalQuizXp, bestStreak, currentStreak]);
+
+    const persistStreak = (nextCurrentStreak: number, nextBestStreak: number) => {
+        updatePlayerQuizStreak(nextCurrentStreak, nextBestStreak).then((response) => {
+            if (!response.success) {
+                console.error("Failed to save player quiz streak:", response.error);
+            }
+        }).catch((error) => {
+            console.error("Failed to save player quiz streak:", error);
+        });
+    };
+
+    const orderedQuestionIndexes = questionOrder
+        ?? Array.from({ length: quizzes.length }, (_, index) => index);
+    const activeQuizIndex = orderedQuestionIndexes[currentIndex] ?? currentIndex;
+    const quiz = quizzes[activeQuizIndex];
+    const selectedQuiz = selectedQuizzes[activeQuizIndex];
 
     const openAccessibility = () => {
         setAccessibilityClosing(false);
@@ -215,8 +260,17 @@ export default function QuizLandingClient({
         setAccessibilityClosing(false);
     };
 
-    const quiz = quizzes[currentIndex];
-    const selectedQuiz = selectedQuizzes[currentIndex];
+    const findNextUnansweredQuestion = (
+        order: number[],
+        progress: Record<number, SavedQuestionProgress>,
+        startIndex: number,
+    ) => {
+        for (let offset = 0; offset < order.length; offset += 1) {
+            const index = (startIndex + offset) % order.length;
+            if (!progress[order[index]]?.result.correct) return index;
+        }
+        return -1;
+    };
     const isLessonOnlyUnit = Boolean(
         initialQuizzes &&
         initialQuizzes.length === 1 &&
@@ -241,16 +295,43 @@ export default function QuizLandingClient({
         : (hasLesson ? lessonSlides.length : 0) + currentIndex;
 
     const nextQuiz = () => {
-        if (lives <= 0 || currentIndex >= quizzes.length - 1) {
+        if (lives <= 0) {
             setIsFinished(true);
             return;
         }
 
-        const nextIndex = currentIndex + 1;
-        const savedProgress = questionProgress[nextIndex];
+        const currentQuizIndex = orderedQuestionIndexes[currentIndex];
+        let nextOrder = orderedQuestionIndexes;
+        let searchStartIndex = currentIndex + 1;
+        let savedProgress = questionProgress;
+
+        if (result && !result.correct && currentQuizIndex !== undefined) {
+            nextOrder = [
+                ...orderedQuestionIndexes.filter((index) => index !== currentQuizIndex),
+                currentQuizIndex,
+            ];
+            searchStartIndex = currentIndex % nextOrder.length;
+            savedProgress = { ...questionProgress };
+            delete savedProgress[currentQuizIndex];
+            setQuestionOrder(nextOrder);
+            setQuestionProgress(savedProgress);
+        }
+
+        const nextIndex = findNextUnansweredQuestion(
+            nextOrder,
+            savedProgress,
+            searchStartIndex,
+        );
+        if (nextIndex === -1) {
+            setIsFinished(true);
+            return;
+        }
+
+        const nextQuizIndex = nextOrder[nextIndex];
+        const nextProgress = savedProgress[nextQuizIndex];
         setCurrentIndex(nextIndex);
-        setValue(savedProgress?.value);
-        setResult(savedProgress?.result ?? null);
+        setValue(nextProgress?.value);
+        setResult(nextProgress?.result ?? null);
     };
 
     const handleBack = () => {
@@ -268,7 +349,8 @@ export default function QuizLandingClient({
         }
 
         const previousIndex = currentIndex - 1;
-        const savedProgress = questionProgress[previousIndex];
+        const previousQuizIndex = orderedQuestionIndexes[previousIndex];
+        const savedProgress = questionProgress[previousQuizIndex];
         setCurrentIndex(previousIndex);
         setValue(savedProgress?.value);
         setResult(savedProgress?.result ?? null);
@@ -278,7 +360,7 @@ export default function QuizLandingClient({
         if (
             hasLesson &&
             lives > 0 &&
-            currentIndex >= quizzes.length - 1
+            score === quizzes.length
         ) {
             playQuizSound("lesson-complete");
         }
@@ -286,7 +368,7 @@ export default function QuizLandingClient({
     };
 
     const skipQuestion = () => {
-        if (!quiz || result || questionProgress[currentIndex]) return;
+        if (!quiz || result) return;
 
         const skippedValue = getCorrectValue(quiz);
         const skippedResult: AnswerResult = {
@@ -298,33 +380,63 @@ export default function QuizLandingClient({
         setValue(skippedValue);
         setQuestionProgress((progress) => ({
             ...progress,
-            [currentIndex]: { value: skippedValue, result: skippedResult },
+            [activeQuizIndex]: { value: skippedValue, result: skippedResult },
         }));
         setResult(skippedResult);
+        setCurrentStreak(0);
+        persistStreak(0, bestStreak);
         playQuizSound("skipped-answer");
     };
 
-    const submitAnswer = () => {
-        if (!quiz || questionProgress[currentIndex]) return;
-        const nextResult = evaluate(quiz, value);
+    const applyAnswer = (
+        nextResult: AnswerResult,
+        answerValue: AnswerValue,
+        skipped = false,
+    ) => {
+        if (!quiz) return;
+        const previousProgress = questionProgress[activeQuizIndex];
         setQuestionProgress((progress) => ({
             ...progress,
-            [currentIndex]: { value, result: nextResult },
+            [activeQuizIndex]: { value: answerValue, result: nextResult },
         }));
         setResult(nextResult);
         if (nextResult.correct) {
-            if (quiz.type_name === "MCQ" || quiz.type_name === "FITB") {
-                playQuizSound("correct-answer1");
-            } else if (quiz.type_name === "Order") {
-                playQuizSound("correct-answer3");
-            } else if (quiz.type_name === "Pair") {
-                playQuizSound("correct-answer2");
+            if (!skipped) {
+                if (quiz.type_name === "MCQ" || quiz.type_name === "FITB") {
+                    playQuizSound("correct-answer1");
+                } else if (quiz.type_name === "Order") {
+                    playQuizSound("correct-answer3");
+                } else if (quiz.type_name === "Pair") {
+                    playQuizSound("correct-answer2");
+                }
             }
-            setScore((currentScore) => currentScore + 1);
+            if (!previousProgress?.result.correct) {
+                setScore((currentScore) => currentScore + 1);
+                setBaseXp((earnedXp) =>
+                    earnedXp + calculateEarnedXp(true, quiz.difficulty_id),
+                );
+            }
+            const nextStreak = currentStreak + 1;
+            const nextBestStreak = Math.max(bestStreak, nextStreak);
+            setCurrentStreak(nextStreak);
+            setBestStreak(nextBestStreak);
+            persistStreak(nextStreak, nextBestStreak);
         } else {
-            playQuizSound("wrong-answer");
-            setLives((currentLives) => Math.max(0, currentLives - 1));
+            if (!skipped) {
+                playQuizSound("wrong-answer");
+                const nextLives = Math.max(0, lives - 1);
+                setLives(nextLives);
+                if (nextLives === 0) setIsFinished(true);
+            }
+            setCurrentStreak(0);
+            persistStreak(0, bestStreak);
         }
+    };
+
+    const submitAnswer = () => {
+        if (!quiz || result) return;
+        const nextResult = evaluate(quiz, value);
+        applyAnswer(nextResult, value);
     };
 
     const handleAnswerChange = (nextValue: AnswerValue) => {
@@ -333,20 +445,13 @@ export default function QuizLandingClient({
         setValue(nextValue);
 
         const pairCount = quiz?.quiz_payload.pairs?.length ?? 0;
-        if (quiz?.type_name === "Pair" && nextValue === pairCount && !questionProgress[currentIndex]) {
+        if (
+            quiz?.type_name === "Pair"
+            && nextValue === pairCount
+            && !questionProgress[activeQuizIndex]?.result.correct
+        ) {
             const nextResult = evaluate(quiz, nextValue);
-            setQuestionProgress((progress) => ({
-                ...progress,
-                [currentIndex]: { value: nextValue, result: nextResult },
-            }));
-            setResult(nextResult);
-            if (nextResult.correct) {
-                playQuizSound("correct-answer2");
-                setScore((currentScore) => currentScore + 1);
-            } else {
-                playQuizSound("wrong-answer");
-                setLives((currentLives) => Math.max(0, currentLives - 1));
-            }
+            applyAnswer(nextResult, nextValue);
         }
     };
 

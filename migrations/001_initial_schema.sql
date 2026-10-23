@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS `user_auth_tbl` (
 CREATE TABLE IF NOT EXISTS `player_tbl` (
     `user_id` INT NOT NULL UNIQUE,
     `username` VARCHAR(100) NOT NULL UNIQUE,
+    `xp` INT NOT NULL DEFAULT 0,
+    `max_streak` INT NOT NULL DEFAULT 0,
+    `current_streak` INT NOT NULL DEFAULT 0,
+    `last_quiz_date` DATE NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`user_id`),
     CONSTRAINT `fk_player_user` FOREIGN KEY (`user_id`) REFERENCES `user_auth_tbl` (`user_id`) ON DELETE CASCADE
