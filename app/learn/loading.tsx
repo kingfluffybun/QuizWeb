@@ -11,31 +11,40 @@ export default function LearnLoading() {
 
       <main>
         <section className="available-units" aria-label="Loading available units">
-          {/* 1. Heading */}
-          <div className="available-units-heading" style={{ marginBottom: 28 }}>
-            <div className="skeleton-shimmer skeleton-line title" style={{ width: 220, margin: 0 }} />
-            <div className="skeleton-shimmer skeleton-line medium" style={{ height: 16, marginTop: 8 }} />
+          <div className="available-units-heading">
+            <div>
+              <div className="skeleton-shimmer learn-skeleton-title" />
+              <div className="skeleton-shimmer learn-skeleton-description" />
+            </div>
+            <div className="learn-filters-bar">
+              <div className="skeleton-shimmer learn-skeleton-search" />
+              <div className="learn-section-chips" aria-hidden="true">
+                {[74, 90, 90, 90, 90, 90].map((width, index) => (
+                  <div
+                    key={index}
+                    className="skeleton-shimmer learn-skeleton-chip"
+                    style={{ width }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* 2. Units Grid */}
-          <div className="available-units-list" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
+          <div className="available-units-list">
             {[1, 2, 3, 4, 5, 6].map((unit) => (
-              <article
-                key={unit}
-                className="available-unit-card skeleton-card"
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: 24,
-                  borderRadius: 16,
-                }}
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-                  <div className="skeleton-shimmer skeleton-line sub-title" style={{ width: "80%", margin: 0 }} />
-                  <div className="skeleton-shimmer skeleton-line" style={{ width: "50%", height: 13, margin: 0 }} />
+              <article key={unit} className="available-unit-card">
+                <div className="available-unit-info">
+                  <div className="skeleton-shimmer learn-skeleton-unit-title" />
+                  <div className="available-unit-badges" aria-hidden="true">
+                    <div className="skeleton-shimmer learn-skeleton-badge" style={{ width: 68 }} />
+                    <div className="skeleton-shimmer learn-skeleton-badge" style={{ width: 88 }} />
+                    <div className="skeleton-shimmer learn-skeleton-badge" style={{ width: 148 }} />
+                  </div>
                 </div>
-                <div className="skeleton-shimmer skeleton-btn" style={{ width: 110, height: 38, borderRadius: 10 }} />
+                <div className="available-unit-actions" aria-hidden="true">
+                  <div className="skeleton-shimmer learn-skeleton-action" />
+                  <div className="skeleton-shimmer learn-skeleton-action" />
+                </div>
               </article>
             ))}
           </div>

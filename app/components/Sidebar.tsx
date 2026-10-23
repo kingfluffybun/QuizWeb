@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { signOutAction } from "@/app/actions/auth";
+import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 
 export interface SidebarNavItem {
     label: string;
@@ -16,12 +17,12 @@ export interface SidebarConfig {
     roleBadge: string | null;
 }
 
-export interface SidebarProps {
-    role?: string;
-    username?: string;
-    email?: string;
-    avatarColor?: string;
-}
+// export interface SidebarProps {
+//     role?: string;
+//     username?: string;
+//     email?: string;
+//     avatarColor?: string;
+// }
 
 /**
  * Returns role-aware navigation items and role badge configuration.
@@ -109,57 +110,62 @@ function getRouteIcon(pathname: string) {
     return null;
 }
 
-export default function Sidebar({ role: initialRole, username: initialUsername, email: initialEmail }: SidebarProps = {}) {
+
+
+export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [fetchedRole, setFetchedRole] = useState<string | undefined>(undefined);
-    const [fetchedUsername, setFetchedUsername] = useState<string | undefined>(undefined);
-    const [fetchedEmail, setFetchedEmail] = useState<string | undefined>(undefined);
+    const [fetchedRole, setFetchedRole] = useState<string | undefined>();
+    const [fetchedUsername, setFetchedUsername] = useState<string | undefined>();
+    const [fetchedEmail, setFetchedEmail] = useState<string | undefined>();
+    const [fetchedAvaColor, setFetcedAvaColor] = useState<string | undefined>();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
     const pathname = usePathname();
     const currentPageIconRef = useRef<HTMLDivElement>(null);
     const currentPageTitleRef = useRef<HTMLHeadingElement>(null);
     const profileContainerRef = useRef<HTMLDivElement>(null);
-
+    
     useEffect(() => {
-        if (initialRole !== undefined && initialUsername !== undefined && initialEmail !== undefined) return;
+        // if (initialRole !== undefined && initialUsername !== undefined && initialEmail !== undefined && initialAvaColor !== undefined) return;
         let isMounted = true;
-        fetch("/api/auth/session")
-            .then((res) => (res.ok ? res.json() : null))
-            .then((session) => {
-                if (!isMounted || !session?.user) return;
-                if (initialRole === undefined) {
-                    setFetchedRole(session.user.role || session.user.user_role || "user");
-                }
-                if (initialUsername === undefined && session.user.name) {
-                    setFetchedUsername(session.user.name);
-                }
-                if (initialEmail === undefined && session.user.email) {
-                    setFetchedEmail(session.user.email);
-                }
+        fetch("/api/db/user-info")
+            .then(async (res) => {
+                const json = await res.json();
+                if (!isMounted || !res.ok) return;
+                if (Object.keys(json).length === 0) return;
+                
+                const userData: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
+
+                setFetchedRole(userData?.user_role || "user");
+                setFetchedUsername(userData?.username);
+                setFetchedEmail(userData?.email);
+                setFetcedAvaColor(userData?.avatar_color);
             })
-            .catch(() => {
+            .catch((err) => {
                 // Silently fallback to unauthenticated/user default
+                console.error("API Fetch encountered an error:", err);
             });
         return () => {
             isMounted = false;
         };
-    }, [initialEmail, initialRole, initialUsername]);
+    }, []);
 
-    const effectiveRole = initialRole ?? fetchedRole ?? "user";
+    const effectiveRole = fetchedRole ?? "user";
     const isAdmin = effectiveRole === "admin";
     const isMaintainer = effectiveRole === "maintainer";
     const roleBadge = isAdmin ? "Admin" : isMaintainer ? "Maintainer" : null;
-    const displayName = initialUsername ?? fetchedUsername ?? "Profile";
+    const displayName = fetchedUsername ?? "Profile";
     const firstName = displayName.trim().split(/\s+/)[0] || "Profile";
-    const profileInitial = (initialUsername ?? fetchedUsername ?? "")
+    const profileInitial = (fetchedUsername ?? "")
         .trim()
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 2)
         .map((namePart) => namePart.charAt(0).toUpperCase())
         .join("");
-    const displayEmail = initialEmail ?? fetchedEmail ?? null;
+    const displayEmail = fetchedEmail ?? null;
     const routeIcon = getRouteIcon(pathname);
+    const avaColor = fetchedAvaColor;
 
     useEffect(() => {
         const activeOption = document.querySelector("#quiz-sidebar .sidebar-option.active");
@@ -248,7 +254,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                         <Link href="/cheat-sheet" className={`sidebar-option${isRouteActive(pathname, ["/cheat-sheet"]) ? " active" : ""}`}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-notebook-text"><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9.5 8h5"/><path d="M9.5 12H16"/><path d="M9.5 16H14"/></svg>
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"> <path d="M18 1.5C19.3807 1.5 20.5 2.61929 20.5 4V20C20.5 21.3807 19.3807 22.5 18 22.5H6C4.61929 22.5 3.5 21.3807 3.5 20V18.5H6V17.5H3.5V14.5H6V13.5H3.5V10.5H6V9.5H3.5V6.5H6V5.5H3.5V4C3.5 2.61929 4.61929 1.5 6 1.5H18ZM9.5 15.5V16.5H14V15.5H9.5ZM9.5 12.5H16V11.5H9.5V12.5ZM9.5 8.5H14.5V7.5H9.5V8.5Z" fill="currentColor"/> </svg>
-                            <p>Cheat Sheet {/* <span className="sidebar-coming-soon">Soon</span> */} </p>
+                            <p>Cheat Sheet</p>
                         </Link>
                         <Link
                             href="/quiz"
@@ -276,7 +282,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 aria-controls="profile-menu"
                                 onClick={() => setIsProfileMenuOpen((open) => !open)}
                             >
-                                <span className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></span>
+                                <span className="profile-icon" aria-hidden="true" style={{backgroundColor: avaColor}}><span>{profileInitial}</span></span>
                                 <div className="profile-detail">
                                     <p id="name">{firstName}</p>
                                     <p id="email">{displayEmail}</p>
@@ -297,7 +303,7 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                                 }}
                             >
                                 <div className="profile-header">
-                                    <div className="profile-icon" aria-hidden="true"><span>{profileInitial}</span></div>
+                                    <div className="profile-icon" aria-hidden="true" style={{backgroundColor: avaColor}}><span>{profileInitial}</span></div>
                                     <div className="profile-detail">
                                         <p id="name">{displayName}</p>
                                         <p id="email">{displayEmail}</p>
@@ -337,22 +343,6 @@ export default function Sidebar({ role: initialRole, username: initialUsername, 
                             </div>
                         </div>
                     </div>
-
-                    {/* Bottom Profile and Settings */}
-                    {/* <Link href="/profile" aria-label={`Open profile for ${displayName}`} className="sidebar-option sidebar-profile">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-user"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
-                        <p>{displayName}</p>
-                        <p>{displayEmail}</p>
-                        {roleBadge && (
-                            <span className={`sidebar-role-badge role-${effectiveRole}`}>
-                                {roleBadge}
-                            </span>
-                        )}
-                    </Link>
-                    <Link href={"/settings"} aria-current={isRouteActive(pathname, ["/settings"]) ? "page" : undefined} className={`sidebar-option${isRouteActive(pathname, ["/settings"]) ? " active" : ""}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
-                        <p>Settings</p>
-                    </Link> */}
                 </div>
             </div>
         </>

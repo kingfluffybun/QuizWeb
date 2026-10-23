@@ -87,11 +87,7 @@ export default async function AdminPage() {
 
   return (
     <div className="dashboard-page admin-app-layout">
-      <Sidebar
-        role="admin"
-        username={session?.user?.name || admin.email?.split("@")[0] || "Admin"}
-        email={admin.email}
-      />
+      <Sidebar/>
       <main className="admin-main">
         <div className="admin-container">
           <header className="admin-header admin-dashboard-header">
