@@ -400,9 +400,12 @@ button.quick-action-btn:hover {
 
 .day.today.active p,
 .day.today.active-start p,
-.day.today.active-middle p,
-.day.today.active-end p {
+.day.today.active-middle p {
     box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.day.today.active-end p {
+    /* box-shadow: 0 0 0 2px var(--primary-color); */
 }
 
 .day-label {
