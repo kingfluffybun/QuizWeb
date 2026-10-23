@@ -251,6 +251,15 @@ export default function QuizLandingClient({
     const quiz = quizzes[activeQuizIndex];
     const selectedQuiz = selectedQuizzes[activeQuizIndex];
 
+    const handleIncorrectPair = () => {
+        playQuizSound("wrong-answer");
+        setLives(Math.max(0, lives - 1));
+        if (lives <= 1) setIsFinished(true);
+        setMissedQuestionIndexes((missed) => new Set(missed).add(activeQuizIndex));
+        setCurrentStreak(0);
+        persistStreak(0, bestStreak);
+    };
+
     const openAccessibility = () => {
         setAccessibilityClosing(false);
         setAccessibilityOpen(true);
@@ -710,7 +719,7 @@ export default function QuizLandingClient({
                                     onChange={handleAnswerChange}
                                     disabled={areChoicesLocked}
                                     onPairMatched={() => playQuizSound("correct-answer1")}
-                                    onIncorrectPair={() => playQuizSound("wrong-answer")}
+                                    onIncorrectPair={handleIncorrectPair}
                                 />
                             )}
                         </div>
