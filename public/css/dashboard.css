@@ -629,7 +629,7 @@ button.quick-action-btn:hover {
     align-items: flex-end;
     gap: 12px;
     padding-top: 36px;
-    border-bottom: 4px solid var(--text-inverse);
+    border-bottom: 4px solid var(--border-main);
     .podium-place-container {
         display: flex;
         flex-direction: column;
