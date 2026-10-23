@@ -233,7 +233,7 @@ export default function HomeLoading() {
                 </div>
               </div>
               <div className="leaderboard-placement">
-                {Array.from({ length: 7 }, (_, index) => index + 4).map((place) => (
+                {Array.from({ length: 5 }, (_, index) => index + 4).map((place) => (
                   <div className="leaderboard-player row" key={place}>
                     <div className="player-details row">
                       <p className="skeleton-shimmer skeleton-leaderboard-rank" aria-hidden="true" />
