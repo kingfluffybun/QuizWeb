@@ -267,7 +267,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 0 24px;
+    /* padding: 0 24px; */
 }
 
 .available-units-heading {
@@ -1567,6 +1567,22 @@ footer.incorrect {
         width: 100% !important;
     }
 
+    .quiz-page.learn-page {
+        flex: 1 1 auto !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .quiz-page.learn-page > main {
+        min-height: 0 !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 24px !important;
+    }
+
     .quiz-page.quiz-no-footer-page > .quiz-completion-main {
         min-height: 100dvh !important;
     }
@@ -1578,7 +1594,7 @@ footer.incorrect {
     }
 
     .quiz-page main {
-        padding: 14px 12px !important;
+        padding: 24px 24px 0 !important;
         width: 100% !important;
         min-width: 0 !important;
         max-width: 100% !important;
@@ -2032,7 +2048,16 @@ footer.incorrect {
     .available-units {
         width: 100% !important;
         max-width: 100% !important;
-        padding: 0 !important;
+        padding: 14px 12px 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .skeleton-learn-page .available-units {
+        padding-top: 24px !important;
+    }
+
+    .skeleton-learn-page .learn-skeleton-unit-title {
+        height: 18px;
     }
 
     .learn-filters-bar {
@@ -2063,6 +2088,7 @@ footer.incorrect {
         gap: 12px !important;
         padding: 16px !important;
         border-radius: 14px !important;
+        box-sizing: border-box !important;
     }
 
     .available-unit-actions {

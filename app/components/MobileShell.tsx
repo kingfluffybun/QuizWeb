@@ -168,7 +168,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="mobile-shell">
+    <div className={`mobile-shell${pathname === "/learn" ? " mobile-shell--learn" : ""}`}>
       {/* Sticky Top Mobile App Bar */}
       <header className="mobile-app-bar">
         <Link href="/home" className="mobile-app-brand" aria-label="QuizWeb home">
