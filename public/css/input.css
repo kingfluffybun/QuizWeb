@@ -1209,6 +1209,9 @@ textarea {
   font-size: 12px;
   font-weight: 600;
 }
+.question-code-toggle {
+  align-self: flex-start;
+}
 .lesson-code-toggle:hover {
   border-color: var(--primary-color);
   color: var(--primary-color);

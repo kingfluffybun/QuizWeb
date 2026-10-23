@@ -402,6 +402,8 @@ export default function QuizInputForm({
 
   // Live Authoring Input Telemetry States
   const [questionText, setQuestionText] = useState<string>("");
+  const questionTextInputRef = useRef<HTMLTextAreaElement>(null);
+  const pendingQuestionSelection = useRef<{ start: number; end: number } | null>(null);
   const [unitTitle, setUnitTitle] = useState<string>("");
   const [lessonSlides, setLessonSlides] = useState<
     { text: string; title?: string; code?: string }[]
@@ -444,6 +446,18 @@ export default function QuizInputForm({
     .filter(Boolean)
     .join("\n\n");
   const hasInitializedType = useRef(false);
+
+  useEffect(() => {
+    const selection = pendingQuestionSelection.current;
+    if (!selection) return;
+
+    const textarea = questionTextInputRef.current;
+    if (textarea) {
+      textarea.focus();
+      textarea.setSelectionRange(selection.start, selection.end);
+    }
+    pendingQuestionSelection.current = null;
+  }, [questionText]);
 
   const handleCopyId = (quizId: number) => {
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -1264,6 +1278,27 @@ export default function QuizInputForm({
   ]);
 
   // Live telemetry calculations
+  const insertQuestionCodeBlock = () => {
+    const textarea = questionTextInputRef.current;
+    if (!textarea) return;
+
+    const selectionStart = textarea.selectionStart;
+    const selectionEnd = textarea.selectionEnd;
+    const selectedText = questionText.slice(selectionStart, selectionEnd);
+    const beforeText = questionText.slice(0, selectionStart);
+    const afterText = questionText.slice(selectionEnd);
+    const prefix = beforeText && !beforeText.endsWith("\n") ? "\n" : "";
+    const suffix = afterText && !afterText.startsWith("\n") ? "\n" : "";
+    const codeContentStart = selectionStart + prefix.length + 4;
+    const insertedBlock = `${prefix}\`\`\`\n${selectedText}${selectedText.endsWith("\n") ? "" : "\n"}\`\`\`${suffix}`;
+
+    pendingQuestionSelection.current = {
+      start: codeContentStart,
+      end: codeContentStart + selectedText.length,
+    };
+    setQuestionText(`${beforeText}${insertedBlock}${afterText}`);
+  };
+
   const wordCount = questionText.trim()
     ? questionText.trim().split(/\s+/).filter(Boolean).length
     : 0;
@@ -2834,12 +2869,21 @@ export default function QuizInputForm({
                   )}
                 </div>
               </div>
+              <button
+                type="button"
+                className="lesson-code-toggle question-code-toggle"
+                onClick={insertQuestionCodeBlock}
+                title="Wrap selected text in a code block, or insert one at the cursor"
+              >
+                Add code block
+              </button>
               <textarea
                 id="question_text"
                 name="question_text"
                 className="form-textarea"
                 placeholder="Enter the question text here..."
                 value={questionText}
+                ref={questionTextInputRef}
                 onChange={(e) => setQuestionText(e.target.value)}
                 required
               />
