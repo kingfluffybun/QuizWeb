@@ -23,7 +23,9 @@ type LessonCodeFrameProps = {
   className: string;
   title: string;
   source: string;
+  language?: string;
   toggleable?: boolean;
+  editorOnly?: boolean;
 };
 
 function splitLessonSentences(text: string) {
@@ -43,7 +45,9 @@ export function LessonCodeFrame({
   className,
   title,
   source,
+  language = "html",
   toggleable = true,
+  editorOnly = false,
 }: LessonCodeFrameProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const cleanupFrameObservers = useRef<(() => void) | null>(null);
@@ -124,25 +128,27 @@ export function LessonCodeFrame({
 
   return (
     <div className="lesson-code-frame">
-      {toggleable && (
+      {(toggleable || editorOnly) && (
         <div className="lesson-code-frame-controls" aria-label="Code preview view">
             <div className="window-controls">
                 <div className="circle"></div>
                 <div className="circle"></div>
                 <div className="circle"></div>
             </div>
-            <div className="lesson-code-frame-controls-pill">
-                <button type="button" className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`} aria-pressed={view === "code"} onClick={() => { cancelEditorResize(); setView("code"); }} > <p>Code</p> </button>
-                <button type="button" className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`} aria-pressed={view === "result"} onClick={() => { cancelEditorResize(); setView("result"); }} > <p>Result</p> </button>
-            </div>
+            {toggleable && !editorOnly && (
+              <div className="lesson-code-frame-controls-pill">
+                  <button type="button" className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`} aria-pressed={view === "code"} onClick={() => { cancelEditorResize(); setView("code"); }} > <p>Code</p> </button>
+                  <button type="button" className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`} aria-pressed={view === "result"} onClick={() => { cancelEditorResize(); setView("result"); }} > <p>Result</p> </button>
+              </div>
+            )}
         </div>
       )}
-      {toggleable && view === "code" ? (
+      {editorOnly || (toggleable && view === "code") ? (
         <Editor
-          className="lesson-code-editor"
+          className={`lesson-code-editor${className ? ` ${className}` : ""}`}
           height={`${editorHeight}px`}
           width="100%"
-          language="html"
+          language={language}
           value={source}
           theme="vs-dark"
           onMount={(editor) => {
@@ -151,6 +157,13 @@ export function LessonCodeFrame({
               editorResizeFrame.current = window.requestAnimationFrame(() => {
                 editorResizeFrame.current = null;
                 if (!editor.getDomNode()?.isConnected || editor.getLayoutInfo().width === 0) return;
+
+                const isMobile = window.matchMedia("(max-width: 768px)").matches;
+                if (editorOnly && isMobile) {
+                  const maxMobileHeight = Math.max(180, window.innerHeight * 0.7);
+                  setEditorHeight(Math.max(120, Math.min(editor.getContentHeight(), maxMobileHeight)));
+                  return;
+                }
 
                 const maxHeight = Math.max(180, Math.min(360, window.innerHeight * 0.4));
                 setEditorHeight(Math.max(180, Math.min(editor.getContentHeight(), maxHeight)));

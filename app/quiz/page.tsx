@@ -35,6 +35,8 @@ function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
                     unit_assessment: payload.assessment ?? {},
                     quiz_id: entryRecord.quiz_id ?? quizRecord.quiz_id ?? index,
                     question_text: entryRecord.question_text ?? quizRecord.question_text ?? `Question ${index + 1}`,
+                    cat_id: entryRecord.cat_id ?? quizRecord.cat_id,
+                    cat_name: entryRecord.cat_name ?? quizRecord.cat_name,
                     type_name: inferredType,
                     quiz_payload: entryPayload,
                 };

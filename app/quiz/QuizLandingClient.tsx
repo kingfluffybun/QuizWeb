@@ -10,7 +10,9 @@ import "#css/sidebar.css"
 import { useQuizData } from "@/app/quiz/useQuizData";
 import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import QuizRender from "@/app/components/quiz/quizRender";
-import LessonCard from "@/app/components/LessonCard";
+import LessonCard, {
+    LessonCodeFrame,
+} from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
@@ -51,6 +53,92 @@ type UnitQuizData = QuizData & {
         lesson_text?: string;
     };
 };
+
+function renderInlineCode(text: string): ReactNode[] {
+    return text.split(/(`[^`]+`)/g).map((part, index) => {
+        if (part.startsWith("`") && part.endsWith("`")) {
+            return <code key={index}>{part.slice(1, -1)}</code>;
+        }
+        return part;
+    });
+}
+
+type QuizQuestionPart = { type: "text" | "code"; content: string };
+
+function getQuizCodeLanguage(categoryId?: number, categoryName?: string): string {
+    if (categoryId === 1) return "html";
+    if (categoryId === 2) return "css";
+    if (categoryId === 3) return "javascript";
+
+    const normalizedCategory = categoryName?.trim().toLowerCase();
+    return normalizedCategory === "js" || normalizedCategory?.includes("javascript")
+        ? "javascript"
+        : "html";
+}
+
+function parseQuizQuestion(text: string): QuizQuestionPart[] {
+    const parts: { type: "text" | "code"; content: string }[] = [];
+    const codeBlockPattern = /```[^\n`]*\r?\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+
+    for (const match of text.matchAll(codeBlockPattern)) {
+        const matchIndex = match.index ?? 0;
+        if (matchIndex > lastIndex) {
+            parts.push({ type: "text", content: text.slice(lastIndex, matchIndex) });
+        }
+        parts.push({ type: "code", content: match[1].replace(/\r?\n$/, "") });
+        lastIndex = matchIndex + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+        parts.push({ type: "text", content: text.slice(lastIndex) });
+    }
+
+    return parts.length > 0 ? parts : [{ type: "text", content: text }];
+}
+
+function QuizQuestionPrompt({ parts }: { parts: QuizQuestionPart[] }) {
+    const hasCode = parts.some((part) => part.type === "code");
+    const textParts = parts.filter((part) => part.type === "text" && part.content.trim());
+
+    if (!hasCode) {
+        return <h1>{renderInlineCode(parts.map((part) => part.content).join(""))}</h1>;
+    }
+
+    return (
+        <div className="quiz-question-prompt">
+            {textParts.map((part, index) => (
+                <p className="quiz-question-copy" key={index}>
+                    {renderInlineCode(part.content)}
+                </p>
+            ))}
+        </div>
+    );
+}
+
+function QuizQuestionCodeBlocks({
+    parts,
+    codeLanguage,
+}: {
+    parts: QuizQuestionPart[];
+    codeLanguage: string;
+}) {
+    return (
+        <>
+            {parts.filter((part) => part.type === "code").map((part, index) => (
+                <LessonCodeFrame
+                    className="quiz-question-code"
+                    title={`Question code snippet ${index + 1}`}
+                    source={part.content}
+                    language={codeLanguage}
+                    editorOnly
+                    toggleable={false}
+                    key={index}
+                />
+            ))}
+        </>
+    );
+}
 
 const correctMessages = ["That's correct!", "Excellent job!", "Well done!"];
 const incorrectMessages = ["Hard luck!", "That’s incorrect.", "Not quite right."];
@@ -250,6 +338,8 @@ export default function QuizLandingClient({
     const activeQuizIndex = orderedQuestionIndexes[currentIndex] ?? currentIndex;
     const quiz = quizzes[activeQuizIndex];
     const selectedQuiz = selectedQuizzes[activeQuizIndex];
+    const questionParts = parseQuizQuestion(quiz?.question_text ?? "Loading question...");
+    const questionHasCode = questionParts.some((part) => part.type === "code");
 
     const handleIncorrectPair = () => {
         playQuizSound("wrong-answer");
@@ -706,9 +796,33 @@ export default function QuizLandingClient({
                             )}
                         />
                     ) : (
-                        <div className="quiz-container" key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}>
-                            <h1>{quiz?.question_text ?? "Loading question..."}</h1>
-                            {quiz && (
+                        <div
+                            className={`quiz-container${questionHasCode ? " has-code-block" : ""}`}
+                            key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}
+                        >
+                            <QuizQuestionPrompt parts={questionParts} />
+                            {questionHasCode ? (
+                                <div className="quiz-question-layout">
+                                    <div className="quiz-question-code-column">
+                                        <QuizQuestionCodeBlocks
+                                            parts={questionParts}
+                                            codeLanguage={getQuizCodeLanguage(quiz?.cat_id, quiz?.cat_name)}
+                                        />
+                                    </div>
+                                    <div className="quiz-question-answer-column">
+                                        {quiz && (
+                                            <QuizRender
+                                                quiz={quiz}
+                                                value={value}
+                                                onChange={handleAnswerChange}
+                                                disabled={areChoicesLocked}
+                                                onPairMatched={() => playQuizSound("correct-answer1")}
+                                                onIncorrectPair={handleIncorrectPair}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            ) : quiz && (
                                 <QuizRender
                                     quiz={quiz}
                                     value={value}
