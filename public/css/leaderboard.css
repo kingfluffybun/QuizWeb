@@ -1,5 +1,5 @@
 .leaderboard-page {
-    --leaderboard-ray-color: #f0e5ff;
+    --leaderboard-ray-color: hsl(260, 100%, 70%, 10%);
 }
 
 [data-theme="dark"] .leaderboard-page {
