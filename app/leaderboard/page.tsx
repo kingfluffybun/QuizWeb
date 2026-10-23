@@ -14,7 +14,7 @@ export default async function LeaderboardPage() {
         redirect("/login");
     }
 
-    const entriesByPeriod = await getLeaderboardEntriesByPeriod();
+    const entriesByPeriod = await getLeaderboardEntriesByPeriod({ includeAll: true });
 
     return (
         <div className="dashboard-page leaderboard-page">

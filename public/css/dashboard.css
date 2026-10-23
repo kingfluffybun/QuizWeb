@@ -718,7 +718,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     padding: 8px 24px;
     justify-content: space-between;
     border-bottom: 2px solid var(--border-main);
-    transition: 200ms all ease;
+    transition: 200ms background ease;
     p {text-wrap: nowrap; color: var(--text-main);}
     .player-details {
         gap: 16px;

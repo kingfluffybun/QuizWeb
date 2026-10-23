@@ -82,11 +82,21 @@
     grid-area: placements;
     min-width: 0;
     margin-inline: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
+}
+
+@media (min-width: 769px) {
+    .leaderboard-page .leaderboard .leaderboard-placement {
+        max-height: 540px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-placement::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 .leaderboard-page .leaderboard .podium-place-empty .player-icon {
@@ -177,6 +187,8 @@
         margin-inline: -14px;
         border: 0;
         border-radius: 0;
+        max-height: none;
+        overflow: visible;
     }
 
     .leaderboard-page .leaderboard .podium-stage::before {
