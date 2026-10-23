@@ -110,12 +110,11 @@
     aspect-ratio: 1;
     height: 40px; width: auto;
     flex: 0 0 40px;
-    /* background-color: var(--primary-color); */
     border-radius: 999px;
-    color: var(--text-inverse);
+    color: #333;
     display: grid;
     place-items: center;
-    span {font-size: 1rem; font-weight: 700;}
+    span {font-size: 1.25rem; font-weight: 700;}
 }
 
 .profile-menu-toggle {

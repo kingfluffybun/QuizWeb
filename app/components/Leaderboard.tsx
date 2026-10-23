@@ -101,12 +101,13 @@ export default function Leaderboard({
 
                                         <div
                                             style={{ 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center',
-                                                    backgroundColor: entry.avatar_color,
-                                                    fontWeight: 'bold',
-                                                    fontSize: '1.5rem'
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center',
+                                                backgroundColor: entry.avatar_color,
+                                                color: '#333',
+                                                fontWeight: 'bold',
+                                                fontSize: '1.5rem'
                                             }}
                                             className="player-icon"
                                             aria-label={`${entry.username}'s profile picture`}
@@ -158,6 +159,7 @@ export default function Leaderboard({
                                         alignItems: 'center', 
                                         justifyContent: 'center',
                                         backgroundColor: entry.avatar_color,
+                                        color: '#333',
                                         fontWeight: 'bold',
                                         fontSize: '1rem'
                                     }}
