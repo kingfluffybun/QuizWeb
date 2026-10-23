@@ -25,6 +25,7 @@ export default async function LeaderboardPage() {
                         entriesByPeriod={entriesByPeriod}
                         showPeriodTitle
                         initialPeriod="all-time"
+                        currentUserId={session.user.id}
                     />
                 </div>
             </main>

@@ -35,7 +35,7 @@
     min-height: 100%;
     margin-inline: auto;
     display: grid;
-    padding: 24px;
+    padding: 24px 0;
     padding-top: 0;
     grid-template-areas:
         "welcome leaderboard"
@@ -216,7 +216,7 @@
 .calendar-container {
     display: flex;
     justify-content: space-between;
-    gap: 48px;
+    gap: 24px;
 }
 
 .calendar {
