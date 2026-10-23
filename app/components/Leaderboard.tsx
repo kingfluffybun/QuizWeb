@@ -106,15 +106,14 @@ export default function Leaderboard({
                             >
                                 {entry && (
                                     <>
-
                                         <div
                                             style={{ 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center',
-                                                    backgroundColor: entry.avatar_color,
-                                                    fontWeight: 'bold',
-                                                    fontSize: '1.25rem'
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center',
+                                                backgroundColor: entry.avatar_color,
+                                                fontWeight: 'bold',
+                                                fontSize: '1.25rem'
                                             }}
                                             className="player-icon"
                                             aria-label={`${entry.username}'s profile picture`}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 import Sidebar from "@/app/components/Sidebar";
 import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
 import "#css/quiz.css";
@@ -33,17 +34,19 @@ function ProfileIcon({ name }: { name: ProfileIconName }) {
     );
 }
 
-type ProfileDetails = {
-    displayName: string;
-    email: string;
-    learningGoal: string;
-};
+// type ProfileDetails = {
+//     displayName: string;
+//     email: string;
+//     learningGoal: string;
+//     avaColor: string;
+// };
 
-const defaultProfile: ProfileDetails = {
-    displayName: "Juan DelaCruz",
-    email: "juan.delacruz@example.com",
-    learningGoal: "Build my first website",
-};
+// const defaultProfile: ProfileDetails = {
+//     displayName: "Juan DelaCruz",
+//     email: "juan.delacruz@example.com",
+//     learningGoal: "Build my first website",
+//     avaColor: "#ccc",
+// };
 
 const activity = [
     { day: "Sun", completed: true },
@@ -70,53 +73,55 @@ const passwordStrengthColors = ["#333333", "#e5484d", "#e5484d", "#f5a623", "#f5
 
 export default function ProfilePage() {
     const [isProfileLoaded, setIsProfileLoaded] = useState(false);
-    const [profile, setProfile] = useState<ProfileDetails>(defaultProfile);
-    const [draft, setDraft] = useState<ProfileDetails>(defaultProfile);
+    const [username, setUsername] = useState<string | undefined>();
+    const [email, setEmail] = useState<string | undefined>();
+    const [avaColor, setAvaColor] = useState<string | undefined>();
+
+    const [draft, setDraft] = useState<string | undefined>();
     const [isEditing, setIsEditing] = useState(false);
     const [saveMessage, setSaveMessage] = useState("");
+
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [passwordMessage, setPasswordMessage] = useState("");
     const [newPassword, setNewPassword] = useState("");
 
     useEffect(() => {
         let isMounted = true;
-        const loadProfile = async () => {
-            await Promise.resolve();
-            try {
-                const savedProfile = localStorage.getItem("quizweb-profile-details");
-                if (savedProfile) {
-                    const parsedProfile = JSON.parse(savedProfile) as Partial<ProfileDetails>;
-                    const loadedProfile = { ...defaultProfile, ...parsedProfile };
-                    if (isMounted) {
-                        setProfile(loadedProfile);
-                        setDraft(loadedProfile);
-                    }
-                }
-            } catch {
-                localStorage.removeItem("quizweb-profile-details");
-            } finally {
-                if (isMounted) setIsProfileLoaded(true);
-            }
-        };
-        void loadProfile();
+        fetch("/api/db/user-info")
+            .then(async (res) => {
+                const json = await res.json();
+                if (!isMounted || !res.ok) return;
+                if (Object.keys(json).length === 0) return;
+                
+                const userData: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
+
+                setUsername(userData?.username);
+                setEmail(userData?.email);
+                setAvaColor(userData?.avatar_color);
+                setIsProfileLoaded(true);
+            })
+            .catch((err) => {
+                // Silently fallback to unauthenticated/user default
+                console.error("API Fetch encountered an error:", err);
+            });
         return () => {
             isMounted = false;
         };
     }, []);
 
-    const handleSave = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const savedProfile = {
-            displayName: draft.displayName.trim() || defaultProfile.displayName,
-            email: draft.email.trim(),
-            learningGoal: draft.learningGoal.trim(),
-        };  
-        setProfile(savedProfile);
-        setDraft(savedProfile);
-        localStorage.setItem("quizweb-profile-details", JSON.stringify(savedProfile));
-        setIsEditing(false);
-        setSaveMessage("Profile details saved.");
-    };
+    // const handleSave = (event: FormEvent<HTMLFormElement>) => {
+    //     event.preventDefault();
+    //     const savedProfile = {
+    //         displayName: draft?.username.trim() || username,
+    //         email: draft.email.trim(),
+    //         learningGoal: draft.learningGoal.trim(),
+    //     };  
+    //     setProfile(savedProfile);
+    //     setDraft(savedProfile);
+    //     localStorage.setItem("quizweb-profile-details", JSON.stringify(savedProfile));
+    //     setIsEditing(false);
+    //     setSaveMessage("Profile details saved.");
+    // };
 
     const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -153,9 +158,10 @@ export default function ProfilePage() {
     const missingPasswordRules = passwordRules.filter((rule) => !rule.test(newPassword)).map((rule) => rule.label);
     const passwordRulesPassed = passedPasswordRules === passwordRules.length;
 
-    const initials = profile.displayName
+    const initials = (username ?? "")
         .trim()
         .split(/\s+/)
+        .filter(Boolean)
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase() ?? "")
         .join("");
@@ -177,12 +183,12 @@ export default function ProfilePage() {
                     </header>
 
                     <section className="profile-hero" aria-label="Profile summary">
-                        <div className="profile-avatar" aria-label={`${profile.displayName} avatar`}>{initials}</div>
+                        <div className="profile-avatar" style={{backgroundColor: avaColor}} aria-label={`${username} avatar`}>{initials}</div>
                         <div className="profile-identity">
                             <div className="profile-name-line">
-                                <h2>{profile.displayName}</h2>
+                                <h2>{username}</h2>
                             </div>
-                            <p>@{profile.displayName.toLowerCase().replace(/\s+/g, "")}</p>
+                            <p>@{email || username?.toLowerCase().replace(/\s+/g, "")}</p>
                             <div className="profile-meta">
                                 <span><ProfileIcon name="calendar" /> Joined October 2026</span>
                             </div>
@@ -265,7 +271,7 @@ export default function ProfilePage() {
                                         <h2 id="about-title">{isChangingPassword ? "Change password" : "Profile details"}</h2>
                                     </span>
                                 </div>
-                                {!isChangingPassword && !isEditing && <button type="button" className="profile-icon-button" aria-label="Edit profile details" onClick={() => { setDraft(profile); setIsEditing(true); setSaveMessage(""); }}><ProfileIcon name="edit" /></button>}
+                                {/* {!isChangingPassword && !isEditing && <button type="button" className="profile-icon-button" aria-label="Edit profile details" onClick={() => { setDraft(profile); setIsEditing(true); setSaveMessage(""); }}><ProfileIcon name="edit" /></button>} */}
                             </div>
                             {isChangingPassword ? (
                                 <form className="profile-password-form" noValidate onSubmit={handlePasswordSubmit}>
@@ -313,33 +319,34 @@ export default function ProfilePage() {
                                     </div>
                                 </form>
                             ) : isEditing ? (
-                                <form className="profile-details-form" onSubmit={handleSave}>
+                                // <form className="profile-details-form" onSubmit={handleSave}>
+                                <form className="profile-details-form">
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="user" /></span>
-                                        <input id="profile-display-name" placeholder=" " autoComplete="name" required value={draft.displayName} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} />
+                                        {/* <input id="profile-display-name" placeholder=" " autoComplete="name" required value={draft?.profile} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} /> */}
                                         <span className="profile-details-floating-label">Display name</span>
                                     </label>
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="mail" /></span>
-                                        <input id="profile-email" type="email" placeholder=" " autoComplete="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} />
+                                        {/* <input id="profile-email" type="email" placeholder=" " autoComplete="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /> */}
                                         <span className="profile-details-floating-label">Email address</span>
                                     </label>
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="target" /></span>
-                                        <input id="profile-learning-goal" placeholder=" " value={draft.learningGoal} onChange={(event) => setDraft({ ...draft, learningGoal: event.target.value })} />
+                                        {/* <input id="profile-learning-goal" placeholder=" " value={draft.learningGoal} onChange={(event) => setDraft({ ...draft, learningGoal: event.target.value })} /> */}
                                         <span className="profile-details-floating-label">Learning goal</span>
                                     </label>
                                     <div className="profile-form-actions">
                                         <button className="profile-save-button" type="submit">Save changes</button>
-                                        <button className="profile-cancel-button" type="button" onClick={() => { setDraft(profile); setIsEditing(false); }}>Cancel</button>
+                                        {/* <button className="profile-cancel-button" type="button" onClick={() => { setDraft(profile); setIsEditing(false); }}>Cancel</button> */}
                                     </div>
                                 </form>
                             ) : (
                                 <>
                                     <dl className="profile-details-list">
-                                        <div><dt>Display name</dt><dd>{profile.displayName}</dd></div>
-                                        <div><dt>Email</dt><dd>{profile.email || "Not provided"}</dd></div>
-                                        <div><dt>Learning goal</dt><dd>{profile.learningGoal || "Not set"}</dd></div>
+                                        <div><dt>Display name</dt><dd>{username}</dd></div>
+                                        <div><dt>Email</dt><dd>{email || "Not provided"}</dd></div>
+                                        <div><dt>Learning goal</dt><dd>{"Not set"}</dd></div>
                                     </dl>
                                     {saveMessage && <p className="profile-save-message" role="status">{saveMessage}</p>}
                                     <div className="profile-password-section">
