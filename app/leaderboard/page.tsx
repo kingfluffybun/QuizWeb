@@ -21,7 +21,6 @@ export default async function LeaderboardPage() {
             <Sidebar />
             <main>
                 <div className="leaderboard-page-content">
-                    <h1>Leaderboard</h1>
                     <Leaderboard
                         entriesByPeriod={entriesByPeriod}
                         showPeriodTitle

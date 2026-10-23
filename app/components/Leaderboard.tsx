@@ -108,7 +108,7 @@ export default function Leaderboard({
                                                     justifyContent: 'center',
                                                     backgroundColor: entry.avatar_color,
                                                     fontWeight: 'bold',
-                                                    fontSize: '1.5rem'
+                                                    fontSize: '1.25rem'
                                             }}
                                             className="player-icon"
                                             aria-label={`${entry.username}'s profile picture`}

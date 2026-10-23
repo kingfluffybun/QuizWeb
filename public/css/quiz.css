@@ -79,11 +79,11 @@
                 color: var(--bg-main);
             }
 
-            &[data-lives="0"] > svg:nth-child(n+2),
-            &[data-lives="1"] > svg:nth-child(n+3),
-            &[data-lives="2"] > svg:nth-child(n+4),
-            &[data-lives="3"] > svg:nth-child(n+5),
-            &[data-lives="4"] > svg {
+            &[data-lives="4"] > svg:nth-child(n+5),
+            &[data-lives="3"] > svg:nth-child(n+4),
+            &[data-lives="2"] > svg:nth-child(n+3),
+            &[data-lives="1"] > svg:nth-child(n+2),
+            &[data-lives="0"] > svg {
                 fill: var(--border-main);
             }
         }
