@@ -210,6 +210,13 @@
     grid-template-rows: minmax(0, 1fr);
 }
 
+.quiz-page.learn-page > main {
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
 .quiz-complete-card {
     text-align: center;
     background-color: var(--bg-card);
