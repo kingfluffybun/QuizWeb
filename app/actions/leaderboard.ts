@@ -10,6 +10,7 @@ export interface LeaderboardEntry {
     userId: number;
     username: string;
     xp: number;
+    avatar_color?: string;
 }
 
 export type LeaderboardEntriesByPeriod = Record<LeaderboardPeriod, LeaderboardEntry[]>;
@@ -18,6 +19,7 @@ interface LeaderboardRow extends RowDataPacket {
     user_id: number;
     username: string;
     xp: number | string;
+    avatar_color?: string;
 }
 
 const periods: LeaderboardPeriod[] = ["daily", "weekly", "monthly", "all-time"];
@@ -35,19 +37,21 @@ async function getEntriesForPeriod(period: LeaderboardPeriod): Promise<Leaderboa
     }
 
     const [rows] = await db.query<LeaderboardRow[]>(
-        `SELECT p.user_id, p.username, SUM(a.xp_earned) AS xp
-         FROM user_activity_tbl a
-         INNER JOIN player_tbl p ON p.user_id = a.user_id
-         WHERE ${periodConditions[period]}
-         GROUP BY p.user_id, p.username
-         ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
-         LIMIT 10`
+        `SELECT p.user_id, p.username, SUM(a.xp_earned) AS xp, u.avatar_color
+        FROM user_activity_tbl a
+        INNER JOIN player_tbl p ON p.user_id = a.user_id
+        LEFT JOIN user_auth_tbl u ON p.user_id = u.user_id
+        WHERE ${periodConditions[period]}
+        GROUP BY p.user_id, p.username, u.avatar_color
+        ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
+        LIMIT 10`
     );
 
     return rows.map((row) => ({
         userId: Number(row.user_id),
         username: row.username,
         xp: Number(row.xp),
+        avatar_color: row.avatar_color,
     }));
 }
 

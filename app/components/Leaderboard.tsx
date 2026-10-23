@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import type { LeaderboardEntriesByPeriod, LeaderboardPeriod } from "@/app/actions/leaderboard";
+import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 
 interface LeaderboardProps {
     entriesByPeriod: LeaderboardEntriesByPeriod;
@@ -22,6 +23,14 @@ const periodOptions: { period: LeaderboardPeriod; title: string }[] = [
     { period: "monthly", title: "Month" },
     { period: "all-time", title: "All Time" },
 ];
+
+function getInitials(username: string): string {
+    const name = username.toUpperCase().split(' ');
+    return name.length > 1 
+        ? `${name[0][0]}${name[name.length - 1][0]}`
+        : name[0]?.substring(0, 1) || '?';
+}
+
 
 export default function Leaderboard({
     entriesByPeriod,
@@ -89,10 +98,20 @@ export default function Leaderboard({
                             >
                                 {entry && (
                                     <>
+
                                         <div
+                                            style={{ 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    justifyContent: 'center',
+                                                    backgroundColor: entry.avatar_color,
+                                                    fontWeight: 'bold',
+                                                    fontSize: '1.5rem'
+                                            }}
                                             className="player-icon"
                                             aria-label={`${entry.username}'s profile picture`}
                                         >
+                                            {getInitials(entry.username)}
                                             {rank === 1 ? (
                                                 <span className="crown" aria-hidden="true">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -133,7 +152,20 @@ export default function Leaderboard({
                         <div className="leaderboard-player row" id="nth-place" key={entry.userId}>
                             <div className="player-details row">
                                 <p>{index + 4}</p>
-                                <div className="player-icon" aria-label={`${entry.username}'s profile picture`} />
+                                <div 
+                                    style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center',
+                                        backgroundColor: entry.avatar_color,
+                                        fontWeight: 'bold',
+                                        fontSize: '1rem'
+                                    }}
+                                    className="player-icon" 
+                                    aria-label={`${entry.username}'s profile picture`} 
+                                >
+                                    {getInitials(entry.username)}
+                                </div>
                                 <p id="player-name">{entry.username}</p>
                             </div>
                             <p>{entry.xp.toLocaleString()} XP</p>
