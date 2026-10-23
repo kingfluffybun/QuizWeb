@@ -79,6 +79,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const todayDayNum = isCurrentViewMonth && clientToday
         ? Number(clientToday.slice(8, 10))
         : null;
+    const hasToday = todayDayNum !== null && monthDays.includes(todayDayNum);
 
     // Motivational text
     const motivationMessage = (() => {
@@ -198,6 +199,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                                 type="button"
                                 className="calendar-nav-btn"
                                 onClick={handleNextMonth}
+                                disabled={hasToday}
                                 aria-label="Next month"
                                 title="Next month"
                             >
@@ -222,7 +224,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
                     {monthDays.map((dayNum) => {
                         const dateString = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
                         const isActive = activeDates.has(dateString);
-                        const isToday = isCurrentViewMonth && dayNum === todayDayNum;
+                        const isToday = hasToday && dayNum === todayDayNum;
                         const dayOfWeek = (firstDayOfWeek + dayNum - 1) % 7;
                         const hasActivePreviousDay =
                             isActive &&
