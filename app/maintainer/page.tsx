@@ -105,11 +105,7 @@ export default async function MaintainerStudioPage() {
 
   return (
     <div className="dashboard-page maintainer-page maintainer-studio-page">
-      <Sidebar
-        role={staff.role}
-        username={currentUserProfile.name}
-        email={currentUserProfile.email}
-      />
+      <Sidebar/>
       <main className="maintainer-main">
         <MaintainerStudioClient
           initialStats={initialStats}

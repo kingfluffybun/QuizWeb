@@ -135,7 +135,6 @@ export default function Sidebar() {
                 if (Object.keys(json).length === 0) return;
                 
                 const userData: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
-                console.log(userData);
 
                 setFetchedRole(userData?.user_role || "user");
                 setFetchedUsername(userData?.username);
