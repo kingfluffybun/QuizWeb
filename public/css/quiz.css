@@ -333,6 +333,14 @@
     border-radius: 14px;
 }
 
+@media (min-width: 769px) {
+    .skeleton-learn-page .learn-skeleton-search {
+        width: 252px;
+        flex: 0 0 252px;
+        box-sizing: border-box;
+    }
+}
+
 .learn-filters-bar {
     display: flex;
     flex-wrap: wrap;
