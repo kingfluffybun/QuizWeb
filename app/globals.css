@@ -161,6 +161,12 @@ small {
     font-size: clamp(0.5rem, 1.5vw, 1rem);
     font-weight: 400;
 }
+code {
+    background-color: var(--border-main);
+    padding: 0 8px;
+    font-family: var(--font-jetbrains-mono), monospace;
+    border-radius: 4px;
+}
 
 .col {
     display: flex;

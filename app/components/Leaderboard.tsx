@@ -8,6 +8,8 @@ interface LeaderboardProps {
     entriesByPeriod: LeaderboardEntriesByPeriod;
     maxEntries?: number;
     showPeriodTitle?: boolean;
+    initialPeriod?: LeaderboardPeriod;
+    currentUserId?: string;
 }
 
 const periodTitles: Record<LeaderboardPeriod, string> = {
@@ -36,10 +38,16 @@ export default function Leaderboard({
     entriesByPeriod,
     maxEntries,
     showPeriodTitle = false,
+    initialPeriod = "daily",
+    currentUserId,
 }: LeaderboardProps) {
-    const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
+    const [period, setPeriod] = useState<LeaderboardPeriod>(initialPeriod);
     const entries = entriesByPeriod[period];
     const visibleEntries = maxEntries === undefined ? entries : entries.slice(0, maxEntries);
+    const currentUserRank = currentUserId
+        ? entries.findIndex((entry) => String(entry.userId) === currentUserId) + 1
+        : 0;
+    const currentUserEntry = currentUserRank > 3 ? entries[currentUserRank - 1] : undefined;
 
     const changePeriod = (nextPeriod: LeaderboardPeriod) => {
         setPeriod(nextPeriod);
@@ -148,31 +156,59 @@ export default function Leaderboard({
                 {visibleEntries.length === 0 && (
                     <p>No XP earned for this period yet.</p>
                 )}
-                <div className="leaderboard-placement">
-                    {visibleEntries.slice(3).map((entry, index) => (
-                        <div className="leaderboard-player row" id="nth-place" key={entry.userId}>
-                            <div className="player-details row">
-                                <p>{index + 4}</p>
-                                <div 
-                                    style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center',
-                                        backgroundColor: entry.avatar_color,
-                                        color: '#333',
-                                        fontWeight: 'bold',
-                                        fontSize: '1rem'
-                                    }}
-                                    className="player-icon" 
-                                    aria-label={`${entry.username}'s profile picture`} 
-                                >
-                                    {getInitials(entry.username)}
+                <div className={`leaderboard-placement${currentUserEntry ? " has-current-user" : ""}`}>
+                    <div className="leaderboard-placement-scroll">
+                        {visibleEntries.slice(3).map((entry, index) => (
+                            <div className="leaderboard-player row" key={entry.userId}>
+                                <div className="player-details row">
+                                    <p>{index + 4}</p>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            backgroundColor: entry.avatar_color,
+                                            fontWeight: "bold",
+                                            fontSize: "1rem",
+                                        }}
+                                        className="player-icon"
+                                        aria-label={`${entry.username}'s profile picture`}
+                                    >
+                                        {getInitials(entry.username)}
+                                    </div>
+                                    <p className="leaderboard-entry-name">{entry.username}</p>
                                 </div>
-                                <p id="player-name">{entry.username}</p>
+                                <p>{entry.xp.toLocaleString()} XP</p>
                             </div>
-                            <p>{entry.xp.toLocaleString()} XP</p>
+                        ))}
+                    </div>
+                    {currentUserEntry && (
+                        <div
+                            className="leaderboard-player row leaderboard-current-user"
+                            role="group"
+                            aria-label={`Your position: ${currentUserRank}, ${currentUserEntry.username}, ${currentUserEntry.xp.toLocaleString()} XP`}
+                        >
+                            <div className="player-details row">
+                                <p>{currentUserRank}</p>
+                                <div
+                                    className="player-icon"
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        backgroundColor: currentUserEntry.avatar_color,
+                                        fontWeight: "bold",
+                                        fontSize: "1rem",
+                                    }}
+                                    aria-hidden="true"
+                                >
+                                    {getInitials(currentUserEntry.username)}
+                                </div>
+                                <p className="leaderboard-entry-name">{currentUserEntry.username} (You)</p>
+                            </div>
+                            <p>{currentUserEntry.xp.toLocaleString()} XP</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>

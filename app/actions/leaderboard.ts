@@ -31,7 +31,10 @@ const periodConditions: Record<LeaderboardPeriod, string> = {
     "all-time": "1 = 1",
 };
 
-async function getEntriesForPeriod(period: LeaderboardPeriod): Promise<LeaderboardEntry[]> {
+async function getEntriesForPeriod(
+    period: LeaderboardPeriod,
+    limit: number | null = 10,
+): Promise<LeaderboardEntry[]> {
     if (!Object.hasOwn(periodConditions, period)) {
         throw new Error("Invalid leaderboard period");
     }
@@ -44,7 +47,8 @@ async function getEntriesForPeriod(period: LeaderboardPeriod): Promise<Leaderboa
         WHERE ${periodConditions[period]}
         GROUP BY p.user_id, p.username, u.avatar_color
         ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
-        LIMIT 10`
+        ${limit === null ? "" : "LIMIT ?"}`,
+        limit === null ? [] : [limit],
     );
 
     return rows.map((row) => ({
@@ -67,10 +71,14 @@ export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<
     return getEntriesForPeriod(period);
 }
 
-export async function getLeaderboardEntriesByPeriod(): Promise<LeaderboardEntriesByPeriod> {
+export async function getLeaderboardEntriesByPeriod(
+    options: { includeAll?: boolean } = {},
+): Promise<LeaderboardEntriesByPeriod> {
     await requireAuthenticatedUser();
     const [daily, weekly, monthly, allTime] = await Promise.all(
-        periods.map((period) => getEntriesForPeriod(period))
+        periods.map((period) =>
+            getEntriesForPeriod(period, options.includeAll ? null : 10)
+        )
     );
 
     return {

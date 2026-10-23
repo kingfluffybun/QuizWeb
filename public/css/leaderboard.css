@@ -9,8 +9,9 @@
 .leaderboard-page-content {
     width: 100%;
     max-width: 1440px;
+    height: 100%;
     margin-inline: auto;
-    padding: 24px;
+    padding: 24px 0;
     padding-top: 0;
     box-sizing: border-box;
 
@@ -26,7 +27,19 @@
     }
 }
 
-.leaderboard-header {
+@media (min-width: 769px) {
+    .leaderboard-page .leaderboard > .card {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        grid-template-areas:
+            "header header"
+            "podium placements";
+        align-items: start;
+        column-gap: 24px;
+    }
+}
+
+.leaderboard-page .leaderboard-header {
     display: flex;
     align-items: center;
     height: fit-content;
@@ -48,12 +61,62 @@
 }
 
 .leaderboard-page .leaderboard .podium-stage {
+    grid-area: podium;
     position: relative;
     isolation: isolate;
     overflow: hidden;
     width: 100%;
     container-type: inline-size;
     border-radius: 12px 12px 0 0;
+}
+
+.leaderboard-player {
+    padding: 12px 24px;
+}
+
+.leaderboard-page .leaderboard .leaderboard-header {
+    grid-area: header;
+}
+
+.leaderboard-page .leaderboard .leaderboard-placement {
+    grid-area: placements;
+    min-width: 0;
+    margin-inline: 0;
+    position: relative;
+    max-height: 540px;
+    overflow: hidden;
+}
+
+@media (min-width: 769px) {
+    .leaderboard-page .leaderboard .leaderboard-placement-scroll {
+        height: 540px;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-placement.has-current-user .leaderboard-placement-scroll {
+        padding-bottom: 68px;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-placement-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-current-user {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        border-top: 1px solid var(--border-main);
+        background-color: #F3ECFF;
+        box-shadow: 0 -10px 16px -6px var(--border-main);
+        background: var(--bg-card);
+    }
 }
 
 .leaderboard-page .leaderboard .podium-place-empty .player-icon {
@@ -70,18 +133,19 @@
 
 .leaderboard-page .leaderboard .podium {
     --podium-first-color: var(--primary-color);
-    --podium-second-color: #b895fe;
-    --podium-third-color: #d5c0fe;
+    --podium-second-color: #B38CFF;
+    --podium-third-color: #CDB5FF;
     position: relative;
     width: 100%;
     max-width: 1024px;
     min-width: 0;
     margin-inline: auto;
+    padding: 0 24px;
     padding-top: 60px;
     .podium-place {
-        &#first-place {height: 228px; background-color: var(--podium-first-color);}
-        &#second-place {height: 188px; background-color: var(--podium-second-color);}
-        &#third-place {height: 148px; background-color: var(--podium-third-color);}
+        &#first-place {height: 360px; background-color: var(--podium-first-color);}
+        &#second-place {height: 280px; background-color: var(--podium-second-color);}
+        &#third-place {height: 200px; background-color: var(--podium-third-color);}
         h1 {font-size: clamp(3rem, 5vw, 3.75rem);}
     }
 }
@@ -96,7 +160,6 @@
     position: absolute;
     z-index: -1;
     left: 50%;
-    bottom: -50cqi;
     width: 100cqi;
     aspect-ratio: 1;
     transform: translateX(-50%);
@@ -111,6 +174,15 @@
     .leaderboard-page-content {
         padding: 14px 12px;
     }
+    .leaderboard-page .leaderboard .podium {
+        .podium-place {
+            &#first-place {height: 180px; background-color: var(--podium-first-color);}
+            &#second-place {height: 140px; background-color: var(--podium-second-color);}
+            &#third-place {height: 100px; background-color: var(--podium-third-color);}
+            h1 {font-size: clamp(3rem, 5vw, 3.75rem);}
+        }
+    }
+    
 
     .leaderboard-page .leaderboard-header {
         align-items: stretch;
@@ -129,6 +201,25 @@
     .leaderboard-page .leaderboard-header .sort-by-time label {
         flex: 1 1 0;
         min-width: 0;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-placement {
+        margin-inline: -14px;
+        border: 0;
+        border-radius: 0;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-placement-scroll {
+        max-height: none;
+        overflow: visible;
+        padding-bottom: 0;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-current-user {
+        position: static;
+        border-top: 0;
     }
 
     .leaderboard-page .leaderboard .podium-stage::before {

@@ -14,15 +14,19 @@ export default async function LeaderboardPage() {
         redirect("/login");
     }
 
-    const entriesByPeriod = await getLeaderboardEntriesByPeriod();
+    const entriesByPeriod = await getLeaderboardEntriesByPeriod({ includeAll: true });
 
     return (
         <div className="dashboard-page leaderboard-page">
             <Sidebar />
             <main>
                 <div className="leaderboard-page-content">
-                    <h1>Leaderboard</h1>
-                    <Leaderboard entriesByPeriod={entriesByPeriod} showPeriodTitle />
+                    <Leaderboard
+                        entriesByPeriod={entriesByPeriod}
+                        showPeriodTitle
+                        initialPeriod="all-time"
+                        currentUserId={session.user.id}
+                    />
                 </div>
             </main>
         </div>

@@ -112,6 +112,9 @@
     flex: 0 0 40px;
     border-radius: 999px;
     color: #333;
+=======
+    color: #1f2937;
+>>>>>>> ba0ae2aa2f7455f93bbf373e94ef7b195c125775
     display: grid;
     place-items: center;
     span {font-size: 1.25rem; font-weight: 700;}

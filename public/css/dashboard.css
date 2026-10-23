@@ -35,7 +35,7 @@
     min-height: 100%;
     margin-inline: auto;
     display: grid;
-    padding: 24px;
+    padding: 24px 0;
     padding-top: 0;
     grid-template-areas:
         "welcome leaderboard"
@@ -216,7 +216,7 @@
 .calendar-container {
     display: flex;
     justify-content: space-between;
-    gap: 48px;
+    gap: 24px;
 }
 
 .calendar {
@@ -623,12 +623,13 @@ button.quick-action-btn:hover {
 
 .podium {
     --podium-first-color: var(--primary-color);
-    --podium-second-color: #b895fe;
-    --podium-third-color: #d5c0fe;
+    --podium-second-color: #B38CFF;
+    --podium-third-color: #CDB5FF;
     display: flex;
     align-items: flex-end;
     gap: 12px;
     padding-top: 36px;
+    border-bottom: 4px solid var(--text-inverse);
     .podium-place-container {
         display: flex;
         flex-direction: column;
@@ -651,7 +652,7 @@ button.quick-action-btn:hover {
             border-width: 3px;
             .podium-player-xp {
                 position: absolute;
-                bottom: -24px;
+                bottom: -28px;
                 left: 50%;
                 transform: translate(-50%, -50%);
                 padding: 4px 8px;
@@ -691,8 +692,8 @@ button.quick-action-btn:hover {
         border-radius: 16px 16px 0 0;
         padding: 12px 24px;
         padding-bottom: 0;
-        border-bottom: 4px solid var(--text-inverse);
         h1 {font-size: clamp(1rem, 3vw, 1.75rem); color: var(--text-inverse);}
+        svg {display: none;}
         svg {aspect-ratio: 1; height: 48px; color: var(--text-inverse); margin-bottom: -4px;}
         &#first-place {height: 180px; background-color: var(--podium-first-color); svg {height: 72px; margin-bottom: -6px;}}
         &#second-place {height: 140px; background-color: var(--podium-second-color);}
@@ -717,7 +718,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     padding: 8px 24px;
     justify-content: space-between;
     border-bottom: 2px solid var(--border-main);
-    transition: 200ms all ease;
+    transition: 200ms background ease;
     p {text-wrap: nowrap; color: var(--text-main);}
     .player-details {
         gap: 16px;
@@ -737,6 +738,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     width: 48px;
     border-radius: 999px;
     background-color: var(--border-main);
+    color: #1F2937;
     border: 2px solid var(--primary-color);
 }
 

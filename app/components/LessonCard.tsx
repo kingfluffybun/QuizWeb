@@ -30,6 +30,15 @@ function splitLessonSentences(text: string) {
   return text.split(/(?<=[.!?])\s+/u).map((sentence) => sentence.trim()).filter(Boolean);
 }
 
+function renderLessonText(text: string) {
+  return text.split(/(`[^`]+`)/g).map((part, index) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return <code key={index}>{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
 export function LessonCodeFrame({
   className,
   title,
@@ -227,7 +236,9 @@ export default function LessonCard({
         {slide.lesson_text && (
           <div className="lesson-card-text">
             {splitLessonSentences(slide.lesson_text).map((sentence, index) => (
-              <p key={`${index}-${sentence}`}>{sentence}</p>
+              <p key={`${index}-${sentence}`}>
+                {renderLessonText(sentence)}
+              </p>
             ))}
           </div>
         )}
