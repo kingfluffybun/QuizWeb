@@ -26,7 +26,19 @@
     }
 }
 
-.leaderboard-header {
+@media (min-width: 769px) {
+    .leaderboard-page .leaderboard > .card {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        grid-template-areas:
+            "header header"
+            "podium placements";
+        align-items: start;
+        column-gap: 24px;
+    }
+}
+
+.leaderboard-page .leaderboard-header {
     display: flex;
     align-items: center;
     height: fit-content;
@@ -48,12 +60,24 @@
 }
 
 .leaderboard-page .leaderboard .podium-stage {
+    grid-area: podium;
     position: relative;
     isolation: isolate;
     overflow: hidden;
     width: 100%;
     container-type: inline-size;
     border-radius: 12px 12px 0 0;
+}
+
+.leaderboard-page .leaderboard .leaderboard-header {
+    grid-area: header;
+}
+
+.leaderboard-page .leaderboard .leaderboard-placement {
+    grid-area: placements;
+    min-width: 0;
+    margin-inline: 0;
+    overflow: hidden;
 }
 
 .leaderboard-page .leaderboard .podium-place-empty .player-icon {
@@ -70,18 +94,19 @@
 
 .leaderboard-page .leaderboard .podium {
     --podium-first-color: var(--primary-color);
-    --podium-second-color: #b895fe;
-    --podium-third-color: #d5c0fe;
+    --podium-second-color: #B38CFF;
+    --podium-third-color: #CDB5FF;
     position: relative;
     width: 100%;
     max-width: 1024px;
     min-width: 0;
     margin-inline: auto;
+    padding: 0 24px;
     padding-top: 60px;
     .podium-place {
-        &#first-place {height: 228px; background-color: var(--podium-first-color);}
-        &#second-place {height: 188px; background-color: var(--podium-second-color);}
-        &#third-place {height: 148px; background-color: var(--podium-third-color);}
+        &#first-place {height: 360px; background-color: var(--podium-first-color);}
+        &#second-place {height: 280px; background-color: var(--podium-second-color);}
+        &#third-place {height: 200px; background-color: var(--podium-third-color);}
         h1 {font-size: clamp(3rem, 5vw, 3.75rem);}
     }
 }
@@ -96,7 +121,6 @@
     position: absolute;
     z-index: -1;
     left: 50%;
-    bottom: -50cqi;
     width: 100cqi;
     aspect-ratio: 1;
     transform: translateX(-50%);
@@ -129,6 +153,12 @@
     .leaderboard-page .leaderboard-header .sort-by-time label {
         flex: 1 1 0;
         min-width: 0;
+    }
+
+    .leaderboard-page .leaderboard .leaderboard-placement {
+        margin-inline: -14px;
+        border: 0;
+        border-radius: 0;
     }
 
     .leaderboard-page .leaderboard .podium-stage::before {

@@ -22,7 +22,11 @@ export default async function LeaderboardPage() {
             <main>
                 <div className="leaderboard-page-content">
                     <h1>Leaderboard</h1>
-                    <Leaderboard entriesByPeriod={entriesByPeriod} showPeriodTitle />
+                    <Leaderboard
+                        entriesByPeriod={entriesByPeriod}
+                        showPeriodTitle
+                        initialPeriod="all-time"
+                    />
                 </div>
             </main>
         </div>

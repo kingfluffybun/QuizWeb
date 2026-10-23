@@ -8,6 +8,7 @@ interface LeaderboardProps {
     entriesByPeriod: LeaderboardEntriesByPeriod;
     maxEntries?: number;
     showPeriodTitle?: boolean;
+    initialPeriod?: LeaderboardPeriod;
 }
 
 const periodTitles: Record<LeaderboardPeriod, string> = {
@@ -36,8 +37,9 @@ export default function Leaderboard({
     entriesByPeriod,
     maxEntries,
     showPeriodTitle = false,
+    initialPeriod = "daily",
 }: LeaderboardProps) {
-    const [period, setPeriod] = useState<LeaderboardPeriod>("daily");
+    const [period, setPeriod] = useState<LeaderboardPeriod>(initialPeriod);
     const entries = entriesByPeriod[period];
     const visibleEntries = maxEntries === undefined ? entries : entries.slice(0, maxEntries);
 
