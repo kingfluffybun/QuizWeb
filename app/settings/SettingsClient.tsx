@@ -30,7 +30,7 @@ interface AccessibilitySettings {
 }
 
 const defaultAccessibility: AccessibilitySettings = {
-  theme: "light",
+  theme: "system",
   uiScale: "100",
   reduceMotion: false,
 };
@@ -46,7 +46,7 @@ function getAccessibilitySettings(): AccessibilitySettings {
     if (saved) {
       const parsed = JSON.parse(saved);
       cachedAccessibility = {
-        theme: parsed.theme || "light",
+        theme: parsed.theme || "system",
         uiScale: parsed.uiScale || "100",
         reduceMotion: parsed.reduceMotion ?? false,
       };
