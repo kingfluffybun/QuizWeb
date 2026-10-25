@@ -2,31 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
-import { DAILY_XP_GOAL_THRESHOLDS } from "@/lib/daily-goal";
+import { getDailyXpGoalThresholds } from "@/lib/daily-goal";
 import type { DailyGoalData } from "@/lib/daily-goal";
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const CHART_TICKS = [0, 75, 150, 225, 300];
 const CHART_HEIGHT_PX = 148;
 
-function getBarHeight(xp: number): number {
-    const value = Math.min(Math.max(xp, 0), CHART_TICKS[CHART_TICKS.length - 1]);
-    const upperTickIndex = CHART_TICKS.findIndex((tick) => tick >= value);
-
-    if (upperTickIndex <= 0) {
-        return 0;
-    }
-
-    const lowerTick = CHART_TICKS[upperTickIndex - 1];
-    const upperTick = CHART_TICKS[upperTickIndex];
-    const intervalProgress = (value - lowerTick) / (upperTick - lowerTick);
-    const scaleProgress = (upperTickIndex - 1 + intervalProgress) / (CHART_TICKS.length - 1);
-
-    return scaleProgress * CHART_HEIGHT_PX;
+interface DailyGoalPreview {
+    weekXp: number[];
+    previousWeekXp: number;
 }
 
-export default function DailyGoalCard({ initialData }: { initialData: DailyGoalData }) {
+function getBarHeight(xp: number, maximumXp: number): number {
+    const value = Math.min(Math.max(xp, 0), maximumXp);
+    return (value / maximumXp) * CHART_HEIGHT_PX;
+}
+
+export default function DailyGoalCard({
+    initialData,
+    canPreview = false,
+}: {
+    initialData: DailyGoalData;
+    canPreview?: boolean;
+}) {
     const [goalData, setGoalData] = useState(initialData);
+    const [previewData, setPreviewData] = useState<DailyGoalPreview | null>(null);
 
     useEffect(() => {
         let isActive = true;
@@ -59,11 +59,44 @@ export default function DailyGoalCard({ initialData }: { initialData: DailyGoalD
         };
     }, []);
 
-    const todayXp = Math.max(0, goalData.todayXp);
-    const goal = DAILY_XP_GOAL_THRESHOLDS.find((threshold) => todayXp < threshold)
-        ?? DAILY_XP_GOAL_THRESHOLDS[DAILY_XP_GOAL_THRESHOLDS.length - 1];
+    const previewWeekXp = (canPreview ? previewData?.weekXp : undefined) ?? goalData.weekXp;
+    const previousWeekXp = (canPreview ? previewData?.previousWeekXp : undefined) ?? goalData.previousWeekXp;
+    const todayIndex = goalData.weekDates.indexOf(new Date().toISOString().slice(0, 10));
+    const todayXp = Math.max(
+        0,
+        canPreview && previewData && todayIndex >= 0 ? previewWeekXp[todayIndex] : goalData.todayXp,
+    );
+    const goalThresholds = getDailyXpGoalThresholds(previousWeekXp);
+    const maximumGoal = goalThresholds[goalThresholds.length - 1];
+    const goal = goalThresholds.find((threshold) => todayXp < threshold) ?? maximumGoal;
     const todayProgress = Math.min(todayXp / goal, 1) * 100;
-    const chartTicks = [...CHART_TICKS].reverse();
+    const chartTicks = [0, ...goalThresholds].reverse();
+
+    const updatePreviewDay = (index: number, value: number) => {
+        const currentPreview = previewData ?? {
+            weekXp: goalData.weekXp,
+            previousWeekXp: goalData.previousWeekXp,
+        };
+
+        setPreviewData({
+            ...currentPreview,
+            weekXp: currentPreview.weekXp.map((xp, dayIndex) => (
+                dayIndex === index ? Math.max(0, Math.floor(value || 0)) : xp
+            )),
+        });
+    };
+
+    const updatePreviousWeekXp = (value: number) => {
+        const currentPreview = previewData ?? {
+            weekXp: goalData.weekXp,
+            previousWeekXp: goalData.previousWeekXp,
+        };
+
+        setPreviewData({
+            ...currentPreview,
+            previousWeekXp: Math.max(0, Math.floor(value || 0)),
+        });
+    };
 
     return (
         <>
@@ -91,7 +124,7 @@ export default function DailyGoalCard({ initialData }: { initialData: DailyGoalD
                     <div
                         className="daily-prograss-graph daily-goal-chart"
                         role="img"
-                        aria-label={`XP earned this week: ${DAY_LABELS.map((day, index) => `${day} ${goalData.weekXp[index]}`).join(", ")}`}
+                        aria-label={`XP earned this week: ${DAY_LABELS.map((day, index) => `${day} ${previewWeekXp[index]}`).join(", ")}`}
                     >
                         <div className="graph-x-axis-container">
                             {chartTicks.map((value, index) => (
@@ -102,20 +135,68 @@ export default function DailyGoalCard({ initialData }: { initialData: DailyGoalD
                             ))}
                         </div>
                         <div className="graph-y-axis">
-                            {DAY_LABELS.map((day, index) => (
-                                <div key={day}>
-                                    {goalData.weekXp[index] > 0 && (
+                            {DAY_LABELS.map((day, index) => {
+                                const xp = Math.max(0, previewWeekXp[index]);
+                                const hasActivity = xp > 0;
+
+                                return (
+                                    <div key={day}>
                                         <div
-                                            className="graph-y-bar"
-                                            style={{ height: `${getBarHeight(goalData.weekXp[index])}px` }}
-                                            title={`${goalData.weekXp[index]} XP on ${goalData.weekDates[index]}`}
+                                            className={`graph-y-bar${hasActivity ? "" : " graph-y-bar-empty"}`}
+                                            style={{
+                                                height: hasActivity
+                                                    ? `${getBarHeight(xp, maximumGoal)}px`
+                                                    : "2px",
+                                            }}
+                                            title={`${xp} XP on ${goalData.weekDates[index]}`}
                                         />
-                                    )}
-                                    <p>{day}</p>
-                                </div>
-                            ))}
+                                        <p>{day}</p>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
+                    {canPreview && (
+                        <details className="daily-goal-preview-hub">
+                            <summary>Daily Goal Preview Hub</summary>
+                            <p className="daily-goal-preview-note">
+                                Preview changes only. They won’t be saved to your XP activity.
+                            </p>
+                            <label className="daily-goal-preview-previous">
+                                Previous week total XP
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={previousWeekXp}
+                                    onChange={(event) => updatePreviousWeekXp(Number(event.currentTarget.value))}
+                                />
+                            </label>
+                            <div className="daily-goal-preview-days">
+                                {DAY_LABELS.map((day, index) => (
+                                    <label key={day}>
+                                        {day} XP
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={previewWeekXp[index]}
+                                            onChange={(event) => updatePreviewDay(index, Number(event.currentTarget.value))}
+                                        />
+                                    </label>
+                                ))}
+                            </div>
+                            {previewData && (
+                                <button
+                                    className="daily-goal-preview-reset"
+                                    type="button"
+                                    onClick={() => setPreviewData(null)}
+                                >
+                                    Reset preview
+                                </button>
+                            )}
+                        </details>
+                    )}
                 </div>
             </div>
         </>

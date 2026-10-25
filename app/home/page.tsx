@@ -9,6 +9,7 @@ import StreakCalendar from "./StreakCalendar";
 import { getUserStreakData } from "@/app/actions/streak";
 import { getLeaderboardEntriesByPeriod } from "@/app/actions/leaderboard";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
+import { isAdmin as hasAdminRole } from "@/lib/rbac";
 import DailyGoalCard from "./DailyGoalCard";
 
 export default async function DashboardPage() {
@@ -27,6 +28,7 @@ export default async function DashboardPage() {
 
     const displayName = session.user.name?.trim() || session.user.email?.split("@")[0] || "User";
     const firstName = displayName.trim().split(/\s+/)[0] || "Profile";
+    const canPreviewDailyGoal = hasAdminRole(session.user.role || session.user.user_role);
 
     return (
         <div className="dashboard-page">
@@ -116,7 +118,7 @@ export default async function DashboardPage() {
                                     </div>
                                 </div> */}
                             </div>
-                            <DailyGoalCard initialData={dailyGoalData} />
+                            <DailyGoalCard initialData={dailyGoalData} canPreview={canPreviewDailyGoal} />
                         </div>
 
                         {/* Streak */}
