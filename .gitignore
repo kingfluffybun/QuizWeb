@@ -40,6 +40,7 @@ tests/*
 !tests/test-phase2-rendering.ts
 !tests/test-phase3-optimization.ts
 !tests/test-enhancements-and-migration.ts
+!tests/test-curriculum-level-progression.ts
 
 # debug
 npm-debug.log*

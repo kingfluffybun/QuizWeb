@@ -291,6 +291,9 @@ export interface Category {
 export interface Section {
   sec_id: number;
   sec_num: string;
+  cat_id?: number;
+  sec_title?: string;
+  difficulty_id?: number;
 }
 
 export interface Difficulty {
@@ -538,11 +541,19 @@ async function fetchQuizMetadataInternal() {
       db.query<RowDataPacket[]>("SELECT * FROM quiz_type_tbl ORDER BY quiz_type_id"),
     ]);
 
+    const mappedSections: Section[] = (sections as RowDataPacket[]).map((s) => ({
+      sec_id: Number(s.sec_id),
+      sec_num: String(s.sec_num),
+      cat_id: s.cat_id != null ? Number(s.cat_id) : undefined,
+      sec_title: s.sec_title != null ? String(s.sec_title) : undefined,
+      difficulty_id: s.difficulty_id != null ? Number(s.difficulty_id) : undefined,
+    }));
+
     return {
       categories: categories as Category[],
       difficulties: difficulties as Difficulty[],
       types: types as QuizType[],
-      sections: sections as Section[],
+      sections: mappedSections,
     };
   } catch (error) {
     console.error("Failed to fetch quiz metadata:", error);
@@ -1143,6 +1154,9 @@ export interface AvailableUnit {
   unit_number?: number | string | null;
   quiz_count: number;
   has_coding_assessment?: boolean;
+  sec_title?: string;
+  difficulty_name?: string;
+  unit_order?: number;
 }
 
 export interface CodeProblemStep {
@@ -1256,14 +1270,18 @@ async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
         u.unit_id,
         u.unit_id AS pending_id,
         u.unit_title,
+        u.unit_order,
         u.sec_id,
         s.sec_num,
+        s.sec_title,
+        d.difficulty_name,
         c.cat_name AS category_name,
         (SELECT COUNT(*) FROM quiz_tbl q WHERE q.unit_id = u.unit_id) AS quiz_count,
         EXISTS(SELECT 1 FROM unit_assessment_tbl ua WHERE ua.unit_id = u.unit_id) AS has_coding_assessment
       FROM unit_tbl u
       JOIN sec_tbl s ON u.sec_id = s.sec_id
       JOIN cat_tbl c ON s.cat_id = c.cat_id
+      LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
       WHERE u.status = 'approved'
       ORDER BY u.unit_id ASC`,
     );
@@ -1274,6 +1292,9 @@ async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
       unit_title: String(row.unit_title),
       category_name: row.category_name != null ? String(row.category_name) : undefined,
       sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
+      sec_title: row.sec_title != null ? String(row.sec_title) : undefined,
+      difficulty_name: row.difficulty_name != null ? String(row.difficulty_name) : undefined,
+      unit_order: row.unit_order != null ? Number(row.unit_order) : undefined,
       unit_number: row.sec_num != null ? Number(row.sec_num) : null,
       quiz_count: Number(row.quiz_count ?? 0),
       has_coding_assessment: Boolean(row.has_coding_assessment),

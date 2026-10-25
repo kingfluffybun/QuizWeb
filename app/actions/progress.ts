@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getNextSectionId } from "@/lib/curriculum";
 import { revalidatePath } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
@@ -17,6 +18,8 @@ export interface UserLessonProgress {
   unit_title: string;
   sec_id: number;
   sec_num: number;
+  sec_title?: string;
+  difficulty_name?: string;
   cat_id: number;
   cat_name: string;
 }
@@ -28,6 +31,7 @@ export interface UnitProgressItem {
   total_slides: number;
   is_completed: boolean;
   percentage: number;
+  unit_order?: number;
 }
 
 export interface UserSectionProgress {
@@ -36,6 +40,9 @@ export interface UserSectionProgress {
     sec_num: number;
     cat_id: number;
     cat_name: string;
+    sec_title?: string;
+    difficulty_name?: string;
+    difficulty_id?: number;
   };
   units: UnitProgressItem[];
   overallPercentage: number;
@@ -71,12 +78,15 @@ export async function getUserLastActiveProgress(
          u.unit_title,
          u.sec_id,
          s.sec_num,
+         s.sec_title,
+         d.difficulty_name,
          c.cat_id,
          c.cat_name
        FROM user_lesson_progress_tbl p
        JOIN unit_tbl u ON p.unit_id = u.unit_id
        JOIN sec_tbl s ON u.sec_id = s.sec_id
        JOIN cat_tbl c ON s.cat_id = c.cat_id
+       LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
        WHERE p.user_id = ?
        ORDER BY p.last_accessed_at DESC
        LIMIT 1`,
@@ -98,6 +108,8 @@ export async function getUserLastActiveProgress(
       unit_title: String(r.unit_title),
       sec_id: Number(r.sec_id),
       sec_num: Number(r.sec_num),
+      sec_title: r.sec_title != null ? String(r.sec_title) : undefined,
+      difficulty_name: r.difficulty_name != null ? String(r.difficulty_name) : undefined,
       cat_id: Number(r.cat_id),
       cat_name: String(r.cat_name),
     };
@@ -115,7 +127,15 @@ export async function getUserSectionProgress(
   explicitSectionId?: number,
 ): Promise<UserSectionProgress> {
   const defaultFallback: UserSectionProgress = {
-    section: { sec_id: 1, sec_num: 1, cat_id: 1, cat_name: "HTML" },
+    section: {
+      sec_id: 1,
+      sec_num: 1,
+      cat_id: 1,
+      cat_name: "HTML",
+      sec_title: "Getting Started",
+      difficulty_id: 1,
+      difficulty_name: "Beginner",
+    },
     units: [],
     overallPercentage: 0,
     totalUnits: 0,
@@ -131,8 +151,12 @@ export async function getUserSectionProgress(
     }
     if (!Number.isInteger(userId) || userId < 1) return defaultFallback;
 
-    let targetSectionId = explicitSectionId;
-    if (!targetSectionId) {
+    let targetSectionId =
+      explicitSectionId != null && Number.isFinite(Number(explicitSectionId))
+        ? Number(explicitSectionId)
+        : undefined;
+
+    if (!targetSectionId || targetSectionId < 1) {
       const [playerRows] = await db.query<RowDataPacket[]>(
         "SELECT current_section FROM player_tbl WHERE user_id = ? LIMIT 1",
         [userId],
@@ -141,25 +165,33 @@ export async function getUserSectionProgress(
     }
 
     const [secRows] = await db.query<RowDataPacket[]>(
-      `SELECT s.sec_id, s.sec_num, c.cat_id, c.cat_name
+      `SELECT s.sec_id, s.sec_num, s.sec_title, s.difficulty_id, d.difficulty_name, c.cat_id, c.cat_name
        FROM sec_tbl s
        JOIN cat_tbl c ON s.cat_id = c.cat_id
+       LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
        WHERE s.sec_id = ?
        LIMIT 1`,
       [targetSectionId],
     );
 
-    const sectionMeta = secRows[0]
-      ? {
-          sec_id: Number(secRows[0].sec_id),
-          sec_num: Number(secRows[0].sec_num),
-          cat_id: Number(secRows[0].cat_id),
-          cat_name: String(secRows[0].cat_name),
-        }
-      : defaultFallback.section;
+    let sectionMeta = defaultFallback.section;
+    if (secRows[0]) {
+      sectionMeta = {
+        sec_id: Number(secRows[0].sec_id),
+        sec_num: Number(secRows[0].sec_num),
+        cat_id: Number(secRows[0].cat_id),
+        cat_name: String(secRows[0].cat_name),
+        sec_title: String(secRows[0].sec_title ?? ""),
+        difficulty_id: Number(secRows[0].difficulty_id ?? 1),
+        difficulty_name: String(secRows[0].difficulty_name ?? "Beginner"),
+      };
+    } else {
+      // If targetSectionId is invalid/missing in sec_tbl, fall back targetSectionId to Section 1
+      targetSectionId = defaultFallback.section.sec_id;
+    }
 
     const [unitRows] = await db.query<RowDataPacket[]>(
-      `SELECT u.unit_id, u.unit_title,
+      `SELECT u.unit_id, u.unit_title, u.unit_order,
               COALESCE(sc.slide_count, 1) AS total_slides,
               COALESCE(p.current_slide_order, 0) AS current_slide_order,
               COALESCE(p.is_completed, 0) AS is_completed
@@ -169,7 +201,7 @@ export async function getUserSectionProgress(
        ) sc ON u.unit_id = sc.unit_id
        LEFT JOIN user_lesson_progress_tbl p ON u.unit_id = p.unit_id AND p.user_id = ?
        WHERE u.sec_id = ? AND u.status = 'approved'
-       ORDER BY u.unit_id ASC`,
+       ORDER BY u.unit_order ASC, u.unit_id ASC`,
       [userId, targetSectionId],
     );
 
@@ -188,6 +220,7 @@ export async function getUserSectionProgress(
         total_slides: totalSlides,
         is_completed: isCompleted,
         percentage,
+        unit_order: r.unit_order != null ? Number(r.unit_order) : 1,
       };
     });
 
@@ -214,6 +247,7 @@ export async function getUserSectionProgress(
 
 /**
  * Records or updates the user's current slide progress in a lesson unit.
+ * Automatically advances player_tbl.current_section when all units in a section are completed.
  */
 export async function recordLessonSlideProgress(
   unitId: number,
@@ -272,6 +306,58 @@ export async function recordLessonSlideProgress(
     );
     const dbIsCompleted = Boolean(statusRows[0]?.is_completed);
 
+    // Auto-advance player_tbl.current_section if all approved units in this unit's section are now completed
+    let advancedSectionId: number | null = null;
+    if (dbIsCompleted) {
+      const [unitSecRows] = await db.query<RowDataPacket[]>(
+        "SELECT sec_id FROM unit_tbl WHERE unit_id = ? LIMIT 1",
+        [unitId],
+      );
+      const currentSectionId = Number(unitSecRows[0]?.sec_id);
+
+      if (Number.isInteger(currentSectionId) && currentSectionId > 0) {
+        const [completionCheckRows] = await db.query<RowDataPacket[]>(
+          `SELECT 
+             COUNT(u.unit_id) AS total_units,
+             COUNT(p.unit_id) AS completed_units
+           FROM unit_tbl u
+           LEFT JOIN user_lesson_progress_tbl p 
+             ON u.unit_id = p.unit_id AND p.user_id = ? AND p.is_completed = 1
+           WHERE u.sec_id = ? AND u.status = 'approved'`,
+          [userId, currentSectionId],
+        );
+
+        const totalUnits = Number(completionCheckRows[0]?.total_units ?? 0);
+        const completedUnits = Number(completionCheckRows[0]?.completed_units ?? 0);
+
+        if (totalUnits > 0 && completedUnits >= totalUnits) {
+          const nextSectionId = getNextSectionId(currentSectionId);
+          if (nextSectionId !== null) {
+            const [playerRows] = await db.query<RowDataPacket[]>(
+              "SELECT current_section FROM player_tbl WHERE user_id = ? LIMIT 1",
+              [userId],
+            );
+            const playerCurrentSec = Number(playerRows[0]?.current_section || 1);
+            if (playerCurrentSec <= currentSectionId) {
+              const [updateResult] = await db.query<ResultSetHeader>(
+                "UPDATE player_tbl SET current_section = ? WHERE user_id = ?",
+                [nextSectionId, userId],
+              );
+              if (updateResult.affectedRows === 0) {
+                await db.query<ResultSetHeader>(
+                  `INSERT INTO player_tbl (user_id, username, current_section)
+                   SELECT user_id, username, ? FROM user_auth_tbl WHERE user_id = ?
+                   ON DUPLICATE KEY UPDATE current_section = VALUES(current_section)`,
+                  [nextSectionId, userId],
+                );
+              }
+              advancedSectionId = nextSectionId;
+            }
+          }
+        }
+      }
+    }
+
     try {
       revalidatePath("/home");
       revalidatePath("/learn");
@@ -284,6 +370,7 @@ export async function recordLessonSlideProgress(
       currentSlideOrder: safeSlideOrder,
       totalSlides: resolvedTotal,
       isCompleted: dbIsCompleted,
+      advancedSectionId,
     };
   } catch (error) {
     console.error("Failed to record lesson slide progress:", error);
