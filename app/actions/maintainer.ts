@@ -150,18 +150,20 @@ export async function getMaintainerSubmissions(): Promise<MaintainerSubmissionsR
   try {
     const [rows] = await db.query<DbPendingRow[]>(
       `SELECT 
-        pending_id,
-        author_id,
-        unit_title,
-        sec_id,
-        pending_status,
-        pending_note,
-        pending_name
-      FROM pending_tbl
-      WHERE (? IS NOT NULL AND author_id = ?)
-         OR (? != '' AND pending_name = ?)
-      ORDER BY pending_id DESC`,
-      [authorId, authorId, maintainerName, maintainerName]
+        u.unit_id AS pending_id,
+        u.author_id,
+        u.unit_title,
+        u.sec_id,
+        u.status AS pending_status,
+        u.pending_note,
+        COALESCE(p.username, ua.email, '') AS pending_name
+      FROM unit_tbl u
+      LEFT JOIN player_tbl p ON u.author_id = p.user_id
+      LEFT JOIN user_auth_tbl ua ON u.author_id = ua.user_id
+      WHERE (? IS NOT NULL AND u.author_id = ?)
+         OR (? != '' AND (p.username = ? OR ua.email = ?))
+      ORDER BY u.unit_id DESC`,
+      [authorId, authorId, maintainerName, maintainerName, maintainerName]
     );
 
     const submissions: MaintainerSubmission[] = (Array.isArray(rows) ? rows : []).map((row) => ({
@@ -202,13 +204,15 @@ export async function getMaintainerStats(): Promise<MaintainerStats> {
     const [rows] = await db.query<DbStatsRow[]>(
       `SELECT 
         COUNT(*) AS total,
-        COUNT(CASE WHEN pending_status = 'approved' THEN 1 END) AS approved,
-        COUNT(CASE WHEN pending_status = 'pending' THEN 1 END) AS pending,
-        COUNT(CASE WHEN pending_status = 'rejected' THEN 1 END) AS rejected
-      FROM pending_tbl
-      WHERE (? IS NOT NULL AND author_id = ?)
-         OR (? != '' AND pending_name = ?)`,
-      [authorId, authorId, maintainerName, maintainerName]
+        COUNT(CASE WHEN u.status = 'approved' THEN 1 END) AS approved,
+        COUNT(CASE WHEN u.status = 'pending' THEN 1 END) AS pending,
+        COUNT(CASE WHEN u.status = 'rejected' THEN 1 END) AS rejected
+      FROM unit_tbl u
+      LEFT JOIN player_tbl p ON u.author_id = p.user_id
+      LEFT JOIN user_auth_tbl ua ON u.author_id = ua.user_id
+      WHERE (? IS NOT NULL AND u.author_id = ?)
+         OR (? != '' AND (p.username = ? OR ua.email = ?))`,
+      [authorId, authorId, maintainerName, maintainerName, maintainerName]
     );
 
     const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;

@@ -34,6 +34,7 @@ tests/
 !tests/
 tests/*
 !tests/test-assessment-json-import.ts
+!tests/test-db-v2-live-actions.ts
 
 # debug
 npm-debug.log*
@@ -54,3 +55,7 @@ next-env.d.ts
 
 # local md file
 WEBSITE_ARCHITECTURE_GUIDE.md
+
+# Database exports
+/exports/*.json
+
