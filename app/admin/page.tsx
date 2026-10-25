@@ -7,7 +7,7 @@ import {
   getAdminReviewQueue,
 } from "@/app/actions/admin";
 import {
-  getPaginatedRecentQuizzes,
+  getPaginatedRecentUnits,
   getPendingQuizzes,
   getQuizMetadata,
   getQuizMetrics,
@@ -46,8 +46,8 @@ export default async function AdminPage() {
     types: [],
     sections: [],
   };
-  let workspaceRecent: Awaited<ReturnType<typeof getPaginatedRecentQuizzes>> = {
-    quizzes: [],
+  let workspaceRecentUnits: Awaited<ReturnType<typeof getPaginatedRecentUnits>> = {
+    units: [],
     currentPage: 1,
     totalPages: 1,
     totalCount: 0,
@@ -65,12 +65,12 @@ export default async function AdminPage() {
   let workspacePending: Awaited<ReturnType<typeof getPendingQuizzes>> = [];
 
   try {
-    const [usersResult, analyticsResult, queueResult, metadata, recent, metrics, pending] = await Promise.all([
+    const [usersResult, analyticsResult, queueResult, metadata, recentUnits, metrics, pending] = await Promise.all([
       getAdminUsers(),
       getAdminAnalytics(),
       getAdminReviewQueue(),
       getQuizMetadata(),
-      getPaginatedRecentQuizzes(),
+      getPaginatedRecentUnits(),
       getQuizMetrics(),
       getPendingQuizzes("all"),
     ]);
@@ -78,7 +78,7 @@ export default async function AdminPage() {
     initialAnalytics = analyticsResult;
     initialReviewQueue = queueResult;
     workspaceMetadata = metadata;
-    workspaceRecent = recent;
+    workspaceRecentUnits = recentUnits;
     workspaceMetrics = metrics;
     workspacePending = pending;
   } catch (err) {
@@ -114,10 +114,10 @@ export default async function AdminPage() {
             difficulties={workspaceMetadata.difficulties}
             types={workspaceMetadata.types}
             sections={workspaceMetadata.sections}
-            recentQuizzes={workspaceRecent.quizzes}
-            recentPage={workspaceRecent.currentPage}
-            recentTotalPages={workspaceRecent.totalPages}
-            recentTotalCount={workspaceRecent.totalCount}
+            recentUnits={workspaceRecentUnits.units}
+            recentPage={workspaceRecentUnits.currentPage}
+            recentTotalPages={workspaceRecentUnits.totalPages}
+            recentTotalCount={workspaceRecentUnits.totalCount}
             metrics={workspaceMetrics}
             pendingQuizzes={workspacePending}
             canReview

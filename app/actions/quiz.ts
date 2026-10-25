@@ -1606,6 +1606,145 @@ export async function getRecentQuizzes() {
   return result.quizzes;
 }
 
+export interface RecentUnitItem {
+  unit_id: number;
+  unit_title: string;
+  sec_id: number;
+  sec_num?: string | number;
+  cat_id: number;
+  cat_name: string;
+  author_id: number | null;
+  author_name: string;
+  status: "pending" | "approved" | "rejected";
+  pending_note: string | null;
+  slide_count: number;
+  question_count: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getPaginatedRecentUnits(
+  page = 1,
+  pageSize = 20,
+  filters: {
+    id?: string;
+    search?: string;
+    category?: string;
+    section?: string;
+    status?: string;
+  } = {},
+): Promise<{
+  units: RecentUnitItem[];
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+}> {
+  try {
+    const numericPageSize = Number(pageSize);
+    const safePageSize =
+      Number.isFinite(numericPageSize) && numericPageSize > 0
+        ? Math.floor(numericPageSize)
+        : 20;
+    const where: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (filters.id?.trim()) {
+      where.push("CAST(u.unit_id AS CHAR) LIKE ?");
+      params.push(`%${filters.id.replace(/^[#\s]+/, "").trim()}%`);
+    }
+    if (filters.search?.trim()) {
+      const search = `%${filters.search.trim()}%`;
+      where.push("(u.unit_title LIKE ? OR p.username LIKE ? OR ua.email LIKE ?)");
+      params.push(search, search, search);
+    }
+    if (filters.category) {
+      where.push("c.cat_name = ?");
+      params.push(filters.category);
+    }
+    if (filters.section) {
+      where.push("s.sec_num = ?");
+      params.push(filters.section);
+    }
+    if (filters.status) {
+      where.push("u.status = ?");
+      params.push(filters.status);
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+    const joins = `
+      FROM unit_tbl u
+      LEFT JOIN sec_tbl s ON u.sec_id = s.sec_id
+      LEFT JOIN cat_tbl c ON s.cat_id = c.cat_id
+      LEFT JOIN player_tbl p ON u.author_id = p.user_id
+      LEFT JOIN user_auth_tbl ua ON u.author_id = ua.user_id
+    `;
+
+    const [countRows] = await db.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total ${joins} ${whereClause}`,
+      params,
+    );
+    const totalCount = Number(countRows[0]?.total ?? 0);
+    const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
+    const numericPage = Number(page);
+    const requestedPage =
+      Number.isFinite(numericPage) && numericPage > 0
+        ? Math.floor(numericPage)
+        : 1;
+    const currentPage = Math.min(requestedPage, totalPages);
+    const offset = (currentPage - 1) * safePageSize;
+
+    const [units] = await db.query<RowDataPacket[]>(
+      `SELECT u.unit_id, u.unit_title, u.sec_id, u.author_id, u.status, u.pending_note,
+              u.created_at, u.updated_at,
+              s.sec_num, c.cat_id, COALESCE(c.cat_name, 'General') AS cat_name,
+              COALESCE(p.username, ua.email, 'Administrator') AS author_name,
+              COALESCE(sc.slide_count, 0) AS slide_count,
+              COALESCE(qc.quiz_count, 0) AS question_count
+       ${joins}
+       LEFT JOIN (
+         SELECT unit_id, COUNT(*) AS slide_count FROM lesson_slide_tbl GROUP BY unit_id
+       ) sc ON u.unit_id = sc.unit_id
+       LEFT JOIN (
+         SELECT unit_id, COUNT(*) AS quiz_count FROM quiz_tbl GROUP BY unit_id
+       ) qc ON u.unit_id = qc.unit_id
+       ${whereClause}
+       ORDER BY u.unit_id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, safePageSize, offset],
+    );
+
+    return {
+      units: units.map((u) => ({
+        unit_id: Number(u.unit_id),
+        unit_title: String(u.unit_title),
+        sec_id: Number(u.sec_id),
+        sec_num: u.sec_num != null ? Number(u.sec_num) : undefined,
+        cat_id: Number(u.cat_id),
+        cat_name: String(u.cat_name),
+        author_id: u.author_id != null ? Number(u.author_id) : null,
+        author_name: String(u.author_name),
+        status: (u.status as "pending" | "approved" | "rejected") || "approved",
+        pending_note: u.pending_note != null ? String(u.pending_note) : null,
+        slide_count: Number(u.slide_count),
+        question_count: Number(u.question_count),
+        created_at: u.created_at ? new Date(u.created_at).toISOString() : undefined,
+        updated_at: u.updated_at ? new Date(u.updated_at).toISOString() : undefined,
+      })),
+      currentPage,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Failed to fetch recent units:", error);
+    return { units: [], currentPage: 1, totalPages: 1, totalCount: 0 };
+  }
+}
+
+export async function getRecentUnits() {
+  const result = await getPaginatedRecentUnits(1, 20);
+  return result.units;
+}
+
 async function fetchUnitByIdInternal(unitId: number) {
   if (!Number.isInteger(unitId) || unitId < 1) return null;
 

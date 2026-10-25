@@ -33,7 +33,8 @@ export interface StaffWorkspaceToolsProps {
   difficulties: Difficulty[];
   types: QuizType[];
   sections: QuizInputProps["sections"];
-  recentQuizzes: QuizInputProps["initialRecentQuizzes"];
+  recentUnits?: QuizInputProps["initialRecentUnits"];
+  recentQuizzes?: QuizInputProps["initialRecentQuizzes"];
   recentPage: number;
   recentTotalPages: number;
   recentTotalCount: number;
@@ -47,6 +48,7 @@ export default function StaffWorkspaceTools({
   difficulties,
   types,
   sections,
+  recentUnits,
   recentQuizzes,
   recentPage,
   recentTotalPages,
@@ -196,6 +198,7 @@ export default function StaffWorkspaceTools({
             difficulties={difficulties}
             types={types}
             sections={sections}
+            initialRecentUnits={recentUnits}
             initialRecentQuizzes={recentQuizzes}
             initialPage={recentPage}
             initialTotalPages={recentTotalPages}

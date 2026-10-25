@@ -58,15 +58,16 @@ function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
 export default async function QuizPage({
     searchParams,
 }: {
-    searchParams: Promise<{ quizId?: string; unitId?: string; source?: string }>;
+    searchParams: Promise<{ quizId?: string; unitId?: string; source?: string; slide?: string }>;
 }) {
-    const { quizId, unitId, source } = await searchParams;
+    const { quizId, unitId, source, slide } = await searchParams;
     if (!quizId && !unitId) {
         redirect("/learn");
     }
 
     const selectedUnitId = unitId ? Number(unitId) : null;
     const selectedQuizId = quizId ? Number(quizId) : null;
+    const initialSlideOrder = slide ? Math.max(1, parseInt(slide, 10)) : undefined;
     const selectedUnit = selectedUnitId
         ? await getUnitById(selectedUnitId)
         : null;
@@ -111,8 +112,9 @@ export default async function QuizPage({
             <QuizLandingClient
                 key={unitId ?? quizId}
                 initialQuizzes={quizzesToDisplay}
-                completionDestination={source === "quiz" ? "home" : "input"}
+                completionDestination={source === "quiz" || source === "home" ? "home" : "input"}
                 unitId={selectedUnitId ?? selectedQuizId ?? undefined}
+                initialSlideOrder={initialSlideOrder}
             />
         );
     }
