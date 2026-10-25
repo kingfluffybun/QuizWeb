@@ -213,7 +213,7 @@ textarea {
 
 @media (prefers-color-scheme: dark) {
     [data-theme="system"] {
-        --primary-color: #2a1952;
+        --primary-color: #672fce;
         --bg-brand: #1f1433;
         --bg-main: #15151e;
         --bg-card: #1c1c24;
