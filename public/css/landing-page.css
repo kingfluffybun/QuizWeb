@@ -105,8 +105,8 @@
 
 .clouds {width: 56vh;}
 .designs {user-select: none; pointer-events: none; z-index: 5;}
-#clouds-topleft {left: -68vh; top: 12vh;}
-#clouds-topright {right: -68vh; top: 12vh;}
+#clouds-topleft {left: -80vh; top: 12vh;}
+#clouds-topright {right: -80vh; top: 12vh;}
 #clouds-left {left: 0; bottom: 11.5vh;}
 #clouds-right {right: 0; bottom: 11.5vh;}
 #bus {width: 56vh; bottom: 5vh; left: 50%; transform: translate(-50%, 0); z-index: 999;}
@@ -196,6 +196,8 @@
     /* #clouds-topleft, #clouds-topright {display: none;} */
     #clouds-left {left: -24vh; bottom: 11vh;}
     #clouds-right {right: -24vh; bottom: 11vh;}
+    #clouds-topleft {left: -96vh;} 
+    #clouds-topright {right: -96vh;}
 }
 
 @media (max-width: 768px) {
@@ -222,9 +224,13 @@
         > h1 {
             width: 100%;
             max-width: 100%;
-            font-size: clamp(2rem, 10vw, 3rem);
+            font-size: clamp(2rem, 8vw, 2.5rem);
             line-height: 1.08;
-            text-wrap: balance;
+            text-wrap: unset;
+            .hero-title-line {
+                display: block;
+                white-space: nowrap;
+            }
         }
         > p {
             width: 100%;
@@ -319,7 +325,7 @@
     .pos-2 {order: 2;}
 
     #clouds-topleft, #clouds-topright {max-width: 50vw;}
-    #clouds-topleft {left: -36vh;} #clouds-topright {right: -36vh;}
+    #clouds-topleft {left: -40vh;} #clouds-topright {right: -40vh;}
     #bus {width: 36vh; bottom: 10vh; max-width: 80vw;}
     #clouds-left {left: -20vh; bottom: 14vh; max-width: 50vw;}
     #clouds-right {right: -20vh; bottom: 14vh; max-width: 50vw;}

@@ -47,7 +47,11 @@ export default function Home() {
                     <Image src="/assets/QuizWeb-Logo.svg" width={96} height={96} alt=""/>
                     <h1>QuizWeb</h1>
                 </div>
-                <h1>Writing Code gets easier, QuizWeb makes it stick.</h1>
+                <h1>
+                    <span className="hero-title-line">Writing Code gets</span>{" "}
+                    <span className="hero-title-line">easier, QuizWeb</span>{" "}
+                    <span className="hero-title-line">makes it stick.</span>
+                </h1>
                 <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
                 <Link href="/home" className="call-to-action row">
                     <h2>Start Learning</h2>
