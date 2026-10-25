@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { requireStaff } from "@/lib/rbac";
 import {
-  getPaginatedRecentQuizzes,
+  getPaginatedRecentUnits,
   getPendingQuizzes,
   getQuizMetadata,
   getQuizMetrics,
@@ -48,8 +48,8 @@ export default async function MaintainerStudioPage() {
     types: [],
     sections: [],
   };
-  let workspaceRecent: Awaited<ReturnType<typeof getPaginatedRecentQuizzes>> = {
-    quizzes: [],
+  let workspaceRecentUnits: Awaited<ReturnType<typeof getPaginatedRecentUnits>> = {
+    units: [],
     currentPage: 1,
     totalPages: 1,
     totalCount: 0,
@@ -75,7 +75,7 @@ export default async function MaintainerStudioPage() {
       getMaintainerStats(),
       getMaintainerSubmissions(),
       getQuizMetadata(),
-      getPaginatedRecentQuizzes(),
+      getPaginatedRecentUnits(),
       getQuizMetrics(),
       getPendingQuizzes("pending"),
     ]);
@@ -88,7 +88,7 @@ export default async function MaintainerStudioPage() {
       initialSubmissions = subsResult.value.submissions;
     }
     if (metadataResult.status === "fulfilled") workspaceMetadata = metadataResult.value;
-    if (recentResult.status === "fulfilled") workspaceRecent = recentResult.value;
+    if (recentResult.status === "fulfilled") workspaceRecentUnits = recentResult.value;
     if (metricsResult.status === "fulfilled") workspaceMetrics = metricsResult.value;
     if (pendingResult.status === "fulfilled") workspacePending = pendingResult.value;
   } catch (error) {
@@ -117,10 +117,10 @@ export default async function MaintainerStudioPage() {
             difficulties={workspaceMetadata.difficulties}
             types={workspaceMetadata.types}
             sections={workspaceMetadata.sections}
-            recentQuizzes={workspaceRecent.quizzes}
-            recentPage={workspaceRecent.currentPage}
-            recentTotalPages={workspaceRecent.totalPages}
-            recentTotalCount={workspaceRecent.totalCount}
+            recentUnits={workspaceRecentUnits.units}
+            recentPage={workspaceRecentUnits.currentPage}
+            recentTotalPages={workspaceRecentUnits.totalPages}
+            recentTotalCount={workspaceRecentUnits.totalCount}
             metrics={workspaceMetrics}
             pendingQuizzes={workspacePending}
             canReview={staff.role === "admin"}

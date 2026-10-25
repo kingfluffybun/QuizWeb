@@ -35,6 +35,12 @@ tests/
 tests/*
 !tests/test-assessment-json-import.ts
 !tests/test-db-v2-live-actions.ts
+!tests/test-maintainer-json-import.ts
+!tests/test-phase1-optimization.ts
+!tests/test-phase2-rendering.ts
+!tests/test-phase3-optimization.ts
+!tests/test-enhancements-and-migration.ts
+!tests/test-curriculum-level-progression.ts
 
 # debug
 npm-debug.log*

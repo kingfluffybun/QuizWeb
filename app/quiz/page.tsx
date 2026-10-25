@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
+import { getNextCurriculumUnit } from "@/app/actions/progress";
 import type { QuizData } from "@/app/quiz/types";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
 import QuizLandingClient from "./QuizLandingClient";
@@ -58,15 +59,16 @@ function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
 export default async function QuizPage({
     searchParams,
 }: {
-    searchParams: Promise<{ quizId?: string; unitId?: string; source?: string }>;
+    searchParams: Promise<{ quizId?: string; unitId?: string; source?: string; slide?: string }>;
 }) {
-    const { quizId, unitId, source } = await searchParams;
+    const { quizId, unitId, source, slide } = await searchParams;
     if (!quizId && !unitId) {
         redirect("/learn");
     }
 
     const selectedUnitId = unitId ? Number(unitId) : null;
     const selectedQuizId = quizId ? Number(quizId) : null;
+    const initialSlideOrder = slide ? Math.max(1, parseInt(slide, 10)) : undefined;
     const selectedUnit = selectedUnitId
         ? await getUnitById(selectedUnitId)
         : null;
@@ -77,6 +79,9 @@ export default async function QuizPage({
     const quizzesToDisplay = selectedPayload
         ? unwrapUnitQuizzes([selectedPayload]).map(shuffleQuizOptions)
         : [];
+    const nextCurriculumUnit = selectedUnitId
+        ? await getNextCurriculumUnit(selectedUnitId)
+        : null;
 
     if (unitId || quizId) {
         if (quizzesToDisplay.length === 0) {
@@ -111,8 +116,10 @@ export default async function QuizPage({
             <QuizLandingClient
                 key={unitId ?? quizId}
                 initialQuizzes={quizzesToDisplay}
-                completionDestination={source === "quiz" ? "home" : "input"}
+                completionDestination={source === "quiz" || source === "home" ? "home" : "input"}
                 unitId={selectedUnitId ?? selectedQuizId ?? undefined}
+                initialSlideOrder={initialSlideOrder}
+                nextUnit={nextCurriculumUnit}
             />
         );
     }

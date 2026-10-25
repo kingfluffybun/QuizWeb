@@ -20,6 +20,7 @@ import {
     recordQuizCompletion,
     updatePlayerQuizStreak,
 } from "@/app/actions/streak";
+import { recordLessonSlideProgress } from "@/app/actions/progress";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
 
@@ -36,6 +37,7 @@ type SavedQuestionProgress = {
 };
 
 type UnitQuizData = QuizData & {
+    unit_id?: number;
     unit_title?: string;
     unit_assessment?: unknown;
     unit_lesson_card?: {
@@ -262,10 +264,20 @@ export default function QuizLandingClient({
     initialQuizzes,
     completionDestination = "input",
     unitId,
+    initialSlideOrder,
+    nextUnit,
 }: {
     initialQuizzes?: QuizData[];
     completionDestination?: "home" | "input";
     unitId?: number;
+    initialSlideOrder?: number;
+    nextUnit?: {
+        unit_id: number;
+        unit_title: string;
+        sec_id?: number;
+        sec_num?: number;
+        cat_name?: string;
+    } | null;
 }) {
     const router = useRouter();
     const playQuizSound = useQuizSounds();
@@ -283,7 +295,11 @@ export default function QuizLandingClient({
     const [bestStreak, setBestStreak] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
-    const [lessonSlideIndex, setLessonSlideIndex] = useState(0);
+    const [lessonSlideIndex, setLessonSlideIndex] = useState(() =>
+        typeof initialSlideOrder === "number" && initialSlideOrder > 0
+            ? initialSlideOrder - 1
+            : 0,
+    );
     const [questionProgress, setQuestionProgress] = useState<Record<number, SavedQuestionProgress>>({});
     const [missedQuestionIndexes, setMissedQuestionIndexes] = useState<Set<number>>(
         () => new Set(),
@@ -293,6 +309,36 @@ export default function QuizLandingClient({
     const completionRecorded = useRef(false);
     const allQuestionsCorrect = quizzes.length > 0 && score === quizzes.length;
     const totalQuizXp = calculateQuizXp(baseXp, allQuestionsCorrect, currentStreak);
+
+    const orderedQuestionIndexes = questionOrder
+        ?? Array.from({ length: quizzes.length }, (_, index) => index);
+    const activeQuizIndex = orderedQuestionIndexes[currentIndex] ?? currentIndex;
+    const quiz = quizzes[activeQuizIndex];
+    const selectedQuiz = selectedQuizzes[activeQuizIndex];
+    const isLessonOnlyUnit = Boolean(
+        initialQuizzes &&
+        initialQuizzes.length === 1 &&
+        selectedQuiz?.type_name === "Unit",
+    );
+    const unitLessonCard = selectedQuiz?.unit_lesson_card ?? {};
+    const lessonSlides = Array.isArray(unitLessonCard.lesson_slide)
+        ? unitLessonCard.lesson_slide
+        : Array.isArray(unitLessonCard.lesson_slides)
+            ? unitLessonCard.lesson_slides
+        : [{
+            lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "",
+            }];
+    const hasLesson = lessonSlides.some(
+        (slide) => slide.lesson_title || slide.lesson_text || slide.lesson_code,
+    );
+    const isShowingLesson = hasLesson && !hasStartedQuiz;
+    const totalProgressItems = (hasLesson ? lessonSlides.length : 0)
+        + (isLessonOnlyUnit ? 0 : quizzes.length);
+    const activeProgressIndex = isShowingLesson
+        ? lessonSlideIndex
+        : (hasLesson ? lessonSlides.length : 0) + currentIndex;
+
+    const resolvedUnitId = unitId ?? selectedQuiz?.unit_id ?? (quizzes[0] as UnitQuizData)?.unit_id;
 
     useEffect(() => {
         if (!hasStartedQuiz) return;
@@ -309,6 +355,17 @@ export default function QuizLandingClient({
         if (!isFinished || completionRecorded.current) return;
 
         completionRecorded.current = true;
+        const targetUnitId = resolvedUnitId;
+        if (targetUnitId) {
+            recordLessonSlideProgress(
+                targetUnitId,
+                Math.max(1, lessonSlides.length),
+                Math.max(1, lessonSlides.length),
+                true,
+            ).catch((err) => {
+                console.error("Failed to record lesson completion progress:", err);
+            });
+        }
         recordQuizCompletion({
             xpEarned: totalQuizXp,
             currentStreak,
@@ -321,7 +378,23 @@ export default function QuizLandingClient({
         }).catch((error) => {
             console.error("Failed to record quiz completion:", error);
         });
-    }, [isFinished, totalQuizXp, bestStreak, currentStreak]);
+    }, [isFinished, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length]);
+
+    useEffect(() => {
+        if (typeof initialSlideOrder === "number" && initialSlideOrder > 0 && lessonSlides.length > 0) {
+            const clamped = Math.min(lessonSlides.length - 1, Math.max(0, initialSlideOrder - 1));
+            setLessonSlideIndex(clamped);
+        }
+    }, [initialSlideOrder, lessonSlides.length]);
+
+    useEffect(() => {
+        if (!resolvedUnitId || !hasLesson || isFinished) return;
+        const currentOrder = lessonSlideIndex + 1;
+        const total = Math.max(1, lessonSlides.length);
+        recordLessonSlideProgress(resolvedUnitId, currentOrder, total, false).catch((err) => {
+            console.error("Failed to record slide progress:", err);
+        });
+    }, [resolvedUnitId, hasLesson, lessonSlideIndex, lessonSlides.length, isFinished]);
 
     const persistStreak = (nextCurrentStreak: number, nextBestStreak: number) => {
         updatePlayerQuizStreak(nextCurrentStreak, nextBestStreak).then((response) => {
@@ -333,11 +406,6 @@ export default function QuizLandingClient({
         });
     };
 
-    const orderedQuestionIndexes = questionOrder
-        ?? Array.from({ length: quizzes.length }, (_, index) => index);
-    const activeQuizIndex = orderedQuestionIndexes[currentIndex] ?? currentIndex;
-    const quiz = quizzes[activeQuizIndex];
-    const selectedQuiz = selectedQuizzes[activeQuizIndex];
     const questionParts = parseQuizQuestion(quiz?.question_text ?? "Loading question...");
     const questionHasCode = questionParts.some((part) => part.type === "code");
 
@@ -373,28 +441,6 @@ export default function QuizLandingClient({
         }
         return -1;
     };
-    const isLessonOnlyUnit = Boolean(
-        initialQuizzes &&
-        initialQuizzes.length === 1 &&
-        selectedQuiz?.type_name === "Unit",
-    );
-    const unitLessonCard = selectedQuiz?.unit_lesson_card ?? {};
-    const lessonSlides = Array.isArray(unitLessonCard.lesson_slide)
-        ? unitLessonCard.lesson_slide
-        : Array.isArray(unitLessonCard.lesson_slides)
-            ? unitLessonCard.lesson_slides
-        : [{
-            lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "",
-            }];
-    const hasLesson = lessonSlides.some(
-        (slide) => slide.lesson_title || slide.lesson_text || slide.lesson_code,
-    );
-    const isShowingLesson = hasLesson && !hasStartedQuiz;
-    const totalProgressItems = (hasLesson ? lessonSlides.length : 0)
-        + (isLessonOnlyUnit ? 0 : quizzes.length);
-    const activeProgressIndex = isShowingLesson
-        ? lessonSlideIndex
-        : (hasLesson ? lessonSlides.length : 0) + currentIndex;
 
     const nextQuiz = () => {
         if (lives <= 0) {
@@ -663,23 +709,47 @@ export default function QuizLandingClient({
                                   ? "Outstanding performance! Ready to tackle the Unit Coding Assessment?"
                                   : "Outstanding performance!"}
                         </p>
+                        {lives > 0 && nextUnit && (
+                            <Link
+                                href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
+                                className="options"
+                                id="submit"
+                                style={{ textDecoration: "none" }}
+                            >
+                                Next Unit: {nextUnit.unit_title}
+                            </Link>
+                        )}
                         {lives > 0 && hasCodingAssessment && (
                             <Link
                                 href={codingAssessmentHref}
                                 className="options"
-                                id="submit"
-                                style={{ textDecoration: "none" }}
+                                id={nextUnit ? undefined : "submit"}
+                                style={{
+                                    textDecoration: "none",
+                                    ...(nextUnit
+                                        ? {
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              margin: "14px auto 0",
+                                              minHeight: "54px",
+                                              width: "240px",
+                                              borderRadius: "16px",
+                                              fontSize: "1.1rem",
+                                          }
+                                        : {}),
+                                }}
                             >
                                 Start Coding Assessment
                             </Link>
                         )}
                         <button
                             className="options"
-                            id={lives > 0 && hasCodingAssessment ? undefined : "submit"}
+                            id={lives > 0 && (nextUnit || hasCodingAssessment) ? undefined : "submit"}
                             type="button"
                             onClick={() => window.location.reload()}
                             style={
-                                lives > 0 && hasCodingAssessment
+                                lives > 0 && (nextUnit || hasCodingAssessment)
                                     ? {
                                           display: "flex",
                                           alignItems: "center",
@@ -861,8 +931,18 @@ export default function QuizLandingClient({
                                     id="submit"
                                     onClick={() => {
                                         if (isLessonOnlyUnit) {
+                                            if (resolvedUnitId) {
+                                                recordLessonSlideProgress(
+                                                    resolvedUnitId,
+                                                    Math.max(1, lessonSlides.length),
+                                                    Math.max(1, lessonSlides.length),
+                                                    true,
+                                                ).catch((err) => {
+                                                    console.error("Failed to record lesson completion progress:", err);
+                                                });
+                                            }
                                             playQuizSound("lesson-complete");
-                                            router.push("/learn");
+                                            router.push(completionDestination === "home" ? "/home" : "/learn");
                                         } else {
                                             setHasStartedQuiz(true);
                                         }

@@ -100,60 +100,157 @@ const ImportTextSchema = z.string().refine((value) => value.trim().length > 0, {
   message: "Text is required.",
 });
 
+export function coerceFileBuffers(raw: unknown, defaultHtml = ""): CPFileBuffers {
+  if (typeof raw === "string") {
+    return { html: raw, css: "", js: "" };
+  }
+  if (raw && typeof raw === "object") {
+    const record = raw as Record<string, unknown>;
+    return {
+      html: typeof record.html === "string" ? record.html : defaultHtml,
+      css: typeof record.css === "string" ? record.css : "",
+      js: typeof record.js === "string" ? record.js : "",
+    };
+  }
+  return { html: defaultHtml, css: "", js: "" };
+}
+
 const ImportFileBuffersSchema = z.strictObject({
   html: z.string(),
   css: z.string(),
   js: z.string(),
 });
 
-const ImportCPStepSchema = z
-  .strictObject({
-    stepNumber: z.number().int().min(1),
-    instruction: ImportTextSchema,
-    starterCode: ImportFileBuffersSchema,
-    expectedTemplate: ImportFileBuffersSchema,
-    inheritPreviousCode: z.boolean(),
-    hint: z.string().optional(),
-  })
-  .superRefine((step, ctx) => {
-    if (!hasAnyNonEmptyBuffer(step.expectedTemplate)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["expectedTemplate"],
-        message: `Step ${step.stepNumber}: At least one tab (index.html, style.css, or script.js) must have a non-empty expected template.`,
+export const ImportCPStepSchema = z.preprocess(
+  (rawStep) => {
+    if (!rawStep || typeof rawStep !== "object") return rawStep;
+    const step = { ...(rawStep as Record<string, unknown>) };
+    if (!step.instruction && typeof step.prompt === "string") {
+      step.instruction = step.prompt;
+    }
+    if (step.starterCode !== undefined) {
+      step.starterCode = coerceFileBuffers(step.starterCode);
+    } else if (step.starter !== undefined || step.template !== undefined) {
+      step.starterCode = coerceFileBuffers(step.starter ?? step.template);
+    }
+    if (step.expectedTemplate !== undefined) {
+      step.expectedTemplate = coerceFileBuffers(step.expectedTemplate);
+    } else if (step.expected !== undefined) {
+      step.expectedTemplate = coerceFileBuffers(step.expected);
+    }
+    if (step.stepNumber === undefined && typeof step.step_number === "number") {
+      step.stepNumber = step.step_number;
+    }
+    if (step.inheritPreviousCode === undefined) {
+      step.inheritPreviousCode =
+        typeof step.stepNumber === "number" ? step.stepNumber > 1 : true;
+    }
+    delete step.prompt;
+    delete step.starter;
+    delete step.template;
+    delete step.expected;
+    delete step.step_number;
+    delete step.step_id;
+    delete step.assessment_id;
+    return step;
+  },
+  z
+    .strictObject({
+      stepNumber: z.number().int().min(1),
+      instruction: ImportTextSchema,
+      starterCode: ImportFileBuffersSchema,
+      expectedTemplate: ImportFileBuffersSchema,
+      inheritPreviousCode: z.boolean(),
+      hint: z.string().optional(),
+    })
+    .superRefine((step, ctx) => {
+      if (!hasAnyNonEmptyBuffer(step.expectedTemplate)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["expectedTemplate"],
+          message: `Step ${step.stepNumber}: At least one tab (index.html, style.css, or script.js) must have a non-empty expected template.`,
+        });
+      }
+
+      for (const key of CP_FILE_KEYS) {
+        if (step.expectedTemplate[key].includes("########")) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["expectedTemplate", key],
+            message: `Step ${step.stepNumber} (${CP_FILE_LABELS[key]}): Adjacent '########' wildcards are ambiguous; separate wildcards with literal tokens.`,
+          });
+        }
+      }
+    }),
+);
+
+export const CodeProblemAssessmentImportSchema = z.preprocess(
+  (raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return raw;
+    }
+    const record = { ...(raw as Record<string, unknown>) };
+    const hasCpSteps =
+      Array.isArray(record.cp_steps) && record.cp_steps.length > 0;
+    const stepsIsStrings =
+      Array.isArray(record.steps) &&
+      record.steps.length > 0 &&
+      typeof record.steps[0] === "string";
+
+    if (hasCpSteps && (!record.steps || stepsIsStrings)) {
+      record.steps = record.cp_steps;
+    } else if (stepsIsStrings && !hasCpSteps) {
+      const unwrapped = unwrapCodeProblemAssessment(record);
+      if (unwrapped) {
+        record.steps = unwrapped.steps;
+        if (!record.expected_outcome) {
+          record.expected_outcome = unwrapped.expected_outcome;
+        }
+        record.schemaVersion = 2;
+      }
+    }
+    if (Array.isArray(record.steps)) {
+      record.steps = record.steps.map((st, i) => {
+        if (st && typeof st === "object") {
+          const s = { ...(st as Record<string, unknown>) };
+          if (s.stepNumber === undefined && s.step_number === undefined) {
+            s.stepNumber = i + 1;
+          }
+          return s;
+        }
+        return st;
       });
     }
-
-    for (const key of CP_FILE_KEYS) {
-      if (step.expectedTemplate[key].includes("########")) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["expectedTemplate", key],
-          message: `Step ${step.stepNumber} (${CP_FILE_LABELS[key]}): Adjacent '########' wildcards are ambiguous; separate wildcards with literal tokens.`,
-        });
-      }
-    }
-  });
-
-export const CodeProblemAssessmentImportSchema = z
-  .strictObject({
-    schemaVersion: z.literal(2),
-    title: z.string(),
-    description: z.string(),
-    steps: z.array(ImportCPStepSchema).min(1).max(20),
-    expected_outcome: z.string(),
-  })
-  .superRefine((assessment, ctx) => {
-    assessment.steps.forEach((step, index) => {
-      if (step.stepNumber !== index + 1) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["steps", index, "stepNumber"],
-          message: `Step numbers must be sequential (expected ${index + 1}, got ${step.stepNumber}).`,
-        });
-      }
-    });
-  });
+    delete record.status;
+    delete record.unit_id;
+    delete record.assessment_id;
+    delete record.author_id;
+    delete record.created_at;
+    delete record.updated_at;
+    return record;
+  },
+  z
+    .strictObject({
+      schemaVersion: z.literal(2).default(2),
+      title: z.string().default(""),
+      description: z.string().default(""),
+      steps: z.array(ImportCPStepSchema).min(1).max(20),
+      expected_outcome: z.string().default(""),
+      cp_steps: z.array(z.unknown()).optional(),
+      assessment: z.string().optional(),
+    })
+    .superRefine((assessment, ctx) => {
+      assessment.steps.forEach((step, index) => {
+        if (step.stepNumber !== index + 1) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["steps", index, "stepNumber"],
+            message: `Step numbers must be sequential (expected ${index + 1}, got ${step.stepNumber}).`,
+          });
+        }
+      });
+    }),
+);
 
 /**
  * Public step payload hydrated to the browser in `/quiz-cp`.
@@ -178,20 +275,6 @@ export interface PublicCodeProblem {
   steps: PublicCPStep[];
 }
 
-function coerceFileBuffers(raw: unknown, defaultHtml = ""): CPFileBuffers {
-  if (typeof raw === "string") {
-    return { html: raw, css: "", js: "" };
-  }
-  if (raw && typeof raw === "object") {
-    const record = raw as Record<string, unknown>;
-    return {
-      html: typeof record.html === "string" ? record.html : defaultHtml,
-      css: typeof record.css === "string" ? record.css : "",
-      js: typeof record.js === "string" ? record.js : "",
-    };
-  }
-  return { html: defaultHtml, css: "", js: "" };
-}
 
 /**
  * Safely unwraps raw MySQL JSON (`unit_assessment_json` or `quiz_payload`) into a
@@ -290,14 +373,16 @@ export function unwrapCodeProblemAssessment(
       .map((s) => s.trim())
       .filter(Boolean);
 
-    if (stringSteps.length > 0 && expectedOutcome) {
+    if (stringSteps.length > 0) {
+      const outcomeHtml =
+        expectedOutcome || `<main>\n  <!-- Assessment Step -->\n</main>`;
       stringSteps.forEach((instruction, idx) => {
         normalizedSteps.push({
           stepNumber: idx + 1,
           instruction,
           starterCode: createEmptyFileBuffers(),
           expectedTemplate: {
-            html: expectedOutcome,
+            html: outcomeHtml,
             css: "",
             js: "",
           },
@@ -316,7 +401,11 @@ export function unwrapCodeProblemAssessment(
     title,
     description,
     steps: normalizedSteps,
-    expected_outcome: expectedOutcome,
+    expected_outcome:
+      expectedOutcome ||
+      (normalizedSteps.length > 0
+        ? normalizedSteps[normalizedSteps.length - 1].expectedTemplate.html
+        : ""),
   };
 
   const result = CodeProblemAssessmentSchema.safeParse(candidate);

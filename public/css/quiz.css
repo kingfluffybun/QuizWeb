@@ -690,9 +690,10 @@
 .lesson-code-frame {
     flex: 1;
     width: 100%;
-    /* padding: 12px 0; */
-    /* kailangan naka set talaga as white (hindi var(--bg-card)) */
-    iframe {background-color: #fff; outline: 1px solid var(--border-main);}
+}
+.lesson-code-frame iframe {
+    background-color: #fff;
+    outline: 1px solid var(--border-main);
 }
 
 .lesson-code-frame-controls {
@@ -702,23 +703,37 @@
     width: 100%;
     padding: 8px 16px;
     border-radius: 8px 8px 0 0;
-    background: var(--bg-card);
-    background-color: #2B2B2B;
-    .window-controls {
-        display: flex;
-        gap: 4px;
-        .circle {width: auto; height: 16px; aspect-ratio: 1/1; border-radius: 999px;}
-        .circle:first-child {background-color: #FF605C;}
-        .circle:nth-child(2) {background-color: #FFBD44;}
-        .circle:last-child {background-color: #00CA4E;}
-    }
-    .lesson-code-frame-controls-pill {
-        display: flex;
-        padding: 4px;
-        background-color: #3C3C3C;
-        border-radius: 999px;
-        > button {transition: all 200ms;}
-    }
+    background: #2b2b2b;
+    box-sizing: border-box;
+}
+.lesson-code-frame-controls .window-controls {
+    display: flex;
+    gap: 4px;
+}
+.lesson-code-frame-controls .window-controls .circle {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    border-radius: 999px;
+}
+.lesson-code-frame-controls .window-controls .circle:first-child {
+    background-color: #ff605c;
+}
+.lesson-code-frame-controls .window-controls .circle:nth-child(2) {
+    background-color: #ffbd44;
+}
+.lesson-code-frame-controls .window-controls .circle:last-child {
+    background-color: #00ca4e;
+}
+.lesson-code-frame-controls .lesson-code-frame-controls-pill,
+.lesson-code-frame-controls-pill {
+    display: flex;
+    padding: 4px;
+    background-color: #3c3c3c;
+    border-radius: 999px;
+}
+.lesson-code-frame-controls-pill > button {
+    transition: all 200ms;
 }
 
 .lesson-code-frame-tab {
@@ -727,12 +742,18 @@
     border-radius: 999px;
     background: transparent;
     cursor: pointer;
-    > p {color: var(--text-muted); font-size: clamp(0.5rem, 1.5vw, 1rem); ;}
+}
+.lesson-code-frame-tab > p {
+    color: var(--text-muted);
+    font-size: clamp(0.5rem, 1.5vw, 1rem);
+    margin: 0;
 }
 
 .lesson-code-frame-tab.active {
-    background: #2C2C2C;
-    > p {color: var(--text-inverse);}
+    background: #2c2c2c;
+}
+.lesson-code-frame-tab.active > p {
+    color: var(--text-inverse);
 }
 
 .lesson-code-source {

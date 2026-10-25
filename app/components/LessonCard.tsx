@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
+
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{ minHeight: "180px", width: "100%", background: "#1e1e1e" }}
+      className="lesson-code-editor animate-pulse flex items-center justify-center text-neutral-500 text-xs"
+    >
+      Loading code editor...
+    </div>
+  ),
+});
 
 export type LessonSlide = {
   lesson_title?: string;

@@ -124,13 +124,14 @@ CREATE TABLE IF NOT EXISTS `user_otp_tbl` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `rate_limit_tbl` (
-  `rate_id` INT NOT NULL AUTO_INCREMENT,
-  `client_ip` VARCHAR(45) NOT NULL,
-  `action_type` VARCHAR(50) NOT NULL,
-  `request_count` INT NOT NULL DEFAULT '1',
-  `window_start` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`rate_id`),
-  UNIQUE KEY `uk_rate_ip_action` (`client_ip`, `action_type`)
+  `limit_key` VARCHAR(255) NOT NULL,
+  `attempts` INT NOT NULL DEFAULT '0',
+  `reset_at` BIGINT NOT NULL,
+  `blocked` TINYINT(1) NOT NULL DEFAULT '0',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`limit_key`),
+  KEY `idx_rate_limit_reset_at` (`reset_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `user_activity_tbl` (

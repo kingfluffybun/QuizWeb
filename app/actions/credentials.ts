@@ -12,6 +12,13 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_.\- ]{3,30}$/;
 const PASSWORD_COMPLEXITY_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,24}$/;
 
+const ARGON2_OPTIONS: Parameters<typeof argon2.hash>[1] = {
+  type: argon2.argon2id,
+  memoryCost: 32768,
+  timeCost: 2,
+  parallelism: 1,
+};
+
 export interface ActionResult {
   success: boolean;
   error?: string;
@@ -202,7 +209,7 @@ export async function changePassword(
     };
   }
 
-  const newHash = await argon2.hash(newPassword);
+  const newHash = await argon2.hash(newPassword, ARGON2_OPTIONS);
 
   // Invalidate previous active sessions across devices by incrementing token_version (SEC-05)
   await db.query(
@@ -268,7 +275,7 @@ export async function setPasswordForOAuth(
     };
   }
 
-  const newHash = await argon2.hash(newPassword);
+  const newHash = await argon2.hash(newPassword, ARGON2_OPTIONS);
 
   // Invalidate previous active sessions across devices by incrementing token_version (SEC-05)
   await db.query(

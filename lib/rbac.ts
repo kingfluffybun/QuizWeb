@@ -147,6 +147,19 @@ export async function requireAuth(): Promise<AuthenticatedUser | false> {
   const userId = session?.user?.id;
   if (!userId) return false;
 
+  // In live execution, auth() already validated token_version and fetched the authoritative
+  // user_role from user_auth_tbl during the session callback for this request lifecycle.
+  if (!isTestSession) {
+    const sessionRole = session?.user?.role || session?.user?.user_role;
+    if (sessionRole && isValidRole(sessionRole)) {
+      return {
+        id: String(userId),
+        role: sessionRole,
+        email: session?.user?.email,
+      };
+    }
+  }
+
   const resolution = await fetchAuthoritativeRole(userId, isTestSession);
 
   if (resolution.status === "FOUND") {

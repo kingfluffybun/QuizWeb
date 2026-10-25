@@ -7,25 +7,27 @@ import "@/public/css/skeleton.css";
 import AccessibilityInit from "@/app/components/AccessibilityInit";
 import MobileShell from "@/app/components/MobileShell";
 import "@/public/css/mobile-shell.css";
-import { SessionProvider } from "next-auth/react";
-import { auth } from "@/auth";
+import SessionWrapper from "@/app/components/SessionWrapper";
 
 const poppins = Poppins({
     variable: "--font-poppins",
     subsets: ["latin"],
-    weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+    weight: ['400', '500', '600', '700', '800'],
+    display: "swap",
 });
 
 const montserrat = Montserrat({
     variable: "--font-montserrat",
     subsets: ["latin"],
-    weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+    weight: ['400', '500', '600', '700', '800'],
+    display: "swap",
 });
 
 const jetBrainsMono = JetBrains_Mono({
     variable: "--font-jetbrains-mono",
     subsets: ["latin"],
     weight: ['400', '500', '600', '700'],
+    display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -56,12 +58,11 @@ const themeInitScript = `
 })();
 `;
 
-export default async function RootLayout({
+export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const session = await auth();
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
@@ -69,14 +70,14 @@ export default async function RootLayout({
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
             </head>
             <body className={`${poppins.variable} ${montserrat.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
-                <SessionProvider session={session}>
-                <AccessibilityInit />
-                <MobileShell>{children}</MobileShell>
-                <Script id="theme-init" strategy="beforeInteractive">
-                    {themeInitScript}
-                </Script>
-                </SessionProvider>
+                <SessionWrapper>
+                    <AccessibilityInit />
+                    <MobileShell>{children}</MobileShell>
+                    <Script id="theme-init" strategy="beforeInteractive">
+                        {themeInitScript}
+                    </Script>
+                </SessionWrapper>
             </body>
         </html>
-    )
+    );
 }

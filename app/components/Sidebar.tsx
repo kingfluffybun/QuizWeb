@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
 import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 
@@ -17,12 +18,12 @@ export interface SidebarConfig {
     roleBadge: string | null;
 }
 
-// export interface SidebarProps {
-//     role?: string;
-//     username?: string;
-//     email?: string;
-//     avatarColor?: string;
-// }
+export interface SidebarProps {
+    role?: string;
+    username?: string;
+    email?: string;
+    avatarColor?: string;
+}
 
 /**
  * Returns role-aware navigation items and role badge configuration.
@@ -112,21 +113,36 @@ function getRouteIcon(pathname: string) {
 
 
 
-export default function Sidebar() {
+export default function Sidebar(props: SidebarProps = {}) {
+    const { data: session } = useSession();
+    const sessionUser = session?.user as { role?: string; user_role?: string; name?: string; email?: string } | undefined;
+
+    const initialRole = props.role || sessionUser?.role || sessionUser?.user_role;
+    const initialUsername = props.username || sessionUser?.name;
+    const initialEmail = props.email || sessionUser?.email;
+    const initialAvaColor = props.avatarColor;
+
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [fetchedRole, setFetchedRole] = useState<string | undefined>();
-    const [fetchedUsername, setFetchedUsername] = useState<string | undefined>();
-    const [fetchedEmail, setFetchedEmail] = useState<string | undefined>();
-    const [fetchedAvaColor, setFetcedAvaColor] = useState<string | undefined>();
+    const [fetchedRole, setFetchedRole] = useState<string | undefined>(initialRole);
+    const [fetchedUsername, setFetchedUsername] = useState<string | undefined>(initialUsername);
+    const [fetchedEmail, setFetchedEmail] = useState<string | undefined>(initialEmail);
+    const [fetchedAvaColor, setFetcedAvaColor] = useState<string | undefined>(initialAvaColor);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
     const pathname = usePathname();
     const currentPageIconRef = useRef<HTMLDivElement>(null);
     const currentPageTitleRef = useRef<HTMLHeadingElement>(null);
     const profileContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (initialRole && !fetchedRole) setFetchedRole(initialRole);
+        if (initialUsername && !fetchedUsername) setFetchedUsername(initialUsername);
+        if (initialEmail && !fetchedEmail) setFetchedEmail(initialEmail);
+    }, [initialRole, initialUsername, initialEmail, fetchedRole, fetchedUsername, fetchedEmail]);
     
     useEffect(() => {
-        // if (initialRole !== undefined && initialUsername !== undefined && initialEmail !== undefined && initialAvaColor !== undefined) return;
+        // Skip network round-trip if all essential profile data is already provided
+        if (props.role && props.username && props.email && props.avatarColor) return;
         let isMounted = true;
         fetch("/api/db/user-info")
             .then(async (res) => {
@@ -136,10 +152,10 @@ export default function Sidebar() {
                 
                 const userData: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
 
-                setFetchedRole(userData?.user_role || "user");
-                setFetchedUsername(userData?.username);
-                setFetchedEmail(userData?.email);
-                setFetcedAvaColor(userData?.avatar_color);
+                if (userData?.user_role) setFetchedRole(userData.user_role);
+                if (userData?.username) setFetchedUsername(userData.username);
+                if (userData?.email) setFetchedEmail(userData.email);
+                if (userData?.avatar_color) setFetcedAvaColor(userData.avatar_color);
             })
             .catch((err) => {
                 // Silently fallback to unauthenticated/user default
@@ -148,7 +164,7 @@ export default function Sidebar() {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [props.role, props.username, props.email, props.avatarColor]);
 
     const effectiveRole = fetchedRole ?? "user";
     const isAdmin = effectiveRole === "admin";

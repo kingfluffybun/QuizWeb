@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import {
     type StreakData,
     getUserStreakData,
@@ -13,30 +13,77 @@ const MONTH_NAMES = [
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+const subscribeClientDate = (onStoreChange: () => void) => {
+    if (typeof window === "undefined") {
+        return () => {};
+    }
+    const interval = setInterval(onStoreChange, 60000);
+    const handleEvent = () => onStoreChange();
+
+    window.addEventListener("visibilitychange", handleEvent);
+    window.addEventListener("focus", handleEvent);
+
+    return () => {
+        clearInterval(interval);
+        window.removeEventListener("visibilitychange", handleEvent);
+        window.removeEventListener("focus", handleEvent);
+    };
+};
+
+const getClientLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+const getServerLocalDate = () => null;
+
 export default function StreakCalendar({ initialData }: { initialData: StreakData }) {
     const [streakData, setStreakData] = useState<StreakData>(initialData);
     const [viewYear, setViewYear] = useState<number>(initialData.targetYear);
     const [viewMonth, setViewMonth] = useState<number>(initialData.targetMonth);
-    const [clientToday, setClientToday] = useState<string | null>(null);
+    const clientToday = useSyncExternalStore(subscribeClientDate, getClientLocalDate, getServerLocalDate);
     const activeDates = useMemo(() => new Set(streakData.allActiveDates), [streakData.allActiveDates]);
 
-    // Sync client local date if different from server fallback
+    // Sync client local date if different from loaded streak date
     useEffect(() => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const day = String(now.getDate()).padStart(2, "0");
-        const localDate = `${year}-${month}-${day}`;
-        setClientToday(localDate);
-
-        if (localDate !== initialData.todayDate) {
-            getUserStreakData(undefined, undefined, localDate)
-                .then(setStreakData)
-                .catch((error: unknown) => {
-                    console.error("Failed to refresh local streak data:", error);
-                });
+        if (!clientToday || clientToday === streakData.todayDate) {
+            return;
         }
-    }, [initialData.todayDate]);
+
+        getUserStreakData(undefined, undefined, clientToday)
+            .then(setStreakData)
+            .catch((error: unknown) => {
+                console.error("Failed to refresh local streak data:", error);
+            });
+    }, [clientToday, streakData.todayDate]);
+
+    // Fetch month activity when navigating away from initial target month
+    useEffect(() => {
+        if (viewYear === initialData.targetYear && viewMonth === initialData.targetMonth) {
+            return;
+        }
+
+        let isCancelled = false;
+        getUserStreakData(viewYear, viewMonth, clientToday ?? undefined)
+            .then((data) => {
+                if (!isCancelled) {
+                    setStreakData((prev) => ({
+                        ...prev,
+                        activeDatesInMonth: data.activeDatesInMonth,
+                        allActiveDates: Array.from(new Set([...prev.allActiveDates, ...data.allActiveDates])),
+                    }));
+                }
+            })
+            .catch((error: unknown) => {
+                console.error("Failed to fetch streak data for navigated month:", error);
+            });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [viewYear, viewMonth, clientToday, initialData.targetYear, initialData.targetMonth]);
 
     const handlePrevMonth = useCallback(() => {
         const nextMonth = viewMonth === 1 ? 12 : viewMonth - 1;

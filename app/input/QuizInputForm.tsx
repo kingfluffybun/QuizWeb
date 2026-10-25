@@ -1,11 +1,26 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, startTransition } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{ height: "250px", width: "100%", background: "#1e1e1e" }}
+      className="animate-pulse flex items-center justify-center text-neutral-400 text-xs"
+    >
+      Loading code editor...
+    </div>
+  ),
+});
 import LessonCard, { LessonCodeFrame } from "@/app/components/LessonCard";
 import {
   getPaginatedRecentQuizzes,
+  getPaginatedRecentUnits,
+  getUnitById,
+  deleteUnit,
   updatePendingUnitFromForm,
   getPendingQuizById,
   deleteQuiz,
@@ -18,6 +33,7 @@ import type {
   Difficulty,
   QuizType,
   QuizMetricsData,
+  RecentUnitItem,
 } from "../actions/quiz";
 import AssessmentStepBuilder, {
   AssessmentLivePreview,
@@ -31,6 +47,7 @@ import {
   parseAssessmentBulkImport,
   parseAssessmentImport,
   quizPayloadMatchesType,
+  extractLessonSlides,
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
 
@@ -158,7 +175,8 @@ interface QuizInputFormProps {
   difficulties: Difficulty[];
   types: QuizType[];
   sections?: { sec_id: number; sec_num: string }[];
-  initialRecentQuizzes: RecentQuizItem[];
+  initialRecentUnits?: RecentUnitItem[];
+  initialRecentQuizzes?: RecentQuizItem[];
   initialPage: number;
   initialTotalPages: number;
   initialTotalCount: number;
@@ -243,6 +261,7 @@ export default function QuizInputForm({
   difficulties,
   types,
   sections = [],
+  initialRecentUnits,
   initialRecentQuizzes,
   initialPage,
   initialTotalPages,
@@ -253,8 +272,11 @@ export default function QuizInputForm({
 }: QuizInputFormProps) {
   const router = useRouter();
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
+  const [recentUnits, setRecentUnits] =
+    useState<RecentUnitItem[]>(initialRecentUnits ?? []);
   const [recentQuizzes, setRecentQuizzes] =
-    useState<RecentQuizItem[]>(initialRecentQuizzes);
+    useState<RecentQuizItem[]>(initialRecentQuizzes ?? []);
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
@@ -480,11 +502,14 @@ export default function QuizInputForm({
     }
   };
 
+  const isUnitMode = Boolean(initialRecentUnits || recentUnits.length > 0 || !initialRecentQuizzes);
+
   const hasActiveFilters =
     idFilter.trim() !== "" ||
     searchFilter.trim() !== "" ||
     categoryFilter !== "" ||
     sectionFilter !== "" ||
+    statusFilter !== "" ||
     difficultyFilter !== "" ||
     sortBy !== "id_desc";
 
@@ -493,6 +518,7 @@ export default function QuizInputForm({
     (searchFilter.trim() !== "" ? 1 : 0) +
     (categoryFilter !== "" ? 1 : 0) +
     (sectionFilter !== "" ? 1 : 0) +
+    (statusFilter !== "" ? 1 : 0) +
     (difficultyFilter !== "" ? 1 : 0) +
     (sortBy !== "id_desc" ? 1 : 0);
 
@@ -501,9 +527,63 @@ export default function QuizInputForm({
     setSearchFilter("");
     setCategoryFilter("");
     setSectionFilter("");
+    setStatusFilter("");
     setDifficultyFilter("");
     setSortBy("id_desc");
   };
+
+  const filteredUnits = recentUnits
+    .filter((unit) => {
+      if (idFilter.trim() !== "") {
+        const cleanId = idFilter.replace(/^[#\s]+/, "").trim();
+        if (cleanId !== "" && !unit.unit_id.toString().includes(cleanId)) {
+          return false;
+        }
+      }
+      if (searchFilter.trim() !== "") {
+        const query = searchFilter.toLowerCase().trim();
+        const matchesTitle = unit.unit_title.toLowerCase().includes(query);
+        const matchesAuthor = unit.author_name.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesAuthor) {
+          return false;
+        }
+      }
+      if (
+        categoryFilter !== "" &&
+        unit.cat_name.toLowerCase() !== categoryFilter.toLowerCase()
+      ) {
+        return false;
+      }
+      const unitSecNum = unit.sec_num?.toString() ?? "";
+      if (sectionFilter !== "" && unitSecNum !== sectionFilter) {
+        return false;
+      }
+      if (
+        statusFilter !== "" &&
+        unit.status.toLowerCase() !== statusFilter.toLowerCase()
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "id_asc":
+          return a.unit_id - b.unit_id;
+        case "id_desc":
+          return b.unit_id - a.unit_id;
+        case "title_asc":
+          return a.unit_title.localeCompare(b.unit_title);
+        case "title_desc":
+          return b.unit_title.localeCompare(a.unit_title);
+        case "slides_desc":
+          return b.slide_count - a.slide_count;
+        case "quizzes_desc":
+          return b.question_count - a.question_count;
+        default:
+          return b.unit_id - a.unit_id;
+      }
+    });
 
   const filteredQuizzes = recentQuizzes
     .filter((quiz) => {
@@ -655,6 +735,47 @@ export default function QuizInputForm({
       return;
     }
 
+    const importedTitle =
+      result.data.unit_title ??
+      (result.data as Record<string, unknown>).title;
+    if (typeof importedTitle === "string" && importedTitle.trim()) {
+      setUnitTitle(importedTitle.trim());
+    }
+
+    const incomingSecId =
+      result.data.sec_id ??
+      (result.data as Record<string, unknown>).section_id;
+    if (
+      incomingSecId != null &&
+      sections &&
+      sections.some((s) => s.sec_id === Number(incomingSecId))
+    ) {
+      setSelectedSecId(String(incomingSecId));
+    }
+
+    const rawLessonDoc =
+      result.data.unit_lesson_card_json ??
+      result.data.lesson_slides ??
+      (result.data as Record<string, unknown>).lesson_card ??
+      (result.data as Record<string, unknown>).lessons;
+    const slides = extractLessonSlides(rawLessonDoc);
+    if (slides && slides.length > 0) {
+      setLessonSlides(slides);
+      setCurrentLessonSlide(0);
+      if (
+        !importedTitle &&
+        typeof rawLessonDoc === "object" &&
+        rawLessonDoc !== null
+      ) {
+        const cardTitle =
+          (rawLessonDoc as Record<string, unknown>).lesson_title ??
+          (rawLessonDoc as Record<string, unknown>).title;
+        if (typeof cardTitle === "string" && cardTitle.trim()) {
+          setUnitTitle(cardTitle.trim());
+        }
+      }
+    }
+
     const importedAssessment = result.data.unit_assessment_json;
     setAssessmentFields(importedAssessment);
     const [firstQuiz, ...remainingQuizzes] = result.data.unit_quiz_json;
@@ -679,9 +800,11 @@ export default function QuizInputForm({
       type_name: firstQuizType?.type_name ?? "",
       _queuedUnitQuiz: true,
     });
+    const slideMsg =
+      slides && slides.length > 0 ? `, ${slides.length} lesson slide(s),` : "";
     setImportJsonMessage({
       type: "success",
-      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s) and ${importedAssessment.steps.length} assessment step(s). Review and edit both before submitting.`,
+      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s). You can review all sections or submit directly.`,
     });
   };
 
@@ -734,19 +857,33 @@ export default function QuizInputForm({
     });
 
     if (typeName === "MCQ") {
+      const editingOptions = Array.isArray(editingQuiz?.quiz_payload?.options)
+        ? (editingQuiz!.quiz_payload.options as unknown[]).map(String)
+        : null;
       const options = [0, 1, 2, 3].map(
         (idx) =>
-          (formData.get(`option_${idx}`) as string | null)?.trim() ||
-          mcqOptions[idx] ||
-          (Array.isArray(editingQuiz?.quiz_payload?.options)
-            ? String((editingQuiz.quiz_payload.options as unknown[])[idx] ?? "")
-            : ""),
+          (unitInputTab === "import" && editingOptions && editingOptions[idx]
+            ? editingOptions[idx]
+            : (formData.get(`option_${idx}`) as string | null)?.trim() ||
+              mcqOptions[idx] ||
+              editingOptions?.[idx] ||
+              ""),
       );
       const rawCorrect = formData.get("correct_option_index");
+      const editingCorrect =
+        typeof (editingQuiz?.quiz_payload as Record<string, unknown> | undefined)
+          ?.correct_index === "number"
+          ? Number(
+              (editingQuiz!.quiz_payload as Record<string, unknown>)
+                .correct_index,
+            )
+          : undefined;
       const correct =
-        rawCorrect !== null && !Number.isNaN(Number(rawCorrect))
-          ? Number(rawCorrect)
-          : (mcqCorrectIndex ?? 0);
+        unitInputTab === "import" && editingCorrect !== undefined
+          ? editingCorrect
+          : rawCorrect !== null && !Number.isNaN(Number(rawCorrect))
+            ? Number(rawCorrect)
+            : (editingCorrect ?? mcqCorrectIndex ?? 0);
 
       const qText =
         questionText.trim() ||
@@ -763,10 +900,13 @@ export default function QuizInputForm({
     }
 
     if (typeName === "FITB") {
+      const editingAnswer = String(editingQuiz?.quiz_payload?.answer ?? "");
       const answer =
-        (formData.get("fitb_answer") as string | null)?.trim() ||
-        fitbAnswer ||
-        String(editingQuiz?.quiz_payload?.answer ?? "");
+        unitInputTab === "import" && editingAnswer
+          ? editingAnswer
+          : (formData.get("fitb_answer") as string | null)?.trim() ||
+            fitbAnswer ||
+            editingAnswer;
       return makeBase(
         questionText.trim() || editingQuiz?.question_text || "Fill in the blank",
         {
@@ -776,11 +916,17 @@ export default function QuizInputForm({
     }
 
     if (typeName === "Order") {
-      let items = Array.from({ length: optionCount }, (_, idx) =>
-        (formData.get(`order_${idx}`) as string | null)?.trim() || orderItems[idx] || "",
-      ).filter(Boolean);
-      if (items.length < 2 && Array.isArray(editingQuiz?.quiz_payload?.items)) {
-        items = (editingQuiz.quiz_payload.items as string[]).filter(Boolean);
+      const editingItems = Array.isArray(editingQuiz?.quiz_payload?.items)
+        ? (editingQuiz!.quiz_payload.items as string[]).filter(Boolean)
+        : [];
+      let items =
+        unitInputTab === "import" && editingItems.length >= 2
+          ? editingItems
+          : Array.from({ length: optionCount }, (_, idx) =>
+              (formData.get(`order_${idx}`) as string | null)?.trim() || orderItems[idx] || "",
+            ).filter(Boolean);
+      if (items.length < 2 && editingItems.length >= 2) {
+        items = editingItems;
       }
       return makeBase(
         questionText.trim() || editingQuiz?.question_text || "Arrange the items in order",
@@ -791,20 +937,26 @@ export default function QuizInputForm({
     }
 
     if (typeName === "Pair") {
-      let pairs = Array.from({ length: optionCount }, (_, idx) => ({
-        left:
-          (formData.get(`pair_left_${idx}`) as string | null)?.trim() ||
-          pairValues[idx]?.left ||
-          "",
-        right:
-          (formData.get(`pair_right_${idx}`) as string | null)?.trim() ||
-          pairValues[idx]?.right ||
-          "",
-      })).filter((pair) => pair.left && pair.right);
-      if (pairs.length === 0 && Array.isArray(editingQuiz?.quiz_payload?.pairs)) {
-        pairs = (editingQuiz.quiz_payload.pairs as { left: string; right: string }[]).filter(
-          (p) => p.left && p.right,
-        );
+      const editingPairs = Array.isArray(editingQuiz?.quiz_payload?.pairs)
+        ? (editingQuiz!.quiz_payload.pairs as { left: string; right: string }[]).filter(
+            (p) => p.left && p.right,
+          )
+        : [];
+      let pairs =
+        unitInputTab === "import" && editingPairs.length >= 2
+          ? editingPairs
+          : Array.from({ length: optionCount }, (_, idx) => ({
+              left:
+                (formData.get(`pair_left_${idx}`) as string | null)?.trim() ||
+                pairValues[idx]?.left ||
+                "",
+              right:
+                (formData.get(`pair_right_${idx}`) as string | null)?.trim() ||
+                pairValues[idx]?.right ||
+                "",
+            })).filter((pair) => pair.left && pair.right);
+      if (pairs.length === 0 && editingPairs.length > 0) {
+        pairs = editingPairs;
       }
       return makeBase(
         questionText.trim() || editingQuiz?.question_text || "Match the items",
@@ -833,11 +985,13 @@ export default function QuizInputForm({
         ? (editingQuiz.quiz_payload.steps as { prompt: string; template: string; expected: string }[])
         : [];
       const resolvedSteps =
-        steps.length > 0
-          ? steps
-          : existingSteps.length > 0
-            ? existingSteps
-            : [{ prompt: "Instruction", template: "", expected: "" }];
+        unitInputTab === "import" && existingSteps.length > 0
+          ? existingSteps
+          : steps.length > 0
+            ? steps
+            : existingSteps.length > 0
+              ? existingSteps
+              : [{ prompt: "Instruction", template: "", expected: "" }];
       return makeBase(questionText.trim() || editingQuiz?.question_text || title, {
         title,
         steps: resolvedSteps,
@@ -1005,6 +1159,34 @@ export default function QuizInputForm({
     setCpPromptCount((count) => Math.max(1, count - 1));
   };
 
+  const loadUnitPage = useCallback(
+    async (page: number) => {
+      setIsPending(true);
+      try {
+        const result = await getPaginatedRecentUnits(page, 20, {
+          id: idFilter,
+          search: searchFilter,
+          category: categoryFilter,
+          section: sectionFilter,
+          status: statusFilter,
+        });
+        setRecentUnits(result.units);
+        setCurrentPage(result.currentPage);
+        setTotalPages(result.totalPages);
+        setTotalCount(result.totalCount);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      idFilter,
+      searchFilter,
+      categoryFilter,
+      sectionFilter,
+      statusFilter,
+    ],
+  );
+
   const loadQuizPage = useCallback(
     async (page: number) => {
       setIsPending(true);
@@ -1033,15 +1215,36 @@ export default function QuizInputForm({
     ],
   );
 
+  const loadDataPage = useCallback(
+    async (page: number) => {
+      if (isUnitMode) {
+        await loadUnitPage(page);
+      } else {
+        await loadQuizPage(page);
+      }
+    },
+    [isUnitMode, loadUnitPage, loadQuizPage],
+  );
+
   useEffect(() => {
     if (!showRecentQuizzes) return;
 
     const refreshTimer = window.setTimeout(() => {
-      void loadQuizPage(1);
+      void loadDataPage(1);
     }, 150);
 
     return () => window.clearTimeout(refreshTimer);
-  }, [loadQuizPage, showRecentQuizzes]);
+  }, [loadDataPage, showRecentQuizzes]);
+
+  useEffect(() => {
+    const handlePendingUpdated = () => {
+      void loadDataPage(1);
+    };
+    window.addEventListener("quizweb-pending-updated", handlePendingUpdated);
+    return () => {
+      window.removeEventListener("quizweb-pending-updated", handlePendingUpdated);
+    };
+  }, [loadDataPage]);
 
   useEffect(() => {
     if (types.length > 0 && !hasInitializedType.current) {
@@ -1341,6 +1544,9 @@ export default function QuizInputForm({
 
     const formData = new FormData(event.currentTarget);
     formData.set("sec_id", selectedSecId);
+    if (unitTitle.trim()) {
+      formData.set("unit_title", unitTitle.trim());
+    }
     lessonSlides.forEach((slide, index) => {
       formData.set(`lesson_text_${index}`, slide.text);
       formData.set(`lesson_title_${index}`, slide.title ?? "");
@@ -1350,7 +1556,9 @@ export default function QuizInputForm({
     });
     const unitQuizBatch = preserveQuizDataOnSave
       ? originalUnitQuizzes
-      : buildQuizBatch(buildCurrentQuizEntry());
+      : unitInputTab === "import" && fullJsonImport?.unit_quiz_json?.length
+        ? fullJsonImport.unit_quiz_json
+        : buildQuizBatch(buildCurrentQuizEntry());
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
     }
@@ -1763,16 +1971,16 @@ export default function QuizInputForm({
       const result = isUnit
         ? await deletePendingQuiz(quizId)
         : await deleteQuiz(quizId);
-      if (result.error) {
+      if ("error" in result && result.error) {
         setMessage({ type: "error", text: result.error });
-      } else if (result.success) {
+      } else if ("success" in result && result.success) {
         setMessage({
           type: "success",
           text: `${isUnit ? "Unit" : "Quiz"} successfully deleted!`,
         });
 
         // Refresh list and metrics
-        await Promise.all([loadQuizPage(currentPage), refreshMetrics()]);
+        await Promise.all([loadDataPage(currentPage), refreshMetrics()]);
       }
     } catch (err) {
       console.error("Delete error:", err);
@@ -1780,6 +1988,63 @@ export default function QuizInputForm({
         type: "error",
         text: "An unexpected error occurred during deletion.",
       });
+    }
+  };
+
+  const handleEditUnit = async (unit: RecentUnitItem) => {
+    setIsPending(true);
+    try {
+      const fullUnit = await getUnitById(unit.unit_id);
+      if (fullUnit) {
+        handleEdit(fullUnit as unknown as RecentQuizItem);
+      } else {
+        setMessage({
+          type: "error",
+          text: `Failed to load Unit #${unit.unit_id} for editing.`,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load unit for editing:", error);
+      setMessage({
+        type: "error",
+        text: "An error occurred while loading the unit.",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const handleDeleteUnit = async (unitId: number) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete Unit #${unitId}? All slides, quizzes, and assessments for this unit will also be deleted.`,
+      )
+    ) {
+      return;
+    }
+    setIsPending(true);
+    try {
+      const result = await deleteUnit(unitId);
+      if (result && "error" in result && result.error) {
+        setMessage({ type: "error", text: result.error });
+      } else {
+        setMessage({
+          type: "success",
+          text: `Unit #${unitId} was deleted successfully.`,
+        });
+        if (editingQuiz?.unit_id === unitId || editingQuiz?.quiz_id === unitId) {
+          handleCancelEdit();
+        }
+        await Promise.all([loadDataPage(1), refreshMetrics()]);
+      }
+    } catch (err) {
+      console.error("Delete unit error:", err);
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred during unit deletion.",
+      });
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -3538,27 +3803,39 @@ export default function QuizInputForm({
     "expected_outcome": "<h1>Example</h1>"
   }
 }` : `{
+  "unit_title": "Document Structure",
+  "sec_id": 1,
+  "unit_lesson_card_json": {
+    "lesson_title": "Document Structure",
+    "lesson_slide": [
+      {
+        "lesson_title": "Basic HTML Skeletons",
+        "lesson_text": "In this lesson, you will learn the fundamental elements of HTML.",
+        "lesson_code": "<!DOCTYPE html>\\n<html>\\n<head>\\n<title>Page</title>\\n</head>\\n<body>\\n</body>\\n</html>"
+      }
+    ]
+  },
   "unit_assessment_json": {
     "schemaVersion": 2,
-    "title": "Assessment title",
-    "description": "Assessment description",
+    "title": "Unit 1 Assessment",
+    "description": "Build an HTML page",
     "steps": [{
       "stepNumber": 1,
-      "instruction": "Describe the task",
+      "instruction": "Add the DOCTYPE declaration",
       "starterCode": { "html": "", "css": "", "js": "" },
-      "expectedTemplate": { "html": "<h1>####</h1>", "css": "", "js": "" },
+      "expectedTemplate": { "html": "<!doctype html>", "css": "", "js": "" },
       "inheritPreviousCode": false
     }],
-    "expected_outcome": "<h1>Example</h1>"
+    "expected_outcome": "<!doctype html>\\n<html>\\n<head>\\n<title></title>\\n</head>\\n<body></body>\\n</html>"
   },
   "unit_quiz_json": [{
     "cat_id": 1,
     "sec_id": 1,
     "difficulty_id": 1,
     "quiz_type_id": 1,
-    "question_text": "Question text",
+    "question_text": "Which line comes first at the very top of an HTML page?",
     "quiz_payload": {
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "options": ["<!DOCTYPE html>", "<html>", "<head>", "<body>"],
       "correct_index": 0
     }
   }]
@@ -3587,17 +3864,42 @@ export default function QuizInputForm({
               >
                 {importJsonMessage.text}
                 {importJsonMessage.type === "success" && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ marginTop: "10px" }}
-                    onClick={() => {
-                      setUnitInputTab("assessment");
-                      setPreviewTab("assessment");
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      marginTop: "10px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    Review Assessment
-                  </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setUnitInputTab("lesson");
+                        setPreviewTab("lesson");
+                      }}
+                    >
+                      Review Lesson
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setUnitInputTab("assessment");
+                        setPreviewTab("assessment");
+                      }}
+                    >
+                      Review Assessment
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={isPending}
+                    >
+                      {isPending ? "Submitting Unit..." : "Submit Unit for Review"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -3606,7 +3908,7 @@ export default function QuizInputForm({
           <div
             style={{
               display:
-                unitInputTab !== "import"
+                unitInputTab !== "import" || fullJsonImport !== null
                   ? "flex"
                   : "none",
               alignItems: "center",
@@ -3717,17 +4019,8 @@ export default function QuizInputForm({
                 Recently Added Units
               </h2>
               <div className="list-visibility-counter">
-                Showing <strong>{filteredQuizzes.length}</strong> of{" "}
-                <strong>{metrics.totalQuizzes || totalCount}</strong> units
-                {metrics.totalQuizzes > 0 && (
-                  <span className="visibility-ratio">
-                    (
-                    {Math.round(
-                      (filteredQuizzes.length / metrics.totalQuizzes) * 100,
-                    )}
-                    % of bank)
-                  </span>
-                )}
+                Showing <strong>{isUnitMode ? filteredUnits.length : filteredQuizzes.length}</strong> of{" "}
+                <strong>{totalCount}</strong> units
               </div>
             </div>
             <div className="list-header-actions">
@@ -3735,7 +4028,7 @@ export default function QuizInputForm({
                 <label
                   htmlFor="sort-by-select"
                   className="sort-label"
-                  title="Sort Quizzes"
+                  title="Sort Units"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -3762,12 +4055,23 @@ export default function QuizInputForm({
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="sort-select"
-                  aria-label="Sort quizzes"
+                  aria-label="Sort units"
                 >
                   <option value="id_desc">ID: High to Low (Newest)</option>
                   <option value="id_asc">ID: Low to High (Oldest)</option>
-                  <option value="diff_asc">Difficulty: Easy → Hard</option>
-                  <option value="diff_desc">Difficulty: Hard → Easy</option>
+                  {isUnitMode ? (
+                    <>
+                      <option value="title_asc">Title: A → Z</option>
+                      <option value="title_desc">Title: Z → A</option>
+                      <option value="slides_desc">Most Slides</option>
+                      <option value="quizzes_desc">Most Questions</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="diff_asc">Difficulty: Easy → Hard</option>
+                      <option value="diff_desc">Difficulty: Hard → Easy</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -3868,6 +4172,20 @@ export default function QuizInputForm({
                   </button>
                 </span>
               )}
+              {statusFilter !== "" && (
+                <span className="active-filter-tag">
+                  Status: {statusFilter}
+                  <button
+                    type="button"
+                    className="active-filter-tag-close"
+                    onClick={() => setStatusFilter("")}
+                    title="Remove status filter"
+                    aria-label="Remove status filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
               {difficultyFilter !== "" && (
                 <span className="active-filter-tag">
                   Diff: {difficultyFilter}
@@ -3887,11 +4205,19 @@ export default function QuizInputForm({
                   Sort:{" "}
                   {sortBy === "id_asc"
                     ? "Oldest First"
-                    : sortBy === "diff_asc"
-                      ? "Easy → Hard"
-                      : sortBy === "diff_desc"
-                        ? "Hard → Easy"
-                        : sortBy}
+                    : sortBy === "title_asc"
+                      ? "Title A → Z"
+                      : sortBy === "title_desc"
+                        ? "Title Z → A"
+                        : sortBy === "slides_desc"
+                          ? "Most Slides"
+                          : sortBy === "quizzes_desc"
+                            ? "Most Questions"
+                            : sortBy === "diff_asc"
+                              ? "Easy → Hard"
+                              : sortBy === "diff_desc"
+                                ? "Hard → Easy"
+                                : sortBy}
                   <button
                     type="button"
                     className="active-filter-tag-close"
@@ -3946,9 +4272,11 @@ export default function QuizInputForm({
                 )}
               </div>
               <div className="filter-grid">
-                {/* Question ID Filter */}
+                {/* ID Filter */}
                 <div className="filter-group">
-                  <span className="filter-group-title">Question ID</span>
+                  <span className="filter-group-title">
+                    {isUnitMode ? "Unit ID" : "Question ID"}
+                  </span>
                   <div
                     style={{
                       position: "relative",
@@ -3960,9 +4288,9 @@ export default function QuizInputForm({
                       type="text"
                       value={idFilter}
                       onChange={(e) => setIdFilter(e.target.value)}
-                      placeholder="e.g. 42 or #42"
+                      placeholder={isUnitMode ? "e.g. 98 or #98" : "e.g. 42 or #42"}
                       className="filter-input"
-                      aria-label="Filter by Question ID"
+                      aria-label={isUnitMode ? "Filter by Unit ID" : "Filter by Question ID"}
                     />
                     {idFilter && (
                       <button
@@ -3988,10 +4316,10 @@ export default function QuizInputForm({
                   </div>
                 </div>
 
-                {/* Lesson Title Search */}
+                {/* Title / Search Filter */}
                 <div className="filter-group">
                   <span className="filter-group-title">
-                    Search Lesson Title
+                    {isUnitMode ? "Search Unit Title" : "Search Lesson Title"}
                   </span>
                   <div
                     style={{
@@ -4004,9 +4332,13 @@ export default function QuizInputForm({
                       type="text"
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
-                      placeholder="Search lesson title..."
+                      placeholder={
+                        isUnitMode
+                          ? "Search unit title or author..."
+                          : "Search lesson title..."
+                      }
                       className="filter-input"
-                      aria-label="Search by lesson title"
+                      aria-label={isUnitMode ? "Search by unit title" : "Search by lesson title"}
                     />
                     {searchFilter && (
                       <button
@@ -4070,36 +4402,56 @@ export default function QuizInputForm({
                   </div>
                 )}
 
-                {/* Difficulty Filter */}
-                <div className="filter-group">
-                  <span className="filter-group-title">Difficulty</span>
-                  <select
-                    value={difficultyFilter}
-                    onChange={(e) => setDifficultyFilter(e.target.value)}
-                    className="filter-select"
-                    aria-label="Filter by difficulty"
-                  >
-                    <option value="">All Difficulties</option>
-                    {difficulties.map((diff) => (
-                      <option
-                        key={diff.difficulty_id}
-                        value={diff.difficulty_name}
-                      >
-                        {diff.difficulty_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Status Filter (Unit Mode) */}
+                {isUnitMode && (
+                  <div className="filter-group">
+                    <span className="filter-group-title">Status</span>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="filter-select"
+                      aria-label="Filter by unit status"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Difficulty Filter (Quiz Mode) */}
+                {!isUnitMode && (
+                  <div className="filter-group">
+                    <span className="filter-group-title">Difficulty</span>
+                    <select
+                      value={difficultyFilter}
+                      onChange={(e) => setDifficultyFilter(e.target.value)}
+                      className="filter-select"
+                      aria-label="Filter by difficulty"
+                    >
+                      <option value="">All Difficulties</option>
+                      {difficulties.map((diff) => (
+                        <option
+                          key={diff.difficulty_id}
+                          value={diff.difficulty_name}
+                        >
+                          {diff.difficulty_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
               </div>
             </div>
           )}
 
-          {recentQuizzes.length === 0 ? (
+          {(isUnitMode ? recentUnits.length === 0 : recentQuizzes.length === 0) ? (
             <div className="empty-state">
-                No units submitted yet. Use the form on the left to add one!
+              No units submitted yet. Use the form on the left to add one!
             </div>
-          ) : filteredQuizzes.length === 0 ? (
+          ) : (isUnitMode ? filteredUnits.length === 0 : filteredQuizzes.length === 0) ? (
             <div className="empty-state">
               <p style={{ margin: "0 0 12px 0" }}>
                 No units found matching the selected filters.
@@ -4129,145 +4481,133 @@ export default function QuizInputForm({
                 paddingRight: "10px",
               }}
             >
-              {filteredQuizzes.map((quiz) => {
-                const payload = quiz.quiz_payload;
-                const unitAssessment =
-                  payload?.assessment && typeof payload.assessment === "object"
-                    ? payload.assessment
-                    : undefined;
-                return (
-                  <div
-                    key={quiz.quiz_id}
-                    className="quiz-list-item"
-                    onClick={() => handleEdit(quiz)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        handleEdit(quiz);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    title="Select this unit to edit"
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: "16px",
-                      }}
-                    >
+              {isUnitMode
+                ? filteredUnits.map((unit) => {
+                    const cleanFilter = idFilter.replace(/^[#\s]+/, "").trim();
+                    const isThisIdFiltered =
+                      cleanFilter !== "" && cleanFilter === unit.unit_id.toString();
+
+                    return (
                       <div
-                        className="quiz-list-question"
-                        style={{ marginBottom: 0 }}
-                      >
-                        {quiz.type_name === "CP" && quiz.quiz_payload?.title
-                          ? quiz.quiz_payload.title
-                          : quiz.question_text}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexShrink: 0,
-                        }}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="btn-preview"
-                          onClick={() =>
-                            router.push(`/quiz?unitId=${quiz.quiz_id}`)
+                        key={unit.unit_id}
+                        className="quiz-list-item unit-list-item"
+                        onClick={() => handleEditUnit(unit)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleEditUnit(unit);
                           }
-                          title={`Preview Question (ID: #${quiz.quiz_id})`}
-                          aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        title="Select this unit to edit"
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: "16px",
+                          }}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-eye"
+                          <div
+                            className="quiz-list-question unit-title-text"
+                            style={{ marginBottom: 0, fontWeight: 600, fontSize: "1.05rem" }}
                           >
-                            <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-edit"
-                          onClick={() => handleEdit(quiz)}
-                          title={`Edit Question (ID: #${quiz.quiz_id})`}
-                          aria-label={`Edit Question (ID: #${quiz.quiz_id})`}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-pencil"
+                            {unit.unit_title}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexShrink: 0,
+                            }}
+                            onClick={(event) => event.stopPropagation()}
                           >
-                            <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
-                            <path d="m16 5 3 3" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-delete"
-                          onClick={() => handleDelete(quiz.quiz_id ?? 0, quiz.type_name ?? "")}
-                          title={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
-                          aria-label={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-trash-2"
-                          >
-                            <path d="M3 6h18" />
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                            <line x1="10" x2="10" y1="11" y2="17" />
-                            <line x1="14" x2="14" y1="11" y2="17" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="quiz-badge-row">
-                      {(() => {
-                        const cleanFilter = idFilter
-                          .replace(/^[#\s]+/, "")
-                          .trim();
-                        const isThisIdFiltered =
-                          cleanFilter !== "" &&
-                          cleanFilter === quiz.quiz_id.toString();
-                        return (
+                            <button
+                              type="button"
+                              className="btn-preview"
+                              onClick={() => router.push(`/quiz?unitId=${unit.unit_id}`)}
+                              title={`Preview Unit (ID: #${unit.unit_id})`}
+                              aria-label={`Preview Unit (ID: #${unit.unit_id})`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-eye"
+                              >
+                                <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-edit"
+                              onClick={() => handleEditUnit(unit)}
+                              title={`Edit Unit (ID: #${unit.unit_id})`}
+                              aria-label={`Edit Unit (ID: #${unit.unit_id})`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-pencil"
+                              >
+                                <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                                <path d="m16 5 3 3" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-delete"
+                              onClick={() => handleDeleteUnit(unit.unit_id)}
+                              title={`Delete Unit (ID: #${unit.unit_id})`}
+                              aria-label={`Delete Unit (ID: #${unit.unit_id})`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-trash-2"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                <line x1="10" x2="10" y1="11" y2="17" />
+                                <line x1="14" x2="14" y1="11" y2="17" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="quiz-badge-row">
                           <div
                             className={`badge-id-container ${isThisIdFiltered ? "active-filter" : ""}`}
                           >
                             <button
                               type="button"
-                              className={`badge badge-id ${copiedQuizId === quiz.quiz_id ? "copied" : ""}`}
-                              onClick={() => handleCopyId(quiz.quiz_id)}
-                              title="Click to copy Question ID"
-                              aria-label={`Copy Question ID ${quiz.quiz_id}`}
+                              className={`badge badge-id ${copiedQuizId === unit.unit_id ? "copied" : ""}`}
+                              onClick={() => handleCopyId(unit.unit_id)}
+                              title="Click to copy Unit ID"
+                              aria-label={`Copy Unit ID ${unit.unit_id}`}
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -4281,7 +4621,7 @@ export default function QuizInputForm({
                                 strokeLinejoin="round"
                                 aria-hidden="true"
                               >
-                                {copiedQuizId === quiz.quiz_id ? (
+                                {copiedQuizId === unit.unit_id ? (
                                   <polyline points="20 6 9 17 4 12" />
                                 ) : (
                                   <>
@@ -4298,24 +4638,24 @@ export default function QuizInputForm({
                                 )}
                               </svg>
                               <span>
-                                {copiedQuizId === quiz.quiz_id
+                                {copiedQuizId === unit.unit_id
                                   ? "Copied!"
-                                  : `ID: #${quiz.quiz_id}`}
+                                  : `ID: #${unit.unit_id}`}
                               </span>
                             </button>
                             <button
                               type="button"
                               className={`badge-id-filter-btn ${isThisIdFiltered ? "filtered" : ""}`}
-                              onClick={() => handleToggleIdFilter(quiz.quiz_id)}
+                              onClick={() => handleToggleIdFilter(unit.unit_id)}
                               title={
                                 isThisIdFiltered
                                   ? "Clear ID filter"
-                                  : "Filter by this Question ID"
+                                  : "Filter by this Unit ID"
                               }
                               aria-label={
                                 isThisIdFiltered
                                   ? "Clear ID filter"
-                                  : `Filter by Question ID ${quiz.quiz_id}`
+                                  : `Filter by Unit ID ${unit.unit_id}`
                               }
                             >
                               {isThisIdFiltered ? (
@@ -4353,105 +4693,353 @@ export default function QuizInputForm({
                               )}
                             </button>
                           </div>
-                        );
-                      })()}
-                      {quiz.type_name !== "Unit" && (
-                        <span className="badge badge-cat">{quiz.cat_name}</span>
-                      )}
-                      {quiz.sec_num && (
-                        <span className="badge badge-type">
-                          Section {quiz.sec_num}
-                        </span>
-                      )}
-                      <span className="badge badge-diff">
-                        {quiz.difficulty_name}
-                      </span>
-                      <span className="badge badge-type">
-                        {quiz.type_name === "Unit"
-                          ? `Unit ${payload?.unit_number ?? ""}`.trim()
-                          : quiz.type_name}
-                      </span>
-                      {quiz.type_name === "MCQ" && payload?.options && (
-                        <span
-                          className="badge badge-metric-tag"
-                          title="Number of options"
-                        >
-                          {payload.options.length} options
-                        </span>
-                      )}
-                      {quiz.type_name === "Order" && payload?.items && (
-                        <span
-                          className="badge badge-metric-tag"
-                          title="Sequence items"
-                        >
-                          {payload.items.length} items
-                        </span>
-                      )}
-                      {quiz.type_name === "Pair" && payload?.pairs && (
-                        <span
-                          className="badge badge-metric-tag"
-                          title="Matching pairs"
-                        >
-                          {payload.pairs.length} pairs
-                        </span>
-                      )}
-                      {quiz.type_name === "CP" && (
-                        <span
-                          className="badge badge-metric-tag"
-                          title="Problem steps"
-                        >
-                          {payload?.steps?.length ||
-                            payload?.prompts?.length ||
-                            1}{" "}
-                          step{(payload?.steps?.length || 1) > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {quiz.type_name === "Unit" && (
-                        <>
-                          <span
-                            className="badge badge-metric-tag"
-                            title="Queued quizzes"
-                          >
-                            {Array.isArray(payload?.quizzes)
-                              ? payload.quizzes.length
-                              : 0} quizzes
+                          <span className="badge badge-cat">{unit.cat_name}</span>
+                          {unit.sec_num != null && (
+                            <span className="badge badge-type">
+                              Section {unit.sec_num}
+                            </span>
+                          )}
+                          <span className={`badge badge-status badge-status-${unit.status}`}>
+                            {unit.status.toUpperCase()}
                           </span>
-                          {Array.isArray(unitAssessment?.cp_steps) &&
-                            unitAssessment.cp_steps.length > 0 && (
+                          <span className="badge badge-metric-tag" title="Lesson Slides count">
+                            {unit.slide_count} {unit.slide_count === 1 ? "slide" : "slides"}
+                          </span>
+                          <span className="badge badge-metric-tag" title="Quizzes count">
+                            {unit.question_count} {unit.question_count === 1 ? "question" : "questions"}
+                          </span>
+                          {unit.author_name && (
+                            <span className="badge badge-author" title={`Author: ${unit.author_name}`}>
+                              by {unit.author_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                : filteredQuizzes.map((quiz) => {
+                    const payload = quiz.quiz_payload;
+                    const unitAssessment =
+                      payload?.assessment && typeof payload.assessment === "object"
+                        ? payload.assessment
+                        : undefined;
+                    return (
+                      <div
+                        key={quiz.quiz_id}
+                        className="quiz-list-item"
+                        onClick={() => handleEdit(quiz)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleEdit(quiz);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        title="Select this unit to edit"
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: "16px",
+                          }}
+                        >
+                          <div
+                            className="quiz-list-question"
+                            style={{ marginBottom: 0 }}
+                          >
+                            {quiz.type_name === "CP" && quiz.quiz_payload?.title
+                              ? quiz.quiz_payload.title
+                              : quiz.question_text}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexShrink: 0,
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              className="btn-preview"
+                              onClick={() =>
+                                router.push(`/quiz?unitId=${quiz.quiz_id}`)
+                              }
+                              title={`Preview Question (ID: #${quiz.quiz_id})`}
+                              aria-label={`Preview Question (ID: #${quiz.quiz_id})`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-eye"
+                              >
+                                <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-edit"
+                              onClick={() => handleEdit(quiz)}
+                              title={`Edit Question (ID: #${quiz.quiz_id})`}
+                              aria-label={`Edit Question (ID: #${quiz.quiz_id})`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-pencil"
+                              >
+                                <path d="M21.174 6.812a1 1 0 0 0-1.986-.212L3.5 20.5l-.5 3 3-.5L20.888 8.8a1 1 0 0 0 .286-1.988Z" />
+                                <path d="m16 5 3 3" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-delete"
+                              onClick={() => handleDelete(quiz.quiz_id ?? 0, quiz.type_name ?? "")}
+                              title={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
+                              aria-label={`Delete ${quiz.type_name === "Unit" ? "Unit" : "Question"} (ID: #${quiz.quiz_id})`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-trash-2"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                <line x1="10" x2="10" y1="11" y2="17" />
+                                <line x1="14" x2="14" y1="11" y2="17" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="quiz-badge-row">
+                          {(() => {
+                            const cleanFilter = idFilter
+                              .replace(/^[#\s]+/, "")
+                              .trim();
+                            const isThisIdFiltered =
+                              cleanFilter !== "" &&
+                              cleanFilter === quiz.quiz_id.toString();
+                            return (
+                              <div
+                                className={`badge-id-container ${isThisIdFiltered ? "active-filter" : ""}`}
+                              >
+                                <button
+                                  type="button"
+                                  className={`badge badge-id ${copiedQuizId === quiz.quiz_id ? "copied" : ""}`}
+                                  onClick={() => handleCopyId(quiz.quiz_id)}
+                                  title="Click to copy Question ID"
+                                  aria-label={`Copy Question ID ${quiz.quiz_id}`}
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="11"
+                                    height="11"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                  >
+                                    {copiedQuizId === quiz.quiz_id ? (
+                                      <polyline points="20 6 9 17 4 12" />
+                                    ) : (
+                                      <>
+                                        <rect
+                                          width="14"
+                                          height="14"
+                                          x="8"
+                                          y="8"
+                                          rx="2"
+                                          ry="2"
+                                        />
+                                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                                      </>
+                                    )}
+                                  </svg>
+                                  <span>
+                                    {copiedQuizId === quiz.quiz_id
+                                      ? "Copied!"
+                                      : `ID: #${quiz.quiz_id}`}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`badge-id-filter-btn ${isThisIdFiltered ? "filtered" : ""}`}
+                                  onClick={() => handleToggleIdFilter(quiz.quiz_id)}
+                                  title={
+                                    isThisIdFiltered
+                                      ? "Clear ID filter"
+                                      : "Filter by this Question ID"
+                                  }
+                                  aria-label={
+                                    isThisIdFiltered
+                                      ? "Clear ID filter"
+                                      : `Filter by Question ID ${quiz.quiz_id}`
+                                  }
+                                >
+                                  {isThisIdFiltered ? (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="11"
+                                      height="11"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <path d="M18 6 6 18" />
+                                      <path d="m6 6 12 12" />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="11"
+                                      height="11"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <circle cx="11" cy="11" r="8" />
+                                      <path d="m21 21-4.3-4.3" />
+                                    </svg>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })()}
+                          {quiz.type_name !== "Unit" && (
+                            <span className="badge badge-cat">{quiz.cat_name}</span>
+                          )}
+                          {quiz.sec_num && (
+                            <span className="badge badge-type">
+                              Section {quiz.sec_num}
+                            </span>
+                          )}
+                          <span className="badge badge-diff">
+                            {quiz.difficulty_name}
+                          </span>
+                          <span className="badge badge-type">
+                            {quiz.type_name === "Unit"
+                              ? `Unit ${payload?.unit_number ?? ""}`.trim()
+                              : quiz.type_name}
+                          </span>
+                          {quiz.type_name === "MCQ" && payload?.options && (
+                            <span
+                              className="badge badge-metric-tag"
+                              title="Number of options"
+                            >
+                              {payload.options.length} options
+                            </span>
+                          )}
+                          {quiz.type_name === "Order" && payload?.items && (
+                            <span
+                              className="badge badge-metric-tag"
+                              title="Sequence items"
+                            >
+                              {payload.items.length} items
+                            </span>
+                          )}
+                          {quiz.type_name === "Pair" && payload?.pairs && (
+                            <span
+                              className="badge badge-metric-tag"
+                              title="Matching pairs"
+                            >
+                              {payload.pairs.length} pairs
+                            </span>
+                          )}
+                          {quiz.type_name === "CP" && (
+                            <span
+                              className="badge badge-metric-tag"
+                              title="Problem steps"
+                            >
+                              {payload?.steps?.length ||
+                                payload?.prompts?.length ||
+                                1}{" "}
+                              step{(payload?.steps?.length || 1) > 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {quiz.type_name === "Unit" && (
+                            <>
                               <span
                                 className="badge badge-metric-tag"
-                                title="Coding Problem steps"
+                                title="Queued quizzes"
                               >
-                                {unitAssessment.cp_steps.length} CP step
-                                {unitAssessment.cp_steps.length === 1 ? "" : "s"}
+                                {Array.isArray(payload?.quizzes)
+                                  ? payload.quizzes.length
+                                  : 0} quizzes
                               </span>
-                            )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                              {Array.isArray(unitAssessment?.cp_steps) &&
+                                unitAssessment.cp_steps.length > 0 && (
+                                  <span
+                                    className="badge badge-metric-tag"
+                                    title="Coding Problem steps"
+                                  >
+                                    {unitAssessment.cp_steps.length} CP step
+                                    {unitAssessment.cp_steps.length === 1 ? "" : "s"}
+                                  </span>
+                                )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
             </div>
           )}
 
           {totalCount > 0 && (
-            <div className="pagination-controls" aria-label="Quiz pagination">
+            <div className="pagination-controls" aria-label="Pagination controls">
               <button
                 type="button"
                 className="pagination-button"
-                onClick={() => loadQuizPage(currentPage - 1)}
+                onClick={() => loadDataPage(currentPage - 1)}
                 disabled={isPending || currentPage === 1}
               >
                 Previous
               </button>
               <span className="pagination-status">
-                Page {currentPage} of {totalPages} ({totalCount} questions)
+                Page {currentPage} of {totalPages} ({totalCount} {isUnitMode ? "units" : "questions"})
               </span>
               <button
                 type="button"
                 className="pagination-button"
-                onClick={() => loadQuizPage(currentPage + 1)}
+                onClick={() => loadDataPage(currentPage + 1)}
                 disabled={isPending || currentPage === totalPages}
               >
                 Next

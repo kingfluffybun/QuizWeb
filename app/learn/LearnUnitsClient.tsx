@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { AvailableUnit } from "@/app/actions/quiz";
+import { getCanonicalSortOrder } from "@/lib/curriculum";
 import Sidebar from "@/app/components/Sidebar";
 import "#css/quiz.css";
 import "#css/nav.css";
@@ -39,12 +40,6 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                 sensitivity: "base",
             });
         };
-        const categoryOrder: Record<string, number> = {
-            html: 0,
-            css: 1,
-            js: 2,
-            javascript: 2,
-        };
 
         return units
             .filter((unit) => {
@@ -58,15 +53,13 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                 return matchesSection && matchesSearch;
             })
             .sort((a, b) => {
-                const categoryA = (a.category_name ?? "").trim().toLowerCase();
-                const categoryB = (b.category_name ?? "").trim().toLowerCase();
-                const categoryComparison =
-                    (categoryOrder[categoryA] ?? Number.MAX_SAFE_INTEGER) -
-                    (categoryOrder[categoryB] ?? Number.MAX_SAFE_INTEGER);
+                const orderA = getCanonicalSortOrder(a.sec_id ?? 0, a.unit_order ?? 1);
+                const orderB = getCanonicalSortOrder(b.sec_id ?? 0, b.unit_order ?? 1);
+                if (orderA !== orderB) return orderA - orderB;
 
                 return (
-                    categoryComparison ||
                     compareNumbers(a.sec_num, b.sec_num) ||
+                    compareNumbers(a.unit_order, b.unit_order) ||
                     compareNumbers(a.unit_number, b.unit_number) ||
                     a.unit_title.localeCompare(b.unit_title, undefined, {
                         numeric: true,
