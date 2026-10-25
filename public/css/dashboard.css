@@ -379,6 +379,7 @@ button.quick-action-btn:hover {
     left: 0;
     width: calc(100% + 12px);
     border-radius: 999px 0 0 999px;
+    margin-left: 12px
 }
 
 .day.active-middle::after {
@@ -387,7 +388,7 @@ button.quick-action-btn:hover {
 }
 
 .day.active-end::after {
-    left: -12px;
+    left: -24px;
     width: calc(100% + 12px);
     border-radius: 0 999px 999px 0;
 }
@@ -687,6 +688,7 @@ button.quick-action-btn:hover {
     display: flex;
     align-items: flex-end;
     gap: 12px;
+    padding: 0 12px;
     padding-top: 36px;
     border-bottom: 4px solid var(--border-main);
     .podium-place-container {
@@ -1404,7 +1406,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     }
 
     .calendar {
-        gap: 4px !important;
+        gap: 8px !important;
         width: 100% !important;
     }
 
@@ -1429,6 +1431,11 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
         padding: 4px !important;
         font-size: 0.72rem !important;
         font-weight: 600 !important;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
     }
 
     /* Leaderboard Card */
