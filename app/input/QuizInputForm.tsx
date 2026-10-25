@@ -31,6 +31,7 @@ import {
   parseAssessmentBulkImport,
   parseAssessmentImport,
   quizPayloadMatchesType,
+  extractLessonSlides,
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
 
@@ -655,6 +656,47 @@ export default function QuizInputForm({
       return;
     }
 
+    const importedTitle =
+      result.data.unit_title ??
+      (result.data as Record<string, unknown>).title;
+    if (typeof importedTitle === "string" && importedTitle.trim()) {
+      setUnitTitle(importedTitle.trim());
+    }
+
+    const incomingSecId =
+      result.data.sec_id ??
+      (result.data as Record<string, unknown>).section_id;
+    if (
+      incomingSecId != null &&
+      sections &&
+      sections.some((s) => s.sec_id === Number(incomingSecId))
+    ) {
+      setSelectedSecId(String(incomingSecId));
+    }
+
+    const rawLessonDoc =
+      result.data.unit_lesson_card_json ??
+      result.data.lesson_slides ??
+      (result.data as Record<string, unknown>).lesson_card ??
+      (result.data as Record<string, unknown>).lessons;
+    const slides = extractLessonSlides(rawLessonDoc);
+    if (slides && slides.length > 0) {
+      setLessonSlides(slides);
+      setCurrentLessonSlide(0);
+      if (
+        !importedTitle &&
+        typeof rawLessonDoc === "object" &&
+        rawLessonDoc !== null
+      ) {
+        const cardTitle =
+          (rawLessonDoc as Record<string, unknown>).lesson_title ??
+          (rawLessonDoc as Record<string, unknown>).title;
+        if (typeof cardTitle === "string" && cardTitle.trim()) {
+          setUnitTitle(cardTitle.trim());
+        }
+      }
+    }
+
     const importedAssessment = result.data.unit_assessment_json;
     setAssessmentFields(importedAssessment);
     const [firstQuiz, ...remainingQuizzes] = result.data.unit_quiz_json;
@@ -679,9 +721,11 @@ export default function QuizInputForm({
       type_name: firstQuizType?.type_name ?? "",
       _queuedUnitQuiz: true,
     });
+    const slideMsg =
+      slides && slides.length > 0 ? `, ${slides.length} lesson slide(s),` : "";
     setImportJsonMessage({
       type: "success",
-      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s) and ${importedAssessment.steps.length} assessment step(s). Review and edit both before submitting.`,
+      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s). You can review all sections or submit directly.`,
     });
   };
 
@@ -1763,9 +1807,9 @@ export default function QuizInputForm({
       const result = isUnit
         ? await deletePendingQuiz(quizId)
         : await deleteQuiz(quizId);
-      if (result.error) {
+      if ("error" in result && result.error) {
         setMessage({ type: "error", text: result.error });
-      } else if (result.success) {
+      } else if ("success" in result && result.success) {
         setMessage({
           type: "success",
           text: `${isUnit ? "Unit" : "Quiz"} successfully deleted!`,
@@ -3538,27 +3582,39 @@ export default function QuizInputForm({
     "expected_outcome": "<h1>Example</h1>"
   }
 }` : `{
+  "unit_title": "Document Structure",
+  "sec_id": 1,
+  "unit_lesson_card_json": {
+    "lesson_title": "Document Structure",
+    "lesson_slide": [
+      {
+        "lesson_title": "Basic HTML Skeletons",
+        "lesson_text": "In this lesson, you will learn the fundamental elements of HTML.",
+        "lesson_code": "<!DOCTYPE html>\\n<html>\\n<head>\\n<title>Page</title>\\n</head>\\n<body>\\n</body>\\n</html>"
+      }
+    ]
+  },
   "unit_assessment_json": {
     "schemaVersion": 2,
-    "title": "Assessment title",
-    "description": "Assessment description",
+    "title": "Unit 1 Assessment",
+    "description": "Build an HTML page",
     "steps": [{
       "stepNumber": 1,
-      "instruction": "Describe the task",
+      "instruction": "Add the DOCTYPE declaration",
       "starterCode": { "html": "", "css": "", "js": "" },
-      "expectedTemplate": { "html": "<h1>####</h1>", "css": "", "js": "" },
+      "expectedTemplate": { "html": "<!doctype html>", "css": "", "js": "" },
       "inheritPreviousCode": false
     }],
-    "expected_outcome": "<h1>Example</h1>"
+    "expected_outcome": "<!doctype html>\\n<html>\\n<head>\\n<title></title>\\n</head>\\n<body></body>\\n</html>"
   },
   "unit_quiz_json": [{
     "cat_id": 1,
     "sec_id": 1,
     "difficulty_id": 1,
     "quiz_type_id": 1,
-    "question_text": "Question text",
+    "question_text": "Which line comes first at the very top of an HTML page?",
     "quiz_payload": {
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "options": ["<!DOCTYPE html>", "<html>", "<head>", "<body>"],
       "correct_index": 0
     }
   }]
@@ -3587,17 +3643,42 @@ export default function QuizInputForm({
               >
                 {importJsonMessage.text}
                 {importJsonMessage.type === "success" && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ marginTop: "10px" }}
-                    onClick={() => {
-                      setUnitInputTab("assessment");
-                      setPreviewTab("assessment");
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      marginTop: "10px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    Review Assessment
-                  </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setUnitInputTab("lesson");
+                        setPreviewTab("lesson");
+                      }}
+                    >
+                      Review Lesson
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setUnitInputTab("assessment");
+                        setPreviewTab("assessment");
+                      }}
+                    >
+                      Review Assessment
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={isPending}
+                    >
+                      {isPending ? "Submitting Unit..." : "Submit Unit for Review"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -3606,7 +3687,7 @@ export default function QuizInputForm({
           <div
             style={{
               display:
-                unitInputTab !== "import"
+                unitInputTab !== "import" || fullJsonImport !== null
                   ? "flex"
                   : "none",
               alignItems: "center",

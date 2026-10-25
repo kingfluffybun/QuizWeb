@@ -947,8 +947,15 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     return { error: "At least one quiz is required before submitting the unit." };
   }
 
-  const session = await auth();
-  const authorId = staff.id ? Number(staff.id) : (session?.user?.id ? Number(session.user.id) : null);
+  let authorId = staff.id ? Number(staff.id) : null;
+  if (!authorId) {
+    try {
+      const session = await auth();
+      if (session?.user?.id) authorId = Number(session.user.id);
+    } catch {
+      // safe fallback outside request scope
+    }
+  }
 
   const connection = await db.getConnection();
   try {
@@ -1803,8 +1810,15 @@ export async function createQuiz(state: unknown, formData: FormData) {
       return { error: parsedPayload.error };
     }
 
-    const session = await auth();
-    const authorId = staff.id ? Number(staff.id) : (session?.user?.id ? Number(session.user.id) : null);
+    let authorId = staff.id ? Number(staff.id) : null;
+    if (!authorId) {
+      try {
+        const session = await auth();
+        if (session?.user?.id) authorId = Number(session.user.id);
+      } catch {
+        // safe fallback outside request scope
+      }
+    }
     const resolvedSecId = secId && String(secId).trim() !== "" ? Number(secId) : 1;
 
     const connection = await db.getConnection();

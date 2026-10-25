@@ -35,6 +35,7 @@ tests/
 tests/*
 !tests/test-assessment-json-import.ts
 !tests/test-db-v2-live-actions.ts
+!tests/test-maintainer-json-import.ts
 
 # debug
 npm-debug.log*
