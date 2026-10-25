@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { requireAdmin, requireStaff } from "@/lib/rbac";
@@ -19,6 +19,29 @@ import {
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
 
+function createSafeCache<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  parts: string[],
+  options?: { tags?: string[]; revalidate?: number | false }
+): T {
+  try {
+    const cached = unstable_cache(fn, parts, options);
+    return (async (...args: Parameters<T>) => {
+      try {
+        return await cached(...args);
+      } catch (err: unknown) {
+        const msg = (err as { message?: string })?.message || "";
+        if (msg.includes("incrementalCache missing")) {
+          return await fn(...args);
+        }
+        throw err;
+      }
+    }) as T;
+  } catch {
+    return fn;
+  }
+}
+
 function revalidateQuizPaths() {
   try {
     revalidatePath("/learn");
@@ -28,6 +51,7 @@ function revalidateQuizPaths() {
     revalidatePath("/maintainer");
     revalidatePath("/input");
     revalidatePath("/pending");
+    updateTag("curriculum");
   } catch {
     // Ignore when called outside Next.js request context (e.g. CLI test scripts)
   }
@@ -505,20 +529,14 @@ async function quizHasColumn(columnName: string) {
   }
 }
 
-export async function getQuizMetadata() {
+async function fetchQuizMetadataInternal() {
   try {
-    const [categories] = await db.query<RowDataPacket[]>(
-      "SELECT * FROM cat_tbl ORDER BY cat_name",
-    );
-    const [sections] = await db.query<RowDataPacket[]>(
-      "SELECT * FROM sec_tbl ORDER BY sec_id",
-    );
-    const [difficulties] = await db.query<RowDataPacket[]>(
-      "SELECT * FROM difficulty_tbl ORDER BY difficulty_id",
-    );
-    const [types] = await db.query<RowDataPacket[]>(
-      "SELECT * FROM quiz_type_tbl ORDER BY quiz_type_id",
-    );
+    const [[categories], [sections], [difficulties], [types]] = await Promise.all([
+      db.query<RowDataPacket[]>("SELECT * FROM cat_tbl ORDER BY cat_name"),
+      db.query<RowDataPacket[]>("SELECT * FROM sec_tbl ORDER BY sec_id"),
+      db.query<RowDataPacket[]>("SELECT * FROM difficulty_tbl ORDER BY difficulty_id"),
+      db.query<RowDataPacket[]>("SELECT * FROM quiz_type_tbl ORDER BY quiz_type_id"),
+    ]);
 
     return {
       categories: categories as Category[],
@@ -531,6 +549,12 @@ export async function getQuizMetadata() {
     return { categories: [], difficulties: [], types: [], sections: [] };
   }
 }
+
+export const getQuizMetadata = createSafeCache(
+  fetchQuizMetadataInternal,
+  ["quiz-metadata"],
+  { tags: ["curriculum", "metadata"], revalidate: 3600 }
+);
 
 async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
   if (!Array.isArray(quizzes) || quizzes.length === 0) return [];
@@ -1218,7 +1242,7 @@ export async function getCodeProblems(unitId?: number): Promise<CodeProblem[]> {
   }
 }
 
-export async function getAvailableUnits(): Promise<AvailableUnit[]> {
+async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
   try {
     const [rows] = await db.query<RowDataPacket[]>(
       `SELECT 
@@ -1252,6 +1276,12 @@ export async function getAvailableUnits(): Promise<AvailableUnit[]> {
     return [];
   }
 }
+
+export const getAvailableUnits = createSafeCache(
+  fetchAvailableUnitsInternal,
+  ["available-units"],
+  { tags: ["curriculum"], revalidate: 3600 }
+);
 
 function parseJsonColumn(value: unknown) {
   if (typeof value !== "string") return value;
@@ -1569,7 +1599,7 @@ export async function getRecentQuizzes() {
   return result.quizzes;
 }
 
-export async function getUnitById(unitId: number) {
+async function fetchUnitByIdInternal(unitId: number) {
   if (!Number.isInteger(unitId) || unitId < 1) return null;
 
   try {
@@ -1696,6 +1726,12 @@ export async function getUnitById(unitId: number) {
     return null;
   }
 }
+
+export const getUnitById = createSafeCache(
+  fetchUnitByIdInternal,
+  ["unit-by-id"],
+  { tags: ["curriculum"], revalidate: 3600 }
+);
 
 export async function getQuizOrUnitById(id: number) {
   if (!Number.isInteger(id) || id < 1) return null;
