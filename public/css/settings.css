@@ -831,7 +831,7 @@ html[data-motion="reduce"] .settings-main *::after {
    ============================================================================= */
 @media (max-width: 768px) {
   .settings-main {
-    padding: 20px 12px !important;
+    padding: 38px !important;
     width: 100% !important;
     min-height: auto !important;
   }
