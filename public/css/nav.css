@@ -1,6 +1,6 @@
 .public-nav {
     top: 0;
-    position: fixed;
+    position: absolute;
     display: flex;
     align-items: flex-start;
     height: 10vh;
