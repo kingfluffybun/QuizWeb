@@ -430,6 +430,10 @@
             
             > a p {
                 padding: 0;
+                background-color: transparent;
+                border-radius: 0;
+                color: var(--text-inverse);
+                font-weight: inherit;
             }
         }
     }

@@ -203,7 +203,7 @@
     .accessibility {display: none;} 
     
     .public-nav {
-        position: fixed !important;
+        position: absolute !important;
         display: flex;
         padding: 0 2rem;
         > div:first-child {margin-right: auto; margin-left: auto;}
@@ -212,7 +212,7 @@
 
     .hero {min-height: 108vh;}
     .hero .hero-text {
-        top: 16%; 
+        top: 12%; 
         width: min(100%, 400px);
         max-width: 100%;
         padding: 0 16px;
