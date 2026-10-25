@@ -893,7 +893,7 @@ export async function signOutAction() {
     } catch (err) {
         console.error("Error updating token_version during signOutAction:", err);
     }
-    await signOut({ redirectTo: "/" });
+    await signOut({ redirectTo: "/?signedOut=1" });
 }
 
 export async function logoutUser(userId?: string | number) {
@@ -913,7 +913,7 @@ export async function logoutUser(userId?: string | number) {
         );
     }
     try {
-        await signOut({ redirectTo: "/login" });
+        await signOut({ redirectTo: "/?signedOut=1" });
     } catch {
         // signOut may redirect in Next.js
     }
