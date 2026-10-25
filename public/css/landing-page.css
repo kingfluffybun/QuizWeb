@@ -210,7 +210,7 @@
         > #logo-nav {display: none;}
     }
 
-    .hero {min-height: 108vh;}
+    .hero {min-height: 100vh;}
     .hero .hero-text {
         top: 14%; 
         width: min(100%, 400px);
