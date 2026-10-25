@@ -18,6 +18,10 @@ async function runLiveConformanceTests() {
     getUnitById,
     getQuizMetrics,
     getPaginatedRecentQuizzes,
+    getPendingQuizzes,
+    getQuizzes,
+    getCodeProblems,
+    getUnits,
   } = await import("../app/actions/quiz");
   const { resolveAuthoritativeAssessment, getPublicCodeProblem } = await import("../app/actions/cp-engine");
   const { getAdminAnalytics, getAdminReviewQueue } = await import("../app/actions/admin");
@@ -150,8 +154,54 @@ async function runLiveConformanceTests() {
   assert.ok(!("learning_goal" in user), "Must NOT select non-existent learning_goal from user_auth_tbl");
   console.log(`✔ User Info query verified for user_id=${user.user_id}, email=${user.email}, daily_xp_goal=${user.daily_xp_goal}`);
 
+  // 10. Test getPendingQuizzes("all")
+  console.log("\n[Test 10] Testing getPendingQuizzes('all')...");
+  const allPending = await getPendingQuizzes("all");
+  assert.ok(Array.isArray(allPending), "Pending units must be an array");
+  assert.equal(allPending.length, 20, "Expected 20 units returned by getPendingQuizzes('all')");
+  const samplePending = allPending[0];
+  assert.ok(samplePending.cat_name && samplePending.cat_name.length > 0, "Pending unit must have cat_name populated");
+  assert.notEqual(samplePending.difficulty_name, "approved", "Pending unit difficulty_name must NOT be status enum");
+  assert.ok(Array.isArray(samplePending.unit_quiz_json) && samplePending.unit_quiz_json.length > 0, "Pending unit must contain populated unit_quiz_json array");
+  assert.ok(samplePending.unit_lesson_card_json?.lesson_card?.lesson_format, "Pending unit must contain lesson_format");
+  console.log(`✔ getPendingQuizzes('all') verified: returned ${allPending.length} units with cat_name="${samplePending.cat_name}", difficulty="${samplePending.difficulty_name}", quizzesCount=${samplePending.unit_quiz_json.length}`);
+
+  // 11. Test getQuizzes()
+  console.log("\n[Test 11] Testing getQuizzes()...");
+  const activeQuizzes = await getQuizzes();
+  assert.equal(activeQuizzes.length, 256, "Expected 256 approved quizzes for active learners");
+  const firstActiveQuiz = activeQuizzes[0];
+  assert.ok(firstActiveQuiz.quiz_payload, "Active quiz must have quiz_payload");
+  assert.ok(firstActiveQuiz.cat_name, "Active quiz must have cat_name");
+  assert.ok(firstActiveQuiz.difficulty_name, "Active quiz must have difficulty_name");
+
+  const htmlQuizzes = await getQuizzes({ cat_id: 1 });
+  assert.ok(htmlQuizzes.length > 0, "Expected HTML quizzes");
+  assert.ok(htmlQuizzes.every((q) => q.cat_id === 1), "All returned quizzes must belong to cat_id 1");
+  console.log(`✔ getQuizzes() verified: 256 approved quizzes; cat_id=1 filter returned ${htmlQuizzes.length} HTML quizzes`);
+
+  // 12. Test getCodeProblems()
+  console.log("\n[Test 12] Testing getCodeProblems()...");
+  const codeProblems = await getCodeProblems();
+  assert.equal(codeProblems.length, 20, "Expected 20 code problems from unit assessments");
+  const firstCP = codeProblems[0];
+  assert.ok(firstCP.steps.length > 0, "Code problem must have steps");
+  assert.ok(firstCP.instructions.length > 0, "Code problem must have instructions");
+  assert.ok(firstCP.steps[0].prompt, "First step must have prompt");
+  console.log(`✔ getCodeProblems() verified: ${codeProblems.length} code problems with step templates`);
+
+  // 13. Test getUnits()
+  console.log("\n[Test 13] Testing getUnits()...");
+  const allUnits = await getUnits();
+  assert.equal(allUnits.length, 20, "Expected 20 units from getUnits()");
+  const sampleUnit = allUnits[0];
+  assert.ok(Array.isArray(sampleUnit.unit_lesson_card_json.lesson_slide), "Unit must have slides");
+  assert.ok(Array.isArray(sampleUnit.quiz_json) && sampleUnit.quiz_json.length > 0, "Unit must have quizzes");
+  assert.ok(sampleUnit.assessment_json !== null, "Unit must have assessment_json");
+  console.log(`✔ getUnits() verified: retrieved ${allUnits.length} units with full slides, quizzes, and assessments`);
+
   console.log("\n================================================================================");
-  console.log(" All 9 Database V2 Conformance Live Integration Tests Passed!");
+  console.log(" All 13 Database V2 Conformance Live Integration Tests Passed!");
   console.log("================================================================================\n");
 }
 

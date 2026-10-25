@@ -131,6 +131,7 @@ export const POST = async (req: Request): Promise<Response> => {
             success: true,
             message: "Profile updated successfully",
             user_id: userId,
+            email: session.user.email,
             username: newUsername,
             daily_xp_goal: targetGoal,
             learning_goal: `${targetGoal} XP / day`

@@ -1173,6 +1173,44 @@ export async function getCodeProblems(unitId?: number): Promise<CodeProblem[]> {
       });
     }
 
+    // Also support CP quizzes in quiz_cp_tbl / quiz_cp_step_tbl
+    const [cpQuizRows] = await db.query<RowDataPacket[]>(
+      `SELECT q.quiz_id, q.unit_id, q.question_text, cp.title, u.unit_title
+       FROM quiz_tbl q
+       JOIN unit_tbl u ON q.unit_id = u.unit_id
+       JOIN quiz_cp_tbl cp ON q.quiz_id = cp.quiz_id
+       WHERE u.status = 'approved' ${unitFilter ? "AND u.unit_id = ?" : ""}
+       ORDER BY q.quiz_id DESC`,
+      params,
+    );
+
+    for (const cpRow of cpQuizRows) {
+      const [cpSteps] = await db.query<RowDataPacket[]>(
+        `SELECT step_order, prompt, template_code, expected_code
+         FROM quiz_cp_step_tbl
+         WHERE quiz_id = ?
+         ORDER BY step_order ASC`,
+        [cpRow.quiz_id],
+      );
+      if (!cpSteps || cpSteps.length === 0) continue;
+
+      const instructions = cpSteps.map((s) => String(s.prompt ?? ""));
+      const codeSteps: CodeProblemStep[] = cpSteps.map((s) => ({
+        prompt: String(s.prompt ?? ""),
+        template: String(s.template_code ?? ""),
+        expected: String(s.expected_code ?? ""),
+      }));
+
+      problems.push({
+        unit_id: Number(cpRow.unit_id),
+        quiz_id: Number(cpRow.quiz_id),
+        unit_title: String(cpRow.unit_title),
+        question_text: String(cpRow.title ?? cpRow.question_text ?? cpRow.unit_title),
+        instructions,
+        steps: codeSteps,
+      });
+    }
+
     return problems;
   } catch (error) {
     console.error("Failed to fetch code problems:", error);
@@ -1928,10 +1966,22 @@ export async function getQuizzes(filters?: {
   cat_id?: number;
   sec_id?: number;
   difficulty_id?: number;
+  status?: string;
 }) {
   try {
     const conditions: string[] = [];
-    const params: number[] = [];
+    const params: (string | number)[] = [];
+
+    if (filters?.status) {
+      if (filters.status !== "all") {
+        conditions.push("u.status = ?");
+        params.push(filters.status);
+      }
+    } else {
+      // By default, regular quiz consumers only receive questions from approved units
+      conditions.push("u.status = 'approved'");
+    }
+
     if (filters?.cat_id) {
       conditions.push("s.cat_id = ?");
       params.push(filters.cat_id);
@@ -2002,11 +2052,13 @@ export async function getPendingQuizzes(statusFilter = "pending"): Promise<Pendi
     }
 
     const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT u.unit_id AS pending_id, u.unit_id, u.unit_title, u.sec_id,
+      `SELECT u.unit_id AS pending_id, u.unit_id, u.unit_title, u.sec_id, u.lesson_format,
               u.status AS pending_status, u.pending_note, s.sec_num,
+              c.cat_id, c.cat_name,
               COALESCE(p.username, ua.email, 'Anonymous') AS pending_name
        FROM unit_tbl u
        LEFT JOIN sec_tbl s ON u.sec_id = s.sec_id
+       LEFT JOIN cat_tbl c ON s.cat_id = c.cat_id
        LEFT JOIN player_tbl p ON u.author_id = p.user_id
        LEFT JOIN user_auth_tbl ua ON u.author_id = ua.user_id
        ${whereClause}
@@ -2014,24 +2066,57 @@ export async function getPendingQuizzes(statusFilter = "pending"): Promise<Pendi
       params,
     );
 
-    return rows.map((row) => ({
-      pending_id: Number(row.pending_id),
-      unit_id: Number(row.unit_id),
-      unit_title: String(row.unit_title ?? ""),
-      sec_id: Number(row.sec_id ?? 0),
-      pending_status: String(row.pending_status ?? "pending"),
-      pending_name: String(row.pending_name ?? "Anonymous"),
-      pending_note: row.pending_note != null ? String(row.pending_note) : null,
-      unit_lesson_card_json: { lesson_card: {} },
-      unit_quiz_json: [],
-      unit_assessment_json: null,
-      sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
-      question_text: String(row.unit_title ?? ""),
-      cat_name: "",
-      difficulty_name: String(row.pending_status ?? ""),
-      type_name: "Unit",
-      quiz_payload: {},
-    }));
+    const unitIds = rows.map((r) => Number(r.unit_id));
+    const quizzesByUnit = new Map<number, QuizRow[]>();
+
+    if (unitIds.length > 0) {
+      const [quizzes] = await db.query<QuizRow[]>(
+        `SELECT q.quiz_id, q.unit_id, q.difficulty_id, q.quiz_type_id, q.quiz_order, q.question_text,
+                d.difficulty_name, t.type_name,
+                s.sec_id, s.sec_num, s.cat_id, c.cat_name
+         FROM quiz_tbl q
+         JOIN unit_tbl u ON q.unit_id = u.unit_id
+         JOIN sec_tbl s ON u.sec_id = s.sec_id
+         JOIN cat_tbl c ON s.cat_id = c.cat_id
+         JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+         JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+         WHERE q.unit_id IN (?)
+         ORDER BY q.unit_id, q.quiz_order ASC, q.quiz_id ASC`,
+        [unitIds],
+      );
+
+      const populatedQuizzes = await populateQuizPayloads(quizzes);
+      for (const q of populatedQuizzes) {
+        const uId = Number(q.unit_id);
+        if (!quizzesByUnit.has(uId)) quizzesByUnit.set(uId, []);
+        quizzesByUnit.get(uId)!.push(q);
+      }
+    }
+
+    return rows.map((row) => {
+      const uId = Number(row.unit_id);
+      const unitQuizzes = quizzesByUnit.get(uId) ?? [];
+      const firstQuiz = unitQuizzes[0] ?? null;
+
+      return {
+        pending_id: uId,
+        unit_id: uId,
+        unit_title: String(row.unit_title ?? ""),
+        sec_id: Number(row.sec_id ?? 0),
+        pending_status: String(row.pending_status ?? "pending"),
+        pending_name: String(row.pending_name ?? "Anonymous"),
+        pending_note: row.pending_note != null ? String(row.pending_note) : null,
+        unit_lesson_card_json: { lesson_card: { lesson_format: row.lesson_format ?? "slides" } },
+        unit_quiz_json: unitQuizzes,
+        unit_assessment_json: null,
+        sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
+        question_text: String(row.unit_title ?? ""),
+        cat_name: String(row.cat_name ?? firstQuiz?.cat_name ?? ""),
+        difficulty_name: String(firstQuiz?.difficulty_name ?? "Beginner"),
+        type_name: String(firstQuiz?.type_name ?? "Unit"),
+        quiz_payload: firstQuiz?.quiz_payload ?? {},
+      };
+    });
   } catch (error) {
     console.error("Failed to fetch pending quizzes:", error);
     return [];
