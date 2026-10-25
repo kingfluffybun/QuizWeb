@@ -1,7 +1,15 @@
 "use client";
 
-import Editor, { type Monaco } from "@monaco-editor/react";
+import type { Monaco } from "@monaco-editor/react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
+
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+    ssr: false,
+    loading: () => (
+        <div style={{ minHeight: "220px", width: "100%", background: "#1e1e1e" }} className="animate-pulse" />
+    ),
+});
 import Sidebar from "@/app/components/Sidebar";
 import "#css/dashboard.css";
 import "#css/sidebar.css";

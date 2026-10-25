@@ -108,6 +108,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export default middleware;
+export { middleware as proxy };
 
 export const config = {
   matcher: [

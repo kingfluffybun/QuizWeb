@@ -9,6 +9,13 @@ import { sendEmail } from "@/lib/email";
 import { auth, signOut } from "@/auth";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
+const ARGON2_OPTIONS: Parameters<typeof argon2.hash>[1] = {
+    type: argon2.argon2id,
+    memoryCost: 32768,
+    timeCost: 2,
+    parallelism: 1,
+};
+
 function hashToken(raw: string): string {
     return crypto.createHash("sha256").update(raw).digest("hex");
 }
@@ -132,7 +139,7 @@ export async function signUp(formData: FormData) {
             [normalizedEmail, trimmedUsername]
         );
 
-        const hashed = await argon2.hash(password);
+        const hashed = await argon2.hash(password, ARGON2_OPTIONS);
 
         const rawVerificationToken = crypto.randomBytes(32).toString("hex");
         const hashedVerificationToken = hashToken(rawVerificationToken);
@@ -747,7 +754,7 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
         }
 
         // Hash the new pass
-        const hashed = await argon2.hash(newPassword);
+        const hashed = await argon2.hash(newPassword, ARGON2_OPTIONS);
 
         // Update password and increment token_version to revoke active sessions (SEC-05)
         await db.query(
