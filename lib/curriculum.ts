@@ -196,6 +196,58 @@ export function getNextSectionId(currentSectionId: number | string): number | nu
 }
 
 /**
+ * Returns the next available section ID in the curriculum progression path that has content,
+ * skipping empty sections with 0 approved units.
+ * If availableSectionIds is not specified or empty, falls back to getNextSectionId.
+ */
+export function getNextAvailableSectionId(
+  currentSectionId: number | string,
+  availableSectionIds?: Set<number> | number[],
+): number | null {
+  const secId = Number(currentSectionId);
+  if (!Number.isFinite(secId)) return null;
+  const index = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === secId);
+  if (index === -1) return null;
+
+  if (!availableSectionIds) {
+    return getNextSectionId(currentSectionId);
+  }
+
+  const validIds =
+    availableSectionIds instanceof Set
+      ? availableSectionIds
+      : new Set(availableSectionIds.map(Number));
+
+  if (validIds.size === 0) {
+    return getNextSectionId(currentSectionId);
+  }
+
+  for (let i = index + 1; i < CANONICAL_SECTIONS.length; i++) {
+    const candidateId = CANONICAL_SECTIONS[i].sec_id;
+    if (validIds.has(candidateId)) {
+      return candidateId;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns the canonical sort order weight for a given section ID and unit order,
+ * ensuring units sort strictly across tiers: Beginner -> Intermediate -> Advanced.
+ */
+export function getCanonicalSortOrder(
+  secId: number | string,
+  unitOrder: number | string = 1,
+): number {
+  const id = Number(secId);
+  const order = Number(unitOrder) || 1;
+  const index = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === id);
+  const sectionWeight = index !== -1 ? (index + 1) * 1000 : 99000;
+  return sectionWeight + order;
+}
+
+/**
  * Returns the previous section ID in the curriculum progression path,
  * or null if currentSectionId is the first section or invalid.
  */

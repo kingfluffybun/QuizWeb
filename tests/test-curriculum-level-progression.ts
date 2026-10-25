@@ -13,13 +13,17 @@ async function runTests() {
   const {
     CANONICAL_SECTIONS,
     getNextSectionId,
+    getNextAvailableSectionId,
+    getCanonicalSortOrder,
     getPreviousSectionId,
     getSectionById,
     getCurriculumMetadata,
   } = await import("../lib/curriculum");
   const {
+    getUserLastActiveProgress,
     getUserSectionProgress,
     recordLessonSlideProgress,
+    getNextCurriculumUnit,
   } = await import("../app/actions/progress");
   const { getAvailableUnits, getQuizMetadata } = await import("../app/actions/quiz");
 
@@ -301,6 +305,70 @@ async function runTests() {
     assert(quizMeta.sections.length === 16, `getQuizMetadata returned 16 sections (actual: ${quizMeta.sections.length})`);
     assert(typeof quizMeta.sections[0].sec_num === "string", `Section sec_num is string formatted (actual: ${typeof quizMeta.sections[0].sec_num})`);
     assert(quizMeta.sections[0].sec_title === "Getting Started", `First section has title "Getting Started"`);
+
+    // -------------------------------------------------------------
+    // Test Suite 8: Dynamic Progression Continuity & Forward Targets
+    // -------------------------------------------------------------
+    console.log("\n[8] Verifying Dynamic Progression Continuity & Forward Targets...");
+
+    // 8.1 getNextAvailableSectionId skips empty sections
+    const activeSections = new Set([1, 2, 3, 4, 5, 6, 13, 14, 15]);
+    const skippedSec = getNextAvailableSectionId(6, activeSections);
+    assert(skippedSec === 13, `getNextAvailableSectionId(6) skips empty sections (7..12) and returns 13 (actual: ${skippedSec})`);
+
+    const finalSec = getNextAvailableSectionId(15, activeSections);
+    assert(finalSec === null, `getNextAvailableSectionId(15) with no further active sections returns null (actual: ${finalSec})`);
+
+    // 8.2 Canonical sort order weights
+    const htmlOrder1 = getCanonicalSortOrder(1, 1);
+    const htmlOrder2 = getCanonicalSortOrder(1, 2);
+    const cssOrder1 = getCanonicalSortOrder(4, 1);
+    const advCssOrder = getCanonicalSortOrder(13, 1);
+    const jsOrder = getCanonicalSortOrder(15, 1);
+
+    assert(htmlOrder1 < htmlOrder2, `HTML Sec 1 Unit 1 (${htmlOrder1}) < HTML Sec 1 Unit 2 (${htmlOrder2})`);
+    assert(htmlOrder2 < cssOrder1, `HTML Sec 1 Unit 2 (${htmlOrder2}) < CSS Sec 1 Unit 1 (${cssOrder1})`);
+    assert(cssOrder1 < advCssOrder, `CSS Sec 1 (${cssOrder1}) < CSS Sec 5 (${advCssOrder})`);
+    assert(advCssOrder < jsOrder, `CSS Sec 5 (${advCssOrder}) < JS Sec 6 (${jsOrder})`);
+
+    // 8.3 Forward-pointing resume target on user completion
+    const testProgUser = 99998;
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [testProgUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [testProgUser]);
+    await db.query("INSERT IGNORE INTO user_auth_tbl (user_id, email, password_hash) VALUES (?, 'prog@test.com', 'hash')", [testProgUser]);
+    await db.query("INSERT INTO player_tbl (user_id, username, current_section) VALUES (?, 'prog_user', 1)", [testProgUser]);
+
+    // When user has no progress, points forward to first unit
+    const initialProg = await getUserLastActiveProgress(testProgUser);
+    assert(initialProg !== null, "getUserLastActiveProgress for new user returns initial start target");
+    assert(initialProg?.resume_type === "up_next", `New user has resume_type = up_next (actual: ${initialProg?.resume_type})`);
+    assert(initialProg?.next_unit_id === 98, `New user points to Unit 98 (actual: ${initialProg?.next_unit_id})`);
+
+    // Complete Unit 98
+    await recordLessonSlideProgress(98, 6, 6, true, testProgUser);
+    const postProg = await getUserLastActiveProgress(testProgUser);
+    assert(postProg !== null, "postProg is not null");
+    assert(postProg?.resume_type === "up_next", `Completed unit resolves resume_type = up_next (actual: ${postProg?.resume_type})`);
+    assert(postProg?.next_unit_id === 103, `Completed Unit 98 advances target to Unit 103 (actual: ${postProg?.next_unit_id})`);
+
+    // In-progress unit returns in_progress
+    await recordLessonSlideProgress(103, 3, 6, false, testProgUser);
+    const inProgress = await getUserLastActiveProgress(testProgUser);
+    assert(inProgress?.resume_type === "in_progress", `In-progress unit resolves resume_type = in_progress (actual: ${inProgress?.resume_type})`);
+    assert(inProgress?.current_slide_order === 3, `In-progress slide matches 3 (actual: ${inProgress?.current_slide_order})`);
+
+    // 8.4 getNextCurriculumUnit continuity
+    const nextAfter98 = await getNextCurriculumUnit(98);
+    assert(nextAfter98?.unit_id === 103, `getNextCurriculumUnit(98) is Unit 103 (actual: ${nextAfter98?.unit_id})`);
+
+    const nextAfter116 = await getNextCurriculumUnit(116);
+    assert(nextAfter116?.unit_id === 106, `getNextCurriculumUnit(116) bridges empty sections to Unit 106 (actual: ${nextAfter116?.unit_id})`);
+
+    // Clean up test user
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [testProgUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [testProgUser]);
+    await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [testProgUser]);
+    console.log("  ✓ Cleaned up forward target test user");
 
     console.log(`\n=== RESULTS: ${passed} PASSED, ${failed} FAILED ===`);
     if (failed > 0) {

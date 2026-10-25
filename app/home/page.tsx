@@ -54,8 +54,18 @@ export default async function DashboardPage() {
     const canPreviewDailyGoal = hasAdminRole(session.user.role || session.user.user_role);
 
     const resumeHref = lastActiveProgress
-        ? `/quiz?unitId=${lastActiveProgress.unit_id}&slide=${lastActiveProgress.current_slide_order}&source=quiz`
+        ? (lastActiveProgress.resume_type === "up_next" && lastActiveProgress.next_unit_id
+            ? `/quiz?unitId=${lastActiveProgress.next_unit_id}&slide=${lastActiveProgress.next_slide_order ?? 1}&source=quiz`
+            : `/quiz?unitId=${lastActiveProgress.unit_id}&slide=${lastActiveProgress.current_slide_order}&source=quiz`)
         : "/learn";
+
+    const quickActionLabel = lastActiveProgress
+        ? (lastActiveProgress.resume_type === "in_progress"
+            ? "Resume"
+            : lastActiveProgress.resume_type === "completed_all"
+                ? "Review"
+                : "Continue")
+        : "Explore";
 
     return (
         <div className="dashboard-page">
@@ -139,13 +149,23 @@ export default async function DashboardPage() {
                         <div className="card">
                             <div className="card-title">
                                 <h2>Continue Where You Left Off</h2>
-                                <a href={resumeHref}><h2 className="quick-action">{lastActiveProgress ? (lastActiveProgress.is_completed ? "Review" : "Resume") : "Explore"}</h2></a>
+                                <a href={resumeHref}><h2 className="quick-action">{quickActionLabel}</h2></a>
                             </div>
                             <p>
                                 {lastActiveProgress ? (
-                                    <>
-                                        Continue <strong>{lastActiveProgress.unit_title}</strong> ({lastActiveProgress.cat_name} Section {lastActiveProgress.sec_num}, Slide {lastActiveProgress.current_slide_order} of {lastActiveProgress.total_slides}){lastActiveProgress.is_completed ? " — Completed! You can review or practice again." : "."}
-                                    </>
+                                    lastActiveProgress.resume_type === "up_next" && lastActiveProgress.next_unit_title ? (
+                                        <>
+                                            Up next: <strong>{lastActiveProgress.next_unit_title}</strong> ({lastActiveProgress.next_cat_name} Section {lastActiveProgress.next_sec_num}) — Continue your progression.
+                                        </>
+                                    ) : lastActiveProgress.resume_type === "completed_all" ? (
+                                        <>
+                                            You&apos;ve completed all available curriculum units! You can review or practice again anytime.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Continue <strong>{lastActiveProgress.unit_title}</strong> ({lastActiveProgress.cat_name} Section {lastActiveProgress.sec_num}, Slide {lastActiveProgress.current_slide_order} of {lastActiveProgress.total_slides}).
+                                        </>
+                                    )
                                 ) : (
                                     "Pick up right where you left off in the interactive curriculum to maintain your streak."
                                 )}

@@ -1150,6 +1150,7 @@ export interface AvailableUnit {
   unit_id: number;
   unit_title: string;
   category_name?: string;
+  sec_id?: number;
   sec_num?: string;
   unit_number?: number | string | null;
   quiz_count: number;
@@ -1291,6 +1292,7 @@ async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
       unit_id: Number(row.unit_id),
       unit_title: String(row.unit_title),
       category_name: row.category_name != null ? String(row.category_name) : undefined,
+      sec_id: row.sec_id != null ? Number(row.sec_id) : undefined,
       sec_num: row.sec_num != null ? String(row.sec_num) : undefined,
       sec_title: row.sec_title != null ? String(row.sec_title) : undefined,
       difficulty_name: row.difficulty_name != null ? String(row.difficulty_name) : undefined,

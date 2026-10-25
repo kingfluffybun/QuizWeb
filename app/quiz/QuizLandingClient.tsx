@@ -265,11 +265,19 @@ export default function QuizLandingClient({
     completionDestination = "input",
     unitId,
     initialSlideOrder,
+    nextUnit,
 }: {
     initialQuizzes?: QuizData[];
     completionDestination?: "home" | "input";
     unitId?: number;
     initialSlideOrder?: number;
+    nextUnit?: {
+        unit_id: number;
+        unit_title: string;
+        sec_id?: number;
+        sec_num?: number;
+        cat_name?: string;
+    } | null;
 }) {
     const router = useRouter();
     const playQuizSound = useQuizSounds();
@@ -701,23 +709,47 @@ export default function QuizLandingClient({
                                   ? "Outstanding performance! Ready to tackle the Unit Coding Assessment?"
                                   : "Outstanding performance!"}
                         </p>
+                        {lives > 0 && nextUnit && (
+                            <Link
+                                href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
+                                className="options"
+                                id="submit"
+                                style={{ textDecoration: "none" }}
+                            >
+                                Next Unit: {nextUnit.unit_title}
+                            </Link>
+                        )}
                         {lives > 0 && hasCodingAssessment && (
                             <Link
                                 href={codingAssessmentHref}
                                 className="options"
-                                id="submit"
-                                style={{ textDecoration: "none" }}
+                                id={nextUnit ? undefined : "submit"}
+                                style={{
+                                    textDecoration: "none",
+                                    ...(nextUnit
+                                        ? {
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              margin: "14px auto 0",
+                                              minHeight: "54px",
+                                              width: "240px",
+                                              borderRadius: "16px",
+                                              fontSize: "1.1rem",
+                                          }
+                                        : {}),
+                                }}
                             >
                                 Start Coding Assessment
                             </Link>
                         )}
                         <button
                             className="options"
-                            id={lives > 0 && hasCodingAssessment ? undefined : "submit"}
+                            id={lives > 0 && (nextUnit || hasCodingAssessment) ? undefined : "submit"}
                             type="button"
                             onClick={() => window.location.reload()}
                             style={
-                                lives > 0 && hasCodingAssessment
+                                lives > 0 && (nextUnit || hasCodingAssessment)
                                     ? {
                                           display: "flex",
                                           alignItems: "center",

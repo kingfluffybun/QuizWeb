@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
+import { getNextCurriculumUnit } from "@/app/actions/progress";
 import type { QuizData } from "@/app/quiz/types";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
 import QuizLandingClient from "./QuizLandingClient";
@@ -78,6 +79,9 @@ export default async function QuizPage({
     const quizzesToDisplay = selectedPayload
         ? unwrapUnitQuizzes([selectedPayload]).map(shuffleQuizOptions)
         : [];
+    const nextCurriculumUnit = selectedUnitId
+        ? await getNextCurriculumUnit(selectedUnitId)
+        : null;
 
     if (unitId || quizId) {
         if (quizzesToDisplay.length === 0) {
@@ -115,6 +119,7 @@ export default async function QuizPage({
                 completionDestination={source === "quiz" || source === "home" ? "home" : "input"}
                 unitId={selectedUnitId ?? selectedQuizId ?? undefined}
                 initialSlideOrder={initialSlideOrder}
+                nextUnit={nextCurriculumUnit}
             />
         );
     }
