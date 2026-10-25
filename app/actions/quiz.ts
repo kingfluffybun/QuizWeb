@@ -1158,6 +1158,8 @@ export interface AvailableUnit {
   sec_title?: string;
   difficulty_name?: string;
   unit_order?: number;
+  is_locked?: boolean;
+  is_completed?: boolean;
 }
 
 export interface CodeProblemStep {

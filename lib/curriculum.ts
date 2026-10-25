@@ -247,6 +247,106 @@ export function getCanonicalSortOrder(
   return sectionWeight + order;
 }
 
+export interface CanonicalUnitSummary {
+  unit_id: number;
+  unit_order: number;
+  sec_id: number;
+}
+
+export interface CurriculumUnlockState {
+  unlockedUnitIds: Set<number>;
+  unlockedSectionIds: Set<number>;
+  completedSectionIds: Set<number>;
+  activeUnitId: number | null;
+  activeSectionId: number | null;
+}
+
+/**
+ * Computes which units and sections are unlocked given the set of completed unit IDs
+ * and the ordered list of approved units.
+ *
+ * Rules:
+ * 1. The first active section (and its first unit) is always unlocked.
+ * 2. Within an unlocked section, Unit 1 is unlocked.
+ * 3. Unit K (K > 1) is unlocked IF AND ONLY IF Unit K - 1 is completed.
+ * 4. Section S (S > 1) is unlocked IF AND ONLY IF ALL approved units in Section S - 1 are completed.
+ */
+export function computeCurriculumUnlockState(
+  allUnitsOrdered: CanonicalUnitSummary[],
+  completedUnitIds: Set<number>,
+): CurriculumUnlockState {
+  const unlockedUnitIds = new Set<number>();
+  const unlockedSectionIds = new Set<number>();
+  const completedSectionIds = new Set<number>();
+
+  if (allUnitsOrdered.length === 0) {
+    return {
+      unlockedUnitIds,
+      unlockedSectionIds,
+      completedSectionIds,
+      activeUnitId: null,
+      activeSectionId: null,
+    };
+  }
+
+  // Group units by sec_id maintaining the canonical sequence
+  const sectionMap = new Map<number, CanonicalUnitSummary[]>();
+  for (const u of allUnitsOrdered) {
+    const list = sectionMap.get(u.sec_id) ?? [];
+    list.push(u);
+    sectionMap.set(u.sec_id, list);
+  }
+
+  let isPreviousSectionCompleted = true;
+  let activeUnitId: number | null = null;
+  let activeSectionId: number | null = null;
+
+  for (const [secId, units] of sectionMap.entries()) {
+    if (isPreviousSectionCompleted) {
+      unlockedSectionIds.add(secId);
+      if (activeSectionId === null) {
+        activeSectionId = secId;
+      }
+
+      let isPreviousUnitCompleted = true; // First unit in an unlocked section is always unlocked
+      for (const unit of units) {
+        if (isPreviousUnitCompleted) {
+          unlockedUnitIds.add(unit.unit_id);
+          if (activeUnitId === null && !completedUnitIds.has(unit.unit_id)) {
+            activeUnitId = unit.unit_id;
+            activeSectionId = secId;
+          }
+        }
+        // Next unit unlocks only if current unit is completed
+        isPreviousUnitCompleted = completedUnitIds.has(unit.unit_id);
+      }
+
+      const allUnitsInSecCompleted =
+        units.length > 0 && units.every((u) => completedUnitIds.has(u.unit_id));
+      if (allUnitsInSecCompleted) {
+        completedSectionIds.add(secId);
+      }
+
+      isPreviousSectionCompleted = allUnitsInSecCompleted;
+    } else {
+      // Subsequent sections remain locked
+      break;
+    }
+  }
+
+  if (activeUnitId === null && allUnitsOrdered.length > 0) {
+    activeUnitId = allUnitsOrdered[allUnitsOrdered.length - 1].unit_id;
+  }
+
+  return {
+    unlockedUnitIds,
+    unlockedSectionIds,
+    completedSectionIds,
+    activeUnitId,
+    activeSectionId,
+  };
+}
+
 /**
  * Returns the previous section ID in the curriculum progression path,
  * or null if currentSectionId is the first section or invalid.

@@ -119,44 +119,95 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                     </div>
                     {filteredUnits.length > 0 ? (
                         <div className="available-units-list">
-                            {filteredUnits.map((unit) => (
-                                <article className="available-unit-card" key={unit.unit_id}>
-                                    <div className="available-unit-info">
-                                        <h3>{unit.unit_title}</h3>
-                                        <div className="available-unit-badges">
-                                            {unit.sec_num && (
-                                                <span className="available-unit-badge badge-section">
-                                                    Section {unit.sec_num}
+                            {filteredUnits.map((unit) => {
+                                const isLocked = Boolean(unit.is_locked);
+                                const isCompleted = Boolean(unit.is_completed);
+
+                                return (
+                                    <article
+                                        className={`available-unit-card${isLocked ? " is-locked" : ""}`}
+                                        key={unit.unit_id}
+                                        style={isLocked ? { opacity: 0.65 } : undefined}
+                                    >
+                                        <div className="available-unit-info">
+                                            <h3>{unit.unit_title}</h3>
+                                            <div className="available-unit-badges">
+                                                {unit.sec_num && (
+                                                    <span className="available-unit-badge badge-section">
+                                                        Section {unit.sec_num}
+                                                    </span>
+                                                )}
+                                                <span className="available-unit-badge badge-questions">
+                                                    {unit.quiz_count} {unit.quiz_count === 1 ? "question" : "questions"}
                                                 </span>
+                                                {unit.has_coding_assessment && (
+                                                    <span className="available-unit-badge badge-coding">
+                                                        Coding Assessment
+                                                    </span>
+                                                )}
+                                                {isLocked && (
+                                                    <span
+                                                        className="available-unit-badge"
+                                                        style={{
+                                                            backgroundColor: "rgba(100, 116, 139, 0.16)",
+                                                            color: "var(--text-muted)",
+                                                        }}
+                                                    >
+                                                        🔒 Locked
+                                                    </span>
+                                                )}
+                                                {isCompleted && (
+                                                    <span
+                                                        className="available-unit-badge"
+                                                        style={{
+                                                            backgroundColor: "rgba(16, 185, 129, 0.16)",
+                                                            color: "#059669",
+                                                        }}
+                                                    >
+                                                        ✓ Completed
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="available-unit-actions">
+                                            {unit.has_coding_assessment && !isLocked && (
+                                                <Link
+                                                    href={`/quiz-cp?unitId=${unit.pending_id}`}
+                                                    className="available-unit-cp-link"
+                                                >
+                                                    Code Problem
+                                                </Link>
                                             )}
-                                            <span className="available-unit-badge badge-questions">
-                                                {unit.quiz_count} {unit.quiz_count === 1 ? "question" : "questions"}
-                                            </span>
-                                            {unit.has_coding_assessment && (
-                                                <span className="available-unit-badge badge-coding">
-                                                    Coding Assessment
-                                                </span>
+                                            {isLocked ? (
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="available-unit-link is-locked"
+                                                    style={{
+                                                        opacity: 0.5,
+                                                        cursor: "not-allowed",
+                                                        pointerEvents: "none",
+                                                        borderBottomWidth: "3px",
+                                                    }}
+                                                >
+                                                    Locked
+                                                </button>
+                                            ) : (
+                                                <Link
+                                                    href={`/quiz?unitId=${unit.pending_id}&source=quiz`}
+                                                    className="available-unit-link"
+                                                >
+                                                    {isCompleted
+                                                        ? "Review"
+                                                        : unit.quiz_count > 0
+                                                          ? "Start unit"
+                                                          : "Start Lesson"}
+                                                </Link>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="available-unit-actions">
-                                        {unit.has_coding_assessment && (
-                                            <Link
-                                                href={`/quiz-cp?unitId=${unit.pending_id}`}
-                                                className="available-unit-cp-link"
-                                            >
-                                                Code Problem
-                                            </Link>
-                                        )}
-                                        <Link
-                                            href={`/quiz?unitId=${unit.pending_id}&source=quiz`}
-                                            className="available-unit-link"
-                                        >
-                                            {unit.quiz_count > 0 ? "Start unit" : "Start Lesson"}
-                                        </Link>
-                                    </div>
-                                </article>
-                            ))}
+                                    </article>
+                                );
+                            })}
                         </div>
                     ) : (
                         <p className="available-units-empty">

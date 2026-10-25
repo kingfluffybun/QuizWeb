@@ -112,26 +112,57 @@ export default async function DashboardPage() {
                                     <hr></hr>
                                     <div className="unit-list-dashboard">
                                         {sectionProgress.units.length > 0 ? (
-                                            sectionProgress.units.map((unit, index) => (
-                                                <Link
-                                                    key={unit.unit_id}
-                                                    href={`/quiz?unitId=${unit.unit_id}&slide=${unit.current_slide_order || 1}&source=quiz`}
-                                                    className="unit row"
-                                                    style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-                                                    title={`Open ${unit.unit_title}`}
-                                                >
-                                                    <div className="unit-no row"><p>{index + 1}</p></div>
-                                                    <div className="unit-info">
-                                                        <div className="unit-description">
-                                                            <p id="unit-title">{unit.unit_title}</p>
-                                                            <p>{unit.is_completed ? `${unit.total_slides}/${unit.total_slides}` : `${unit.current_slide_order}/${unit.total_slides}`}</p>
+                                            sectionProgress.units.map((unit, index) => {
+                                                const isLocked = Boolean(unit.is_locked);
+                                                const isCompleted = Boolean(unit.is_completed);
+                                                const unitContent = (
+                                                    <>
+                                                        <div className="unit-no row" style={isLocked ? { opacity: 0.6 } : undefined}>
+                                                            <p>{isLocked ? "🔒" : index + 1}</p>
                                                         </div>
-                                                        <div className="unit-progress-bar">
-                                                            <div className="progress-bar-fill" style={{ width: `${unit.percentage}%` }}></div>
+                                                        <div className="unit-info" style={isLocked ? { opacity: 0.6 } : undefined}>
+                                                            <div className="unit-description">
+                                                                <p id="unit-title">{unit.unit_title}</p>
+                                                                <p>
+                                                                    {isLocked
+                                                                        ? "Locked"
+                                                                        : isCompleted
+                                                                          ? `${unit.total_slides}/${unit.total_slides}`
+                                                                          : `${unit.current_slide_order}/${unit.total_slides}`}
+                                                                </p>
+                                                            </div>
+                                                            <div className="unit-progress-bar">
+                                                                <div className="progress-bar-fill" style={{ width: `${isLocked ? 0 : unit.percentage}%` }}></div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </Link>
-                                            ))
+                                                    </>
+                                                );
+
+                                                if (isLocked) {
+                                                    return (
+                                                        <div
+                                                            key={unit.unit_id}
+                                                            className="unit row is-locked"
+                                                            style={{ cursor: "not-allowed", opacity: 0.7 }}
+                                                            title={`${unit.unit_title} (Complete previous unit to unlock)`}
+                                                        >
+                                                            {unitContent}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <Link
+                                                        key={unit.unit_id}
+                                                        href={`/quiz?unitId=${unit.unit_id}&slide=${unit.current_slide_order || 1}&source=quiz`}
+                                                        className="unit row"
+                                                        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+                                                        title={`Open ${unit.unit_title}`}
+                                                    >
+                                                        {unitContent}
+                                                    </Link>
+                                                );
+                                            })
                                         ) : (
                                             <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", padding: "8px 0" }}>
                                                 No units in this section yet.

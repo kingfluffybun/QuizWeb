@@ -1,9 +1,10 @@
-import { getAvailableUnits } from "@/app/actions/quiz";
+import { auth } from "@/auth";
+import { getAvailableUnitsForUser } from "@/app/actions/progress";
 import LearnUnitsClient from "./LearnUnitsClient";
 
-export const revalidate = 3600;
-
 export default async function LearnPage() {
-    const units = await getAvailableUnits();
+    const session = await auth();
+    const userId = session?.user?.id ? Number(session.user.id) : undefined;
+    const units = await getAvailableUnitsForUser(userId);
     return <LearnUnitsClient units={units} />;
 }

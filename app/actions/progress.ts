@@ -2,7 +2,13 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { getNextSectionId, getNextAvailableSectionId } from "@/lib/curriculum";
+import {
+  getNextSectionId,
+  getNextAvailableSectionId,
+  computeCurriculumUnlockState,
+  type CanonicalUnitSummary,
+} from "@/lib/curriculum";
+import { getAvailableUnits, type AvailableUnit } from "@/app/actions/quiz";
 import { revalidatePath } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
@@ -37,6 +43,7 @@ export interface UnitProgressItem {
   current_slide_order: number;
   total_slides: number;
   is_completed: boolean;
+  is_locked: boolean;
   percentage: number;
   unit_order?: number;
 }
@@ -50,6 +57,7 @@ export interface UserSectionProgress {
     sec_title?: string;
     difficulty_name?: string;
     difficulty_id?: number;
+    is_locked?: boolean;
   };
   units: UnitProgressItem[];
   overallPercentage: number;
@@ -247,6 +255,110 @@ export async function getUserLastActiveProgress(
 }
 
 /**
+ * Computes the user's unlocked units and sections across the entire curriculum.
+ *
+ * Enforces strict per-unit progression:
+ * - A unit is unlocked only if the user has completed its predecessor.
+ * - A section becomes available only once all units in the previous section are completed.
+ */
+export async function getUserCurriculumUnlockState(
+  explicitUserId?: number,
+): Promise<{
+  unlockedUnitIds: Set<number>;
+  unlockedSectionIds: Set<number>;
+  completedSectionIds: Set<number>;
+  completedUnitIds: Set<number>;
+  activeUnitId: number | null;
+  activeSectionId: number | null;
+}> {
+  try {
+    let userId = explicitUserId;
+    if (!userId) {
+      const session = await auth();
+      if (session?.user?.id) userId = Number(session.user.id);
+    }
+
+    const [unitRows] = await db.query<RowDataPacket[]>(
+      `SELECT u.unit_id, u.unit_order, s.sec_id
+       FROM unit_tbl u
+       JOIN sec_tbl s ON u.sec_id = s.sec_id
+       WHERE u.status = 'approved'
+       ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
+    );
+
+    const allUnitsOrdered: CanonicalUnitSummary[] = unitRows.map((r) => ({
+      unit_id: Number(r.unit_id),
+      unit_order: Number(r.unit_order || 1),
+      sec_id: Number(r.sec_id),
+    }));
+
+    const completedUnitIds = new Set<number>();
+    const activeProgressUnitIds = new Set<number>();
+    if (userId && Number.isInteger(userId) && userId > 0) {
+      const [progressRows] = await db.query<RowDataPacket[]>(
+        "SELECT unit_id, is_completed, current_slide_order FROM user_lesson_progress_tbl WHERE user_id = ?",
+        [userId],
+      );
+      for (const pr of progressRows) {
+        if (pr.is_completed) {
+          completedUnitIds.add(Number(pr.unit_id));
+        }
+        if (pr.is_completed || Number(pr.current_slide_order) > 0) {
+          activeProgressUnitIds.add(Number(pr.unit_id));
+        }
+      }
+    }
+
+    const state = computeCurriculumUnlockState(allUnitsOrdered, completedUnitIds);
+    for (const pId of activeProgressUnitIds) {
+      state.unlockedUnitIds.add(pId);
+    }
+
+    return {
+      ...state,
+      completedUnitIds,
+    };
+  } catch (error) {
+    console.error("Failed to get curriculum unlock state:", error);
+    return {
+      unlockedUnitIds: new Set<number>([98]),
+      unlockedSectionIds: new Set<number>([1]),
+      completedSectionIds: new Set<number>(),
+      completedUnitIds: new Set<number>(),
+      activeUnitId: 98,
+      activeSectionId: 1,
+    };
+  }
+}
+
+/**
+ * Checks whether a specific unit is currently unlocked for the user.
+ */
+export async function isUnitUnlockedForUser(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<boolean> {
+  const state = await getUserCurriculumUnlockState(explicitUserId);
+  return state.unlockedUnitIds.has(Number(unitId));
+}
+
+/**
+ * Returns all available units enriched with user-specific unlock and completion states.
+ */
+export async function getAvailableUnitsForUser(
+  explicitUserId?: number,
+): Promise<AvailableUnit[]> {
+  const baseUnits = await getAvailableUnits();
+  const unlockState = await getUserCurriculumUnlockState(explicitUserId);
+
+  return baseUnits.map((u) => ({
+    ...u,
+    is_completed: unlockState.completedUnitIds.has(u.unit_id),
+    is_locked: !unlockState.unlockedUnitIds.has(u.unit_id),
+  }));
+}
+
+/**
  * Retrieves the user's progress across units in their active curriculum section.
  */
 export async function getUserSectionProgress(
@@ -262,6 +374,7 @@ export async function getUserSectionProgress(
       sec_title: "Getting Started",
       difficulty_id: 1,
       difficulty_name: "Beginner",
+      is_locked: false,
     },
     units: [],
     overallPercentage: 0,
@@ -277,6 +390,8 @@ export async function getUserSectionProgress(
       userId = Number(session.user.id);
     }
     if (!Number.isInteger(userId) || userId < 1) return defaultFallback;
+
+    const unlockState = await getUserCurriculumUnlockState(userId);
 
     let targetSectionId =
       explicitSectionId != null && Number.isFinite(Number(explicitSectionId))
@@ -343,6 +458,7 @@ export async function getUserSectionProgress(
         sec_title: String(secRows[0].sec_title ?? ""),
         difficulty_id: Number(secRows[0].difficulty_id ?? 1),
         difficulty_name: String(secRows[0].difficulty_name ?? "Beginner"),
+        is_locked: !unlockState.unlockedSectionIds.has(targetSectionId),
       };
     } else {
       // If targetSectionId is invalid/missing in sec_tbl, fall back targetSectionId to Section 1
@@ -365,19 +481,23 @@ export async function getUserSectionProgress(
     );
 
     const units: UnitProgressItem[] = unitRows.map((r) => {
+      const uId = Number(r.unit_id);
       const totalSlides = Math.max(1, Number(r.total_slides));
       const currentSlide = Math.min(totalSlides, Math.max(0, Number(r.current_slide_order)));
-      const isCompleted = Boolean(r.is_completed);
+      const isCompleted = Boolean(r.is_completed) || unlockState.completedUnitIds.has(uId);
+      const hasProgress = currentSlide > 0 || isCompleted;
+      const isLocked = !hasProgress && !unlockState.unlockedUnitIds.has(uId);
       const percentage = isCompleted
         ? 100
         : Math.min(99, Math.round((currentSlide / totalSlides) * 100));
 
       return {
-        unit_id: Number(r.unit_id),
+        unit_id: uId,
         unit_title: String(r.unit_title),
-        current_slide_order: currentSlide,
+        current_slide_order: isLocked ? 0 : currentSlide,
         total_slides: totalSlides,
         is_completed: isCompleted,
+        is_locked: isLocked,
         percentage,
         unit_order: r.unit_order != null ? Number(r.unit_order) : 1,
       };

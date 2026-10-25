@@ -117,6 +117,14 @@ export async function resolveAuthoritativeAssessment(unitId?: number): Promise<{
 export async function getPublicCodeProblem(
   unitId?: number,
 ): Promise<PublicCodeProblem | null> {
+  if (unitId && Number.isInteger(unitId) && unitId > 0) {
+    const { isUnitUnlockedForUser } = await import("@/app/actions/progress");
+    const isUnlocked = await isUnitUnlockedForUser(unitId);
+    if (!isUnlocked) {
+      return null;
+    }
+  }
+
   const resolved = await resolveAuthoritativeAssessment(unitId);
   if (!resolved) return null;
 
