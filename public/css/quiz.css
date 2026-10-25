@@ -24,8 +24,7 @@
     box-sizing: border-box;
     overflow: hidden;
     padding: 48px 0;
-    gap: 16px;
-    
+    gap: clamp(16px, calc(17.78vh - 144px), 48px);
 }
 
 .quiz-page .quiz-header {
@@ -547,7 +546,6 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-
     min-height: 388px;
     flex: 0 0 auto;
     overflow: hidden;
@@ -675,6 +673,7 @@
 
 .lesson-card .lesson-slide-title {
     font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+    margin-top: -12px;
 }
 
 .lesson-card .lesson-code-preview {
@@ -1119,10 +1118,11 @@
     align-items: center;
     gap: 8px;
     width: 100%;
+    height: 56px;
     padding: 12px 18px;
     background: transparent;
     border: none;
-    border-bottom: 4px solid transparent;
+    border-bottom: 2px solid var(--border-main);
     color: #111827;
     cursor: pointer;
     text-align: left;
@@ -1130,18 +1130,17 @@
     > svg {
         width: 22px;
         height: 22px;
-        color: inherit;
+        color: #7c3aed;
     }
     > h2 {
         margin: 0;
-        font-size: clamp(0.8rem, 1.4vw, 1.2rem);
+        font-size: clamp(0.6rem, 1.2vw, 1rem);
         font-weight: 600;
     }
 }
 
 .file-tab.active {
     border-bottom-color: #7c3aed;
-    box-shadow: inset 0 -1px 0 #ffffff;
 }
 
 .file-tab:not(.active) {
@@ -1164,27 +1163,27 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    > .check-circle {
+    transition: all ease 200ms;
+    > div .check-circle {
         min-width: 28px; height: 28px; 
         border: 1px solid var(--border-main);
         border-radius: 50%;
         svg {color: white;}
     }
-    > p {font-size: 14px;}
 }
 
 .instruction.correct {
-    border-color: #D1FAE5;
-    background-color: #ECFDF550;
-    > .check-circle {
+    background-color: rgba(34, 197, 94, 0.15);
+    border: none;
+    > div .check-circle {
         border: none;
-        background-color: #10B981;
+        background-color:#22c55e;
     }
 }
 
 .instruction.disabled {
     border-color: var(--border-main);
-    background-color: #f0f0f0;
+    background-color: var(--bg-card);
     user-select: none;
     > .check-circle {
         border: none;
@@ -1194,41 +1193,22 @@
 
 .code-editor-container {
     position: relative;
-    > .line-number {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        text-align: right;
-        background-color: #F0F0F0;
-        padding: 16px 12px;
-        > p {user-select: none; font-family: var(--font-jetbrains-mono); color: #999; font-size: clamp(0.5rem, 1.5vw, 1rem); line-height: 1.5;}
-    }
-    > .code-editor {
-        line-height: 1.5;
-        background-color: transparent;
-        padding: 16px 12px;
-        font-family: var(--font-jetbrains-mono);
-        font-size: clamp(0.5rem, 1.5vw, 1rem);
-        font-weight: 500;
-        width: 100%; height: 100%;
-        outline: none;
-        border: none;
-        resize: none;
-    }
     > .code-options {
         display: flex;
         position: absolute;
         bottom: 20px;
         right: calc(20px + 14px);
-        gap: 16px;
+        gap: 8px;
         > .run-code-btn, .submit-btn {
+            position: relative;
             display: flex;
             justify-content: center;
-            border-radius: 16px;
-            width: 180px;
-            padding: 16px 0;
+            align-items: center;
+            border-radius: 999px;
+            padding: 12px 24px;
             outline: none;
             border: none;
+            p {font-size: 14px; white-space: nowrap}
         } .submit-btn {
             background-color: var(--primary-color);
             p {color: var(--text-inverse);}
@@ -1237,12 +1217,26 @@
             gap: 12px;
             color: var(--text-muted);
         }
+        > .run-code-btn::after, > .submit-btn::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            transition: all 0.2s;
+        }
+        > .run-code-btn:hover::after, > .submit-btn:hover::after {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
     }
 }
 
 .monaco-editor-shell {
     overflow: hidden;
-    background-color: #F3F4F6;
+    background-color: var(--cp-editor-background, #F3F4F6);
     border-left: 1px solid var(--border-main);
 }
 
@@ -1253,15 +1247,20 @@
     height: 100% !important;
 }
 
-.monaco-code-editor .monaco-editor,
-.monaco-code-editor .monaco-editor-background,
-.monaco-code-editor .margin {
-    background-color: #F3F4F6 !important;
+[data-theme="dark"] {
+    --cp-editor-background: #1e1e1e;
+    --cp-editor-text: #d4d4d4;
+    --cp-editor-gutter: #252526;
+    --cp-editor-gutter-text: #858585;
 }
 
-.monaco-code-editor .monaco-editor .view-overlays .current-line,
-.monaco-code-editor .monaco-editor .view-overlays .current-line ~ .line-numbers {
-    background: rgba(79, 70, 229, 0.08) !important;
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        --cp-editor-background: #1e1e1e;
+        --cp-editor-text: #d4d4d4;
+        --cp-editor-gutter: #252526;
+        --cp-editor-gutter-text: #858585;
+    }
 }
 
 .canvas-container, .code-editor-container {
@@ -1298,7 +1297,6 @@
             bottom: 3px;
             content: "";
             background-color: #fff;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
             width: 24px; height: 24px;
             border-radius: 50%;
             transition: 350ms ease;
@@ -1522,7 +1520,7 @@
 
         > button.options#submit:not(:disabled):hover::after {background-color: rgba(255, 255, 255, 0.1);}
         > button.options#skip {color: var(--border-main); background-color: var(--bg-card);}
-        > button.options#skip:hover {filter:brightness(0.9); border-color: var(--border-main);}
+        > button.options#skip:hover {filter:brightness(1.2); border-color: var(--border-main);}
         > button.options#skip:active {border-bottom-width: 3px;}
         > button.options#submit:active {border-bottom-width: 0;}
     }
@@ -2437,7 +2435,7 @@ footer.incorrect {
         display: flex;
         flex: 1 1 auto;
         min-height: 0;
-        background: #f3f4f6;
+        background: var(--cp-editor-background, #f3f4f6);
     }
 
     .cp-mobile-gutter,
@@ -2456,8 +2454,8 @@ footer.incorrect {
         padding-right: 8px;
         padding-left: 10px;
         overflow: hidden;
-        background: #e5e7eb;
-        color: #9ca3af;
+        background: var(--cp-editor-gutter, #e5e7eb);
+        color: var(--cp-editor-gutter-text, #9ca3af);
         text-align: right;
         user-select: none;
         white-space: pre;
@@ -2472,7 +2470,7 @@ footer.incorrect {
         border: 0;
         outline: none;
         background: transparent;
-        color: #111827;
+        color: var(--cp-editor-text, #111827);
         overflow: auto;
         resize: none;
         tab-size: 4;

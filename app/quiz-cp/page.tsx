@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
   useEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -69,6 +68,49 @@ function getMobileViewportServerSnapshot() {
   return false;
 }
 
+function updatePreviewDocument(
+  frame: HTMLIFrameElement | null,
+  html: string,
+  css: string,
+) {
+  const previewDocument = frame?.contentDocument;
+  const previewRoot = previewDocument?.getElementById("quiz-preview-root");
+  const previewStyles = previewDocument?.getElementById("quiz-preview-styles");
+  if (!previewRoot || !previewStyles) return;
+
+  previewRoot.innerHTML = html;
+  previewStyles.textContent = css;
+}
+
+function getEditorThemeSnapshot(): "vs" | "vs-dark" {
+  const selectedTheme = document.documentElement.getAttribute("data-theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return selectedTheme === "dark" ||
+    (selectedTheme === "system" && prefersDark)
+    ? "vs-dark"
+    : "vs";
+}
+
+function getEditorThemeServerSnapshot(): "vs" | "vs-dark" {
+  return "vs";
+}
+
+function subscribeEditorTheme(onChange: () => void) {
+  const root = document.documentElement;
+  const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+  const observer = new MutationObserver(onChange);
+  observer.observe(root, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+  colorScheme.addEventListener("change", onChange);
+
+  return () => {
+    observer.disconnect();
+    colorScheme.removeEventListener("change", onChange);
+  };
+}
+
 // Quick-symbol bar shown above the soft keyboard on phones.
 const QUICK_SYMBOLS = [
   "<", ">", "/", "=", '"', "'", "{", "}", "(", ")", ";", ":", "#", ".",
@@ -93,11 +135,15 @@ function CodeProblemRunner() {
   const [problem, setProblem] = useState<PublicCodeProblem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const editorTheme = useSyncExternalStore(
+    subscribeEditorTheme,
+    getEditorThemeSnapshot,
+    getEditorThemeServerSnapshot,
+  );
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [activeFile, setActiveFile] = useState<FileKey>("html");
   const [code, setCode] = useState<CPFileBuffers>(defaultFiles);
-  const [renderedCode, setRenderedCode] = useState<CPFileBuffers>(defaultFiles);
   const [stepSnapshots, setStepSnapshots] = useState<
     Record<number, CPFileBuffers>
   >({});
@@ -127,6 +173,7 @@ function CodeProblemRunner() {
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const initializedPreviewDocumentRef = useRef<Document | null>(null);
 
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
@@ -200,7 +247,6 @@ function CodeProblemRunner() {
               ) {
                 setCurrentStepIndex(parsed.currentStepIndex);
                 setCode(parsed.code);
-                setRenderedCode(parsed.code);
                 setStepSnapshots(parsed.stepSnapshots ?? {});
                 setLives(parsed.lives);
                 return;
@@ -213,7 +259,6 @@ function CodeProblemRunner() {
 
         setCurrentStepIndex(0);
         setCode({ ...firstStepStarter });
-        setRenderedCode({ ...firstStepStarter });
         setStepSnapshots({});
         setLives(5);
         setStatus("active");
@@ -254,54 +299,57 @@ function CodeProblemRunner() {
     }
   }, [problem, status, currentStepIndex, code, stepSnapshots, lives]);
 
-  // Build iframe srcDoc from renderedCode (only updated on Run Code, Reset, or Step Advance)
-  const previewDoc = useMemo(() => {
-    const safeJs = renderedCode.js.replace(/<\/script>/gi, "<\\/script>");
+  useEffect(() => {
+    updatePreviewDocument(previewFrameRef.current, code.html, code.css);
+  }, [code.css, code.html]);
 
-    return `<!DOCTYPE html>
-      <html>
-        <head>
-          <style>${renderedCode.css}</style>
-        </head>
-        <body>
-          ${renderedCode.html}
-          <script>
-            (() => {
-              const formatValue = (value) => {
-                if (typeof value === "string") return value;
-                try {
-                  const serialized = JSON.stringify(value);
-                  return serialized === undefined ? String(value) : serialized;
-                } catch {
-                  return String(value);
-                }
-              };
+  const initializePreview = () => {
+    const previewWindow = previewFrameRef.current?.contentWindow;
+    const previewDocument = previewFrameRef.current?.contentDocument;
+    if (
+      !previewWindow ||
+      !previewDocument ||
+      initializedPreviewDocumentRef.current === previewDocument
+    ) {
+      return;
+    }
 
-              const sendConsoleMessage = (level, args) => {
-                parent.postMessage({
-                  source: "quiz-preview-console",
-                  level,
-                  text: args.map(formatValue).join(" ")
-                }, "*");
-              };
-
-              ["log", "warn", "error"].forEach((level) => {
-                const original = console[level];
-                console[level] = (...args) => {
-                  sendConsoleMessage(level, args);
-                  original(...args);
-                };
-              });
-
-              window.addEventListener("error", (event) => {
-                sendConsoleMessage("error", [event.message]);
-              });
-            })();
-          <\/script>
-          <script>${safeJs}<\/script>
-        </body>
-      </html>`;
-  }, [renderedCode.css, renderedCode.html, renderedCode.js]);
+    initializedPreviewDocumentRef.current = previewDocument;
+    const consoleBridge = previewDocument.createElement("script");
+    if (consoleBridge) {
+      consoleBridge.textContent = `(() => {
+        const formatValue = (value) => {
+          if (typeof value === "string") return value;
+          try {
+            const serialized = JSON.stringify(value);
+            return serialized === undefined ? String(value) : serialized;
+          } catch {
+            return String(value);
+          }
+        };
+        ["log", "warn", "error"].forEach((level) => {
+          const original = console[level].bind(console);
+          console[level] = (...args) => {
+            parent.postMessage({
+              source: "quiz-preview-console",
+              level,
+              text: args.map(formatValue).join(" ")
+            }, "*");
+            original(...args);
+          };
+        });
+        window.addEventListener("error", (event) => {
+          parent.postMessage({
+            source: "quiz-preview-console",
+            level: "error",
+            text: event.message
+          }, "*");
+        });
+      })();`;
+      previewDocument.body.appendChild(consoleBridge);
+    }
+    updatePreviewDocument(previewFrameRef.current, code.html, code.css);
+  };
 
   useEffect(() => {
     const handlePreviewMessage = (event: MessageEvent) => {
@@ -338,8 +386,15 @@ function CodeProblemRunner() {
 
   // Free Run Code action (0 heart loss)
   const handleRunCode = () => {
+    if (activeFile !== "js") return;
     setConsoleMessages([]);
-    setRenderedCode({ ...code });
+    updatePreviewDocument(previewFrameRef.current, code.html, code.css);
+    const previewDocument = previewFrameRef.current?.contentDocument;
+    if (previewDocument && code.js.trim()) {
+      const script = previewDocument.createElement("script");
+      script.textContent = `(() => {\n${code.js}\n})();`;
+      previewDocument.body.appendChild(script);
+    }
     if (isMobileViewport) {
       editorRef.current?.blur();
       setMobileTab("preview");
@@ -378,7 +433,6 @@ function CodeProblemRunner() {
 
     setConsoleMessages([]);
     setCode(baseline);
-    setRenderedCode(baseline);
     setStepFeedback(null);
   };
 
@@ -391,7 +445,6 @@ function CodeProblemRunner() {
     }
     setCurrentStepIndex(0);
     setCode({ ...firstStepStarter });
-    setRenderedCode({ ...firstStepStarter });
     setStepSnapshots({});
     setLives(5);
     setStatus("active");
@@ -405,9 +458,7 @@ function CodeProblemRunner() {
 
     setIsSubmitting(true);
     setStepFeedback(null);
-    // Also refresh preview when submitting
     setConsoleMessages([]);
-    setRenderedCode({ ...code });
 
     try {
       const result = await verifyCodeProblemStep({
@@ -450,7 +501,6 @@ function CodeProblemRunner() {
           if (nextStep && !nextStep.inheritPreviousCode) {
             const nextStarter = { ...nextStep.starterCode };
             setCode(nextStarter);
-            setRenderedCode(nextStarter);
           }
         }
       } else {
@@ -742,10 +792,10 @@ function CodeProblemRunner() {
                     <path d="M4 9h2" />
                     <path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02" />
                   </svg>
-                  <h2>
-                    {problem?.title ? problem.title : "Instructions"}{" "}
-                    {problem ? `(Step ${currentStepIndex + 1}/${problem.steps.length})` : ""}
-                  </h2>
+                  <div style={{display: "flex", width: "100%", justifyContent: "space-between"}}>
+                    <h2>{problem?.title ? problem.title : "Instructions"}{" "}</h2>
+                    {/* <h2>{problem ? `Step ${currentStepIndex + 1}/${problem.steps.length}` : ""}</h2> */}
+                  </div>
                 </div>
               </div>
               <div className="instruction-container col" style={{ gap: "12px" }}>
@@ -792,15 +842,12 @@ function CodeProblemRunner() {
                             border: isCurrent
                               ? "2px solid var(--selected-color, #7c3aed)"
                               : undefined,
-                            boxShadow: isCurrent
-                              ? "0 4px 14px rgba(124, 58, 237, 0.12)"
-                              : undefined,
                           }}
                         >
                           <div
                             style={{
                               display: "flex",
-                              alignItems: "flex-start",
+                              alignItems: "flex-center",
                               gap: "12px",
                               width: "100%",
                             }}
@@ -854,7 +901,7 @@ function CodeProblemRunner() {
                                     color: isCurrent
                                       ? "var(--selected-color, #7c3aed)"
                                       : isCompleted
-                                        ? "#10B981"
+                                        ? "#16a34a"
                                         : "var(--text-muted)",
                                   }}
                                 >
@@ -862,7 +909,7 @@ function CodeProblemRunner() {
                                   {isCompleted
                                     ? "• Completed"
                                     : isCurrent
-                                      ? "• Current Step"
+                                      ? "• Current"
                                       : "• Locked"}
                                 </strong>
                                 {isCurrent && step.hint && (
@@ -1066,7 +1113,7 @@ function CodeProblemRunner() {
                   height="100%"
                   width="100%"
                   language={fileMeta[activeFile].language}
-                  theme="quiz-web"
+                  theme={editorTheme}
                   value={code[activeFile]}
                   onChange={(value) => {
                     const nextValue = value ?? "";
@@ -1074,33 +1121,6 @@ function CodeProblemRunner() {
                       ...previous,
                       [activeFile]: nextValue,
                     }));
-                  }}
-                  beforeMount={(monaco) => {
-                    monaco.editor.defineTheme("quiz-web", {
-                      base: "vs",
-                      inherit: true,
-                      rules: [
-                        { token: "tag", foreground: "#0F172A" },
-                        { token: "attribute.name.html", foreground: "#7C3AED" },
-                        { token: "attribute.value.html", foreground: "#10B981" },
-                        { token: "delimiter.html", foreground: "#475569" },
-                        { token: "string", foreground: "#10B981" },
-                        { token: "comment", foreground: "#94A3B8" },
-                      ],
-                      colors: {
-                        "editor.background": "#F3F4F6",
-                        "editorLineNumber.foreground": "#9CA3AF",
-                        "editorLineNumber.activeForeground": "#475569",
-                        "editorCursor.foreground": "#111827",
-                        "editor.selectionBackground": "#DBEAFE",
-                        "editor.inactiveSelectionBackground": "#E2E8F0",
-                        "editorIndentGuide.background": "#E5E7EB",
-                        "editorIndentGuide.activeBackground": "#A1A1AA",
-                        "editor.lineHighlightBackground": "#EEF2FF",
-                        "editorGroupHeader.tabsBackground": "#F8FAFC",
-                        "tab.inactiveBackground": "#F8FAFC",
-                      },
-                    });
                   }}
                   options={{
                     automaticLayout: true,
@@ -1126,34 +1146,35 @@ function CodeProblemRunner() {
                     onClick={handleResetStep}
                     disabled={!problem || isLoading || isSubmitting}
                     title="Restore this step's starting code"
-                    style={{ width: "140px", cursor: "pointer" }}
-                  >
-                    <p>Reset Step</p>
-                  </button>
-                  <button
-                    type="button"
-                    className="run-code-btn"
-                    onClick={handleRunCode}
-                    disabled={!problem || isLoading}
-                    title="Update live preview without losing hearts"
                     style={{ cursor: "pointer" }}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="lucide lucide-play preview-icon"
-                    >
-                      <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
-                    </svg>
-                    <p>Run Code</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw preview-icon"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   </button>
+                  {activeFile === "js" && (
+                    <button
+                      type="button"
+                      className="run-code-btn"
+                      onClick={handleRunCode}
+                      disabled={!problem || isLoading}
+                      title="Run JavaScript in the preview without losing hearts"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-play preview-icon"
+                      >
+                        <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="submit-btn"
@@ -1240,7 +1261,8 @@ function CodeProblemRunner() {
                   title="code preview"
                   className="preview-frame"
                   ref={previewFrameRef}
-                  srcDoc={previewDoc}
+                  srcDoc='<!doctype html><html><head><style id="quiz-preview-styles"></style></head><body><div id="quiz-preview-root"></div></body></html>'
+                  onLoad={initializePreview}
                   style={{
                     maxWidth: isMobilePreview ? "375px" : "100%",
                     margin: isMobilePreview ? "0 auto" : undefined,
@@ -1335,14 +1357,16 @@ function CodeProblemRunner() {
             >
               Reset
             </button>
-            <button
-              type="button"
-              className="cp-mobile-action-btn"
-              onClick={handleRunCode}
-              disabled={!problem || isLoading}
-            >
-              ▶ Run
-            </button>
+            {activeFile === "js" && (
+              <button
+                type="button"
+                className="cp-mobile-action-btn"
+                onClick={handleRunCode}
+                disabled={!problem || isLoading}
+              >
+                ▶ Run
+              </button>
+            )}
             <button
               type="button"
               className="cp-mobile-action-btn primary"
