@@ -1,8 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, startTransition } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{ height: "250px", width: "100%", background: "#1e1e1e" }}
+      className="animate-pulse flex items-center justify-center text-neutral-400 text-xs"
+    >
+      Loading code editor...
+    </div>
+  ),
+});
 import LessonCard, { LessonCodeFrame } from "@/app/components/LessonCard";
 import {
   getPaginatedRecentQuizzes,

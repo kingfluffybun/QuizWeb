@@ -1,7 +1,19 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{ height: "100%", width: "100%", background: "#1e1e1e" }}
+      className="monaco-code-editor animate-pulse flex items-center justify-center text-neutral-400 text-sm"
+    >
+      Loading editor...
+    </div>
+  ),
+});
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,

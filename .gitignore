@@ -38,6 +38,7 @@ tests/*
 !tests/test-maintainer-json-import.ts
 !tests/test-phase1-optimization.ts
 !tests/test-phase2-rendering.ts
+!tests/test-phase3-optimization.ts
 
 # debug
 npm-debug.log*
