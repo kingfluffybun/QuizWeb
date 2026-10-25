@@ -212,7 +212,7 @@
 
     .hero {min-height: 108vh;}
     .hero .hero-text {
-        top: 12%; 
+        top: 14%; 
         width: min(100%, 400px);
         max-width: 100%;
         padding: 0 16px;
