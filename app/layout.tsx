@@ -36,7 +36,7 @@ const themeInitScript = `
 (function() {
     try {
         var saved = localStorage.getItem('app-accessibility-settings');
-        var theme = 'system';
+        var theme = 'light';
         var reduceMotion = false;
         var uiScale = null;
         if (saved) {

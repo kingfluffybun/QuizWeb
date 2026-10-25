@@ -17,7 +17,7 @@ export default function AccessibilityInit() {
         const { theme, uiScale, reduceMotion } = JSON.parse(saved);
         
         // 3. Inject them into the HTML document universally
-        document.documentElement.setAttribute('data-theme', theme || 'system');
+        document.documentElement.setAttribute('data-theme', theme || 'light');
         document.documentElement.setAttribute('data-motion', reduceMotion ? 'reduce' : 'normal');
         
         if (uiScale) {
@@ -25,13 +25,13 @@ export default function AccessibilityInit() {
           document.documentElement.style.setProperty('--settings-base-scale', `${uiScale}%`);
         }
       } catch {
-        document.documentElement.setAttribute('data-theme', 'system');
+        document.documentElement.setAttribute('data-theme', 'light');
         document.documentElement.setAttribute('data-motion', 'normal');
       }
     } else {
-      // Default to system theme and normal motion
+      // Default to light theme and normal motion
       if (!document.documentElement.getAttribute('data-theme')) {
-        document.documentElement.setAttribute('data-theme', 'system');
+        document.documentElement.setAttribute('data-theme', 'light');
       }
       if (!document.documentElement.getAttribute('data-motion')) {
         document.documentElement.setAttribute('data-motion', 'normal');
