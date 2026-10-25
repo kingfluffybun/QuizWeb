@@ -39,13 +39,12 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     }, [initialData.todayDate]);
 
     const handlePrevMonth = useCallback(() => {
-        const [todayYearStr, todayMonthStr] = (clientToday ?? streakData.todayDate).split("-");
         const nextMonth = viewMonth === 1 ? 12 : viewMonth - 1;
         const nextYear = viewMonth === 1 ? viewYear - 1 : viewYear;
 
         setViewYear(nextYear);
         setViewMonth(nextMonth);
-    }, [clientToday, streakData.todayDate]);
+    }, [viewMonth, viewYear]);
 
     const handleNextMonth = useCallback(() => {
         const nextMonth = viewMonth === 12 ? 1 : viewMonth + 1;
