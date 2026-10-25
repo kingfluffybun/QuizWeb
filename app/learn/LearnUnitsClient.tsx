@@ -174,14 +174,6 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                             </div>
                                         </div>
                                         <div className="available-unit-actions">
-                                            {unit.has_coding_assessment && !isLocked && (
-                                                <Link
-                                                    href={`/quiz-cp?unitId=${unit.pending_id}`}
-                                                    className="available-unit-cp-link"
-                                                >
-                                                    Code Problem
-                                                </Link>
-                                            )}
                                             {isLocked ? (
                                                 <button
                                                     type="button"
