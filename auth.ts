@@ -1,8 +1,9 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import NextAuth, { type NextAuthConfig, type Session } from "next-auth";
 import Google from "next-auth/providers/google";
 import Github from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import argon2 from "argon2";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
@@ -168,6 +169,41 @@ async function getActiveSessionUser(): Promise<{ id: string; email?: string } | 
 
     return null;
 }
+
+interface UserAuthRecord {
+    user_role: string;
+    token_version: number;
+    username?: string;
+    isMockNonArray?: boolean;
+}
+
+const getCachedUserAuthRecord = cache(async (userId: string): Promise<UserAuthRecord | null> => {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT u.user_role, u.token_version, p.username 
+         FROM user_auth_tbl u 
+         LEFT JOIN player_tbl p ON u.user_id = p.user_id 
+         WHERE u.user_id = ? LIMIT 1`,
+        [userId]
+    );
+
+    if (!Array.isArray(rows)) {
+        return {
+            user_role: "user",
+            token_version: 1,
+            isMockNonArray: true,
+        };
+    }
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return {
+        user_role: (rows[0]?.user_role as string) || "user",
+        token_version: Number(rows[0]?.token_version ?? 1),
+        username: (rows[0]?.username as string) || undefined,
+    };
+});
 
 export const authConfig: NextAuthConfig = {
     trustHost: true,
@@ -373,24 +409,21 @@ export const authConfig: NextAuthConfig = {
                 }
             }
 
-            // Refresh token role from database in Node runtime to ensure re-encrypted cookie is up to date
+            // Refresh token role and name from database in Node runtime to ensure re-encrypted cookie is up to date
             const userId = (extToken.id || extToken.sub) as string | undefined;
             if (userId && typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge") {
                 try {
-                    const [rows] = await db.query<RowDataPacket[]>(
-                        "SELECT user_role, token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
-                        [userId]
-                    );
-                    if (Array.isArray(rows) && rows.length > 0 && rows[0]?.user_role) {
-                        extToken.role = rows[0].user_role;
-                        extToken.user_role = rows[0].user_role;
-                    }
-                    const [playerRows] = await db.query<RowDataPacket[]>(
-                        "SELECT username FROM player_tbl WHERE user_id = ? LIMIT 1",
-                        [userId]
-                    );
-                    if (Array.isArray(playerRows) && playerRows.length > 0 && playerRows[0]?.username) {
-                        extToken.name = playerRows[0].username as string;
+                    const userRecord = await getCachedUserAuthRecord(String(userId));
+                    if (userRecord && !userRecord.isMockNonArray) {
+                        if (userRecord.user_role) {
+                            extToken.role = userRecord.user_role;
+                            extToken.user_role = userRecord.user_role;
+                        }
+                        if (userRecord.username) {
+                            extToken.name = userRecord.username;
+                        }
+                        // NOTE: Never overwrite extToken.tokenVersion here. extToken.tokenVersion
+                        // records issuance counter and must be compared against userRecord.token_version in session callback.
                     }
                 } catch {
                     // Gracefully retain existing token payload if DB query fails or in offline tests
@@ -432,18 +465,10 @@ export const authConfig: NextAuthConfig = {
             }
 
             try {
-                const [rows] = await db.query<RowDataPacket[]>(
-                    `SELECT u.user_role, u.token_version, p.username 
-                     FROM user_auth_tbl u 
-                     LEFT JOIN player_tbl p ON u.user_id = p.user_id 
-                     WHERE u.user_id = ? LIMIT 1`,
-                    [userId]
-                );
-
-                const tokenVersion = Number(extToken.tokenVersion ?? extToken.token_version ?? 1);
+                const userRecord = await getCachedUserAuthRecord(String(userId));
 
                 // If rows is not an array (e.g. legacy test mock returning non-SELECT ResultSetHeader), fall back safely
-                if (!Array.isArray(rows)) {
+                if (userRecord?.isMockNonArray) {
                     if (extSession && extSession.user) {
                         extSession.user.id = String(userId);
                         extSession.user.role = extToken.role || extToken.user_role || "user";
@@ -458,17 +483,19 @@ export const authConfig: NextAuthConfig = {
                     return session;
                 }
 
-                if (rows.length === 0 || Number(rows[0]?.token_version ?? 1) !== tokenVersion) {
+                const tokenVersion = Number(extToken.tokenVersion ?? extToken.token_version ?? 1);
+
+                if (!userRecord || userRecord.token_version !== tokenVersion) {
                     if (extSession) {
                         extSession.user = undefined;
                     }
                     return null as unknown as typeof session;
                 }
 
-                const dbUsername = (rows[0]?.username as string) || undefined;
+                const dbUsername = userRecord.username;
 
                 if (extSession && extSession.user) {
-                    const dbRole = (rows[0]?.user_role as string) || extToken.role || extToken.user_role || "user";
+                    const dbRole = userRecord.user_role || extToken.role || extToken.user_role || "user";
                     extSession.user.id = String(userId);
                     extSession.user.role = dbRole;
                     extSession.user.user_role = dbRole;
@@ -509,5 +536,22 @@ export const authConfig: NextAuthConfig = {
     },
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth(authConfig);
+
+const getCachedSession = cache(async (): Promise<Session | null> => {
+    return uncachedAuth();
+});
+
+export const auth: typeof uncachedAuth = ((...args: unknown[]) => {
+    const testSession = (globalThis as unknown as { __TEST_AUTH_SESSION__?: Session }).__TEST_AUTH_SESSION__;
+    if (testSession !== undefined && typeof args[0] !== "function") {
+        return Promise.resolve(testSession);
+    }
+    if (args.length > 0) {
+        return (uncachedAuth as unknown as (...fnArgs: unknown[]) => unknown)(...args);
+    }
+    return getCachedSession();
+}) as unknown as typeof uncachedAuth;
+
+export { handlers, signIn, signOut };
 export default authConfig;

@@ -25,23 +25,22 @@ used for project status.
 
 ## Current work
 
-Completed. Implemented comprehensive mobile view across QuizWeb.
+Completed. Implemented and hardened Phase 2: Next.js Rendering & Static Acceleration.
 
 Completed changes:
-- `app/components/MobileShell.tsx`: Replaced static placeholder with a route-aware, role-responsive mobile shell. Automatically suppresses mobile bars on public/marketing routes (`/`, `/about`, `/login`, `/verify-email/*`) and full-screen exercise runners (`/test`, `/quiz-cp`). Replaced text glyphs with accessible SVG navigation icons (Home, Learn, Quiz, Staff Studio/Admin, Settings). Implemented an interactive slide-over drawer with user profile details, role badges, full navigation, and NextAuth session sign-out.
-- `public/css/mobile-shell.css`: Implemented styles for sticky mobile app bar, role pills, fixed bottom navigation with safe-area insets, fluid content region (`padding-bottom: 72px`), backdrop blur overlay, and animated slide-over navigation drawer.
-- `public/css/sidebar.css`: Added mobile media query (`< 768px`) to suppress the 240px desktop sidebar and duplicate top navbar headers, and converted outer app containers (`.dashboard-page`, `.quiz-page`, `.settings-app-layout`, `.admin-app-layout`) into single-column fluid flex containers.
-- `public/css/dashboard.css`: Implemented responsive styles for the player dashboard, stacking `.dashboard-content` into a single column, scaling the welcome banner and background clouds, and adapting the Streak Calendar grid and stats modal for small viewports.
-- `public/css/quiz.css`: Adapted the available units list in the curriculum browser to single-column cards with touch-friendly actions, responsive quiz option choices, and a full-width completion card.
-- `public/css/settings.css`: Added a horizontal swipeable pill bar for `.settings-tabs-nav` with `-webkit-overflow-scrolling: touch`, stacked the accessibility theme grid, and sized form inputs and buttons to full width.
-- `public/css/admin.css` & `public/css/maintainer.css`: Added responsive horizontal scroll wrappers for data tables and stacked metric counter grids and filter toolbars.
-- `public/css/test_quiz.css`: Switched practice quiz page to a clean single-column flex layout with hidden sidebar and touch-friendly choices.
+- `app/components/SessionWrapper.tsx`: Created isolated client component wrapping NextAuth `<SessionProvider>` without an eager server session prop, accepting and forwarding `SessionProviderProps` (`...props`) for full flexibility. Allows Next.js App Router to statically pre-render public routes (`/`, `/about`, `/cheat-sheet`, `/_not-found`, `/login`, `/learn`, `/profile`, `/quiz-cp`) instead of forcing 100% dynamic SSR across the entire application.
+- `app/layout.tsx`: Decoupled `await auth()` from `RootLayout`, changing `RootLayout` into a synchronous component wrapping children with `<SessionWrapper>`. Optimized Google Fonts: trimmed `Poppins` and `Montserrat` from 9 weights down to `['400', '500', '600', '700', '800']` (matching CSS usage) and added `display: "swap"` across `Poppins`, `Montserrat`, and `JetBrains_Mono` to avoid Flash of Invisible Text (FOIT) and eliminate unneeded font asset payloads.
+- `tests/test-phase2-rendering.ts`: Created dedicated Phase 2 automated verification suite checking font configurations, RootLayout decoupling, prerender manifest static routes (`/`, `/_not-found`, `/about`, `/cheat-sheet`, `/login`, `/profile`, `/quiz-cp`), ISR caching (`/learn` 1h), and dynamic SSR security preservation for authenticated routes (`/home`, `/admin`, etc.).
 
 Validation completed:
+- `npm run build`: Production build verified. Static routes (`/`, `/_not-found`, `/about`, `/cheat-sheet`, `/learn`, `/login`, `/profile`, `/quiz-cp`) successfully pre-rendered as `○ (Static)` with zero build errors. Authenticated/dynamic routes (`/admin`, `/home`, `/input`, `/leaderboard`, `/maintainer`, `/pending`, `/post-login`, `/quiz`, `/settings`, `/verify-email/[token]`) correctly preserved as `ƒ (Dynamic)`.
+- `npx tsx tests/test-phase2-rendering.ts` (All 4 verification suites passing)
+- `npx eslint app/layout.tsx app/components/SessionWrapper.tsx tests/test-phase2-rendering.ts` (0 errors, 0 warnings)
 - `npx tsc --noEmit` (0 errors)
-- `npx eslint app/components/MobileShell.tsx app/layout.tsx` (0 errors, 0 warnings)
+- `npx tsx tests/test-phase1-optimization.ts` (All 4 verification suites passing)
+- `npx tsx tests/test-maintainer-json-import.ts` (All 10 normalized tables verified)
+- `npx tsx tests/test-db-v2-live-actions.ts` (All 13 conformance tests passing)
 - `npx tsx tests/test-rbac-e2e.ts` (137/137 tests passing)
-- `npm run build` (Clean production build; all 14 static and dynamic routes compiled successfully)
 
 Before starting work, an agent should replace this section with the files it
 intends to change and a short description. After finishing, it should replace
@@ -49,6 +48,10 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-10-25: Implemented Phase 2: Next.js Rendering & Static Acceleration. Decoupled `auth()` from `RootLayout` (`app/layout.tsx`) by introducing `app/components/SessionWrapper.tsx`. Unblocked Next.js automatic static generation: `/`, `/_not-found`, `/about`, `/cheat-sheet`, `/learn`, `/login`, `/profile`, and `/quiz-cp` are now statically pre-rendered (`○ Static`), eliminating full-app dynamic SSR penalties. Optimized Google Fonts (`Poppins`, `Montserrat`, `JetBrains_Mono`) with `display: "swap"` and pruned unused weights down to `['400', '500', '600', '700', '800']`. Verified with ESLint (0 warnings), TypeScript (0 errors), Next.js production build, all 137 RBAC E2E tests, 13 live DB action tests, maintainer JSON import tests, and Phase 1 optimization tests.
+
+- 2026-10-25: Implemented and reviewed Phase 1: Database & Auth Performance (Quick Wins). Fixed critical session revocation vulnerability in `auth.ts` where `jwt` callback was overwriting `tokenVersion` with current DB value; refined `auth` export wrapper to preserve middleware/route handler invocations; optimized streak date interval math to eliminate redundant split `OR` queries during long streaks; wired `StreakCalendar` navigation effect to fetch historical month activity on demand; added covering index `idx_activity_date_user_xp` in migration 009; wrapped `getLeaderboardEntriesByPeriod` with Next.js `unstable_cache` (60s TTL, `'leaderboard'` tag) with automatic invalidation in `recordUserActivity` and `recordQuizCompletion`. Passed TypeScript (0 errors), all 137 RBAC E2E tests, 13 DB live action tests, maintainer JSON import tests, Phase 1 optimization tests, and Next.js production build.
 
 - 2026-10-19: Fully implemented proper mobile view across QuizWeb. Replaced initial placeholder mobile shell with a route-aware, role-responsive shell in `MobileShell.tsx` and `mobile-shell.css`. Added slide-over mobile drawer, SVG bottom navigation, suppressed 240px desktop sidebar and duplicate headers under 768px in `sidebar.css`, and implemented fluid single-column layouts for Home Dashboard (`dashboard.css`), Learn & Quiz (`quiz.css`), Settings (`settings.css`), Admin & Maintainer (`admin.css`, `maintainer.css`), and Practice Runner (`test_quiz.css`). Passed TypeScript (0 errors), ESLint (0 warnings), all 137 RBAC E2E tests, and Next.js production build.
 

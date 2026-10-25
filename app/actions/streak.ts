@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { invalidateLeaderboardCache } from "@/app/actions/leaderboard";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export interface WeekDayStatus {
@@ -152,19 +153,90 @@ export async function getUserStreakData(
     }
 
     try {
-        const [rows] = await db.query<RowDataPacket[]>(
-            `SELECT DISTINCT DATE_FORMAT(activity_date, '%Y-%m-%d') as act_date 
-             FROM user_activity_tbl 
-             WHERE user_id = ? 
-             ORDER BY act_date ASC`,
+        const d = new Date(todayDate + "T00:00:00Z");
+        const dayOfWeek = d.getUTCDay();
+        const sundayStr = getAdjacentDate(todayDate, -dayOfWeek);
+
+        const targetDaysInMonth = new Date(Date.UTC(resolvedYear, resolvedMonth, 0)).getUTCDate();
+        const targetMonthStart = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-01`;
+        const targetMonthEnd = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-${String(targetDaysInMonth).padStart(2, "0")}`;
+
+        // Look up player record to leverage persisted streaks and bound lookback window
+        const [playerRows] = await db.query<RowDataPacket[]>(
+            `SELECT current_streak, max_streak, last_quiz_date 
+             FROM player_tbl 
+             WHERE user_id = ? LIMIT 1`,
             [userId]
         );
+        const playerCurrentStreak = Number(playerRows[0]?.current_streak ?? 0);
+        const playerMaxStreak = Number(playerRows[0]?.max_streak ?? 0);
 
-        const allActiveDates: string[] = rows.map((r) => r.act_date as string);
+        // Bounded window: cover at least 60 days (or enough for the active streak) plus target month
+        const streakLookbackDays = Math.max(playerCurrentStreak + 7, 60);
+        const streakWindowStart = getAdjacentDate(todayDate, -streakLookbackDays);
+
+        // Determine whether target month and streak lookback intervals overlap/touch
+        const intervalsOverlap = targetMonthStart <= todayDate && targetMonthEnd >= streakWindowStart;
+
+        let activityQuery: string;
+        let activityParams: (number | string)[];
+
+        if (intervalsOverlap) {
+            const rangeStart = targetMonthStart < streakWindowStart ? targetMonthStart : streakWindowStart;
+            const rangeEnd = targetMonthEnd > todayDate ? targetMonthEnd : todayDate;
+            activityQuery = `
+                SELECT DISTINCT DATE_FORMAT(activity_date, '%Y-%m-%d') as act_date 
+                FROM user_activity_tbl 
+                WHERE user_id = ? 
+                  AND activity_date >= ? 
+                  AND activity_date <= ?
+                ORDER BY act_date ASC
+            `;
+            activityParams = [userId, rangeStart, rangeEnd];
+        } else {
+            // Disjoint intervals: order chronologically for optimal index scan
+            const isTargetInPast = targetMonthEnd < streakWindowStart;
+            const [firstStart, firstEnd, secondStart, secondEnd] = isTargetInPast
+                ? [targetMonthStart, targetMonthEnd, streakWindowStart, todayDate]
+                : [streakWindowStart, todayDate, targetMonthStart, targetMonthEnd];
+
+            activityQuery = `
+                SELECT DISTINCT DATE_FORMAT(activity_date, '%Y-%m-%d') as act_date 
+                FROM user_activity_tbl 
+                WHERE user_id = ? 
+                  AND (
+                    (activity_date >= ? AND activity_date <= ?)
+                    OR
+                    (activity_date >= ? AND activity_date <= ?)
+                  )
+                ORDER BY act_date ASC
+            `;
+            activityParams = [userId, firstStart, firstEnd, secondStart, secondEnd];
+        }
+
+        const [[countRows], [activityRows]] = await Promise.all([
+            db.query<RowDataPacket[]>(
+                "SELECT COUNT(DISTINCT activity_date) as total_count FROM user_activity_tbl WHERE user_id = ?",
+                [userId]
+            ),
+            db.query<RowDataPacket[]>(activityQuery, activityParams),
+        ]);
+
+        const totalActiveDays = Number(countRows[0]?.total_count ?? activityRows.length);
+        const allActiveDates: string[] = activityRows.map((r) => r.act_date as string);
         const activeDateSet = new Set(allActiveDates);
 
-        const { currentStreak, longestStreak } = computeStreaks(allActiveDates, todayDate);
+        const computed = computeStreaks(allActiveDates, todayDate);
         const todayCompleted = activeDateSet.has(todayDate);
+        const yesterdayCompleted = activeDateSet.has(getAdjacentDate(todayDate, -1));
+
+        // Streak is only alive if today or yesterday had activity
+        let currentStreak = 0;
+        if (todayCompleted || yesterdayCompleted) {
+            currentStreak = Math.max(computed.currentStreak, playerCurrentStreak);
+        }
+
+        const longestStreak = Math.max(playerMaxStreak, computed.longestStreak, currentStreak);
 
         // Find active days in the target year & month
         const monthPrefix = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-`;
@@ -179,9 +251,6 @@ export async function getUserStreakData(
         }
 
         // Build week days status
-        const d = new Date(todayDate + "T00:00:00Z");
-        const dayOfWeek = d.getUTCDay();
-        const sundayStr = getAdjacentDate(todayDate, -dayOfWeek);
         const letters = ["S", "M", "T", "W", "T", "F", "S"];
         const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -200,7 +269,7 @@ export async function getUserStreakData(
         return {
             currentStreak,
             longestStreak,
-            totalActiveDays: allActiveDates.length,
+            totalActiveDays,
             todayCompleted,
             activeDatesInMonth,
             allActiveDates,
@@ -293,7 +362,23 @@ export async function recordUserActivity(options?: {
             connection.release();
         }
 
+        await invalidateLeaderboardCache();
+
         const streakData = await getUserStreakData(undefined, undefined, activityDate);
+
+        // Keep player_tbl current_streak and max_streak synchronized
+        try {
+            await db.query<ResultSetHeader>(
+                `UPDATE player_tbl
+                 SET current_streak = ?,
+                     max_streak = GREATEST(COALESCE(max_streak, 0), ?)
+                 WHERE user_id = ?`,
+                [streakData.currentStreak, streakData.longestStreak, userId],
+            );
+        } catch (err) {
+            console.error("Failed to sync player streak in recordUserActivity:", err);
+        }
+
         return {
             success: true,
             streak: streakData.currentStreak,
@@ -386,6 +471,7 @@ export async function recordQuizCompletion(options: {
             [validatedXp, options.currentStreak, options.bestStreak, userId],
         );
         await connection.commit();
+        await invalidateLeaderboardCache();
         return { success: true };
     } catch (err) {
         await connection.rollback();
