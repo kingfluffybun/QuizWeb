@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const DEFAULT_SETTINGS = {
-  theme: "light",
+  theme: "system",
   uiScale: "100",
   reduceMotion: false,
 };
@@ -15,7 +15,7 @@ function readStoredSettings() {
     if (!saved) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(saved);
     return {
-      theme: parsed.theme || "light",
+      theme: parsed.theme || "system",
       uiScale: parsed.uiScale || "100",
       reduceMotion: parsed.reduceMotion !== undefined ? Boolean(parsed.reduceMotion) : false,
     };

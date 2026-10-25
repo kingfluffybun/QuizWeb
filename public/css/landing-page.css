@@ -318,7 +318,8 @@
     .pos-1 {order: 1;}
     .pos-2 {order: 2;}
 
-    #clouds-topleft, #clouds-topright {display: none !important;}
+    #clouds-topleft, #clouds-topright {max-width: 50vw;}
+    #clouds-topleft {left: -36vh;} #clouds-topright {right: -36vh;}
     #bus {width: 36vh; bottom: 10vh; max-width: 80vw;}
     #clouds-left {left: -20vh; bottom: 14vh; max-width: 50vw;}
     #clouds-right {right: -20vh; bottom: 14vh; max-width: 50vw;}
