@@ -5,13 +5,15 @@ import Link from "next/link";
 import "#css/landing-page.css";
 import "#css/nav.css";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PublicNav from "@/app/components/publicNav";
 import * as Assets from "@/app/actions/animation/svg_assets";
 
 export default function Home() {
     const [menuOpen] = useState(false);
-    const session = useSession();
+    const { status } = useSession();
+    const router = useRouter();
 
     useEffect(() => {
         const bodyOverflow = document.body.style.overflow;
@@ -29,10 +31,11 @@ export default function Home() {
     }, [menuOpen]);
 
     useEffect(() => {
-        if (session?.data?.user) {
-            window.location.href = "/home";
+        const signedOut = new URLSearchParams(window.location.search).get("signedOut") === "1";
+        if (!signedOut && status === "authenticated") {
+            router.replace("/home");
         }
-    }, [session]);
+    }, [status, router]);
 
   return (
         <>
