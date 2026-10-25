@@ -28,6 +28,43 @@ type LessonCodeFrameProps = {
   editorOnly?: boolean;
 };
 
+const previewSizeReporter = `<script>
+(() => {
+  const reportSize = () => {
+    const height = Math.ceil(Math.max(
+      document.documentElement?.scrollHeight ?? 0,
+      document.body?.scrollHeight ?? 0,
+    ));
+    parent.postMessage({ type: "lesson-preview-size", height }, "*");
+  };
+
+  const resizeObserver = new ResizeObserver(reportSize);
+  resizeObserver.observe(document.documentElement);
+  if (document.body) resizeObserver.observe(document.body);
+
+  new MutationObserver(reportSize).observe(document.documentElement, {
+    attributes: true,
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  addEventListener("load", reportSize);
+  addEventListener("resize", reportSize);
+  addEventListener("message", (event) => {
+    if (event.data?.type === "lesson-preview-request-size") reportSize();
+  });
+  document.fonts?.ready.then(reportSize);
+  reportSize();
+})();
+</script>`;
+
+function addPreviewSizeReporter(source: string) {
+  const closingBodyTag = /<\/body\s*>/i;
+  return closingBodyTag.test(source)
+    ? source.replace(closingBodyTag, `${previewSizeReporter}$&`)
+    : `${source}${previewSizeReporter}`;
+}
+
 function splitLessonSentences(text: string) {
   return text.split(/(?<=[.!?])\s+/u).map((sentence) => sentence.trim()).filter(Boolean);
 }
@@ -50,7 +87,6 @@ export function LessonCodeFrame({
   editorOnly = false,
 }: LessonCodeFrameProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
-  const cleanupFrameObservers = useRef<(() => void) | null>(null);
   const editorResizeFrame = useRef<number | null>(null);
   const editorContentSizeListener = useRef<{ dispose: () => void } | null>(null);
   const editorWindowResizeListener = useRef<(() => void) | null>(null);
@@ -67,6 +103,30 @@ export function LessonCodeFrame({
     return () => mobileQuery.removeEventListener("change", updateFontSize);
   }, []);
 
+  useEffect(() => {
+    const handlePreviewMessage = (event: MessageEvent<unknown>) => {
+      const frame = frameRef.current;
+      if (!frame || event.source !== frame.contentWindow) return;
+      if (
+        typeof event.data !== "object" ||
+        event.data === null ||
+        !("type" in event.data) ||
+        event.data.type !== "lesson-preview-size" ||
+        !("height" in event.data) ||
+        typeof event.data.height !== "number" ||
+        !Number.isFinite(event.data.height)
+      ) {
+        return;
+      }
+
+      const height = Math.max(180, Math.ceil(event.data.height));
+      frame.style.height = `${height}px`;
+    };
+
+    window.addEventListener("message", handlePreviewMessage);
+    return () => window.removeEventListener("message", handlePreviewMessage);
+  }, []);
+
   const cancelEditorResize = () => {
     if (editorResizeFrame.current !== null) {
       window.cancelAnimationFrame(editorResizeFrame.current);
@@ -74,51 +134,7 @@ export function LessonCodeFrame({
     }
   };
 
-  const resizeFrame = () => {
-    const frame = frameRef.current;
-    const frameWindow = frame?.contentWindow;
-    const document = frameWindow?.document;
-    if (!frame || !frameWindow || !document) {
-      return;
-    }
-
-    cleanupFrameObservers.current?.();
-
-    const updateHeight = () => {
-      if (frame.contentDocument !== document) return;
-
-      const contentHeight = Math.max(
-        180,
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-      );
-      if (frame.offsetHeight !== contentHeight) {
-        frame.style.height = `${contentHeight}px`;
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(updateHeight);
-    resizeObserver.observe(document.body);
-    const mutationObserver = new MutationObserver(updateHeight);
-    mutationObserver.observe(document.documentElement, {
-      attributes: true,
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-    frameWindow.addEventListener("resize", updateHeight);
-    cleanupFrameObservers.current = () => {
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-      frameWindow.removeEventListener("resize", updateHeight);
-    };
-
-    updateHeight();
-    void document.fonts?.ready.then(updateHeight);
-  };
-
   useEffect(() => () => {
-    cleanupFrameObservers.current?.();
     editorContentSizeListener.current?.dispose();
     if (editorWindowResizeListener.current) {
       window.removeEventListener("resize", editorWindowResizeListener.current);
@@ -191,9 +207,14 @@ export function LessonCodeFrame({
           ref={frameRef}
           className={className}
           title={title}
-          sandbox="allow-same-origin"
-          srcDoc={source}
-          onLoad={resizeFrame}
+          sandbox="allow-scripts"
+          srcDoc={addPreviewSizeReporter(source)}
+          onLoad={() => {
+            frameRef.current?.contentWindow?.postMessage(
+              { type: "lesson-preview-request-size" },
+              "*",
+            );
+          }}
         />
       )}
     </div>
