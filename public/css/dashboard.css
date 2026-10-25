@@ -480,6 +480,63 @@ button.quick-action-btn:hover {
     background-color: hsl(260, 100%, 70%, 10%);
 }
 
+.daily-goal-preview-hub {
+    border-top: 1px solid var(--border-main);
+    padding-top: 12px;
+}
+
+.daily-goal-preview-hub summary {
+    color: var(--primary-color);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.daily-goal-preview-note {
+    margin: 10px 0;
+    font-size: 0.85rem;
+}
+
+.daily-goal-preview-previous,
+.daily-goal-preview-days label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.daily-goal-preview-previous {
+    max-width: 180px;
+    margin-bottom: 10px;
+}
+
+.daily-goal-preview-days {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.daily-goal-preview-hub input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border-main);
+    border-radius: 6px;
+    color: var(--text-main);
+    background-color: var(--bg-main);
+    font: inherit;
+}
+
+.daily-goal-preview-reset {
+    margin-top: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-main);
+    border-radius: 6px;
+    color: var(--text-main);
+    background-color: var(--bg-main);
+    cursor: pointer;
+}
+
 .daily-prograss-graph {
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr);
@@ -550,6 +607,9 @@ button.quick-action-btn:hover {
             flex: none;
             background-color: var(--primary-color);
             border-radius: 999px 999px 0 0;
+        }
+        > .graph-y-bar-empty {
+            background-color: var(--border-main);
         }
     }
 }
@@ -1277,6 +1337,10 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     /* Daily Goal Card & Graph */
     .daily-goal-xp {
         width: 100% !important;
+    }
+
+    .daily-goal-preview-days {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .daily-prograss-graph {

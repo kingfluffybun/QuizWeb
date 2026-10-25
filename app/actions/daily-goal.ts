@@ -10,9 +10,13 @@ interface ActivityRow extends RowDataPacket {
     xp: number | string;
 }
 
-function getUtcWeekDates(today: Date): string[] {
+interface TotalXpRow extends RowDataPacket {
+    xp: number | string;
+}
+
+function getUtcWeekDates(today: Date, offsetWeeks = 0): string[] {
     const sunday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    sunday.setUTCDate(sunday.getUTCDate() - sunday.getUTCDay());
+    sunday.setUTCDate(sunday.getUTCDate() - sunday.getUTCDay() + offsetWeeks * 7);
 
     return Array.from({ length: 7 }, (_, index) => {
         const date = new Date(sunday);
@@ -35,28 +39,45 @@ export async function getDailyGoalData(): Promise<DailyGoalData> {
     const today = new Date();
     const todayDate = today.toISOString().slice(0, 10);
     const weekDates = getUtcWeekDates(today);
+    const previousWeekDates = getUtcWeekDates(today, -1);
 
     try {
-        const [activityRows] = await db.query<ActivityRow[]>(
-            `SELECT DATE_FORMAT(activity_date, '%Y-%m-%d') AS activity_date,
-                    SUM(xp_earned) AS xp
-             FROM user_activity_tbl
-             WHERE user_id = ?
-               AND activity_type <> 'daily_checkin'
-               AND activity_date BETWEEN ? AND ?
-             GROUP BY activity_date`,
-            [userId, weekDates[0], weekDates[6]],
-        );
+        const [[activityRows], [previousWeekTotalRows]] = await Promise.all([
+            db.query<ActivityRow[]>(
+                `SELECT DATE_FORMAT(activity_date, '%Y-%m-%d') AS activity_date,
+                        SUM(xp_earned) AS xp
+                 FROM user_activity_tbl
+                 WHERE user_id = ?
+                   AND activity_type <> 'daily_checkin'
+                   AND activity_date BETWEEN ? AND ?
+                 GROUP BY activity_date`,
+                [userId, weekDates[0], weekDates[6]],
+            ),
+            db.query<TotalXpRow[]>(
+                `SELECT COALESCE(SUM(xp_earned), 0) AS xp
+                 FROM user_activity_tbl
+                 WHERE user_id = ?
+                   AND activity_type <> 'daily_checkin'
+                   AND activity_date BETWEEN ? AND ?`,
+                [userId, previousWeekDates[0], previousWeekDates[6]],
+            ),
+        ]);
         const xpByDate = new Map(
             activityRows.map((row) => [row.activity_date, Number(row.xp)]),
         );
         const weekXp = weekDates.map((date) => xpByDate.get(date) ?? 0);
         const todayIndex = weekDates.indexOf(todayDate);
+        const previousWeekXp = Number(previousWeekTotalRows[0]?.xp ?? 0);
+
+        if (!Number.isFinite(previousWeekXp) || previousWeekXp < 0) {
+            throw new Error("Invalid previous-week XP total");
+        }
 
         return {
             todayXp: todayIndex >= 0 ? weekXp[todayIndex] : 0,
             weekXp,
             weekDates,
+            previousWeekXp,
         };
     } catch (error) {
         console.error("Failed to load daily XP goal data:", error);

@@ -14,6 +14,7 @@ import {
     getUserLastActiveProgress,
     getUserSectionProgress,
 } from "@/app/actions/progress";
+import { isAdmin as hasAdminRole } from "@/lib/rbac";
 import DailyGoalCard from "./DailyGoalCard";
 
 function getCategoryIcon(catName: string) {
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
 
     const displayName = session.user.name?.trim() || session.user.email?.split("@")[0] || "User";
     const firstName = displayName.trim().split(/\s+/)[0] || "Profile";
+    const canPreviewDailyGoal = hasAdminRole(session.user.role || session.user.user_role);
 
     const resumeHref = lastActiveProgress
         ? `/quiz?unitId=${lastActiveProgress.unit_id}&slide=${lastActiveProgress.current_slide_order}&source=quiz`
@@ -128,7 +130,7 @@ export default async function DashboardPage() {
                                     </div>
                                 </div>
                             </div>
-                            <DailyGoalCard initialData={dailyGoalData} />
+                            <DailyGoalCard initialData={dailyGoalData} canPreview={canPreviewDailyGoal} />
                         </div>
 
                         {/* Streak */}
