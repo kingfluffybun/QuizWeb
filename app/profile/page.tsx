@@ -54,10 +54,10 @@ export default function ProfilePage() {
     const [username, setUsername] = useState<string | undefined>();
     const [email, setEmail] = useState<string | undefined>();
     const [avaColor, setAvaColor] = useState<string | undefined>();
-    const [learningGoal, setLearningGoal]  = useState<string | undefined>();
+    const [learningGoal, setLearningGoal] = useState<number | undefined>();
     const [createdDate, setCreatedDate] = useState<string>();
 
-    const [draft, setDraft] = useState<{ username?: string; email?: string; learningGoal?: string }>({
+    const [draft, setDraft] = useState<{ username?: string; email?: string; learningGoal?: number }>({
         username: undefined,
         learningGoal: undefined
     });
@@ -76,14 +76,16 @@ export default function ProfilePage() {
                 
                 const userData: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
 
+                const numericGoal = userData?.learning_goal != null ? Number(userData.learning_goal) : (userData?.daily_xp_goal != null ? Number(userData.daily_xp_goal) : undefined);
+
                 setUsername(userData?.username);
                 setEmail(userData?.email);
                 setAvaColor(userData?.avatar_color);
                 setCreatedDate(userData?.created_at);
-                setLearningGoal(userData?.learning_goal);
+                setLearningGoal(numericGoal);
                 setDraft({
                     username: userData?.username,
-                    learningGoal: userData?.learning_goal
+                    learningGoal: numericGoal
                 });
                 setIsProfileLoaded(true);
 
@@ -107,15 +109,17 @@ export default function ProfilePage() {
         try {
             const usernameValue = draft?.username || username;
             const emailValue = draft?.email || email;
-            const learningGoalValue = draft?.learningGoal || learningGoal || undefined;
+            const learningGoalValue = draft?.learningGoal ?? learningGoal;
 
             console.log("Saving values:");
             console.log("- Username:", JSON.stringify(usernameValue));
             console.log("- Learning Goal:", JSON.stringify(learningGoalValue));
 
+            const numericGoal = learningGoalValue != null ? Number(learningGoalValue) : undefined;
             const payload = {
                 username: (usernameValue || "").trim(),
-                learning_goal: learningGoalValue?.trim() || undefined
+                learning_goal: numericGoal,
+                daily_xp_goal: numericGoal,
             };
 
             console.log("Final payload:", JSON.stringify(payload));
@@ -134,14 +138,15 @@ export default function ProfilePage() {
 
             setSaveMessage("");
 
+            const returnedGoal = result.learning_goal != null ? Number(result.learning_goal) : (result.daily_xp_goal != null ? Number(result.daily_xp_goal) : undefined);
             setUsername(result.username);
             setEmail(emailValue);
-            setLearningGoal(result.learning_goal || undefined);
+            setLearningGoal(returnedGoal);
 
             setDraft({
                 username: result.username,
                 email: result.email,
-                learningGoal: result.learning_goal || undefined
+                learningGoal: returnedGoal
             });
 
             setSaveMessage("Profile updated successfully!");
@@ -163,10 +168,11 @@ export default function ProfilePage() {
 
     const handleCancel = () => {
         setDraft({
-            username, learningGoal
+            username,
+            learningGoal,
         });
         setIsEditing(false);
-    }
+    };
 
     const initials = (username ?? "")
         .trim()
@@ -314,10 +320,16 @@ export default function ProfilePage() {
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="target" /></span>
                                         <input 
                                             id="learning-goal" 
-                                            type="text" 
-                                            placeholder="Learning goal" 
-                                            defaultValue={draft?.learningGoal || learningGoal || ""}
-                                            onChange={(e) => setDraft({ ...draft, learningGoal: e.target.value })}
+                                            type="number" 
+                                            min="10"
+                                            max="1000"
+                                            step="10"
+                                            placeholder="Daily XP Goal (e.g. 50)" 
+                                            defaultValue={draft?.learningGoal ?? learningGoal ?? 50}
+                                            onChange={(e) => {
+                                                const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                                                setDraft({ ...draft, learningGoal: val });
+                                            }}
                                         />
                                         <span className="profile-details-floating-label">Learning goal</span>
                                     </label>
@@ -341,7 +353,7 @@ export default function ProfilePage() {
                                     <dl className="profile-details-list">
                                         <div><dt>Display name</dt><dd>{username}</dd></div>
                                         <div><dt>Email</dt><dd>{email}</dd></div>
-                                        <div><dt>Learning goal</dt><dd>{learningGoal}</dd></div>
+                                        <div><dt>Learning goal</dt><dd>{learningGoal ? `${learningGoal} XP / day` : "50 XP / day"}</dd></div>
                                     </dl>
                                     {saveMessage && <p className="profile-save-message" role="status">{saveMessage}</p>}
                                 </>

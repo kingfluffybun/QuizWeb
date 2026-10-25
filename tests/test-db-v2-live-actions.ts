@@ -139,10 +139,10 @@ async function runLiveConformanceTests() {
   assert.ok(recent.quizzes[0].quiz_payload, "First quiz must have populated quiz_payload");
   console.log(`✔ getPaginatedRecentQuizzes() verified: page 1 returned ${recent.quizzes.length} populated quizzes out of ${recent.totalCount}`);
 
-  // 9. Test User Info Query Conformance (No learning_goal or created_at in user_auth_tbl)
+  // 9. Test User Info Query Conformance (learning_goal and daily_xp_goal in user_auth_tbl)
   console.log("\n[Test 9] Testing User Info Query Conformance...");
   const [userRows] = await db.query<any[]>(
-    `SELECT u.user_id, u.email, p.username, u.user_role, u.avatar_color, u.daily_xp_goal,
+    `SELECT u.user_id, u.email, p.username, u.user_role, u.avatar_color, u.daily_xp_goal, u.learning_goal,
             p.xp, p.current_streak, p.max_streak
      FROM user_auth_tbl u
      LEFT JOIN player_tbl p ON u.user_id = p.user_id
@@ -151,8 +151,9 @@ async function runLiveConformanceTests() {
   assert.ok(userRows.length > 0, "Expected at least one user record");
   const user = userRows[0];
   assert.ok("daily_xp_goal" in user, "Must select daily_xp_goal");
-  assert.ok(!("learning_goal" in user), "Must NOT select non-existent learning_goal from user_auth_tbl");
-  console.log(`✔ User Info query verified for user_id=${user.user_id}, email=${user.email}, daily_xp_goal=${user.daily_xp_goal}`);
+  assert.ok("learning_goal" in user, "Must select learning_goal from user_auth_tbl");
+  assert.equal(typeof user.learning_goal, "number", "learning_goal must be numeric");
+  console.log(`✔ User Info query verified for user_id=${user.user_id}, email=${user.email}, daily_xp_goal=${user.daily_xp_goal}, learning_goal=${user.learning_goal}`);
 
   // 10. Test getPendingQuizzes("all")
   console.log("\n[Test 10] Testing getPendingQuizzes('all')...");

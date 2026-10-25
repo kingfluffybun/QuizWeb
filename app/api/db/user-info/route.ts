@@ -11,7 +11,7 @@ export interface UserInfoResponse {
     user_role?: string;
     avatar_color?: string;
     daily_xp_goal?: number;
-    learning_goal?: string;
+    learning_goal?: number;
     xp?: number;
     current_streak?: number;
     max_streak?: number;
@@ -34,6 +34,7 @@ export const GET = async (): Promise<Response> => {
                 u.user_role,
                 u.avatar_color,
                 u.daily_xp_goal,
+                u.learning_goal,
                 p.xp,
                 p.current_streak,
                 p.max_streak
@@ -47,11 +48,11 @@ export const GET = async (): Promise<Response> => {
         const user = rows[0];
         
         if (user) {
-            const dailyGoal = Number(user.daily_xp_goal ?? 50);
+            const dailyGoal = Number(user.learning_goal ?? user.daily_xp_goal ?? 50);
             return Response.json({
                 ...user,
                 daily_xp_goal: dailyGoal,
-                learning_goal: `${dailyGoal} XP / day`,
+                learning_goal: dailyGoal,
             });
         }
 
@@ -88,7 +89,7 @@ export const POST = async (req: Request): Promise<Response> => {
         const { username, learning_goal, daily_xp_goal } = bodyObj;
 
         const [userRows] = await db.execute<RowDataPacket[]>(
-            `SELECT u.user_id, u.daily_xp_goal, p.username 
+            `SELECT u.user_id, u.daily_xp_goal, u.learning_goal, p.username 
                 FROM user_auth_tbl u 
                 LEFT JOIN player_tbl p ON u.user_id = p.user_id
                 WHERE u.email = ?
@@ -102,7 +103,7 @@ export const POST = async (req: Request): Promise<Response> => {
 
         const userId = userRows[0].user_id;
         const currentUsername = userRows[0].username || "";
-        const currentGoal = Number(userRows[0].daily_xp_goal ?? 50);
+        const currentGoal = Number(userRows[0].learning_goal ?? userRows[0].daily_xp_goal ?? 50);
 
         // Validate and update username if provided
         let finalUsername = currentUsername;
@@ -133,16 +134,16 @@ export const POST = async (req: Request): Promise<Response> => {
             }
         }
 
-        // Parse and update daily_xp_goal if provided
+        // Parse and update learning_goal and daily_xp_goal if provided
         let targetGoal = currentGoal;
-        const rawGoal = daily_xp_goal ?? learning_goal;
+        const rawGoal = learning_goal ?? daily_xp_goal;
         if (rawGoal !== undefined && rawGoal !== null && String(rawGoal).trim() !== "") {
             const digits = parseInt(String(rawGoal).replace(/\D+/g, ""), 10);
             if (!isNaN(digits) && digits > 0) {
                 targetGoal = Math.min(Math.max(digits, 10), 1000);
                 await db.execute<ResultSetHeader>(
-                    `UPDATE user_auth_tbl SET daily_xp_goal = ? WHERE user_id = ?`,
-                    [targetGoal, userId]
+                    `UPDATE user_auth_tbl SET learning_goal = ?, daily_xp_goal = ? WHERE user_id = ?`,
+                    [targetGoal, targetGoal, userId]
                 );
             }
         }
@@ -154,7 +155,7 @@ export const POST = async (req: Request): Promise<Response> => {
             email: session.user.email,
             username: finalUsername,
             daily_xp_goal: targetGoal,
-            learning_goal: `${targetGoal} XP / day`
+            learning_goal: targetGoal,
         });
     } catch (error) {
         console.error("Error updating user profile:", error);

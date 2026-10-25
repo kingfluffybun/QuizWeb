@@ -23,6 +23,7 @@ import {
 import { recordLessonSlideProgress } from "@/app/actions/progress";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
+import { getClientLocalDate } from "@/lib/timezone";
 
 type AnswerResult = {
     correct: boolean;
@@ -370,6 +371,7 @@ export default function QuizLandingClient({
             xpEarned: totalQuizXp,
             currentStreak,
             bestStreak,
+            date: getClientLocalDate(),
         }).then((response) => {
             if (!response.success) {
                 console.error("Failed to record quiz completion:", response.error);

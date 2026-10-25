@@ -50,7 +50,7 @@ async function runPhase1OptimizationTests() {
          FROM user_activity_tbl a
          INNER JOIN player_tbl p ON p.user_id = a.user_id
          LEFT JOIN user_auth_tbl u ON p.user_id = u.user_id
-         WHERE a.activity_date = CURDATE()
+         WHERE a.activity_date = DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))
          GROUP BY p.user_id, p.username, u.avatar_color
          ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
          LIMIT 10`

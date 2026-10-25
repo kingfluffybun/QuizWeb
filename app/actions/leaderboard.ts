@@ -26,9 +26,9 @@ interface LeaderboardRow extends RowDataPacket {
 const periods: LeaderboardPeriod[] = ["daily", "weekly", "monthly", "all-time"];
 
 const periodConditions: Record<LeaderboardPeriod, string> = {
-    daily: "a.activity_date = CURDATE()",
-    weekly: "a.activity_date >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY) AND a.activity_date <= CURDATE()",
-    monthly: "a.activity_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01') AND a.activity_date <= CURDATE()",
+    daily: "a.activity_date = DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))",
+    weekly: "a.activity_date >= DATE_SUB(DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00')), INTERVAL WEEKDAY(DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))) DAY) AND a.activity_date <= DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))",
+    monthly: "a.activity_date >= DATE_FORMAT(DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00')), '%Y-%m-01') AND a.activity_date <= DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))",
     "all-time": "1 = 1",
 };
 

@@ -13,16 +13,20 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
     const [selectedSection, setSelectedSection] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState<string>("");
 
+    const visibleUnits = useMemo(() => {
+        return units.filter((u) => !u.is_locked);
+    }, [units]);
+
     const sections = useMemo(() => {
         const unique = Array.from(
             new Set(
-                units
+                visibleUnits
                     .map((u) => (u.sec_num != null ? String(u.sec_num).trim() : ""))
                     .filter((s): s is string => Boolean(s)),
             ),
         );
         return unique.sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
-    }, [units]);
+    }, [visibleUnits]);
 
     const filteredUnits = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
@@ -41,7 +45,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
             });
         };
 
-        return units
+        return visibleUnits
             .filter((unit) => {
                 const unitSec = unit.sec_num != null ? String(unit.sec_num).trim() : "";
                 const matchesSection =
@@ -67,7 +71,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                     })
                 );
             });
-    }, [units, selectedSection, searchQuery]);
+    }, [visibleUnits, selectedSection, searchQuery]);
 
     return (
         <div className="quiz-page quiz-no-footer-page learn-page">
@@ -79,7 +83,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                             <h2 id="available-units-title">Available Units</h2>
                             <p>Choose a unit to study its lesson and take its quiz.</p>
                         </div>
-                        {units.length > 0 && (
+                        {visibleUnits.length > 0 && (
                             <div className="learn-filters-bar">
                                 <input
                                     type="search"
@@ -98,7 +102,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                             className={`learn-chip${selectedSection === "all" ? " active" : ""}`}
                                             onClick={() => setSelectedSection("all")}
                                         >
-                                            All ({units.length})
+                                            All ({visibleUnits.length})
                                         </button>
                                         {sections.map((sec) => (
                                             <button
