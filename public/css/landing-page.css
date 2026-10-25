@@ -126,11 +126,13 @@
 /* .section-container {margin-top: 10vh;} */
 
 .section {
-    height: 70vh;
-    padding: 10vh 0;
+    min-height: 70vh;
+    height: auto;
+    padding: clamp(48px, 10vh, 96px) 24px;
     margin: 0 auto;
     width: 100%;
     max-width: 1200px;
+    box-sizing: border-box;
 }
 
 .section:nth-child(odd) {
@@ -146,11 +148,14 @@
 }
 
 .section-container {
-    height: 100%;
+    min-height: 50vh;
     width: 100%;
+    min-width: 0;
 }
 
 .section-content {
+    flex: 1 1 50%;
+    min-width: 0;
     align-items: flex-start;
     justify-content: center;
     > h1 {
@@ -161,18 +166,25 @@
     } p {
         font-size: 20px;
         line-height: 1.7;
-        width:520px;
+        width: min(100%, 520px);
     }
 }
 
 .section-illustration {
-    flex: 1;    
-    height: 100%;
+    flex: 1 1 50%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
 }
 
-#laptop, #calendar, #books {height: 100%; width:auto; transform:scale(1.2); user-select: none;}
-#laptop {
-    transform: translateY(40px) scale(1);
+#laptop, #calendar, #books {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: min(52vh, 520px);
+    object-fit: contain;
+    user-select: none;
 }
 
 /* clarence eto yung ibahin mo if gusto mo icustomize yung itsura ng landing page sa lightmode if ayaw mo sya na mag follow sa global na color scheme */
@@ -201,8 +213,26 @@
     .hero {min-height: 108vh;}
     .hero .hero-text {
         top: 16%; 
-        max-width: 400px;
+        width: min(100%, 400px);
+        max-width: 100%;
+        padding: 0 16px;
+        box-sizing: border-box;
+        gap: clamp(12px, 4vw, 20px);
         > #logo-hero {display: flex;}
+        > h1 {
+            width: 100%;
+            max-width: 100%;
+            font-size: clamp(2rem, 10vw, 3rem);
+            line-height: 1.08;
+            text-wrap: balance;
+        }
+        > p {
+            width: 100%;
+            max-width: 30ch;
+            font-size: clamp(1rem, 4.5vw, 1.25rem);
+            line-height: 1.55;
+            text-wrap: pretty;
+        }
     }
     
     .heroDescription {
@@ -222,14 +252,22 @@
         }
     }
     
-    .call-to-action {padding-top: 8px; padding-bottom: 8px; margin-top: 0;}
+    .call-to-action {
+        max-width: 100%;
+        padding: 8px clamp(20px, 7vw, 48px);
+        margin-top: 0;
+        box-sizing: border-box;
+        > h2 {
+            font-size: clamp(0.95rem, 4vw, 1.2rem);
+        }
+    }
     .call-to-action > .call-to-action-icon {
         height: 28px; width: 28px;
         svg {width: 28px; height: 28px;}
     }
     .section-container .row {flex-direction: column;}
     .section-container {height: auto; width: 100%; max-width: 100%;}
-    .section .row {flex-direction: column; width: 100%;}
+    .section .row {flex-direction: column; width: 100%; gap: 48px}
     .section .col {justify-content: flex-start; width: 100%;}
     .section-content {
         width: 100% !important;

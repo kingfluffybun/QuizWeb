@@ -13,7 +13,6 @@
     p {color: var(--text-inverse);}
 
     > div:first-child {margin-right: auto; }
-    > div {margin: 0 0.75rem;} 
     > div a {text-decoration: none;}
     
     > div a p {
