@@ -299,11 +299,9 @@ export async function getAdminAnalytics(): Promise<PlatformAnalytics> {
     throw new Error("Unauthorized: Administrator privileges required.");
   }
 
-  // 1. Total Quizzes Count (sum of JSON quizzes in unit_tbl and rows in quiz_tbl, fallback to total units)
+  // 1. Total Quizzes Count (from normalized quiz_tbl, fallback to total units)
   const [totalRows] = await db.query<RowDataPacket[]>(`
-    SELECT 
-      (SELECT COUNT(*) FROM quiz_tbl) + 
-      (SELECT COALESCE(SUM(JSON_LENGTH(unit_quiz_json)), 0) FROM unit_tbl) AS totalQuizzes
+    SELECT COUNT(*) AS totalQuizzes FROM quiz_tbl
   `);
   let totalQuizzes = Number(totalRows[0]?.totalQuizzes ?? 0);
   if (totalQuizzes === 0) {
@@ -311,62 +309,38 @@ export async function getAdminAnalytics(): Promise<PlatformAnalytics> {
     totalQuizzes = Number(unitCount[0]?.totalUnits ?? 0);
   }
 
-  // 2. Category Distribution (joining cat_tbl with quiz_tbl and unit_tbl.unit_quiz_json)
+  // 2. Category Distribution (joining cat_tbl -> sec_tbl -> unit_tbl -> quiz_tbl)
   const [catRows] = await db.query<RowDataPacket[]>(`
     SELECT 
       c.cat_name AS category,
-      COUNT(all_q.cat_id) AS count
+      COUNT(q.quiz_id) AS count
     FROM cat_tbl c
-    LEFT JOIN (
-      SELECT cat_id FROM quiz_tbl WHERE cat_id IS NOT NULL
-      UNION ALL
-      SELECT jt.cat_id 
-      FROM unit_tbl u,
-      JSON_TABLE(
-        COALESCE(NULLIF(u.unit_quiz_json, ""), "[]"),
-        "$[*]" COLUMNS (
-          cat_id INT PATH "$.cat_id"
-        )
-      ) AS jt
-      WHERE jt.cat_id IS NOT NULL
-    ) AS all_q ON c.cat_id = all_q.cat_id
+    LEFT JOIN sec_tbl s ON c.cat_id = s.cat_id
+    LEFT JOIN unit_tbl u ON s.sec_id = u.sec_id
+    LEFT JOIN quiz_tbl q ON u.unit_id = q.unit_id
     GROUP BY c.cat_id, c.cat_name
     ORDER BY count DESC, c.cat_name ASC
   `);
 
-  // 3. Difficulty Distribution (joining difficulty_tbl with quiz_tbl and unit_tbl.unit_quiz_json)
+  // 3. Difficulty Distribution (joining difficulty_tbl -> quiz_tbl)
   const [diffRows] = await db.query<RowDataPacket[]>(`
     SELECT 
       LOWER(d.difficulty_name) AS difficulty,
-      COUNT(all_q.difficulty_id) AS count
+      COUNT(q.quiz_id) AS count
     FROM difficulty_tbl d
-    LEFT JOIN (
-      SELECT difficulty_id FROM quiz_tbl WHERE difficulty_id IS NOT NULL
-      UNION ALL
-      SELECT jt.difficulty_id 
-      FROM unit_tbl u,
-      JSON_TABLE(
-        COALESCE(NULLIF(u.unit_quiz_json, ""), "[]"),
-        "$[*]" COLUMNS (
-          difficulty_id INT PATH "$.difficulty_id"
-        )
-      ) AS jt
-      WHERE jt.difficulty_id IS NOT NULL
-    ) AS all_q ON d.difficulty_id = all_q.difficulty_id
+    LEFT JOIN quiz_tbl q ON d.difficulty_id = q.difficulty_id
     GROUP BY d.difficulty_id, d.difficulty_name
     ORDER BY d.difficulty_id ASC
   `);
 
-  // 4. Contributor Submission Metrics (joining unit_tbl, unit_approved_tbl, pending_tbl)
+  // 4. Contributor Submission Metrics (from approved units in unit_tbl)
   const [contribRows] = await db.query<RowDataPacket[]>(`
     SELECT 
-      p.author_id AS authorId,
+      u.author_id AS authorId,
       COUNT(u.unit_id) AS totalUnits
     FROM unit_tbl u
-    JOIN unit_approved_tbl a ON u.unit_id = a.unit_id
-    JOIN pending_tbl p ON a.pending_id = p.pending_id
-    WHERE p.author_id IS NOT NULL
-    GROUP BY p.author_id
+    WHERE u.status = 'approved' AND u.author_id IS NOT NULL
+    GROUP BY u.author_id
     ORDER BY totalUnits DESC, authorId ASC
   `);
 
@@ -408,16 +382,18 @@ export async function getAdminReviewQueue(): Promise<PendingReviewItem[]> {
 
   const [rows] = await db.query<RowDataPacket[]>(`
     SELECT 
-      pending_id,
-      author_id,
-      unit_title,
-      sec_id,
-      pending_status,
-      pending_note,
-      pending_name
-    FROM pending_tbl
-    WHERE pending_status = 'pending'
-    ORDER BY pending_id ASC
+      u.unit_id AS pending_id,
+      u.author_id,
+      u.unit_title,
+      u.sec_id,
+      u.status AS pending_status,
+      u.pending_note,
+      COALESCE(p.username, ua.email, 'Anonymous') AS pending_name
+    FROM unit_tbl u
+    LEFT JOIN player_tbl p ON u.author_id = p.user_id
+    LEFT JOIN user_auth_tbl ua ON u.author_id = ua.user_id
+    WHERE u.status = 'pending'
+    ORDER BY u.unit_id ASC
   `);
 
   return (rows as RowDataPacket[]).map((r) => ({

@@ -25,106 +25,85 @@ function parseRawJson(value: unknown): unknown {
 }
 
 /**
- * Resolves the authoritative `CodeProblemAssessment` from `unit_tbl` / `pending_tbl` on the server.
+ * Resolves the authoritative `CodeProblemAssessment` from `unit_assessment_tbl` and `assessment_step_tbl`.
  */
-async function resolveAuthoritativeAssessment(unitId?: number): Promise<{
+export async function resolveAuthoritativeAssessment(unitId?: number): Promise<{
   resolvedUnitId: number;
   unitTitle: string;
   assessment: CodeProblemAssessment;
 } | null> {
   try {
+    let assessmentRow: RowDataPacket | undefined;
+
     if (unitId && Number.isInteger(unitId) && unitId > 0) {
       const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT u.unit_id, p.pending_id,
-                COALESCE(u.unit_title, p.unit_title) AS unit_title,
-                COALESCE(u.unit_assessment_json, p.unit_assessment_json) AS unit_assessment_json,
-                COALESCE(u.unit_quiz_json, p.unit_quiz_json) AS unit_quiz_json
-         FROM unit_tbl u
-         LEFT JOIN unit_approved_tbl a ON a.unit_id = u.unit_id
-         LEFT JOIN pending_tbl p ON p.pending_id = a.pending_id
-         WHERE u.unit_id = ? OR p.pending_id = ?
+        `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
+         FROM unit_assessment_tbl ua
+         JOIN unit_tbl u ON ua.unit_id = u.unit_id
+         WHERE ua.unit_id = ?
          LIMIT 1`,
-        [unitId, unitId],
+        [unitId],
       );
+      assessmentRow = rows[0];
+    } else {
+      // No unitId specified: find newest approved unit with an assessment
+      const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
+         FROM unit_assessment_tbl ua
+         JOIN unit_tbl u ON ua.unit_id = u.unit_id
+         WHERE u.status = 'approved'
+         ORDER BY u.unit_id DESC
+         LIMIT 1`,
+      );
+      assessmentRow = rows[0];
+    }
 
-      let row = rows[0];
-      if (!row) {
-        const [pendingRows] = await db.query<RowDataPacket[]>(
-          `SELECT p.pending_id AS unit_id, p.unit_title,
-                  p.unit_assessment_json, p.unit_quiz_json
-           FROM pending_tbl p
-           WHERE p.pending_id = ?
-           LIMIT 1`,
-          [unitId],
-        );
-        row = pendingRows[0];
-      }
-
-      if (row) {
-        const unitTitle = String(row.unit_title ?? "Coding Assessment");
-        const unwrapped = unwrapCodeProblemAssessment(
-          row.unit_assessment_json,
-          unitTitle,
-        );
-        if (unwrapped && unwrapped.steps.length > 0) {
-          return {
-            resolvedUnitId: Number(row.unit_id ?? row.pending_id ?? unitId),
-            unitTitle,
-            assessment: unwrapped,
-          };
-        }
-
-        // Fallback: check if legacy CP quiz exists inside unit_quiz_json
-        const quizzes = parseRawJson(row.unit_quiz_json);
-        if (Array.isArray(quizzes)) {
-          for (const q of quizzes) {
-            if (q && typeof q === "object" && "quiz_payload" in q) {
-              const fromQuiz = unwrapCodeProblemAssessment(
-                (q as { quiz_payload: unknown }).quiz_payload,
-                unitTitle,
-              );
-              if (fromQuiz && fromQuiz.steps.length > 0) {
-                return {
-                  resolvedUnitId: Number(
-                    row.unit_id ?? row.pending_id ?? unitId,
-                  ),
-                  unitTitle,
-                  assessment: fromQuiz,
-                };
-              }
-            }
-          }
-        }
-      }
+    if (!assessmentRow) {
       return null;
     }
 
-    // No unitId specified: find the newest approved unit with a valid Code Problem assessment
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT u.unit_id, u.unit_title, u.unit_assessment_json, u.unit_quiz_json
-       FROM unit_approved_tbl a
-       JOIN pending_tbl p ON p.pending_id = a.pending_id
-       JOIN unit_tbl u ON u.unit_id = a.unit_id
-       WHERE p.pending_status = 'approved'
-       ORDER BY u.unit_id DESC`,
+    const [steps] = await db.query<RowDataPacket[]>(
+      `SELECT step_number, instruction, inherit_previous_code,
+              starter_html, starter_css, starter_js,
+              expected_html, expected_css, expected_js
+       FROM assessment_step_tbl
+       WHERE assessment_id = ?
+       ORDER BY step_number ASC`,
+      [assessmentRow.assessment_id],
     );
 
-    for (const row of rows) {
-      const unitTitle = String(row.unit_title ?? "Coding Assessment");
-      const unwrapped = unwrapCodeProblemAssessment(
-        row.unit_assessment_json,
-        unitTitle,
-      );
-      if (unwrapped && unwrapped.steps.length > 0) {
-        return {
-          resolvedUnitId: Number(row.unit_id),
-          unitTitle,
-          assessment: unwrapped,
-        };
-      }
+    if (!Array.isArray(steps) || steps.length === 0) {
+      return null;
     }
 
-    return null;
+    const unitTitle = String(assessmentRow.unit_title ?? assessmentRow.title ?? "Coding Assessment");
+    const assessment: CodeProblemAssessment = {
+      schemaVersion: 2,
+      title: String(assessmentRow.title ?? unitTitle),
+      description: String(assessmentRow.description ?? ""),
+      expected_outcome: String(assessmentRow.expected_outcome ?? ""),
+      steps: steps.map((s) => ({
+        stepNumber: Number(s.step_number),
+        instruction: String(s.instruction ?? ""),
+        starterCode: {
+          html: String(s.starter_html ?? ""),
+          css: String(s.starter_css ?? ""),
+          js: String(s.starter_js ?? ""),
+        },
+        expectedTemplate: {
+          html: String(s.expected_html ?? ""),
+          css: String(s.expected_css ?? ""),
+          js: String(s.expected_js ?? ""),
+        },
+        inheritPreviousCode: Boolean(s.inherit_previous_code),
+      })),
+    };
+
+    return {
+      resolvedUnitId: Number(assessmentRow.unit_id),
+      unitTitle,
+      assessment,
+    };
   } catch (error) {
     console.error("Failed to resolve authoritative coding assessment:", error);
     return null;
