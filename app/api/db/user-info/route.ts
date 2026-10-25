@@ -8,7 +8,11 @@ export interface UserInfoResponse {
     username?: string;
     user_role?: string;
     avatar_color?: string;
+    daily_xp_goal?: number;
     learning_goal?: string;
+    xp?: number;
+    current_streak?: number;
+    max_streak?: number;
     created_at?: string;
 }
 
@@ -27,8 +31,10 @@ export const GET = async (): Promise<Response> => {
                 p.username,
                 u.user_role,
                 u.avatar_color,
-                u.learning_goal,
-                u.created_at
+                u.daily_xp_goal,
+                p.xp,
+                p.current_streak,
+                p.max_streak
             FROM user_auth_tbl u
             LEFT JOIN player_tbl p ON u.user_id = p.user_id
             WHERE u.email = ?
@@ -39,7 +45,12 @@ export const GET = async (): Promise<Response> => {
         const user = rows[0];
         
         if (user) {
-            return Response.json(user);
+            const dailyGoal = Number(user.daily_xp_goal ?? 50);
+            return Response.json({
+                ...user,
+                daily_xp_goal: dailyGoal,
+                learning_goal: `${dailyGoal} XP / day`,
+            });
         }
 
         console.log("No user found in database");
@@ -62,19 +73,20 @@ export const POST = async (req: Request): Promise<Response> => {
         
         try {
             bodyObj = await req.json();
-        } catch (e) {
+        } catch {
             // JSON parsing failed, fallback to FormData
             const formData = await req.formData();
             bodyObj = {
-                username: formData.get("username") as string || "",
-                learning_goal: formData.get("learningGoal") as string || ""
+                username: (formData.get("username") as string) || "",
+                learning_goal: (formData.get("learningGoal") as string) || "",
+                daily_xp_goal: (formData.get("daily_xp_goal") as string) || "",
             };
         }
 
-        const { username, learning_goal } = bodyObj;
+        const { username, learning_goal, daily_xp_goal } = bodyObj;
 
         const [userRows] = await db.execute<RowDataPacket[]>(
-            `SELECT u.user_id, p.username 
+            `SELECT u.user_id, u.daily_xp_goal, p.username 
                 FROM user_auth_tbl u 
                 LEFT JOIN player_tbl p ON u.user_id = p.user_id
                 WHERE u.email = ?
@@ -88,30 +100,40 @@ export const POST = async (req: Request): Promise<Response> => {
 
         const userId = userRows[0].user_id;
         const currentUsername = userRows[0].username;
+        const currentGoal = Number(userRows[0].daily_xp_goal ?? 50);
 
         // Prepare new values (keep original if empty/unchanged)
         const newUsername = username?.trim() || currentUsername;
 
-        // Update learning_goal
-        if (learning_goal?.trim()) {
-            await db.execute<ResultSetHeader>(
-                `UPDATE user_auth_tbl SET learning_goal = ? WHERE user_id = ?`,
-                [learning_goal.trim(), userId]
-            );
+        // Parse and update daily_xp_goal if provided
+        let targetGoal = currentGoal;
+        const rawGoal = daily_xp_goal ?? learning_goal;
+        if (rawGoal !== undefined && rawGoal !== null && String(rawGoal).trim() !== "") {
+            const digits = parseInt(String(rawGoal).replace(/\D+/g, ""), 10);
+            if (!isNaN(digits) && digits > 0) {
+                targetGoal = Math.min(Math.max(digits, 10), 1000);
+                await db.execute<ResultSetHeader>(
+                    `UPDATE user_auth_tbl SET daily_xp_goal = ? WHERE user_id = ?`,
+                    [targetGoal, userId]
+                );
+            }
         }
 
         // Update player_tbl username
-        await db.execute<ResultSetHeader>(
-            `UPDATE player_tbl SET username = ? WHERE user_id = ?`,
-            [newUsername, userId]
-        );
+        if (newUsername) {
+            await db.execute<ResultSetHeader>(
+                `UPDATE player_tbl SET username = ? WHERE user_id = ?`,
+                [newUsername, userId]
+            );
+        }
         
         return Response.json({
             success: true,
             message: "Profile updated successfully",
             user_id: userId,
             username: newUsername,
-            learning_goal: learning_goal || null
+            daily_xp_goal: targetGoal,
+            learning_goal: `${targetGoal} XP / day`
         });
     } catch (error) {
         console.error("Error updating user profile:", error);

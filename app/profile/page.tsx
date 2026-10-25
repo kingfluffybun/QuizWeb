@@ -98,8 +98,10 @@ export default function ProfilePage() {
         };
     }, []);
 
-    const oldDate = new Date(createdDate ?? "");
-    const formatDate = oldDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const oldDate = createdDate ? new Date(createdDate) : null;
+    const formatDate = oldDate && !isNaN(oldDate.getTime())
+        ? oldDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : "Recently";
 
     const handleSave = async () => {
         try {
