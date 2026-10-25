@@ -15,7 +15,7 @@
   --pending-danger-background: var(--input-danger-background, #fef2f2);
 }
 
-body {
+body:has(.pending-container) {
   min-height: 100vh;
   margin: 0;
   background-color: var(--pending-background);
