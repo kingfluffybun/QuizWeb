@@ -263,7 +263,8 @@ export async function recordUserActivity(options?: {
     }
 
     const activityType = options?.type ?? "quiz";
-    const xpEarned = typeof options?.xp === "number" ? Math.max(0, options.xp) : 4;
+    // Cap activity XP to prevent client-side tampering (0 - 100 XP per activity)
+    const xpEarned = typeof options?.xp === "number" ? Math.min(Math.max(0, options.xp), 100) : 4;
     const activityDate = (options?.date && /^\d{4}-\d{2}-\d{2}$/.test(options.date))
         ? options.date
         : new Date().toISOString().slice(0, 10);
@@ -279,14 +280,10 @@ export async function recordUserActivity(options?: {
             );
             await connection.query<ResultSetHeader>(
                 `UPDATE player_tbl
-                 SET xp = (
-                         SELECT COALESCE(SUM(activity.xp_earned), 0)
-                         FROM user_activity_tbl activity
-                         WHERE activity.user_id = player_tbl.user_id
-                     ),
+                 SET xp = COALESCE(xp, 0) + ?,
                      last_quiz_date = IF(? = 'quiz', ?, last_quiz_date)
                  WHERE user_id = ?`,
-                [activityType, activityDate, userId],
+                [xpEarned, activityType, activityDate, userId],
             );
             await connection.commit();
         } catch (err) {
@@ -368,26 +365,25 @@ export async function recordQuizCompletion(options: {
         return { success: false, error: "Invalid quiz result values" };
     }
 
+    // Cap quiz XP to prevent client-side tampering (0 - 500 XP per quiz)
+    const validatedXp = Math.min(Math.max(0, options.xpEarned), 500);
+
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query<ResultSetHeader>(
             `INSERT INTO user_activity_tbl (user_id, activity_date, activity_type, xp_earned)
              VALUES (?, CURRENT_DATE, 'quiz', ?)`,
-            [userId, options.xpEarned],
+            [userId, validatedXp],
         );
         await connection.query<ResultSetHeader>(
             `UPDATE player_tbl
-             SET xp = (
-                     SELECT COALESCE(SUM(activity.xp_earned), 0)
-                     FROM user_activity_tbl activity
-                     WHERE activity.user_id = player_tbl.user_id
-                 ),
+             SET xp = COALESCE(xp, 0) + ?,
                  current_streak = ?,
-                 max_streak = GREATEST(max_streak, ?),
+                 max_streak = GREATEST(COALESCE(max_streak, 0), ?),
                  last_quiz_date = CURRENT_DATE
              WHERE user_id = ?`,
-            [options.currentStreak, options.bestStreak, userId],
+            [validatedXp, options.currentStreak, options.bestStreak, userId],
         );
         await connection.commit();
         return { success: true };

@@ -39,17 +39,33 @@ async function getEntriesForPeriod(
         throw new Error("Invalid leaderboard period");
     }
 
-    const [rows] = await db.query<LeaderboardRow[]>(
-        `SELECT p.user_id, p.username, SUM(a.xp_earned) AS xp, u.avatar_color
-        FROM user_activity_tbl a
-        INNER JOIN player_tbl p ON p.user_id = a.user_id
-        LEFT JOIN user_auth_tbl u ON p.user_id = u.user_id
-        WHERE ${periodConditions[period]}
-        GROUP BY p.user_id, p.username, u.avatar_color
-        ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
-        ${limit === null ? "" : "LIMIT ?"}`,
-        limit === null ? [] : [limit],
-    );
+    let rows: LeaderboardRow[];
+
+    if (period === "all-time") {
+        const [allTimeRows] = await db.query<LeaderboardRow[]>(
+            `SELECT p.user_id, p.username, p.xp, u.avatar_color
+            FROM player_tbl p
+            LEFT JOIN user_auth_tbl u ON p.user_id = u.user_id
+            WHERE p.xp > 0
+            ORDER BY p.xp DESC, p.username ASC, p.user_id ASC
+            ${limit === null ? "" : "LIMIT ?"}`,
+            limit === null ? [] : [limit],
+        );
+        rows = allTimeRows;
+    } else {
+        const [periodRows] = await db.query<LeaderboardRow[]>(
+            `SELECT p.user_id, p.username, SUM(a.xp_earned) AS xp, u.avatar_color
+            FROM user_activity_tbl a
+            INNER JOIN player_tbl p ON p.user_id = a.user_id
+            LEFT JOIN user_auth_tbl u ON p.user_id = u.user_id
+            WHERE ${periodConditions[period]}
+            GROUP BY p.user_id, p.username, u.avatar_color
+            ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
+            ${limit === null ? "" : "LIMIT ?"}`,
+            limit === null ? [] : [limit],
+        );
+        rows = periodRows;
+    }
 
     return rows.map((row) => ({
         userId: Number(row.user_id),
