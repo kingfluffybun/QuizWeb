@@ -1662,11 +1662,11 @@ footer.incorrect {
         box-sizing: border-box !important;
     }
 
-    .quiz-page:not(#code-problem) > main {
+    .quiz-page:not(#code-problem):not(.learn-page):not(.profile-page) > main {
         padding-top: calc(112px + env(safe-area-inset-top)) !important;
     }
 
-    .quiz-page:not(#code-problem) > main > .quiz-header {
+    .quiz-page:not(#code-problem):not(.learn-page):not(.profile-page) > main > .quiz-header {
         position: fixed;
         top: 0;
         right: 0;

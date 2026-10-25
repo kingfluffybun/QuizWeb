@@ -28,6 +28,7 @@
     --profile-max: 1200px;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
@@ -760,23 +761,24 @@
         display: flex !important;
         flex-direction: column !important;
         height: auto !important;
-        min-height: 100% !important;
+        min-height: 100dvh !important;
         overflow: visible !important;
     }
 
-    .profile-page main {
-        --profile-gutter: 14px;
+    .profile-page.quiz-page:not(.quiz-no-footer-page) > main {
+        --profile-gutter: 24px;
+        flex: 0 0 auto !important;
+        align-items: stretch !important;
         height: auto !important;
         min-height: 0 !important;
         overflow: visible !important;
-        padding: 16px var(--profile-gutter) 32px !important;
+        padding: 24px var(--profile-gutter) 32px !important;
     }
 
     .profile-content {
+        flex: 0 0 auto !important;
         margin-right: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-        padding-bottom: 8px !important;
+        padding: 14px 12px !important;
         overflow: visible !important;
         scrollbar-gutter: auto;
     }
@@ -1118,6 +1120,22 @@
 }
 
 @media (max-width: 768px) {
+    .profile-skeleton.profile-page > main {
+        padding: 24px 24px 32px !important;
+    }
+
+    .profile-skeleton .profile-content {
+        padding: 22px 12px !important;
+    }
+
+    .profile-skeleton .profile-hero {
+        min-height: 118px;
+    }
+
+    .profile-skeleton .profile-statistics {
+        margin-top: 27px;
+    }
+
     .profile-skeleton .profile-skeleton-avatar {
         flex-basis: 72px;
     }
@@ -1126,5 +1144,11 @@
         flex-basis: 64px;
         width: 64px;
         height: 76px;
+    }
+}
+
+@media (min-width: 381px) and (max-width: 768px) {
+    .profile-skeleton .profile-stat-card {
+        min-height: 145px;
     }
 }

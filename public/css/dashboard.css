@@ -338,7 +338,7 @@ button.quick-action-btn:hover {
     position: relative;
     width: 100%;
     height: auto;
-    aspect-ratio: 2/1;
+    /* aspect-ratio: 2/1; */
     p {
         position: relative;
         z-index: 10;
