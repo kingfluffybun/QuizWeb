@@ -1759,6 +1759,7 @@ footer.incorrect {
     }
 
     .lesson-text-container {
+        order: -1;
         width: 100% !important;
         min-width: 0 !important;
         gap: 12px !important;
@@ -1768,6 +1769,7 @@ footer.incorrect {
     .lesson-card .lesson-slide-title {
         font-size: 1.3rem !important;
         line-height: 1.25 !important;
+        margin-top: 0;
     }
 
     .lesson-card-text {
