@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { auth } from "@/auth";
 
+const USERNAME_REGEX = /^[a-zA-Z0-9_.\- ]{3,30}$/;
+
 export interface UserInfoResponse {
     user_id?: number;
     email?: string;
@@ -99,11 +101,37 @@ export const POST = async (req: Request): Promise<Response> => {
         }
 
         const userId = userRows[0].user_id;
-        const currentUsername = userRows[0].username;
+        const currentUsername = userRows[0].username || "";
         const currentGoal = Number(userRows[0].daily_xp_goal ?? 50);
 
-        // Prepare new values (keep original if empty/unchanged)
-        const newUsername = username?.trim() || currentUsername;
+        // Validate and update username if provided
+        let finalUsername = currentUsername;
+        if (username !== undefined && username !== null) {
+            const trimmedUsername = String(username).trim();
+            if (trimmedUsername !== currentUsername) {
+                if (!USERNAME_REGEX.test(trimmedUsername)) {
+                    return Response.json(
+                        { error: "Username must be 3-30 characters long and contain only letters, numbers, spaces, dots, hyphens, and underscores." },
+                        { status: 400 }
+                    );
+                }
+                const [collision] = await db.query<RowDataPacket[]>(
+                    "SELECT user_id FROM player_tbl WHERE LOWER(username) = LOWER(?) AND user_id != ? LIMIT 1",
+                    [trimmedUsername, userId]
+                );
+                if (Array.isArray(collision) && collision.length > 0) {
+                    return Response.json(
+                        { error: `Username '${trimmedUsername}' is already taken.` },
+                        { status: 409 }
+                    );
+                }
+                await db.execute<ResultSetHeader>(
+                    `UPDATE player_tbl SET username = ? WHERE user_id = ?`,
+                    [trimmedUsername, userId]
+                );
+                finalUsername = trimmedUsername;
+            }
+        }
 
         // Parse and update daily_xp_goal if provided
         let targetGoal = currentGoal;
@@ -118,21 +146,13 @@ export const POST = async (req: Request): Promise<Response> => {
                 );
             }
         }
-
-        // Update player_tbl username
-        if (newUsername) {
-            await db.execute<ResultSetHeader>(
-                `UPDATE player_tbl SET username = ? WHERE user_id = ?`,
-                [newUsername, userId]
-            );
-        }
         
         return Response.json({
             success: true,
             message: "Profile updated successfully",
             user_id: userId,
             email: session.user.email,
-            username: newUsername,
+            username: finalUsername,
             daily_xp_goal: targetGoal,
             learning_goal: `${targetGoal} XP / day`
         });

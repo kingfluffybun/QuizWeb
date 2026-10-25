@@ -433,7 +433,10 @@ export const authConfig: NextAuthConfig = {
 
             try {
                 const [rows] = await db.query<RowDataPacket[]>(
-                    "SELECT user_role, token_version FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+                    `SELECT u.user_role, u.token_version, p.username 
+                     FROM user_auth_tbl u 
+                     LEFT JOIN player_tbl p ON u.user_id = p.user_id 
+                     WHERE u.user_id = ? LIMIT 1`,
                     [userId]
                 );
 
@@ -462,18 +465,7 @@ export const authConfig: NextAuthConfig = {
                     return null as unknown as typeof session;
                 }
 
-                let dbUsername: string | undefined;
-                try {
-                    const [playerRows] = await db.query<RowDataPacket[]>(
-                        "SELECT p.username FROM player_tbl p WHERE p.user_id = ? LIMIT 1",
-                        [userId]
-                    );
-                    if (Array.isArray(playerRows) && playerRows.length > 0 && playerRows[0]?.username) {
-                        dbUsername = playerRows[0].username as string;
-                    }
-                } catch {
-                    // Gracefully retain existing username if player query fails
-                }
+                const dbUsername = (rows[0]?.username as string) || undefined;
 
                 if (extSession && extSession.user) {
                     const dbRole = (rows[0]?.user_role as string) || extToken.role || extToken.user_role || "user";
