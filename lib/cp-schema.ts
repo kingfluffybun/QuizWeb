@@ -138,10 +138,20 @@ export const ImportCPStepSchema = z.preprocess(
     } else if (step.expected !== undefined) {
       step.expectedTemplate = coerceFileBuffers(step.expected);
     }
+    if (step.stepNumber === undefined && typeof step.step_number === "number") {
+      step.stepNumber = step.step_number;
+    }
     if (step.inheritPreviousCode === undefined) {
       step.inheritPreviousCode =
         typeof step.stepNumber === "number" ? step.stepNumber > 1 : true;
     }
+    delete step.prompt;
+    delete step.starter;
+    delete step.template;
+    delete step.expected;
+    delete step.step_number;
+    delete step.step_id;
+    delete step.assessment_id;
     return step;
   },
   z
@@ -193,18 +203,39 @@ export const CodeProblemAssessmentImportSchema = z.preprocess(
       const unwrapped = unwrapCodeProblemAssessment(record);
       if (unwrapped) {
         record.steps = unwrapped.steps;
+        if (!record.expected_outcome) {
+          record.expected_outcome = unwrapped.expected_outcome;
+        }
         record.schemaVersion = 2;
       }
     }
+    if (Array.isArray(record.steps)) {
+      record.steps = record.steps.map((st, i) => {
+        if (st && typeof st === "object") {
+          const s = { ...(st as Record<string, unknown>) };
+          if (s.stepNumber === undefined && s.step_number === undefined) {
+            s.stepNumber = i + 1;
+          }
+          return s;
+        }
+        return st;
+      });
+    }
+    delete record.status;
+    delete record.unit_id;
+    delete record.assessment_id;
+    delete record.author_id;
+    delete record.created_at;
+    delete record.updated_at;
     return record;
   },
   z
     .strictObject({
-      schemaVersion: z.literal(2),
-      title: z.string(),
-      description: z.string(),
+      schemaVersion: z.literal(2).default(2),
+      title: z.string().default(""),
+      description: z.string().default(""),
       steps: z.array(ImportCPStepSchema).min(1).max(20),
-      expected_outcome: z.string(),
+      expected_outcome: z.string().default(""),
       cp_steps: z.array(z.unknown()).optional(),
       assessment: z.string().optional(),
     })
@@ -342,14 +373,16 @@ export function unwrapCodeProblemAssessment(
       .map((s) => s.trim())
       .filter(Boolean);
 
-    if (stringSteps.length > 0 && expectedOutcome) {
+    if (stringSteps.length > 0) {
+      const outcomeHtml =
+        expectedOutcome || `<main>\n  <!-- Assessment Step -->\n</main>`;
       stringSteps.forEach((instruction, idx) => {
         normalizedSteps.push({
           stepNumber: idx + 1,
           instruction,
           starterCode: createEmptyFileBuffers(),
           expectedTemplate: {
-            html: expectedOutcome,
+            html: outcomeHtml,
             css: "",
             js: "",
           },
@@ -368,7 +401,11 @@ export function unwrapCodeProblemAssessment(
     title,
     description,
     steps: normalizedSteps,
-    expected_outcome: expectedOutcome,
+    expected_outcome:
+      expectedOutcome ||
+      (normalizedSteps.length > 0
+        ? normalizedSteps[normalizedSteps.length - 1].expectedTemplate.html
+        : ""),
   };
 
   const result = CodeProblemAssessmentSchema.safeParse(candidate);

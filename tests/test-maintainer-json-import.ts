@@ -51,6 +51,94 @@ async function runMaintainerJsonImportTest() {
     console.log(`✔ parseAssessmentImport verified with 0 errors: title="${importResult.data.unit_title}", quizzes=${importResult.data.unit_quiz_json.length}, steps=${importResult.data.unit_assessment_json.steps.length}`);
 
     // -------------------------------------------------------------------------
+    // Step 2b: Verify schema edge cases
+    // -------------------------------------------------------------------------
+    console.log("\n[Step 2b] Verifying schema edge cases (2-pair questions, export envelopes, cp_steps adaptation)...");
+
+    // Test 1: Full export envelope unwrapping
+    const envelopeResult = parseAssessmentImport(JSON.stringify(rawExport));
+    assert.equal(envelopeResult.success, true, "Full export envelope should unwrap cleanly");
+
+    // Test 2: Unit array unwrapping
+    const arrayResult = parseAssessmentImport(JSON.stringify([unit98]));
+    assert.equal(arrayResult.success, true, "Unit array should unwrap cleanly");
+
+    // Test 3: 2-pair question validation
+    const twoPairUnit = {
+      unit_title: "2-Pair Test Unit",
+      sec_id: "1",
+      unit_assessment_json: {
+        title: "Test Assessment",
+        description: "Test description",
+        steps: ["Step 1 instruction"],
+      },
+      unit_quiz_json: [
+        {
+          cat_id: 1,
+          difficulty_id: 1,
+          quiz_type_id: 4,
+          question_text: "Match the two pairs",
+          quiz_payload: {
+            pairs: [
+              { left: "A", right: "1" },
+              { left: "B", right: "2" },
+            ],
+          },
+          author_id: 4,
+          status: "approved",
+        },
+      ],
+    };
+    const twoPairResult = parseAssessmentImport(JSON.stringify(twoPairUnit));
+    assert.equal(twoPairResult.success, true, "2-pair unit with quiz export metadata should validate");
+
+    // Test 4: cp_steps with { prompt, template, expected } and omitted stepNumber
+    const cpStepsUnit = {
+      unit_title: "CP Steps Test Unit",
+      sec_id: 1,
+      unit_assessment_json: {
+        title: "CP Assessment",
+        description: "CP description",
+        status: "approved",
+        unit_id: 999,
+        assessment_id: 888,
+        cp_steps: [
+          {
+            prompt: "Step 1 Prompt",
+            template: "<div></div>",
+            expected: "<div><h1>Hello</h1></div>",
+          },
+          {
+            prompt: "Step 2 Prompt",
+            template: "<div><h1>Hello</h1></div>",
+            expected: "<div><h1>Hello</h1><p>World</p></div>",
+          },
+        ],
+      },
+      unit_quiz_json: [
+        {
+          cat_id: 1,
+          difficulty_id: 1,
+          quiz_type_id: 1,
+          question_text: "Sample MCQ",
+          quiz_payload: {
+            options: ["A", "B", "C", "D"],
+            correct_index: 0,
+          },
+        },
+      ],
+    };
+    const cpStepsResult = parseAssessmentImport(JSON.stringify(cpStepsUnit));
+    assert.equal(cpStepsResult.success, true, "cp_steps with prompt/template/expected and auto-numbering must succeed");
+    if (cpStepsResult.success && cpStepsResult.mode === "full") {
+      assert.equal(cpStepsResult.data.unit_assessment_json.steps.length, 2);
+      assert.equal(cpStepsResult.data.unit_assessment_json.steps[0].stepNumber, 1);
+      assert.equal(cpStepsResult.data.unit_assessment_json.steps[1].stepNumber, 2);
+      assert.equal(cpStepsResult.data.unit_assessment_json.steps[0].instruction, "Step 1 Prompt");
+    }
+    console.log("✔ Schema edge cases verified: 2-pair quiz, export envelopes, cp_steps adaptation, auto-numbering, and export metadata tolerance");
+
+    // -------------------------------------------------------------------------
     // Step 3: Verify slide extraction from unit_lesson_card_json
     // -------------------------------------------------------------------------
     console.log("\n[Step 3] Verifying extractLessonSlides()...");

@@ -67,6 +67,8 @@ const QuizImportEntryBase = {
   quiz_type_id: z.number().int().positive(),
   question_text: RequiredText,
   quiz_payload: QuizImportPayloadSchema,
+  status: z.string().optional(),
+  author_id: z.number().int().nullable().optional(),
 };
 
 export const QuizImportEntrySchema = z.preprocess((val) => {
@@ -79,6 +81,26 @@ export const QuizImportEntrySchema = z.preprocess((val) => {
       // let zod handle
     }
   }
+  if (typeof obj.cat_id === "string" && /^\d+$/.test(obj.cat_id.trim())) {
+    obj.cat_id = Number(obj.cat_id);
+  }
+  if (
+    typeof obj.difficulty_id === "string" &&
+    /^\d+$/.test(obj.difficulty_id.trim())
+  ) {
+    obj.difficulty_id = Number(obj.difficulty_id);
+  }
+  if (
+    typeof obj.quiz_type_id === "string" &&
+    /^\d+$/.test(obj.quiz_type_id.trim())
+  ) {
+    obj.quiz_type_id = Number(obj.quiz_type_id);
+  }
+  if (typeof obj.sec_id === "string" && /^\d+$/.test(obj.sec_id.trim())) {
+    obj.sec_id = Number(obj.sec_id);
+  }
+  delete obj.created_at;
+  delete obj.updated_at;
   return obj;
 }, z.strictObject(QuizImportEntryBase));
 
@@ -86,6 +108,7 @@ export const AssessmentBulkImportSchema = z.strictObject({
   unit_id: z.number().int().optional(),
   unit_title: z.string().optional(),
   title: z.string().optional(),
+  description: z.string().optional(),
   sec_id: z.number().int().positive().nullable().optional(),
   sec_num: z.union([z.string(), z.number()]).optional(),
   status: z.string().optional(),
@@ -356,10 +379,30 @@ export function extractLessonSlides(
 }
 
 export function normalizeUnitImportCandidate(candidate: unknown): unknown {
-  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+  if (!candidate || typeof candidate !== "object") {
     return candidate;
   }
-  const obj = { ...(candidate as Record<string, unknown>) };
+  if (Array.isArray(candidate)) {
+    if (candidate.length > 0 && typeof candidate[0] === "object") {
+      candidate = candidate[0];
+    } else {
+      return candidate;
+    }
+  }
+  const rawObj = candidate as Record<string, unknown>;
+  if (
+    Array.isArray(rawObj.units) &&
+    rawObj.units.length > 0 &&
+    !rawObj.unit_quiz_json
+  ) {
+    return normalizeUnitImportCandidate(rawObj.units[0]);
+  }
+
+  const obj = { ...rawObj };
+
+  if (typeof obj.sec_id === "string" && /^\d+$/.test(obj.sec_id.trim())) {
+    obj.sec_id = Number(obj.sec_id);
+  }
 
   if (!obj.unit_assessment_json) {
     if (obj.assessment && typeof obj.assessment === "object") {
@@ -367,6 +410,12 @@ export function normalizeUnitImportCandidate(candidate: unknown): unknown {
     } else if (obj.unit_assessment && typeof obj.unit_assessment === "object") {
       obj.unit_assessment_json = obj.unit_assessment;
     }
+  }
+
+  if (!obj.unit_lesson_card_json) {
+    if (obj.lesson_slides) obj.unit_lesson_card_json = obj.lesson_slides;
+    else if (obj.lesson_card) obj.unit_lesson_card_json = obj.lesson_card;
+    else if (obj.lessons) obj.unit_lesson_card_json = obj.lessons;
   }
 
   if (obj.unit_assessment_json && typeof obj.unit_assessment_json === "object") {
@@ -406,6 +455,11 @@ export function normalizeUnitImportCandidate(candidate: unknown): unknown {
       return quiz;
     });
   }
+
+  delete obj.created_at;
+  delete obj.updated_at;
+  delete obj.lesson_format;
+  delete obj.slug;
 
   return obj;
 }

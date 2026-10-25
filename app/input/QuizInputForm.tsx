@@ -778,19 +778,33 @@ export default function QuizInputForm({
     });
 
     if (typeName === "MCQ") {
+      const editingOptions = Array.isArray(editingQuiz?.quiz_payload?.options)
+        ? (editingQuiz!.quiz_payload.options as unknown[]).map(String)
+        : null;
       const options = [0, 1, 2, 3].map(
         (idx) =>
-          (formData.get(`option_${idx}`) as string | null)?.trim() ||
-          mcqOptions[idx] ||
-          (Array.isArray(editingQuiz?.quiz_payload?.options)
-            ? String((editingQuiz.quiz_payload.options as unknown[])[idx] ?? "")
-            : ""),
+          (unitInputTab === "import" && editingOptions && editingOptions[idx]
+            ? editingOptions[idx]
+            : (formData.get(`option_${idx}`) as string | null)?.trim() ||
+              mcqOptions[idx] ||
+              editingOptions?.[idx] ||
+              ""),
       );
       const rawCorrect = formData.get("correct_option_index");
+      const editingCorrect =
+        typeof (editingQuiz?.quiz_payload as Record<string, unknown> | undefined)
+          ?.correct_index === "number"
+          ? Number(
+              (editingQuiz!.quiz_payload as Record<string, unknown>)
+                .correct_index,
+            )
+          : undefined;
       const correct =
-        rawCorrect !== null && !Number.isNaN(Number(rawCorrect))
-          ? Number(rawCorrect)
-          : (mcqCorrectIndex ?? 0);
+        unitInputTab === "import" && editingCorrect !== undefined
+          ? editingCorrect
+          : rawCorrect !== null && !Number.isNaN(Number(rawCorrect))
+            ? Number(rawCorrect)
+            : (editingCorrect ?? mcqCorrectIndex ?? 0);
 
       const qText =
         questionText.trim() ||
@@ -807,10 +821,13 @@ export default function QuizInputForm({
     }
 
     if (typeName === "FITB") {
+      const editingAnswer = String(editingQuiz?.quiz_payload?.answer ?? "");
       const answer =
-        (formData.get("fitb_answer") as string | null)?.trim() ||
-        fitbAnswer ||
-        String(editingQuiz?.quiz_payload?.answer ?? "");
+        unitInputTab === "import" && editingAnswer
+          ? editingAnswer
+          : (formData.get("fitb_answer") as string | null)?.trim() ||
+            fitbAnswer ||
+            editingAnswer;
       return makeBase(
         questionText.trim() || editingQuiz?.question_text || "Fill in the blank",
         {
@@ -820,11 +837,17 @@ export default function QuizInputForm({
     }
 
     if (typeName === "Order") {
-      let items = Array.from({ length: optionCount }, (_, idx) =>
-        (formData.get(`order_${idx}`) as string | null)?.trim() || orderItems[idx] || "",
-      ).filter(Boolean);
-      if (items.length < 2 && Array.isArray(editingQuiz?.quiz_payload?.items)) {
-        items = (editingQuiz.quiz_payload.items as string[]).filter(Boolean);
+      const editingItems = Array.isArray(editingQuiz?.quiz_payload?.items)
+        ? (editingQuiz!.quiz_payload.items as string[]).filter(Boolean)
+        : [];
+      let items =
+        unitInputTab === "import" && editingItems.length >= 2
+          ? editingItems
+          : Array.from({ length: optionCount }, (_, idx) =>
+              (formData.get(`order_${idx}`) as string | null)?.trim() || orderItems[idx] || "",
+            ).filter(Boolean);
+      if (items.length < 2 && editingItems.length >= 2) {
+        items = editingItems;
       }
       return makeBase(
         questionText.trim() || editingQuiz?.question_text || "Arrange the items in order",
@@ -835,20 +858,26 @@ export default function QuizInputForm({
     }
 
     if (typeName === "Pair") {
-      let pairs = Array.from({ length: optionCount }, (_, idx) => ({
-        left:
-          (formData.get(`pair_left_${idx}`) as string | null)?.trim() ||
-          pairValues[idx]?.left ||
-          "",
-        right:
-          (formData.get(`pair_right_${idx}`) as string | null)?.trim() ||
-          pairValues[idx]?.right ||
-          "",
-      })).filter((pair) => pair.left && pair.right);
-      if (pairs.length === 0 && Array.isArray(editingQuiz?.quiz_payload?.pairs)) {
-        pairs = (editingQuiz.quiz_payload.pairs as { left: string; right: string }[]).filter(
-          (p) => p.left && p.right,
-        );
+      const editingPairs = Array.isArray(editingQuiz?.quiz_payload?.pairs)
+        ? (editingQuiz!.quiz_payload.pairs as { left: string; right: string }[]).filter(
+            (p) => p.left && p.right,
+          )
+        : [];
+      let pairs =
+        unitInputTab === "import" && editingPairs.length >= 2
+          ? editingPairs
+          : Array.from({ length: optionCount }, (_, idx) => ({
+              left:
+                (formData.get(`pair_left_${idx}`) as string | null)?.trim() ||
+                pairValues[idx]?.left ||
+                "",
+              right:
+                (formData.get(`pair_right_${idx}`) as string | null)?.trim() ||
+                pairValues[idx]?.right ||
+                "",
+            })).filter((pair) => pair.left && pair.right);
+      if (pairs.length === 0 && editingPairs.length > 0) {
+        pairs = editingPairs;
       }
       return makeBase(
         questionText.trim() || editingQuiz?.question_text || "Match the items",
@@ -877,11 +906,13 @@ export default function QuizInputForm({
         ? (editingQuiz.quiz_payload.steps as { prompt: string; template: string; expected: string }[])
         : [];
       const resolvedSteps =
-        steps.length > 0
-          ? steps
-          : existingSteps.length > 0
-            ? existingSteps
-            : [{ prompt: "Instruction", template: "", expected: "" }];
+        unitInputTab === "import" && existingSteps.length > 0
+          ? existingSteps
+          : steps.length > 0
+            ? steps
+            : existingSteps.length > 0
+              ? existingSteps
+              : [{ prompt: "Instruction", template: "", expected: "" }];
       return makeBase(questionText.trim() || editingQuiz?.question_text || title, {
         title,
         steps: resolvedSteps,
@@ -1385,6 +1416,9 @@ export default function QuizInputForm({
 
     const formData = new FormData(event.currentTarget);
     formData.set("sec_id", selectedSecId);
+    if (unitTitle.trim()) {
+      formData.set("unit_title", unitTitle.trim());
+    }
     lessonSlides.forEach((slide, index) => {
       formData.set(`lesson_text_${index}`, slide.text);
       formData.set(`lesson_title_${index}`, slide.title ?? "");
@@ -1394,7 +1428,9 @@ export default function QuizInputForm({
     });
     const unitQuizBatch = preserveQuizDataOnSave
       ? originalUnitQuizzes
-      : buildQuizBatch(buildCurrentQuizEntry());
+      : unitInputTab === "import" && fullJsonImport?.unit_quiz_json?.length
+        ? fullJsonImport.unit_quiz_json
+        : buildQuizBatch(buildCurrentQuizEntry());
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
     }
