@@ -249,46 +249,47 @@ async function runTests() {
     // Test Suite 6: Automatic Section Progression via recordLessonSlideProgress
     // -------------------------------------------------------------
     console.log("\n[6] Verifying Automatic Section Progression...");
-    // Reset test user's current_section to 1
-    await db.query("UPDATE player_tbl SET current_section = 1 WHERE user_id = ?", [testUserId]);
-
-    // Clean up test user progress for Section 1 units (98 and 103)
-    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id IN (98, 103)", [testUserId]);
+    const autoSecUser = 99995;
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("INSERT IGNORE INTO user_auth_tbl (user_id, email, password_hash) VALUES (?, 'autosec@test.com', 'hash')", [autoSecUser]);
+    await db.query("INSERT INTO player_tbl (user_id, username, current_section) VALUES (?, 'autosec_user', 1)", [autoSecUser]);
 
     // Step 6a: Complete Unit 98 (1 of 2 in Section 1)
-    const res98 = await recordLessonSlideProgress(98, 6, 6, true, testUserId);
+    const res98 = await recordLessonSlideProgress(98, 6, 6, true, autoSecUser);
     assert(res98.success === true, "recordLessonSlideProgress(98) returned success");
 
-    const [playerSecAfter98] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [testUserId]);
+    const [playerSecAfter98] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfter98[0].current_section) === 1,
       `User remains on Section 1 after completing only 1 of 2 units (actual: ${playerSecAfter98[0].current_section})`
     );
 
     // Step 6b: Complete Unit 103 (2 of 2 in Section 1 -> Should Auto-Advance to Section 2!)
-    const res103 = await recordLessonSlideProgress(103, 6, 6, true, testUserId);
+    const res103 = await recordLessonSlideProgress(103, 6, 6, true, autoSecUser);
     assert(res103.success === true, "recordLessonSlideProgress(103) returned success");
     assert(res103.advancedSectionId === 2, "recordLessonSlideProgress indicates advancement to section 2");
 
-    const [playerSecAfter103] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [testUserId]);
+    const [playerSecAfter103] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfter103[0].current_section) === 2,
       `User current_section auto-advanced to Section 2 (actual: ${playerSecAfter103[0].current_section})`
     );
 
     // Step 6c: Review non-regression: completing earlier unit does not regress current_section
-    const reviewRes = await recordLessonSlideProgress(98, 1, 6, true, testUserId);
+    const reviewRes = await recordLessonSlideProgress(98, 1, 6, true, autoSecUser);
     assert(reviewRes.success === true, "Reviewing Unit 98 succeeded");
-    const [playerSecAfterReview] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [testUserId]);
+    const [playerSecAfterReview] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfterReview[0].current_section) === 2,
       `User current_section did NOT regress on review (actual: ${playerSecAfterReview[0].current_section})`
     );
 
     // Clean up test records
-    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id IN (98, 103)", [testUserId]);
-    await db.query("UPDATE player_tbl SET current_section = 1 WHERE user_id = ?", [testUserId]);
-    console.log("  ✓ Cleaned up test lesson progress records and reset player current_section to 1");
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [autoSecUser]);
+    console.log("  ✓ Cleaned up test lesson progress records and test user");
 
     // -------------------------------------------------------------
     // Test Suite 7: getAvailableUnits Backward Compatibility
