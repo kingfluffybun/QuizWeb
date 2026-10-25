@@ -547,6 +547,10 @@ function CodeProblemRunner() {
       setIsSubmitting(false);
     }
   };
+  const submitStepRef = useRef(handleSubmitStep);
+  useEffect(() => {
+    submitStepRef.current = handleSubmitStep;
+  });
 
   if (status === "completed" || status === "gameover") {
     const isVictory = status === "completed";
@@ -1089,6 +1093,14 @@ function CodeProblemRunner() {
                         onFocus={() => setIsTyping(true)}
                         onBlur={() => setIsTyping(false)}
                         onKeyDown={(event) => {
+                          if (
+                            event.key === "Enter" &&
+                            (event.ctrlKey || event.metaKey)
+                          ) {
+                            event.preventDefault();
+                            void submitStepRef.current();
+                            return;
+                          }
                           if (event.key === "Tab") {
                             event.preventDefault();
                             insertAtCursor(TAB_INDENT);
@@ -1133,6 +1145,14 @@ function CodeProblemRunner() {
                       ...previous,
                       [activeFile]: nextValue,
                     }));
+                  }}
+                  onMount={(editor, monaco) => {
+                    editor.addCommand(
+                      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+                      () => {
+                        void submitStepRef.current();
+                      },
+                    );
                   }}
                   options={{
                     automaticLayout: true,
