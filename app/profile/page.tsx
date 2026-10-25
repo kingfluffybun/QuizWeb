@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 import Sidebar from "@/app/components/Sidebar";
 import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
+// import { useRouter } from 'next/navigation';
 import "#css/quiz.css";
 import "#css/nav.css";
 import "#css/sidebar.css";
@@ -34,20 +35,6 @@ function ProfileIcon({ name }: { name: ProfileIconName }) {
     );
 }
 
-// type ProfileDetails = {
-//     displayName: string;
-//     email: string;
-//     learningGoal: string;
-//     avaColor: string;
-// };
-
-// const defaultProfile: ProfileDetails = {
-//     displayName: "Juan DelaCruz",
-//     email: "juan.delacruz@example.com",
-//     learningGoal: "Build my first website",
-//     avaColor: "#ccc",
-// };
-
 const activity = [
     { day: "Sun", completed: true },
     { day: "Sat", completed: true },
@@ -61,29 +48,23 @@ const activity = [
 const weeklyGoal = 7;
 const completedActivityDays = activity.filter(({ completed }) => completed).length;
 const currentStreakDays = completedActivityDays;
-const passwordRules = [
-    { label: "8+ characters", test: (password: string) => password.length >= 8 },
-    { label: "24 max characters", test: (password: string) => password.length <= 24 },
-    { label: "uppercase", test: (password: string) => /[A-Z]/.test(password) },
-    { label: "lowercase", test: (password: string) => /[a-z]/.test(password) },
-    { label: "number", test: (password: string) => /[0-9]/.test(password) },
-    { label: "symbol", test: (password: string) => /[!@#$%^&*]/.test(password) },
-];
-const passwordStrengthColors = ["#333333", "#e5484d", "#e5484d", "#f5a623", "#f5c518", "#8bc34a", "#34c759"];
 
 export default function ProfilePage() {
     const [isProfileLoaded, setIsProfileLoaded] = useState(false);
     const [username, setUsername] = useState<string | undefined>();
     const [email, setEmail] = useState<string | undefined>();
     const [avaColor, setAvaColor] = useState<string | undefined>();
+    const [learningGoal, setLearningGoal]  = useState<string | undefined>();
+    const [createdDate, setCreatedDate] = useState<string>();
 
-    const [draft, setDraft] = useState<string | undefined>();
+    const [draft, setDraft] = useState<{ username?: string; email?: string; learningGoal?: string }>({
+        username: undefined,
+        learningGoal: undefined
+    });
     const [isEditing, setIsEditing] = useState(false);
     const [saveMessage, setSaveMessage] = useState("");
 
-    const [isChangingPassword, setIsChangingPassword] = useState(false);
-    const [passwordMessage, setPasswordMessage] = useState("");
-    const [newPassword, setNewPassword] = useState("");
+    // const router = useRouter();
 
     useEffect(() => {
         let isMounted = true;
@@ -98,7 +79,15 @@ export default function ProfilePage() {
                 setUsername(userData?.username);
                 setEmail(userData?.email);
                 setAvaColor(userData?.avatar_color);
+                setCreatedDate(userData?.created_at);
+                setLearningGoal(userData?.learning_goal);
+                setDraft({
+                    username: userData?.username,
+                    learningGoal: userData?.learning_goal
+                });
                 setIsProfileLoaded(true);
+
+                console.log(userData);
             })
             .catch((err) => {
                 // Silently fallback to unauthenticated/user default
@@ -109,54 +98,73 @@ export default function ProfilePage() {
         };
     }, []);
 
-    // const handleSave = (event: FormEvent<HTMLFormElement>) => {
-    //     event.preventDefault();
-    //     const savedProfile = {
-    //         displayName: draft?.username.trim() || username,
-    //         email: draft.email.trim(),
-    //         learningGoal: draft.learningGoal.trim(),
-    //     };  
-    //     setProfile(savedProfile);
-    //     setDraft(savedProfile);
-    //     localStorage.setItem("quizweb-profile-details", JSON.stringify(savedProfile));
-    //     setIsEditing(false);
-    //     setSaveMessage("Profile details saved.");
-    // };
+    const oldDate = new Date(createdDate ?? "");
+    const formatDate = oldDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const currentPasswordValue = String(formData.get("currentPassword") ?? "");
-        const newPasswordValue = String(formData.get("newPassword") ?? "");
-        const confirmPasswordValue = String(formData.get("confirmPassword") ?? "");
+    const handleSave = async () => {
+        try {
+            const usernameValue = draft?.username || username;
+            const emailValue = draft?.email || email;
+            const learningGoalValue = draft?.learningGoal || learningGoal || undefined;
 
-        if (!currentPasswordValue || !newPasswordValue || !confirmPasswordValue) {
-            setPasswordMessage("Please complete all password fields.");
-            return;
+            console.log("Saving values:");
+            console.log("- Username:", JSON.stringify(usernameValue));
+            console.log("- Learning Goal:", JSON.stringify(learningGoalValue));
+
+            const payload = {
+                username: (usernameValue || "").trim(),
+                learning_goal: learningGoalValue?.trim() || undefined
+            };
+
+            console.log("Final payload:", JSON.stringify(payload));
+
+            const response = await fetch('/api/db/user-info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            setSaveMessage("");
+
+            setUsername(result.username);
+            setEmail(emailValue);
+            setLearningGoal(result.learning_goal || undefined);
+
+            setDraft({
+                username: result.username,
+                email: result.email,
+                learningGoal: result.learning_goal || undefined
+            });
+
+            setSaveMessage("Profile updated successfully!");
+
+            setIsEditing(false);
+        } catch (error: any) {
+            console.error("Error in handleSave:", error);
+
+            let errorMessage = "Failed to save changes. Please try again.";
+
+            if (error?.message?.includes('fetch')) {
+                errorMessage = "Network error - cannot connect to server."
+            }
+
+            alert(errorMessage);
+            setSaveMessage(errorMessage);
         }
-
-        if (!passwordRules.every((rule) => rule.test(newPasswordValue))) {
-            setPasswordMessage("Please meet all password requirements before saving.");
-            return;
-        }
-
-        if (newPasswordValue !== confirmPasswordValue) {
-            setPasswordMessage("New password and confirmation do not match.");
-            return;
-        }
-
-        setPasswordMessage("Your passwords meet the requirements, but password updates are not connected yet.");
     };
 
-    const cancelPasswordChange = () => {
-        setIsChangingPassword(false);
-        setPasswordMessage("");
-        setNewPassword("");
-    };
-
-    const passedPasswordRules = passwordRules.filter((rule) => rule.test(newPassword)).length;
-    const missingPasswordRules = passwordRules.filter((rule) => !rule.test(newPassword)).map((rule) => rule.label);
-    const passwordRulesPassed = passedPasswordRules === passwordRules.length;
+    const handleCancel = () => {
+        setDraft({
+            username, learningGoal
+        });
+        setIsEditing(false);
+    }
 
     const initials = (username ?? "")
         .trim()
@@ -190,7 +198,7 @@ export default function ProfilePage() {
                             </div>
                             <p>@{email || username?.toLowerCase().replace(/\s+/g, "")}</p>
                             <div className="profile-meta">
-                                <span><ProfileIcon name="calendar" /> Joined October 2026</span>
+                                <span><ProfileIcon name="calendar" />Joined {formatDate}</span>
                             </div>
                         </div>
                     </section>
@@ -267,93 +275,73 @@ export default function ProfilePage() {
                             <div className="profile-panel-heading">
                                 <div>
                                     <span className="profile-section-title">
-                                        <span className="profile-section-title-icon"><ProfileIcon name={isChangingPassword ? "user-shield" : "user-pen"} /></span>
-                                        <h2 id="about-title">{isChangingPassword ? "Change password" : "Profile details"}</h2>
+                                        <span className="profile-section-title-icon"><ProfileIcon name={"user-shield"} /></span>
+                                        <h2 id="about-title">Profile details</h2>
                                     </span>
                                 </div>
-                                {/* {!isChangingPassword && !isEditing && <button type="button" className="profile-icon-button" aria-label="Edit profile details" onClick={() => { setDraft(profile); setIsEditing(true); setSaveMessage(""); }}><ProfileIcon name="edit" /></button>} */}
+                                {!isEditing && <button type="button" className="profile-icon-button" aria-label="Edit profile details" onClick={() => setIsEditing(true)}><ProfileIcon name="edit" /></button>}
                             </div>
-                            {isChangingPassword ? (
-                                <form className="profile-password-form" noValidate onSubmit={handlePasswordSubmit}>
-                                    <div className="profile-password-field">
-                                        <label className="profile-password-input-group">
-                                            <span className="profile-password-field-icon" aria-hidden="true"><ProfileIcon name="lock" /></span>
-                                            <input id="profile-current-password" name="currentPassword" type="password" placeholder=" " autoComplete="current-password" onChange={() => setPasswordMessage("")} />
-                                            <span className="profile-password-floating-label">Current password</span>
-                                        </label>
-                                    </div>
-                                    <div className="profile-password-field">
-                                        <label className="profile-password-input-group">
-                                            <span className="profile-password-field-icon" aria-hidden="true"><ProfileIcon name="lock" /></span>
-                                            <input id="profile-new-password" name="newPassword" type="password" placeholder=" " autoComplete="new-password" value={newPassword} onChange={(event) => { setNewPassword(event.target.value); setPasswordMessage(""); }} />
-                                            <span className="profile-password-floating-label">New password</span>
-                                        </label>
-                                    </div>
-                                    <div className="profile-password-field">
-                                        <label className="profile-password-input-group">
-                                            <span className="profile-password-field-icon" aria-hidden="true"><ProfileIcon name="lock" /></span>
-                                            <input id="profile-confirm-password" name="confirmPassword" type="password" placeholder=" " autoComplete="new-password" onChange={() => setPasswordMessage("")} />
-                                            <span className="profile-password-floating-label">Confirm new password</span>
-                                        </label>
-                                    </div>
-                                    {newPassword.length > 0 && (
-                                        <div className="profile-password-strength" aria-live="polite">
-                                            <p className={`profile-password-strength-hint${passwordRulesPassed ? " is-good" : ""}`}>
-                                                {passwordRulesPassed ? "Strong password" : `Needs: ${missingPasswordRules.join(", ")}`}
-                                            </p>
-                                            <div className="profile-password-strength-track" aria-label={`${passedPasswordRules} of ${passwordRules.length} password requirements met`}>
-                                                {passwordRules.map((rule, index) => (
-                                                    <span
-                                                        key={rule.label}
-                                                        className="profile-password-strength-segment"
-                                                        style={{ backgroundColor: index < passedPasswordRules ? passwordStrengthColors[passedPasswordRules] : undefined }}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {passwordMessage && <p className="profile-password-message" role="status">{passwordMessage}</p>}
-                                    <div className="profile-form-actions">
-                                        <button className="profile-save-button" type="submit">Save Changes</button>
-                                        <button className="profile-cancel-button" type="button" onClick={cancelPasswordChange}>Cancel</button>
-                                    </div>
-                                </form>
-                            ) : isEditing ? (
-                                // <form className="profile-details-form" onSubmit={handleSave}>
-                                <form className="profile-details-form">
+                            {isEditing ? (
+                                <form className="profile-details-form" onSubmit={handleSave}>
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="user" /></span>
-                                        {/* <input id="profile-display-name" placeholder=" " autoComplete="name" required value={draft?.profile} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} /> */}
+                                        <input 
+                                            id="username" 
+                                            type="text" 
+                                            placeholder="Display Name" 
+                                            autoComplete="name" 
+                                            required 
+                                            defaultValue={draft?.username || username || ""} 
+                                            onChange={(e) => setDraft({ ...draft, username: e.target.value })} 
+                                        />
                                         <span className="profile-details-floating-label">Display name</span>
                                     </label>
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="mail" /></span>
-                                        {/* <input id="profile-email" type="email" placeholder=" " autoComplete="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /> */}
+                                        <input
+                                            id="email" 
+                                            type="email" 
+                                            placeholder="Email address" 
+                                            autoComplete="email" 
+                                            defaultValue={ email }
+                                            disabled
+                                        />
                                         <span className="profile-details-floating-label">Email address</span>
                                     </label>
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="target" /></span>
-                                        {/* <input id="profile-learning-goal" placeholder=" " value={draft.learningGoal} onChange={(event) => setDraft({ ...draft, learningGoal: event.target.value })} /> */}
+                                        <input 
+                                            id="learning-goal" 
+                                            type="text" 
+                                            placeholder="Learning goal" 
+                                            defaultValue={draft?.learningGoal || learningGoal || ""}
+                                            onChange={(e) => setDraft({ ...draft, learningGoal: e.target.value })}
+                                        />
                                         <span className="profile-details-floating-label">Learning goal</span>
                                     </label>
                                     <div className="profile-form-actions">
-                                        <button className="profile-save-button" type="submit">Save changes</button>
-                                        {/* <button className="profile-cancel-button" type="button" onClick={() => { setDraft(profile); setIsEditing(false); }}>Cancel</button> */}
+                                        <button 
+                                            className="profile-save-button"
+                                            type="button"
+                                            onClick={handleSave}
+                                        >Save changes</button>
+                                        <button 
+                                            className="profile-cancel-button" 
+                                            type="button" 
+                                            onClick={handleCancel}
+                                        >
+                                            Cancel
+                                        </button>
                                     </div>
                                 </form>
                             ) : (
                                 <>
                                     <dl className="profile-details-list">
                                         <div><dt>Display name</dt><dd>{username}</dd></div>
-                                        <div><dt>Email</dt><dd>{email || "Not provided"}</dd></div>
-                                        <div><dt>Learning goal</dt><dd>{"Not set"}</dd></div>
+                                        <div><dt>Email</dt><dd>{email}</dd></div>
+                                        <div><dt>Learning goal</dt><dd>{learningGoal}</dd></div>
                                     </dl>
                                     {saveMessage && <p className="profile-save-message" role="status">{saveMessage}</p>}
-                                    <div className="profile-password-section">
-                                        <button className="profile-password-toggle" type="button" onClick={() => { setIsChangingPassword(true); setPasswordMessage(""); }}>
-                                            Change password
-                                        </button>
-                                    </div>
                                 </>
                             )}
                         </section>
