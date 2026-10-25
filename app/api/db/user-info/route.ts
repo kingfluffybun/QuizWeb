@@ -35,6 +35,7 @@ export const GET = async (): Promise<Response> => {
                 u.avatar_color,
                 u.daily_xp_goal,
                 u.learning_goal,
+                u.created_at,
                 p.xp,
                 p.current_streak,
                 p.max_streak
@@ -53,6 +54,7 @@ export const GET = async (): Promise<Response> => {
                 ...user,
                 daily_xp_goal: dailyGoal,
                 learning_goal: dailyGoal,
+                created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
             });
         }
 
