@@ -1403,6 +1403,12 @@ textarea {
   background-color: #fff;
   cursor: pointer;
 }
+.btn-secondary.active,
+.btn-secondary:active {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+  font-weight: 400;
+}
 .pending-quiz-counter {
   color: #475569;
   font-size: 12px;
