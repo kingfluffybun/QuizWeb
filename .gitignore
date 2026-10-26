@@ -44,6 +44,7 @@ tests/*
 !tests/test-curriculum-level-progression.ts
 !tests/test-staff-unit-immunity.ts
 !tests/test-cp-engine.ts
+!tests/test-curriculum-roadmap-integration.ts
 !tests/test-session-latency-optimization.ts
 
 # debug

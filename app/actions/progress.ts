@@ -695,6 +695,7 @@ export async function recordLessonSlideProgress(
     try {
       revalidatePath("/home");
       revalidatePath("/learn");
+      revalidatePath("/learn-ui");
     } catch {
       // Safely ignore revalidation outside Next.js request context (e.g. tests)
     }

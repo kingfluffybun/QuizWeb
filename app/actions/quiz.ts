@@ -45,6 +45,7 @@ function createSafeCache<Args extends unknown[], Return>(
 function revalidateQuizPaths() {
   try {
     revalidatePath("/learn");
+    revalidatePath("/learn-ui");
     revalidatePath("/quiz");
     revalidatePath("/quiz-cp");
     revalidatePath("/admin");
