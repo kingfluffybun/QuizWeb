@@ -2641,6 +2641,10 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   border-color: var(--border-main, #2d2d3d);
 }
 
+[data-theme="dark"] .lesson-slide-fields {
+  border-color: var(--border-main, #2d2d3d);
+}
+
 [data-theme="dark"] .form-input,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] .form-textarea,
