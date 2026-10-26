@@ -398,6 +398,19 @@ function CodeExample({
             language={getCodeLanguage(sectionTitle)}
             theme={theme}
             value={code}
+            onMount={(editor) => {
+                const mobileViewport = window.matchMedia("(max-width: 768px)");
+                const updateLineNumberWidth = () => {
+                    editor.updateOptions({ lineNumbersMinChars: mobileViewport.matches ? 2 : 5 });
+                };
+
+                updateLineNumberWidth();
+                mobileViewport.addEventListener("change", updateLineNumberWidth);
+                editor.onDidDispose(() => {
+                    mobileViewport.removeEventListener("change", updateLineNumberWidth);
+                });
+            }}
+            beforeMount={defineCodeTheme}
             options={{
                 ariaLabel: `${title} code example`,
                 automaticLayout: true,
