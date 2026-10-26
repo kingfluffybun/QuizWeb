@@ -351,6 +351,14 @@ button.quick-action-btn:hover {
     }
 }
 
+.day.active-start p {
+    border-radius: 999px 0 0 999px;
+}
+
+.day.active-end p {
+    border-radius: 0 999px 999px 0;
+}
+
 .day.active p,
 .day.active-start p,
 .day.active-middle p,
@@ -396,16 +404,6 @@ button.quick-action-btn:hover {
 .day.today:not(.active):not(.active-start):not(.active-middle):not(.active-end) p {
     outline: 2px dashed var(--primary-color);
     background-color: transparent;
-}
-
-.day.today.active p,
-.day.today.active-start p,
-.day.today.active-middle p {
-    box-shadow: 0 0 0 2px var(--primary-color);
-}
-
-.day.today.active-end p {
-    /* box-shadow: 0 0 0 2px var(--primary-color); */
 }
 
 .day-label {
