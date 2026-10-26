@@ -2590,7 +2590,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
     justify-content: space-between;
     gap: 12px;
     padding: 16px;
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1.5px solid #c4b5fd;
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.08));
     color: var(--text-main, #1e293b);
@@ -2642,7 +2642,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 
   .admin-card {
     padding: 20px 16px !important;
-    border-radius: 16px !important;
+    border-radius: 14px !important;
   }
 
   .assessment-step {

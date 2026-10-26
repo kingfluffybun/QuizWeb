@@ -1383,6 +1383,9 @@
 
 /* Mobile Breakpoint (<768px) */
 @media (max-width: 768px) {
+  .maintainer-page .maintainer-stats-ribbon > .stat-card.active-stat-card {
+    border-radius: 14px;
+  }
   .maintainer-page {
     display: flex !important;
     flex-direction: column !important;
@@ -1411,6 +1414,11 @@
 
   .maintainer-page .maintainer-stats-ribbon > * {
     padding: 16px;
+    border-radius: 14px;
+  }
+
+  .maintainer-page .maintainer-stats-ribbon .stat-card-label {
+    font-size: 10px;
   }
 
   /* Header Card stacks vertically */
@@ -1595,7 +1603,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   position: relative;
   background: var(--maintainer-purple);
   /* border: 2px solid var(--border-main); */
-  border-radius: 12px;
+  border-radius: 16px;
   padding: var(--maintainer-space-4);
   display: flex;
   flex-wrap: wrap;
@@ -1605,6 +1613,22 @@ html[data-motion="reduce"] .maintainer-page *::after {
   box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   overflow: hidden;
   transition: var(--maintainer-transition);
+}
+
+.maintainer-header .cloud-right {
+  position: absolute;
+  right: -8px;
+  bottom: -40px;
+  z-index: 0;
+  opacity: 0.25;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.maintainer-header-text,
+.maintainer-header-actions {
+  position: relative;
+  z-index: 1;
 }
 
 /* .maintainer-header::before {
@@ -1730,6 +1754,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
 
 .maintainer-stats-ribbon > .stat-card.active-stat-card {
   box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a !important;
+  border-radius: 16px;
 }
 
 .stat-card {
@@ -2546,6 +2571,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
 
   .maintainer-header {
     gap: 12px;
+    border-radius: 14px;
   }
 
   .maintainer-header-actions > .maintainer-view-switcher {

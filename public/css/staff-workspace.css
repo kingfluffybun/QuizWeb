@@ -33,6 +33,7 @@
   font-family: "Poppins", sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .staff-workspace-heading-row {
@@ -201,6 +202,7 @@
   .staff-workspace-heading {
     align-items: stretch;
     flex-direction: column;
+    margin-top: 16px;
   }
 
   .staff-workspace-tabs {

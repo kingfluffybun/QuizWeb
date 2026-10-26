@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useTransition, useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/rbac";
@@ -424,6 +425,14 @@ export default function MaintainerStudioClient({
             <span style={{whiteSpace: "nowrap"}}>New Unit</span>
           </button>
         </div>
+        <Image
+          src="/assets/landing-page/Clouds-right.svg"
+          alt=""
+          width={180}
+          height={180}
+          className="cloud-right"
+          aria-hidden="true"
+        />
       </header>
       <div className="maintainer-mobile-view-switcher">
         {renderViewSwitcher(true)}
