@@ -1400,7 +1400,8 @@ textarea {
   transform: none;
 }
 .btn-secondary {
-    cursor: pointer;
+  background-color: #fff;
+  cursor: pointer;
 }
 .pending-quiz-counter {
   color: #475569;
