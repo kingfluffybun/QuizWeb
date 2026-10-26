@@ -310,6 +310,19 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Curriculum & Lessons</span>
             </Link>
+            <Link href="/cheat-sheet" className={`mobile-drawer-link${isActiveRoute(pathname, "/cheat-sheet") ? " active" : ""}`}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 6h4" />
+                <path d="M2 10h4" />
+                <path d="M2 14h4" />
+                <path d="M2 18h4" />
+                <rect width="16" height="20" x="4" y="2" rx="2" />
+                <path d="M9.5 8h5" />
+                <path d="M9.5 12H16" />
+                <path d="M9.5 16H14" />
+              </svg>
+              <span>Cheat Sheet</span>
+            </Link>
             <Link href="/quiz" className={`mobile-drawer-link${isActiveRoute(pathname, "/quiz") ? " active" : ""}`}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
