@@ -1205,7 +1205,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 12px 0;
+  margin: 12px 0 0;
 }
 .lesson-slide-nav-button {
   min-width: 88px;
