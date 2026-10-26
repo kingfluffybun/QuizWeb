@@ -372,10 +372,10 @@ html[data-motion="reduce"] .admin-main *::after {
   --admin-stat-accent: #9966ff;
   --admin-stat-accent-soft: rgba(153, 102, 255, 0.12);
   background: var(--admin-card-bg);
-  border: 1.5px solid var(--admin-border);
-  border-radius: 20px;
+  border: 2px solid var(--admin-border);
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: var(--admin-shadow-sm);
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -386,11 +386,7 @@ html[data-motion="reduce"] .admin-main *::after {
 }
 
 .admin-stat-card::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
-  content: "";
-  background: var(--admin-stat-accent);
+  content: none;
 }
 
 .admin-stat-card.stat-total {
@@ -414,8 +410,8 @@ html[data-motion="reduce"] .admin-main *::after {
 }
 
 .admin-stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--admin-shadow-md);
+  transform: none;
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   border-color: var(--admin-stat-accent);
 }
 
@@ -438,9 +434,9 @@ html[data-motion="reduce"] .admin-main *::after {
 }
 
 .admin-stat-card .admin-stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--admin-radius-md);
   background: var(--admin-stat-accent-soft);
   color: var(--admin-stat-accent);
 }
@@ -517,7 +513,7 @@ html[data-motion="reduce"] .admin-main *::after {
   font-size: 2.5rem;
   font-weight: 800;
   color: var(--admin-text-main);
-  line-height: 1.1;
+  line-height: 1;
   margin: 0;
   letter-spacing: -0.02em;
 }
@@ -532,7 +528,7 @@ html[data-motion="reduce"] .admin-main *::after {
   color: var(--admin-text-muted);
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 /* -----------------------------------------------------------------------------
@@ -543,51 +539,53 @@ html[data-motion="reduce"] .admin-main *::after {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 28px;
-  border-bottom: 2px solid var(--admin-border);
-  padding-bottom: 12px;
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
   overflow-x: auto;
 }
 
 .admin-tab-btn {
-  padding: 10px 22px;
-  border: none;
+  padding: 10px 16px;
+  border: 1.5px solid var(--admin-border);
   background: transparent;
-  color: var(--admin-text-muted);
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: var(--admin-radius-md);
+  color: var(--admin-text-main);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 10px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
-.admin-tab-btn:hover {
-  color: var(--admin-text-main);
-  background: var(--admin-primary-light);
+.admin-tab-btn:hover:not(.active) {
+  border-color: var(--admin-primary);
+  color: var(--admin-primary);
 }
 
 .admin-tab-btn.active {
+  border-color: var(--admin-primary);
   background: var(--admin-primary);
   color: var(--admin-text-inverse);
+  box-shadow: 0 4px 12px rgba(153, 102, 255, 0.25);
 }
 
 .admin-tab-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--admin-radius-pill);
-  line-height: 1.2;
-  background: rgba(0, 0, 0, 0.08);
+  min-width: 1.35rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--admin-primary-light);
   color: inherit;
+  text-align: center;
+  font-size: 0.75rem;
 }
 
 .admin-tab-btn.active .admin-tab-badge {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
 }
 
@@ -607,7 +605,7 @@ html[data-motion="reduce"] .admin-main *::after {
 .admin-user-management {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 }
 
 .admin-user-pagination {
@@ -636,7 +634,7 @@ html[data-motion="reduce"] .admin-main *::after {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   flex-wrap: wrap;
 }
 
