@@ -224,11 +224,16 @@ function CodeProblemRunner() {
     };
   }, [isMobileViewport]);
 
+  const [prevUnitId, setPrevUnitId] = useState(requestedUnitId);
+  if (requestedUnitId !== prevUnitId) {
+    setPrevUnitId(requestedUnitId);
+    setIsLoading(true);
+    setLoadError(null);
+  }
+
   // Fetch public problem definition (with expectedTemplate stripped on server)
   useEffect(() => {
     let isActive = true;
-    setIsLoading(true);
-    setLoadError(null);
 
     getPublicCodeProblem(requestedUnitId)
       .then((loadedProblem) => {

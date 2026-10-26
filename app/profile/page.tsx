@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 import Sidebar from "@/app/components/Sidebar";
 import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
@@ -146,12 +146,12 @@ export default function ProfilePage() {
             setSaveMessage("Profile updated successfully!");
 
             setIsEditing(false);
-        } catch (error: any) {
+        } catch (error: unknown) {
 
             let errorMessage = "Failed to save changes. Please try again.";
 
-            if (error?.message?.includes('fetch')) {
-                errorMessage = "Network error - cannot connect to server."
+            if (error instanceof Error && error.message.includes('fetch')) {
+                errorMessage = "Network error - cannot connect to server.";
             }
 
             alert(errorMessage);

@@ -74,10 +74,10 @@ export const POST = async (req: Request): Promise<Response> => {
             return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        let bodyObj: any;
+        let bodyObj: Record<string, unknown>;
         
         try {
-            bodyObj = await req.json();
+            bodyObj = (await req.json()) as Record<string, unknown>;
         } catch {
             // JSON parsing failed, fallback to FormData
             const formData = await req.formData();

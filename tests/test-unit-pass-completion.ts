@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import assert from "node:assert";
 
 const envPath = path.resolve(process.cwd(), ".env.local");
 if (fs.existsSync(envPath)) {
@@ -14,7 +13,6 @@ async function runTests() {
     recordLessonSlideProgress,
     getUserCurriculumUnlockState,
     getUserSectionProgress,
-    getUserLastActiveProgress,
   } = await import("../app/actions/progress");
 
   let passed = 0;

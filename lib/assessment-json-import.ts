@@ -132,7 +132,7 @@ export const AssessmentChoiceSchema = z
   })
   .passthrough();
 
-const AssessmentQuestionSchema = z
+export const AssessmentQuestionSchema = z
   .object({
     id: z.string().optional(),
     prompt: RequiredText,

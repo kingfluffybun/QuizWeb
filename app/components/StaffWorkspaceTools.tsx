@@ -62,12 +62,14 @@ export default function StaffWorkspaceTools({
       ? "pending"
       : "input",
   );
+  const [prevPendingQuizzes, setPrevPendingQuizzes] = useState<PendingUnit[]>(pendingQuizzes);
   const [livePendingQuizzes, setLivePendingQuizzes] = useState<PendingUnit[]>(pendingQuizzes);
   const [activeLaunchLabel, setActiveLaunchLabel] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (pendingQuizzes !== prevPendingQuizzes) {
+    setPrevPendingQuizzes(pendingQuizzes);
     setLivePendingQuizzes(pendingQuizzes);
-  }, [pendingQuizzes]);
+  }
 
   useEffect(() => {
     const handleHash = () => {

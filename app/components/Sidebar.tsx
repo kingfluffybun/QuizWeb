@@ -77,39 +77,7 @@ function getRouteTitle(pathname: string) {
     return "";
 }
 
-function getRouteIcon(pathname: string) {
-    if (pathname.startsWith("/profile")) {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 21a8 8 0 0 1 16 0H4Z" />
-            </svg>
-        );
-    }
-    if (pathname.startsWith("/admin") || pathname.startsWith("/pending")) {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20 13.0004C20 18.0005 16.5 20.5005 12.34 21.9505C12.1222 22.0243 11.8855 22.0207 11.67 21.9405C7.5 20.5005 4 18.0005 4 13.0004V6.00045C4 5.73523 4.10536 5.48088 4.29289 5.29334C4.48043 5.10581 4.73478 5.00045 5 5.00045C7 5.00045 9.5 3.80045 11.24 2.28045C11.4519 2.09945 11.7214 2 12 2C12.2786 2 12.5481 2.09945 12.76 2.28045C14.51 3.81045 17 5.00045 19 5.00045C19.2652 5.00045 19.5196 5.10581 19.7071 5.29334C19.8947 5.48088 20 5.73523 20 6.00045V13.0004Z" />
-            </svg>
-        );
-    }
-    if (pathname.startsWith("/maintainer") || pathname.startsWith("/input")) {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 3H5C4.46957 3 3.96086 3.21071 3.58579 3.58579C3.21071 3.96086 3 4.46957 3 5V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 20.0391 21 19.5304 21 19V12" fill="none" />
-                <path d="M18.3751 2.62523C18.7729 2.2274 19.3125 2.00391 19.8751 2.00391C20.4377 2.00391 20.9773 2.2274 21.3751 2.62523C21.7729 3.02305 21.9964 3.56262 21.9964 4.12523C21.9964 4.68784 21.7729 5.2274 21.3751 5.62523L12.3621 14.6392C12.1246 14.8765 11.8313 15.0501 11.5091 15.1442L8.63609 15.9842C8.55005 16.0093 8.45883 16.0108 8.372 15.9886C8.28517 15.9663 8.20592 15.9212 8.14254 15.8578C8.07916 15.7944 8.03398 15.7151 8.01174 15.6283C7.98949 15.5415 7.991 15.4503 8.01609 15.3642L8.85609 12.4912C8.95062 12.1693 9.12463 11.8763 9.36209 11.6392L18.3751 2.62523Z" />
-            </svg>
-        );
-    }
-    if (pathname.startsWith("/settings")) {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" clipRule="evenodd" />
-            </svg>
-        );
-    }
-    return null;
-}
+
 
 
 
@@ -122,7 +90,6 @@ export default function Sidebar(props: SidebarProps = {}) {
     const initialEmail = props.email || sessionUser?.email;
     const initialAvaColor = props.avatarColor;
 
-    const [isCollapsed, setIsCollapsed] = useState(false);
     const [fetchedRole, setFetchedRole] = useState<string | undefined>(initialRole);
     const [fetchedUsername, setFetchedUsername] = useState<string | undefined>(initialUsername);
     const [fetchedEmail, setFetchedEmail] = useState<string | undefined>(initialEmail);
@@ -133,12 +100,6 @@ export default function Sidebar(props: SidebarProps = {}) {
     const currentPageIconRef = useRef<HTMLDivElement>(null);
     const currentPageTitleRef = useRef<HTMLHeadingElement>(null);
     const profileContainerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (initialRole && !fetchedRole) setFetchedRole(initialRole);
-        if (initialUsername && !fetchedUsername) setFetchedUsername(initialUsername);
-        if (initialEmail && !fetchedEmail) setFetchedEmail(initialEmail);
-    }, [initialRole, initialUsername, initialEmail, fetchedRole, fetchedUsername, fetchedEmail]);
     
     useEffect(() => {
         // Skip network round-trip if all essential profile data is already provided
@@ -166,22 +127,20 @@ export default function Sidebar(props: SidebarProps = {}) {
         };
     }, [props.role, props.username, props.email, props.avatarColor]);
 
-    const effectiveRole = fetchedRole ?? "user";
+    const effectiveRole = fetchedRole ?? initialRole ?? "user";
     const isAdmin = effectiveRole === "admin";
     const isMaintainer = effectiveRole === "maintainer";
-    const roleBadge = isAdmin ? "Admin" : isMaintainer ? "Maintainer" : null;
-    const displayName = fetchedUsername ?? "Profile";
+    const displayName = fetchedUsername ?? initialUsername ?? "Profile";
     const firstName = displayName.trim().split(/\s+/)[0] || "Profile";
-    const profileInitial = (fetchedUsername ?? "")
+    const profileInitial = (fetchedUsername ?? initialUsername ?? "")
         .trim()
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 2)
         .map((namePart) => namePart.charAt(0).toUpperCase())
         .join("");
-    const displayEmail = fetchedEmail ?? null;
-    const routeIcon = getRouteIcon(pathname);
-    const avaColor = fetchedAvaColor;
+    const displayEmail = fetchedEmail ?? initialEmail ?? null;
+    const avaColor = fetchedAvaColor ?? initialAvaColor;
 
     useEffect(() => {
         const activeOption = document.querySelector("#quiz-sidebar .sidebar-option.active");
@@ -215,36 +174,7 @@ export default function Sidebar(props: SidebarProps = {}) {
 
     return (
         <>
-            {/* <nav>
-                <div className="navbar-header">
-                    <div className="toggle-sidebar-nav col">
-                        <button
-                            className="toggle-sidebar col"
-                            type="button"
-                            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                            aria-expanded={!isCollapsed}
-                            aria-controls="quiz-sidebar"
-                            onClick={(event) => {
-                                const nextCollapsed = !isCollapsed;
-                                setIsCollapsed(nextCollapsed);
-                                event.currentTarget.closest(".quiz-page, .dashboard-page, .admin-app-layout, .settings-app-layout")?.classList.toggle(
-                                    "sidebar-collapsed",
-                                    nextCollapsed,
-                                );
-                            }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
-                        </button>
-                    </div>
-                    <div className="divider"></div>
-                    {routeIcon ? (
-                        <div className="sidebar-current-icon" aria-hidden="true">{routeIcon}</div>
-                    ) : (
-                        <div className="sidebar-current-icon" aria-hidden="true" ref={currentPageIconRef}></div>
-                    )}
-                    <h2 className="site-header" ref={currentPageTitleRef}>Home</h2>
-                </div>
-            </nav> */}
+
             <div className="sidebar" id="quiz-sidebar">
                 <div className="sidebar-nav">
                     <div className="logo">
