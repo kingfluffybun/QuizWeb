@@ -417,6 +417,18 @@ function CodeExample({ title, sectionTitle, example }: { title: string; sectionT
             theme="quiz-web"
             value={code}
             beforeMount={defineCodeTheme}
+            onMount={(editor) => {
+                const mobileViewport = window.matchMedia("(max-width: 768px)");
+                const updateLineNumberWidth = () => {
+                    editor.updateOptions({ lineNumbersMinChars: mobileViewport.matches ? 2 : 5 });
+                };
+
+                updateLineNumberWidth();
+                mobileViewport.addEventListener("change", updateLineNumberWidth);
+                editor.onDidDispose(() => {
+                    mobileViewport.removeEventListener("change", updateLineNumberWidth);
+                });
+            }}
             options={{
                 ariaLabel: `${title} code example`,
                 automaticLayout: true,

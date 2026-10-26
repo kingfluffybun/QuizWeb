@@ -6,25 +6,42 @@
     width: 100%;
     max-width: 1440px;
     margin-inline: auto;
-    padding: 0 24px;
+    padding: 24px;
 }
 
 .cheatsheet-heading {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    padding: 24px 28px;
-    border: 1px solid color-mix(in srgb, var(--primary-color) 18%, var(--border-main));
-    border-left: 4px solid var(--primary-color);
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--primary-color) 7%, var(--bg-card));
-    margin-bottom: 24px;
+    justify-content: center;
+    gap: 4px;
+    min-height: 120px;
+    box-sizing: border-box;
+    padding: 24px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--primary-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, .08), 0 12px 24px rgba(0, 0, 0, .1);
+    margin-bottom: 0;
+}
+
+.cheatsheet-heading::after {
+    position: absolute;
+    right: -8px;
+    bottom: -40px;
+    width: 180px;
+    height: 180px;
+    background: url("/assets/landing-page/Clouds-right.svg") center / contain no-repeat;
+    content: "";
+    pointer-events: none;
 }
 
 .cheatsheet-heading h1 {
+    position: relative;
+    z-index: 1;
     margin-bottom: 0;
-    color: var(--primary-color);
+    color: var(--text-inverse);
     font-size: clamp(2rem, 4vw, 2.5rem);
     font-weight: 700;
     line-height: 1.1;
@@ -32,8 +49,10 @@
 }
 
 .cheatsheet-heading p {
+    position: relative;
+    z-index: 1;
     margin-bottom: 0;
-    color: var(--text-muted);
+    color: var(--text-inverse);
     font-size: .92rem;
     line-height: 1.5;
 }
@@ -48,53 +67,59 @@
 
 .cheatsheet-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 28px;
+    gap: 16px;
+    margin-bottom: 0;
 }
 
 .cheatsheet-level-tabs {
-    flex: 0 0 auto;
-    padding: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px;
+    border: 1.5px solid var(--border-main);
     border-radius: 999px;
-    background: hsl(260 100% 70% / 10%);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, .08), 0 12px 24px rgba(0, 0, 0, .1);
-    width: fit-content;
+    background-color: var(--bg-card);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .06);
+    box-sizing: border-box;
 }
 
 .cheatsheet-level-tab {
     display: inline-flex;
+    flex: 1;
     align-items: center;
     justify-content: center;
-    min-width: 138px;
-    padding: 10px 18px;
+    min-height: 36px;
+    padding: 6px 10px;
     border: 0;
     border-radius: 999px;
-    background: transparent;
-    color: var(--text-muted);
-    font: 600 .86rem var(--font-montserrat), sans-serif;
+    background-color: rgba(124, 58, 237, .08);
+    color: var(--text-main);
+    font: 700 .8rem var(--font-montserrat), sans-serif;
     cursor: pointer;
     user-select: none;
-    transition: color 160ms ease, background-color 160ms ease;
+    transition: background-color 150ms ease, color 150ms ease;
 }
 
 .cheatsheet-level-tab:hover,
-.cheatsheet-level-tab:focus-visible {
-    color: var(--primary-color);
+.cheatsheet-level-tab:active,
+.cheatsheet-level-tab:focus-visible,
+.cheatsheet-level-tab[aria-pressed="true"] {
+    background-color: var(--primary-color);
+    color: #ffffff;
     outline: none;
 }
 
-.cheatsheet-level-tab[aria-pressed="true"] {
-    background: var(--primary-color);
-    color: var(--text-inverse);
+.cheatsheet-level-tab:focus-visible {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--primary-color);
 }
 
 .cheatsheet-search {
     display: flex;
     align-items: center;
-    flex: 0 1 440px;
-    width: 440px;
+    flex: 1 1 440px;
+    min-width: 0;
     height: 48px;
     gap: 10px;
     margin: 0;
@@ -150,7 +175,7 @@
 }
 
 .cheatsheet-navigation {
-    margin-bottom: 32px;
+    margin-bottom: 0;
 }
 
 .cheatsheet-navigation a {
@@ -181,13 +206,19 @@
 .cheatsheet-sections {
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 16px;
 }
 
 .cheatsheet-search-groups {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+.cheatsheet-search-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .cheatsheet-search-group.is-search-result-group {
@@ -201,7 +232,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px;
 }
 
 .cheatsheet-search-group-heading h3 {
@@ -233,7 +263,7 @@
 }
 
 .cheatsheet-section {
-    padding: 22px;
+    padding: 24px;
     border: 1px solid var(--border-main);
     border-radius: 16px;
     background: color-mix(in srgb, var(--bg-card) 72%, var(--bg-main));
@@ -245,9 +275,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 18px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border-main);
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
 }
 
 .cheatsheet-section-heading h2 {
@@ -264,14 +294,14 @@
 
 .cheatsheet-card-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
 }
 
 .cheatsheet-card {
     position: relative;
     min-width: 0;
-    padding: 20px 20px 18px;
+    padding: 24px;
     overflow: hidden;
     border: 1px solid var(--border-main);
     border-radius: 13px;
@@ -350,4 +380,61 @@
 
 [data-theme="dark"] .cheatsheet-card:hover {
     box-shadow: 0 8px 20px rgba(0, 0, 0, .2);
+}
+
+@media (max-width: 768px) {
+    .dashboard-page.cheatsheet-page {
+        padding: 24px;
+    }
+
+    .cheatsheet-heading {
+        min-height: 104px;
+        padding: 16px 14px;
+        border-radius: 14px;
+    }
+
+    .cheatsheet-heading::after {
+        right: -4px;
+        bottom: -20px;
+        width: 90px;
+        height: 90px;
+        opacity: .25;
+    }
+
+    .cheatsheet-heading h1 {
+        font-size: clamp(1.2rem, 5vw, 1.5rem);
+        line-height: 1.25;
+    }
+
+    .cheatsheet-heading p {
+        font-size: .85rem;
+        line-height: 1.4;
+    }
+
+    .cheatsheet-level-heading {
+        margin-bottom: 8px;
+    }
+
+    .cheatsheet-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .cheatsheet-card-grid {
+        gap: 12px;
+    }
+
+    .cheatsheet-page > main {
+        padding: 0 !important;
+    }
+
+    .cheatsheet-content {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 14px 12px !important;
+    }
 }
