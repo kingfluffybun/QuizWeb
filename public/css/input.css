@@ -1185,10 +1185,6 @@ textarea {
 }
 .lesson-slide-group {
   margin: 0 0 24px;
-  padding: 16px 16px 16px;
-  border: 2px solid #cbd5e1;
-  border-radius: 16px;
-  background: var(--bg-main);
 }
 .lesson-slide-fields {
   margin-bottom: 16px;
