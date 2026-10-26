@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, startTransition } from "react";
+import React, {
+  useState,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useCallback,
+  startTransition,
+} from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 
@@ -50,7 +57,11 @@ import {
   extractLessonSlides,
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
-import { reconcileCategory, stampUnitFields } from "@/lib/unit-form-sync";
+import {
+  exportUnitToImportJson,
+  reconcileCategory,
+  stampUnitFields,
+} from "@/lib/unit-form-sync";
 
 export interface SavedLessonSlide {
   lesson_text?: string;
@@ -291,101 +302,6 @@ export default function QuizInputForm({
     text: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (initialEditingQuiz || typeof window === "undefined") return;
-
-    const loadPendingQuiz = (pendingId: string | null) => {
-      if (!pendingId) return;
-      const parsedPendingId = Number(pendingId);
-      if (!Number.isInteger(parsedPendingId) || parsedPendingId < 1) {
-        window.sessionStorage.removeItem("quizweb-edit-pending-id");
-        setMessage({ type: "error", text: "The pending unit ID is invalid." });
-        return;
-      }
-
-      void getPendingQuizById(parsedPendingId)
-        .then((quiz) => {
-          window.sessionStorage.removeItem("quizweb-edit-pending-id");
-          if (!quiz || "error" in quiz) {
-            setMessage({
-              type: "error",
-              text:
-                quiz && "error" in quiz
-                  ? quiz.error ?? "The pending unit could not be loaded."
-                  : `Could not load pending unit ${parsedPendingId}. It may have been deleted or is no longer available.`,
-            });
-            return;
-          }
-          handleEdit(quiz as unknown as RecentQuizItem);
-        })
-        .catch((error: unknown) => {
-          window.sessionStorage.removeItem("quizweb-edit-pending-id");
-          console.error("Failed to load pending unit for editing:", error);
-          setMessage({
-            type: "error",
-            text:
-              error instanceof Error
-                ? `The pending unit could not be loaded: ${error.message}`
-                : "The pending unit could not be loaded. Please try again.",
-          });
-        });
-    };
-    const handleEditRequest = (event: Event) => {
-      loadPendingQuiz((event as CustomEvent<string>).detail);
-    };
-
-    const handleStudioLaunch = (event: Event) => {
-      const detail = (event as CustomEvent<{ toolId?: string; title?: string }>).detail;
-      const toolId = (detail?.toolId ?? "unit").toLowerCase();
-      setEditingQuiz(null);
-      setMessage(null);
-
-      if (toolId === "cp") {
-        setUnitInputTab("assessment");
-        setPreviewTab("assessment");
-        window.setTimeout(() => {
-          document.getElementById("assessment_title")?.focus();
-        }, 80);
-        return;
-      }
-
-      setUnitInputTab(toolId === "unit" ? "unit" : "lesson");
-      setPreviewTab("lesson");
-
-      if (toolId === "unit") {
-        window.setTimeout(() => {
-          document.getElementById("unit_title")?.focus();
-        }, 80);
-        return;
-      }
-
-      const matchedType = types.find(
-        (t) => t.type_name.toLowerCase() === toolId,
-      );
-      if (matchedType) {
-        setSelectedTypeId(matchedType.quiz_type_id.toString());
-      }
-      window.setTimeout(() => {
-        const questionInput = document.getElementById("question_text");
-        if (questionInput) {
-          questionInput.scrollIntoView({ behavior: "smooth", block: "center" });
-          questionInput.focus();
-        }
-      }, 100);
-    };
-
-    window.addEventListener("quizweb-edit-pending", handleEditRequest);
-    window.addEventListener("quizweb-studio-launch", handleStudioLaunch);
-
-    const urlPendingId = new URLSearchParams(window.location.search).get("pending_id");
-    const sessionPendingId = window.sessionStorage.getItem("quizweb-edit-pending-id");
-    loadPendingQuiz(urlPendingId || sessionPendingId);
-
-    return () => {
-      window.removeEventListener("quizweb-edit-pending", handleEditRequest);
-      window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
-    };
-  }, [initialEditingQuiz, types]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [idFilter, setIdFilter] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState<string>("");
@@ -686,13 +602,9 @@ export default function QuizInputForm({
       return;
     }
 
-    if (editingQuiz?._pendingUnit) {
-      setImportJsonMessage({
-        type: "error",
-        text: "This unit already has quiz questions. Import assessment-only JSON here to keep its existing quizzes unchanged.",
-      });
-      return;
-    }
+    // Full JSON may also be applied to an existing unit: capture its identity so the
+    // imported content replaces the unit in place (updatePendingUnitFromForm) on save.
+    const existingUnit = editingQuiz?._pendingUnit ? editingQuiz : null;
 
     const importErrors: string[] = [];
     result.data.unit_quiz_json.forEach((quiz, index) => {
@@ -795,17 +707,49 @@ export default function QuizInputForm({
     );
     const { sec_id: firstQuizSectionId, ...firstQuizWithoutSection } =
       firstQuiz;
-    setEditingQuiz({
-      ...firstQuizWithoutSection,
-      ...(firstQuizSectionId == null ? {} : { sec_id: firstQuizSectionId }),
-      type_name: firstQuizType?.type_name ?? "",
-      _queuedUnitQuiz: true,
-    });
+    if (existingUnit) {
+      const validIncomingSecId =
+        incomingSecId != null &&
+        sections.some((s) => s.sec_id === Number(incomingSecId))
+          ? Number(incomingSecId)
+          : undefined;
+      // The original unit quizzes are replaced by the imported ones on save.
+      setOriginalUnitQuizzes(
+        result.data.unit_quiz_json.map(({ sec_id, ...question }) => ({
+          ...question,
+          ...(sec_id == null ? {} : { sec_id }),
+        })),
+      );
+      setEditingQuiz({
+        ...firstQuizWithoutSection,
+        sec_id: validIncomingSecId ?? firstQuizSectionId ?? existingUnit.sec_id,
+        type_name: firstQuizType?.type_name ?? "",
+        quiz_id: existingUnit.quiz_id,
+        unit_id: existingUnit.unit_id,
+        pending_id: existingUnit.pending_id,
+        pending_status: existingUnit.pending_status,
+        difficulty_name: existingUnit.difficulty_name,
+        _pendingUnit: true,
+        unit_assessment: {
+          ...importedAssessment,
+          cp_steps: importedAssessment.steps,
+        },
+      });
+    } else {
+      setEditingQuiz({
+        ...firstQuizWithoutSection,
+        ...(firstQuizSectionId == null ? {} : { sec_id: firstQuizSectionId }),
+        type_name: firstQuizType?.type_name ?? "",
+        _queuedUnitQuiz: true,
+      });
+    }
     const slideMsg =
       slides && slides.length > 0 ? `, ${slides.length} lesson slide(s),` : "";
     setImportJsonMessage({
       type: "success",
-      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s). You can review all sections or submit directly.`,
+      text: existingUnit
+        ? `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s) into Unit #${existingUnit.pending_id}. Saving will replace the unit's lesson, quizzes and assessment.`
+        : `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s). You can review all sections or submit directly.`,
     });
   };
 
@@ -1029,6 +973,63 @@ export default function QuizInputForm({
       currentEntry,
       ...orderedQueuedQuizzes.slice(activeQuizIndex),
     ];
+  };
+
+  // Serializes the whole unit currently in the form (lesson, quizzes, assessment) into the
+  // canonical import JSON. Quiz selection mirrors handleSubmit so the export equals what
+  // would be saved.
+  const buildCurrentUnitImportJson = () => {
+    const quizzes = preserveQuizDataOnSave
+      ? originalUnitQuizzes
+      : unitInputTab === "import" && fullJsonImport?.unit_quiz_json?.length
+        ? fullJsonImport.unit_quiz_json
+        : buildQuizBatch(buildCurrentQuizEntry());
+    return JSON.stringify(
+      exportUnitToImportJson({
+        unitTitle,
+        secId: selectedSecId,
+        catId: selectedCatId,
+        lessonSlides,
+        assessment: {
+          title: assessmentTitle,
+          description: assessmentDescription,
+          steps: cpSteps,
+          expectedOutcome,
+        },
+        quizzes,
+      }),
+      null,
+      2,
+    );
+  };
+
+  const handleExportUnitJson = async (target: "clipboard" | "editor") => {
+    const json = buildCurrentUnitImportJson();
+    if (target === "editor") {
+      setImportJsonText(json);
+      setUnitInputTab("import");
+      setImportJsonMessage({
+        type: "success",
+        text: "Current unit exported below. Edit it and click Validate & Load to apply it to this unit.",
+      });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(json);
+      setImportJsonMessage({
+        type: "success",
+        text: "Unit JSON copied to clipboard.",
+      });
+      setMessage({ type: "success", text: "Unit JSON copied to clipboard." });
+    } catch {
+      // Clipboard can be unavailable (e.g. insecure context): fall back to the editor.
+      setImportJsonText(json);
+      setUnitInputTab("import");
+      setImportJsonMessage({
+        type: "error",
+        text: "Clipboard is unavailable. The unit JSON was placed in the editor below instead.",
+      });
+    }
   };
 
   const handleAddToUnitQueue = () => {
@@ -1813,6 +1814,108 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
+  // Effect Event: always calls the latest handleEdit without making the listener
+  // effect below re-subscribe (and re-load the pending unit) on every render.
+  const onPendingUnitLoaded = useEffectEvent((quiz: RecentQuizItem) => {
+    handleEdit(quiz);
+  });
+
+  useEffect(() => {
+    if (initialEditingQuiz || typeof window === "undefined") return;
+
+    const loadPendingQuiz = (pendingId: string | null) => {
+      if (!pendingId) return;
+      const parsedPendingId = Number(pendingId);
+      if (!Number.isInteger(parsedPendingId) || parsedPendingId < 1) {
+        window.sessionStorage.removeItem("quizweb-edit-pending-id");
+        setMessage({ type: "error", text: "The pending unit ID is invalid." });
+        return;
+      }
+
+      void getPendingQuizById(parsedPendingId)
+        .then((quiz) => {
+          window.sessionStorage.removeItem("quizweb-edit-pending-id");
+          if (!quiz || "error" in quiz) {
+            setMessage({
+              type: "error",
+              text:
+                quiz && "error" in quiz
+                  ? quiz.error ?? "The pending unit could not be loaded."
+                  : `Could not load pending unit ${parsedPendingId}. It may have been deleted or is no longer available.`,
+            });
+            return;
+          }
+          onPendingUnitLoaded(quiz as unknown as RecentQuizItem);
+        })
+        .catch((error: unknown) => {
+          window.sessionStorage.removeItem("quizweb-edit-pending-id");
+          console.error("Failed to load pending unit for editing:", error);
+          setMessage({
+            type: "error",
+            text:
+              error instanceof Error
+                ? `The pending unit could not be loaded: ${error.message}`
+                : "The pending unit could not be loaded. Please try again.",
+          });
+        });
+    };
+    const handleEditRequest = (event: Event) => {
+      loadPendingQuiz((event as CustomEvent<string>).detail);
+    };
+
+    const handleStudioLaunch = (event: Event) => {
+      const detail = (event as CustomEvent<{ toolId?: string; title?: string }>).detail;
+      const toolId = (detail?.toolId ?? "unit").toLowerCase();
+      setEditingQuiz(null);
+      setMessage(null);
+
+      if (toolId === "cp") {
+        setUnitInputTab("assessment");
+        setPreviewTab("assessment");
+        window.setTimeout(() => {
+          document.getElementById("assessment_title")?.focus();
+        }, 80);
+        return;
+      }
+
+      setUnitInputTab(toolId === "unit" ? "unit" : "lesson");
+      setPreviewTab("lesson");
+
+      if (toolId === "unit") {
+        window.setTimeout(() => {
+          document.getElementById("unit_title")?.focus();
+        }, 80);
+        return;
+      }
+
+      const matchedType = types.find(
+        (t) => t.type_name.toLowerCase() === toolId,
+      );
+      if (matchedType) {
+        setSelectedTypeId(matchedType.quiz_type_id.toString());
+      }
+      window.setTimeout(() => {
+        const questionInput = document.getElementById("question_text");
+        if (questionInput) {
+          questionInput.scrollIntoView({ behavior: "smooth", block: "center" });
+          questionInput.focus();
+        }
+      }, 100);
+    };
+
+    window.addEventListener("quizweb-edit-pending", handleEditRequest);
+    window.addEventListener("quizweb-studio-launch", handleStudioLaunch);
+
+    const urlPendingId = new URLSearchParams(window.location.search).get("pending_id");
+    const sessionPendingId = window.sessionStorage.getItem("quizweb-edit-pending-id");
+    loadPendingQuiz(urlPendingId || sessionPendingId);
+
+    return () => {
+      window.removeEventListener("quizweb-edit-pending", handleEditRequest);
+      window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
+    };
+  }, [initialEditingQuiz, types]);
+
   const loadQueuedQuiz = (queuedQuiz: QueuedQuizEntry) => {
     // Category/Section/Unit belong to the unit, not to individual quizzes. Drop them so
     // stepping through quizzes never overwrites the unit-level selections.
@@ -2590,15 +2693,29 @@ export default function QuizInputForm({
               : "Create New Unit"}
           </h2>
           {editingQuiz && !editingQuiz._queuedUnitQuiz && (
-            <button
-              type="button"
-              className="btn-delete"
-              onClick={handleCancelEdit}
-              disabled={isPending}
-              style={{ padding: "6px 12px", fontSize: "0.82rem" }}
-            >
-              Discard &amp; New Unit
-            </button>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {editingQuiz._pendingUnit && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void handleExportUnitJson("clipboard")}
+                  disabled={isPending}
+                  style={{ padding: "6px 12px", fontSize: "0.82rem" }}
+                  title="Copy this whole unit as import JSON"
+                >
+                  Copy Unit JSON
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-delete"
+                onClick={handleCancelEdit}
+                disabled={isPending}
+                style={{ padding: "6px 12px", fontSize: "0.82rem" }}
+              >
+                Discard &amp; New Unit
+              </button>
+            </div>
           )}
         </div>
         {editingQuiz && (
@@ -3808,9 +3925,12 @@ export default function QuizInputForm({
             <p>
               {editingQuiz?._pendingUnit ? (
                 <>
-                  This unit already has quizzes. Paste JSON containing only{" "}
-                  <code>unit_assessment_json</code> to replace its assessment
-                  while keeping its quiz questions unchanged.
+                  Click <strong>Export Current Unit</strong> to load this whole unit
+                  (title, section, lesson slides, quizzes and assessment) as JSON,
+                  edit it, then <strong>Validate &amp; Load</strong> to apply it to
+                  this unit. Saving replaces the unit&apos;s content in place. JSON
+                  containing only <code>unit_assessment_json</code> replaces just the
+                  assessment and keeps the existing quiz questions unchanged.
                 </>
               ) : (
                 <>
@@ -3894,6 +4014,24 @@ export default function QuizInputForm({
                 marginTop: "10px",
               }}
             >
+              {editingQuiz?._pendingUnit && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void handleExportUnitJson("editor")}
+                  >
+                    Export Current Unit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void handleExportUnitJson("clipboard")}
+                  >
+                    Copy Unit JSON
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="btn-primary"

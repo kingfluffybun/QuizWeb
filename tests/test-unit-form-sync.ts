@@ -2,10 +2,15 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  extractLessonSlides,
   parseAssessmentBulkImport,
   parseAssessmentImport,
 } from "../lib/assessment-json-import";
-import { reconcileCategory, stampUnitFields } from "../lib/unit-form-sync";
+import {
+  exportUnitToImportJson,
+  reconcileCategory,
+  stampUnitFields,
+} from "../lib/unit-form-sync";
 
 // Mirrors the curriculum: HTML 1-3, CSS 4-7 & 13-14, JavaScript 8-12 & 15-16
 const sections = [
@@ -98,6 +103,124 @@ function run() {
   );
   assert.equal(emptyStamp.success, true, "empty-selection stamping must leave a valid import");
   console.log("✔ JSON import validates as-is and after stamping (Unit 98, 3 categories)");
+
+  // ---- exportUnitToImportJson: existing unit -> canonical JSON -> re-import ---------
+  // Quizzes shaped like getUnitById rows (extra DB columns, null CP title, string payload)
+  const dbQuizzes = [
+    {
+      quiz_id: 501, unit_id: 98, quiz_order: 1, cat_id: 1, sec_id: 1,
+      difficulty_id: 1, quiz_type_id: 1, type_name: "MCQ", difficulty_name: "Easy",
+      question_text: "Which tag starts an HTML document?",
+      quiz_payload: { options: ["<html>", "<head>", "<body>", "<p>"], correct_index: 0 },
+    },
+    {
+      quiz_id: 502, unit_id: 98, quiz_order: 2, cat_id: 1, sec_id: 1,
+      difficulty_id: 2, quiz_type_id: 5, type_name: "CP",
+      question_text: "Write a heading",
+      quiz_payload: JSON.stringify({
+        title: null,
+        steps: [{ prompt: "Add an h1", template: "", expected: "<h1>Hi</h1>" }],
+      }),
+    },
+  ];
+  const exportSource = {
+    unitTitle: "  Document Structure  ",
+    secId: "4",
+    catId: "2",
+    lessonSlides: [
+      { title: "Skeleton", text: "Every page has a skeleton.", code: "<html></html>" },
+      { text: "Second slide without title or code." },
+    ],
+    assessment: {
+      title: "Build a page",
+      description: "Create a heading",
+      steps: [
+        {
+          stepNumber: 1,
+          instruction: "Add an h1",
+          inheritPreviousCode: false,
+          starterCode: { html: "", css: "", js: "" },
+          expectedTemplate: { html: "<h1>####</h1>", css: "", js: "" },
+          hint: undefined,
+        },
+      ],
+      expectedOutcome: "<h1>Hello</h1>",
+    },
+    quizzes: dbQuizzes,
+  };
+  const exported = exportUnitToImportJson(exportSource);
+  assert.equal(exported.unit_title, "Document Structure");
+  assert.equal(exported.sec_id, 4);
+  assert.deepEqual(
+    exported.unit_quiz_json.map((q) => [q.cat_id, q.sec_id]),
+    [[2, 4], [2, 4]],
+    "unit category/section are stamped onto every exported quiz",
+  );
+  assert.ok(!("quiz_id" in exported.unit_quiz_json[0]), "DB-only columns are dropped");
+
+  const reimported = parseAssessmentImport(JSON.stringify(exported, null, 2));
+  if (!reimported.success) throw new Error(`export must re-import: ${reimported.errors.join(" | ")}`);
+  assert.equal(reimported.mode, "full", "exported unit re-imports as a full unit");
+  if (reimported.mode !== "full") throw new Error("unreachable");
+  assert.equal(reimported.data.unit_title, "Document Structure");
+  assert.equal(reimported.data.sec_id, 4);
+  assert.equal(reimported.data.unit_quiz_json.length, 2);
+  assert.equal(reimported.data.unit_quiz_json[1].question_text, "Write a heading");
+  assert.equal(reimported.data.unit_assessment_json.steps.length, 1);
+  assert.equal(reimported.data.unit_assessment_json.expected_outcome, "<h1>Hello</h1>");
+  assert.deepEqual(extractLessonSlides(reimported.data.unit_lesson_card_json), [
+    { title: "Skeleton", text: "Every page has a skeleton.", code: "<html></html>" },
+    { text: "Second slide without title or code." },
+  ]);
+
+  // Re-exporting the re-imported data is stable (idempotent round trip)
+  const reexported = exportUnitToImportJson({
+    ...exportSource,
+    unitTitle: reimported.data.unit_title ?? "",
+    lessonSlides: extractLessonSlides(reimported.data.unit_lesson_card_json) ?? [],
+    assessment: {
+      title: reimported.data.unit_assessment_json.title,
+      description: reimported.data.unit_assessment_json.description,
+      steps: reimported.data.unit_assessment_json.steps,
+      expectedOutcome: reimported.data.unit_assessment_json.expected_outcome,
+    },
+    quizzes: reimported.data.unit_quiz_json,
+  });
+  assert.deepEqual(reexported, exported, "export -> import -> export is stable");
+
+  // The submit envelope built from the re-imported unit still validates
+  const submitted = parseAssessmentBulkImport(
+    JSON.stringify(
+      buildSubmittedImport(
+        reimported.data.unit_assessment_json,
+        reimported.data.unit_quiz_json as Array<Record<string, unknown>>,
+      ),
+    ),
+  );
+  assert.equal(submitted.success, true, "submit envelope from re-imported unit must validate");
+
+  // Real exported unit (Unit 98) also round-trips through the exporter
+  const unit98Export = exportUnitToImportJson({
+    unitTitle: imported.data.unit_title ?? "",
+    secId: imported.data.sec_id ?? "",
+    catId: "",
+    lessonSlides: extractLessonSlides(imported.data.unit_lesson_card_json) ?? [],
+    assessment: {
+      title: imported.data.unit_assessment_json.title,
+      description: imported.data.unit_assessment_json.description,
+      steps: imported.data.unit_assessment_json.steps,
+      expectedOutcome: imported.data.unit_assessment_json.expected_outcome,
+    },
+    quizzes: imported.data.unit_quiz_json,
+  });
+  const unit98Reimport = parseAssessmentImport(JSON.stringify(unit98Export));
+  assert.equal(unit98Reimport.success, true, "Unit 98 export must re-import");
+  if (unit98Reimport.success && unit98Reimport.mode === "full") {
+    assert.equal(unit98Reimport.data.unit_quiz_json.length, imported.data.unit_quiz_json.length);
+  } else {
+    throw new Error("Unit 98 export should re-import in full mode");
+  }
+  console.log("✔ exportUnitToImportJson round-trips through Import JSON");
 
   console.log("ALL UNIT FORM SYNC TESTS PASSED");
 }

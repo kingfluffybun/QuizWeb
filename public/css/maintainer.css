@@ -42,7 +42,7 @@
   --maintainer-brand-glow: rgba(37, 99, 235, 0.16);
 
   /* Global QuizWeb Harmony (Purple Accents) */
-  --maintainer-purple: var(--primary-color, #9966ff);
+  --maintainer-purple: var(--primary-color, #96f);
   --maintainer-purple-hover: var(--selected-color, #7d3fff);
 
   /* Semantic Status Tokens (Light Theme) */
@@ -1572,8 +1572,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
 .maintainer-page a:focus-visible,
 .maintainer-page select:focus-visible,
 .maintainer-page input:focus-visible {
-  outline: 2px solid var(--maintainer-brand);
-  outline-offset: 4px;
+  outline: 2px solid var(--maintainer-purple);
 }
 
 
@@ -1680,9 +1679,9 @@ html[data-motion="reduce"] .maintainer-page *::after {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--maintainer-brand);
-  color: #ffffff;
-  border: 1px solid var(--maintainer-brand);
+  background: var(--maintainer-surface-alt, transparent);
+  color: var(--maintainer-text, var(--text-main, #333));
+  border: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
   padding: 12px 20px;
   border-radius: var(--radius-md);
   font-family: 'Poppins', sans-serif;
@@ -1691,14 +1690,13 @@ html[data-motion="reduce"] .maintainer-page *::after {
   text-decoration: none;
   cursor: pointer;
   box-shadow: var(--maintainer-shadow-sm);
-  transition: var(--maintainer-transition);
+  transition: all 0.18s ease;
 }
 
 .btn-studio-primary:hover {
-  background: var(--maintainer-brand-hover);
-  border-color: var(--maintainer-brand-hover);
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px var(--maintainer-brand-glow);
+  background: var(--maintainer-surface-alt, transparent);
+  color: var(--primary-color, #9966ff);
+  border-color: var(--primary-color, #9966ff);
 }
 
 /* Stats Ribbon Grid & Interactive Cards */

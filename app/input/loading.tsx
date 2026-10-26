@@ -3,7 +3,7 @@ import "#css/input.css";
 
 export default function InputLoading() {
   return (
-    <div className="skeleton-input-page" aria-busy="true" aria-label="Loading question studio">
+    <div className="skeleton-input-page quiz-input-studio-page" aria-busy="true" aria-label="Loading question studio">
       {/* 1. Header */}
       <header className="admin-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 32px" }}>
         <div className="skeleton-shimmer skeleton-line title" style={{ width: 220, margin: 0 }} />

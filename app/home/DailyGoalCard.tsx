@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
-import { getDailyXpGoalThresholds } from "@/lib/daily-goal";
+import { DAILY_XP_GOAL_THRESHOLDS } from "@/lib/daily-goal";
 import type { DailyGoalData } from "@/lib/daily-goal";
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const CHART_HEIGHT_PX = 148;
+const MAX_CHART_XP = 300;
 
 interface DailyGoalPreview {
     weekXp: number[];
@@ -66,11 +67,9 @@ export default function DailyGoalCard({
         0,
         canPreview && previewData && todayIndex >= 0 ? previewWeekXp[todayIndex] : goalData.todayXp,
     );
-    const goalThresholds = getDailyXpGoalThresholds(previousWeekXp);
-    const maximumGoal = goalThresholds[goalThresholds.length - 1];
-    const goal = goalThresholds.find((threshold) => todayXp < threshold) ?? maximumGoal;
+    const goal = goalData.dailyGoal;
     const todayProgress = Math.min(todayXp / goal, 1) * 100;
-    const chartTicks = [0, ...goalThresholds].reverse();
+    const chartTicks = [0, ...DAILY_XP_GOAL_THRESHOLDS].reverse();
 
     const updatePreviewDay = (index: number, value: number) => {
         const currentPreview = previewData ?? {
@@ -145,7 +144,7 @@ export default function DailyGoalCard({
                                             className={`graph-y-bar${hasActivity ? "" : " graph-y-bar-empty"}`}
                                             style={{
                                                 height: hasActivity
-                                                    ? `${getBarHeight(xp, maximumGoal)}px`
+                                                    ? `${getBarHeight(xp, MAX_CHART_XP)}px`
                                                     : "2px",
                                             }}
                                             title={`${xp} XP on ${goalData.weekDates[index]}`}

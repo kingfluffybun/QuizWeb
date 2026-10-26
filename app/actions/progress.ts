@@ -3,12 +3,16 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import {
-  getNextSectionId,
   getNextAvailableSectionId,
   computeCurriculumUnlockState,
   type CanonicalUnitSummary,
 } from "@/lib/curriculum";
-import { getAvailableUnits, type AvailableUnit } from "@/app/actions/quiz";
+import {
+  getAvailableUnits,
+  getAvailableUnitsForStaff,
+  type AvailableUnit,
+} from "@/app/actions/quiz";
+import { isStaff, requireStaff } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
@@ -203,11 +207,68 @@ export async function getUserLastActiveProgress(
 }
 
 /**
+ * Resolves the role for a user (maintainer, admin, or user) from session or database.
+ */
+async function getUserRole(explicitUserId?: number): Promise<string | null> {
+  const testSession = (
+    globalThis as unknown as {
+      __TEST_AUTH_SESSION__?: {
+        user?: { id?: string | number; role?: string; user_role?: string };
+      } | null;
+    }
+  ).__TEST_AUTH_SESSION__;
+
+  if (testSession?.user) {
+    const sessionUserId = testSession.user.id ? Number(testSession.user.id) : undefined;
+    const sessionRole = testSession.user.role || testSession.user.user_role;
+    if (sessionRole && (!explicitUserId || explicitUserId === sessionUserId)) {
+      return String(sessionRole);
+    }
+  }
+
+  let sessionUserRole: string | undefined;
+  let sessionUserId: number | undefined;
+  try {
+    const session = await auth();
+    if (session?.user) {
+      sessionUserId = session.user.id ? Number(session.user.id) : undefined;
+      sessionUserRole = (session.user.role as string) || (session.user.user_role as string);
+    }
+  } catch {
+    // Handled gracefully outside Next.js request context
+  }
+
+  const targetUserId = explicitUserId ?? sessionUserId;
+  if (sessionUserRole && (!explicitUserId || explicitUserId === sessionUserId)) {
+    return sessionUserRole;
+  }
+
+  if (targetUserId && Number.isInteger(targetUserId) && targetUserId > 0) {
+    try {
+      const [rows] = await db.query<RowDataPacket[]>(
+        "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+        [targetUserId],
+      );
+      if (rows.length > 0 && rows[0]?.user_role) {
+        return String(rows[0].user_role);
+      }
+    } catch {
+      // Graceful fallback
+    }
+  }
+
+  return null;
+}
+
+/**
  * Computes the user's unlocked units and sections across the entire curriculum.
  *
- * Enforces strict per-unit progression:
+ * Enforces strict per-unit progression for regular users:
  * - A unit is unlocked only if the user has completed its predecessor.
  * - A section becomes available only once all units in the previous section are completed.
+ *
+ * Maintainers and admins are immune/exempted from these unit tracking limitations;
+ * all units and sections are immediately unlocked for staff.
  */
 export async function getUserCurriculumUnlockState(
   explicitUserId?: number,
@@ -257,6 +318,20 @@ export async function getUserCurriculumUnlockState(
 
     const state = computeCurriculumUnlockState(allUnitsOrdered, completedUnitIds);
 
+    // Maintainers and admins are immune/exempted from unit tracking limitations:
+    // All approved curriculum units and sections are immediately unlocked for staff.
+    const userRole = await getUserRole(userId);
+    if (isStaff(userRole)) {
+      return {
+        unlockedUnitIds: new Set<number>(allUnitsOrdered.map((u) => u.unit_id)),
+        unlockedSectionIds: new Set<number>(allUnitsOrdered.map((u) => u.sec_id)),
+        completedSectionIds: state.completedSectionIds,
+        completedUnitIds,
+        activeUnitId: state.activeUnitId,
+        activeSectionId: state.activeSectionId,
+      };
+    }
+
     return {
       ...state,
       completedUnitIds,
@@ -276,11 +351,16 @@ export async function getUserCurriculumUnlockState(
 
 /**
  * Checks whether a specific unit is currently unlocked for the user.
+ * Maintainers and admins are immune to unit tracking limitations and can access any unit.
  */
 export async function isUnitUnlockedForUser(
   unitId: number,
   explicitUserId?: number,
 ): Promise<boolean> {
+  const userRole = await getUserRole(explicitUserId);
+  if (isStaff(userRole) || (await requireStaff())) {
+    return true;
+  }
   const state = await getUserCurriculumUnlockState(explicitUserId);
   return state.unlockedUnitIds.has(Number(unitId));
 }
@@ -291,6 +371,18 @@ export async function isUnitUnlockedForUser(
 export async function getAvailableUnitsForUser(
   explicitUserId?: number,
 ): Promise<AvailableUnit[]> {
+  const userRole = await getUserRole(explicitUserId);
+  const isStaffUser = isStaff(userRole);
+  if (isStaffUser) {
+    const staffUnits = await getAvailableUnitsForStaff(explicitUserId);
+    const unlockState = await getUserCurriculumUnlockState(explicitUserId);
+    return staffUnits.map((unit) => ({
+      ...unit,
+      is_completed: unlockState.completedUnitIds.has(unit.unit_id),
+      is_locked: false,
+    }));
+  }
+
   const baseUnits = await getAvailableUnits();
   const unlockState = await getUserCurriculumUnlockState(explicitUserId);
 

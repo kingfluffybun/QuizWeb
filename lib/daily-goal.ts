@@ -25,4 +25,5 @@ export interface DailyGoalData {
     weekXp: number[];
     weekDates: string[];
     previousWeekXp: number;
+    dailyGoal: number;
 }

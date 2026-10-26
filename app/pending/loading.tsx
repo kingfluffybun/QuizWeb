@@ -4,7 +4,7 @@ import "#css/pending.css";
 
 export default function PendingLoading() {
   return (
-    <div className="skeleton-pending-page" aria-busy="true" aria-label="Loading pending review queue">
+    <div className="skeleton-pending-page pending-review-page" aria-busy="true" aria-label="Loading pending review queue">
       {/* 1. Header */}
       <header className="admin-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 32px" }}>
         <div className="skeleton-shimmer skeleton-line title" style={{ width: 240, margin: 0 }} />

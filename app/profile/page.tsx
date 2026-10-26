@@ -111,18 +111,12 @@ export default function ProfilePage() {
             const emailValue = draft?.email || email;
             const learningGoalValue = draft?.learningGoal ?? learningGoal;
 
-            console.log("Saving values:");
-            console.log("- Username:", JSON.stringify(usernameValue));
-            console.log("- Learning Goal:", JSON.stringify(learningGoalValue));
-
             const numericGoal = learningGoalValue != null ? Number(learningGoalValue) : undefined;
             const payload = {
                 username: (usernameValue || "").trim(),
                 learning_goal: numericGoal,
                 daily_xp_goal: numericGoal,
             };
-
-            console.log("Final payload:", JSON.stringify(payload));
 
             const response = await fetch('/api/db/user-info', {
                 method: 'POST',
@@ -153,7 +147,6 @@ export default function ProfilePage() {
 
             setIsEditing(false);
         } catch (error: any) {
-            console.error("Error in handleSave:", error);
 
             let errorMessage = "Failed to save changes. Please try again.";
 
