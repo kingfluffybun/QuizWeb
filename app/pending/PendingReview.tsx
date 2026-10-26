@@ -137,6 +137,12 @@ export default function PendingReview({
         <div className="pending-filters" aria-label="Review filter">
           <label className="pending-status-select-wrap">
             <span>Status</span>
+            <span
+              className={`pending-status-select-value ${filter}`}
+              aria-hidden="true"
+            >
+              {filter}
+            </span>
             <select
               className={`pending-status-select ${filter}`}
               value={filter}

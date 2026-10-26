@@ -15,6 +15,11 @@ interface TotalXpRow extends RowDataPacket {
     xp: number | string;
 }
 
+interface LearningGoalRow extends RowDataPacket {
+    learning_goal: number | string | null;
+    daily_xp_goal: number | string | null;
+}
+
 function getWeekDates(todayDateStr: string, offsetWeeks = 0): string[] {
     const d = new Date(todayDateStr + "T00:00:00Z");
     const dayOfWeek = d.getUTCDay();
@@ -46,7 +51,7 @@ export async function getDailyGoalData(clientToday?: string): Promise<DailyGoalD
     const previousWeekDates = getWeekDates(todayDate, -1);
 
     try {
-        const [[activityRows], [previousWeekTotalRows]] = await Promise.all([
+        const [[activityRows], [previousWeekTotalRows], [goalRows]] = await Promise.all([
             db.query<ActivityRow[]>(
                 `SELECT DATE_FORMAT(activity_date, '%Y-%m-%d') AS activity_date,
                         SUM(xp_earned) AS xp
@@ -65,6 +70,13 @@ export async function getDailyGoalData(clientToday?: string): Promise<DailyGoalD
                    AND activity_date BETWEEN ? AND ?`,
                 [userId, previousWeekDates[0], previousWeekDates[6]],
             ),
+            db.query<LearningGoalRow[]>(
+                `SELECT learning_goal, daily_xp_goal
+                 FROM user_auth_tbl
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [userId],
+            ),
         ]);
         const xpByDate = new Map(
             activityRows.map((row) => [row.activity_date, Number(row.xp)]),
@@ -77,11 +89,21 @@ export async function getDailyGoalData(clientToday?: string): Promise<DailyGoalD
             throw new Error("Invalid previous-week XP total");
         }
 
+        const goalRow = goalRows[0];
+        if (!goalRow) {
+            throw new Error("Unable to find the user's learning goal");
+        }
+        const dailyGoal = Number(goalRow.learning_goal ?? goalRow.daily_xp_goal ?? 50);
+        if (!Number.isSafeInteger(dailyGoal) || dailyGoal < 1) {
+            throw new Error("Invalid learning goal");
+        }
+
         return {
             todayXp: todayIndex >= 0 ? weekXp[todayIndex] : 0,
             weekXp,
             weekDates,
             previousWeekXp,
+            dailyGoal,
         };
     } catch (error) {
         console.error("Failed to load daily XP goal data:", error);

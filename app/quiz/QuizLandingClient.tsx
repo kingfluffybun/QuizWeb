@@ -307,6 +307,11 @@ export default function QuizLandingClient({
     );
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+    const [lessonProgressState, setLessonProgressState] = useState<
+        "idle" | "saving" | "saved" | "failed"
+    >("idle");
+    const [lessonProgressError, setLessonProgressError] = useState<string | null>(null);
+    const [completionRetryCount, setCompletionRetryCount] = useState(0);
     const completionRecorded = useRef(false);
     const allQuestionsCorrect = quizzes.length > 0 && score === quizzes.length;
     const totalQuizXp = calculateQuizXp(baseXp, allQuestionsCorrect, currentStreak);
@@ -359,19 +364,32 @@ export default function QuizLandingClient({
         if (!isPassed) return;
 
         if (completionRecorded.current) return;
+        if (!resolvedUnitId) return;
         completionRecorded.current = true;
 
-        const targetUnitId = resolvedUnitId;
-        if (targetUnitId) {
-            recordLessonSlideProgress(
-                targetUnitId,
-                Math.max(1, lessonSlides.length),
-                Math.max(1, lessonSlides.length),
-                true,
-            ).catch((err) => {
-                console.error("Failed to record lesson completion progress:", err);
-            });
-        }
+        recordLessonSlideProgress(
+            resolvedUnitId,
+            Math.max(1, lessonSlides.length),
+            Math.max(1, lessonSlides.length),
+            true,
+        ).then((response) => {
+            if (response.success && response.isCompleted) {
+                setLessonProgressState("saved");
+                return;
+            }
+            completionRecorded.current = false;
+            setLessonProgressState("failed");
+            setLessonProgressError(
+                response.success
+                    ? "The server did not confirm lesson completion. Please retry."
+                    : response.error ?? "Lesson progress could not be saved.",
+            );
+        }).catch((err) => {
+            completionRecorded.current = false;
+            setLessonProgressState("failed");
+            setLessonProgressError("Lesson progress could not be saved. Please retry.");
+            console.error("Failed to record lesson completion progress:", err);
+        });
         recordQuizCompletion({
             xpEarned: totalQuizXp,
             currentStreak,
@@ -385,7 +403,7 @@ export default function QuizLandingClient({
         }).catch((error) => {
             console.error("Failed to record quiz completion:", error);
         });
-    }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length]);
+    }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount]);
 
     useEffect(() => {
         if (typeof initialSlideOrder === "number" && initialSlideOrder > 0 && lessonSlides.length > 0) {
@@ -398,7 +416,11 @@ export default function QuizLandingClient({
         if (!resolvedUnitId || !hasLesson || isFinished) return;
         const currentOrder = lessonSlideIndex + 1;
         const total = Math.max(1, lessonSlides.length);
-        recordLessonSlideProgress(resolvedUnitId, currentOrder, total, false).catch((err) => {
+        recordLessonSlideProgress(resolvedUnitId, currentOrder, total, false).then((response) => {
+            if (!response.success) {
+                console.error("Failed to record slide progress:", response.error);
+            }
+        }).catch((err) => {
             console.error("Failed to record slide progress:", err);
         });
     }, [resolvedUnitId, hasLesson, lessonSlideIndex, lessonSlides.length, isFinished]);
@@ -413,8 +435,47 @@ export default function QuizLandingClient({
         });
     };
 
+    const finishLessonOnlyUnit = async () => {
+        if (!resolvedUnitId || lessonProgressState === "saving") return;
+
+        setLessonProgressState("saving");
+        setLessonProgressError(null);
+        try {
+            const response = await recordLessonSlideProgress(
+                resolvedUnitId,
+                Math.max(1, lessonSlides.length),
+                Math.max(1, lessonSlides.length),
+                true,
+            );
+            if (!response.success || !response.isCompleted) {
+                setLessonProgressState("failed");
+                setLessonProgressError(
+                    response.success
+                        ? "The server did not confirm lesson completion. Please retry."
+                        : response.error ?? "Lesson progress could not be saved.",
+                );
+                return;
+            }
+
+            setLessonProgressState("saved");
+            playQuizSound("lesson-complete");
+            router.push(completionDestination === "home" ? "/home" : "/learn");
+        } catch (error) {
+            console.error("Failed to record lesson completion progress:", error);
+            setLessonProgressState("failed");
+            setLessonProgressError("Lesson progress could not be saved. Please retry.");
+        }
+    };
+
     const questionParts = parseQuizQuestion(quiz?.question_text ?? "Loading question...");
     const questionHasCode = questionParts.some((part) => part.type === "code");
+    const isLessonProgressSaved = !resolvedUnitId || lessonProgressState === "saved";
+    const isLessonProgressPending =
+        Boolean(resolvedUnitId) &&
+        lessonProgressState === "idle" &&
+        isFinished &&
+        lives > 0 &&
+        (quizzes.length === 0 || score >= quizzes.length);
 
     const handleIncorrectPair = () => {
         playQuizSound("wrong-answer");
@@ -717,11 +778,39 @@ export default function QuizLandingClient({
                                   ? "Outstanding performance! Ready to tackle the Unit Coding Assessment?"
                                   : "Outstanding performance!"}
                         </p>
+                        {isPassed && resolvedUnitId && (
+                            lessonProgressState === "saving" || isLessonProgressPending
+                        ) && (
+                            <p role="status">Saving lesson progress...</p>
+                        )}
+                        {isPassed && resolvedUnitId && lessonProgressState === "failed" && (
+                            <div role="alert">
+                                <p>{lessonProgressError}</p>
+                                <button
+                                    className="options"
+                                    type="button"
+                                    onClick={() => {
+                                        setLessonProgressState("saving");
+                                        setLessonProgressError(null);
+                                        setCompletionRetryCount((count) => count + 1);
+                                    }}
+                                >
+                                    Retry saving progress
+                                </button>
+                            </div>
+                        )}
+                        {isPassed && resolvedUnitId && lessonProgressState === "saved" && (
+                            <p role="status">Lesson progress saved.</p>
+                        )}
                         {isPassed && hasCodingAssessment && (
                             <Link
                                 href={codingAssessmentHref}
                                 className="options"
                                 id="submit"
+                                aria-disabled={!isLessonProgressSaved}
+                                onClick={(event) => {
+                                    if (!isLessonProgressSaved) event.preventDefault();
+                                }}
                                 style={{ textDecoration: "none" }}
                             >
                                 Code Problem
@@ -732,6 +821,10 @@ export default function QuizLandingClient({
                                 href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
                                 className="options"
                                 id={hasCodingAssessment ? undefined : "submit"}
+                                aria-disabled={!isLessonProgressSaved}
+                                onClick={(event) => {
+                                    if (!isLessonProgressSaved) event.preventDefault();
+                                }}
                                 style={{
                                     textDecoration: "none",
                                     ...(hasCodingAssessment
@@ -756,6 +849,7 @@ export default function QuizLandingClient({
                             id={isPassed ? undefined : "submit"}
                             type="button"
                             onClick={() => window.location.reload()}
+                            disabled={isPassed && !isLessonProgressSaved}
                             style={
                                 isPassed
                                     ? {
@@ -917,6 +1011,9 @@ export default function QuizLandingClient({
 
             <footer className={!isShowingLesson && result ? (result.correct ? "correct" : "incorrect") : ""}>
                 <div style={{ width: "100%", maxWidth: "1080px", display: "flex", justifyContent: "space-between" }}>
+                    {lessonProgressError && !isFinished && (
+                        <p role="alert">{lessonProgressError}</p>
+                    )}
                     {/* dito sa div yung message */}
                     {hasLesson && !hasStartedQuiz ? (
                         <div className="lesson-footer-controls">
@@ -937,26 +1034,16 @@ export default function QuizLandingClient({
                                     type="button"
                                     className="options"
                                     id="submit"
-                                    onClick={() => {
-                                        if (isLessonOnlyUnit) {
-                                            if (resolvedUnitId) {
-                                                recordLessonSlideProgress(
-                                                    resolvedUnitId,
-                                                    Math.max(1, lessonSlides.length),
-                                                    Math.max(1, lessonSlides.length),
-                                                    true,
-                                                ).catch((err) => {
-                                                    console.error("Failed to record lesson completion progress:", err);
-                                                });
-                                            }
-                                            playQuizSound("lesson-complete");
-                                            router.push(completionDestination === "home" ? "/home" : "/learn");
-                                        } else {
-                                            setHasStartedQuiz(true);
-                                        }
-                                    }}
+                                    onClick={() => isLessonOnlyUnit
+                                        ? void finishLessonOnlyUnit()
+                                        : setHasStartedQuiz(true)}
+                                    disabled={isLessonOnlyUnit && lessonProgressState === "saving"}
                                 >
-                                    {isLessonOnlyUnit ? "Finish Lesson" : "Start Quiz"}
+                                    {isLessonOnlyUnit && lessonProgressState === "saving"
+                                        ? "Saving..."
+                                        : isLessonOnlyUnit
+                                          ? "Finish Lesson"
+                                          : "Start Quiz"}
                                 </button>
                             ) : (
                                 <button

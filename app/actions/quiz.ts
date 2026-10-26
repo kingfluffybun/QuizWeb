@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
-import { requireAdmin, requireStaff } from "@/lib/rbac";
+import { isStaff, requireAdmin, requireStaff } from "@/lib/rbac";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { PoolConnection } from "mysql2/promise";
 import {
@@ -1266,8 +1266,11 @@ export async function getCodeProblems(unitId?: number): Promise<CodeProblem[]> {
   }
 }
 
-async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
+async function fetchAvailableUnitsInternal(
+  includeAllStatuses = false,
+): Promise<AvailableUnit[]> {
   try {
+    const statusFilter = includeAllStatuses ? "" : "WHERE u.status = 'approved'";
     const [rows] = await db.query<RowDataPacket[]>(
       `SELECT 
         u.unit_id,
@@ -1285,7 +1288,7 @@ async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
       JOIN sec_tbl s ON u.sec_id = s.sec_id
       JOIN cat_tbl c ON s.cat_id = c.cat_id
       LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
-      WHERE u.status = 'approved'
+      ${statusFilter}
       ORDER BY u.unit_id ASC`,
     );
 
@@ -1310,10 +1313,29 @@ async function fetchAvailableUnitsInternal(): Promise<AvailableUnit[]> {
 }
 
 export const getAvailableUnits = createSafeCache(
-  fetchAvailableUnitsInternal,
+  () => fetchAvailableUnitsInternal(),
   ["available-units"],
   { tags: ["curriculum"], revalidate: 3600 }
 );
+
+export async function getAvailableUnitsForStaff(explicitUserId?: number): Promise<AvailableUnit[]> {
+  const staffSession = await requireStaff();
+  if (!staffSession) {
+    if (explicitUserId && Number.isInteger(explicitUserId) && explicitUserId > 0) {
+      const [rows] = await db.query<RowDataPacket[]>(
+        "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+        [explicitUserId],
+      );
+      const role = rows[0]?.user_role;
+      if (!isStaff(role)) {
+        throw new Error("Unauthorized: Maintainer or Administrator access required.");
+      }
+    } else {
+      throw new Error("Unauthorized: Maintainer or Administrator access required.");
+    }
+  }
+  return fetchAvailableUnitsInternal(true);
+}
 
 function parseJsonColumn(value: unknown) {
   if (typeof value !== "string") return value;
@@ -2686,7 +2708,7 @@ export async function updatePendingUnitFromForm(
 }
 
 export async function updateUnit(unitId: number, formData: FormData) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaff())) {
     return { error: "Unauthorized" };
   }
   return updatePendingUnitFromForm(unitId, formData);

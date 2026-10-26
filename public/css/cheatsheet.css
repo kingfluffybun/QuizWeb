@@ -10,41 +10,32 @@
 }
 
 .cheatsheet-heading {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    min-height: 164px;
-    justify-content: center;
-    padding: 28px 34px;
-    overflow: hidden;
-    border-radius: 16px;
-    background: var(--primary-color);
-    box-shadow: 0 10px 26px rgba(104, 63, 194, .18);
+    gap: 8px;
+    padding: 24px 28px;
+    border: 1px solid color-mix(in srgb, var(--primary-color) 18%, var(--border-main));
+    border-left: 4px solid var(--primary-color);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--primary-color) 7%, var(--bg-card));
     margin-bottom: 24px;
 }
 
-.cheatsheet-heading::after {
-    position: absolute;
-    right: -10px;
-    bottom: -22px;
-    width: 250px;
-    height: 144px;
-    background: url("/assets/landing-page/Clouds-right.svg") center / contain no-repeat;
-    content: "";
-    pointer-events: none;
-}
-
 .cheatsheet-heading h1 {
-    margin-bottom: 6px;
-    color: #fff;
-    font-size: 2.25rem;
+    margin-bottom: 0;
+    color: var(--primary-color);
+    font-size: clamp(2rem, 4vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.1;
     letter-spacing: -.04em;
 }
 
 .cheatsheet-heading p {
-    color: rgba(255, 255, 255, .9);
-    font-size: .95rem;
+    margin-bottom: 0;
+    color: var(--text-muted);
+    font-size: .92rem;
+    line-height: 1.5;
 }
 
 .cheatsheet-level-tabs,

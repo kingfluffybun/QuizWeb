@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useTransition, useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/rbac";
@@ -300,6 +301,58 @@ export default function MaintainerStudioClient({
     return list;
   }, [submissions, statusFilter, searchQuery, sortOption]);
 
+  const renderViewSwitcher = (mobile = false) => (
+    <div
+      className={`maintainer-view-switcher${mobile ? " maintainer-view-switcher-mobile" : ""}`}
+      role="tablist"
+      aria-label="Maintainer studio layout view"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={studioView === "all"}
+        className={`maintainer-view-pill ${studioView === "all" ? "active" : ""}`}
+        onClick={() => setStudioView("all")}
+      >
+        <span className="maintainer-view-pill-desktop-label">Unified Studio</span>
+        <span className="maintainer-view-pill-mobile-label">Studio</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={studioView === "editor"}
+        className={`maintainer-view-pill ${studioView === "editor" ? "active" : ""}`}
+        onClick={() => {
+          setStudioView("editor");
+          if (typeof window !== "undefined") {
+            window.setTimeout(() => {
+              document
+                .getElementById("quiz-workspace")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 30);
+          }
+        }}
+      >
+        <span className="maintainer-view-pill-desktop-label">Focus Editor</span>
+        <span className="maintainer-view-pill-mobile-label">Editor</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={studioView === "submissions"}
+        className={`maintainer-view-pill ${studioView === "submissions" ? "active" : ""}`}
+        onClick={() => setStudioView("submissions")}
+      >
+        <span className="maintainer-view-pill-desktop-label">
+          My Submissions ({submissions.length})
+        </span>
+        <span className="maintainer-view-pill-mobile-label">
+          Submissions ({submissions.length})
+        </span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="maintainer-container">
       {!mobileNoticeDismissed && (
@@ -333,44 +386,7 @@ export default function MaintainerStudioClient({
           </div>
         </div>
         <div className="maintainer-header-actions">
-          <div className="maintainer-view-switcher" role="tablist" aria-label="Maintainer studio layout view">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={studioView === "all"}
-              className={`maintainer-view-pill ${studioView === "all" ? "active" : ""}`}
-              onClick={() => setStudioView("all")}
-            >
-              Unified Studio
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={studioView === "editor"}
-              className={`maintainer-view-pill ${studioView === "editor" ? "active" : ""}`}
-              onClick={() => {
-                setStudioView("editor");
-                if (typeof window !== "undefined") {
-                  window.setTimeout(() => {
-                    document
-                      .getElementById("quiz-workspace")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 30);
-                }
-              }}
-            >
-              Focus Editor
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={studioView === "submissions"}
-              className={`maintainer-view-pill ${studioView === "submissions" ? "active" : ""}`}
-              onClick={() => setStudioView("submissions")}
-            >
-              My Submissions ({submissions.length})
-            </button>
-          </div>
+          {renderViewSwitcher()}
           <button
             type="button"
             className="btn-studio-refresh"
@@ -409,7 +425,18 @@ export default function MaintainerStudioClient({
             <span style={{whiteSpace: "nowrap"}}>New Unit</span>
           </button>
         </div>
+        <Image
+          src="/assets/landing-page/Clouds-right.svg"
+          alt=""
+          width={180}
+          height={180}
+          className="cloud-right"
+          aria-hidden="true"
+        />
       </header>
+      <div className="maintainer-mobile-view-switcher">
+        {renderViewSwitcher(true)}
+      </div>
 
       {/* ------------------------------------------------------------------- */}
       {/* 2. Maintainer Stats Ribbon (Interactive Clickable Cards)             */}
@@ -793,7 +820,10 @@ export default function MaintainerStudioClient({
                         )}
 
                         {isApproved && (
-                          <Link href="/quiz" className="btn-action-view">
+                          <Link
+                            href={`/quiz?unitId=${item.pending_id}`}
+                            className="btn-action-view"
+                          >
                             <span>View in Quiz</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />

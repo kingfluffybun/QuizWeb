@@ -216,7 +216,7 @@ export default function AssessmentStepBuilder({
 
                 return (
                   <div
-                    className="assessment-step"
+                    className="assessment-step assessment-step-card"
                     key={index}
                     style={{
                       display: "flex",
@@ -248,6 +248,7 @@ export default function AssessmentStepBuilder({
                         </label>
                         {index > 0 && (
                           <label
+                            className="assessment-step-carryover-label"
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
@@ -303,6 +304,7 @@ export default function AssessmentStepBuilder({
                     <div>
                       <label
                         htmlFor={`assessment-step-${index}`}
+                        className="assessment-step-instruction-label"
                         style={{
                           fontSize: "0.82rem",
                           fontWeight: 600,
@@ -332,6 +334,7 @@ export default function AssessmentStepBuilder({
 
                     {/* File Sub-Tabs: index.html | style.css | script.js */}
                     <div
+                      className="assessment-step-file-editor"
                       style={{
                         display: "flex",
                         flexDirection: "column",
@@ -343,6 +346,7 @@ export default function AssessmentStepBuilder({
                       }}
                     >
                       <div
+                        className="assessment-step-file-header"
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
@@ -353,7 +357,11 @@ export default function AssessmentStepBuilder({
                           paddingBottom: "8px",
                         }}
                       >
-                        <div style={{ display: "flex", gap: "6px" }} role="tablist">
+                        <div
+                          className="assessment-step-file-tabs"
+                          style={{ display: "flex", gap: "6px" }}
+                          role="tablist"
+                        >
                           {CP_FILE_KEYS.map((fileKey) => {
                             const isSelected = activeTab === fileKey;
                             const hasExpected =
@@ -364,6 +372,7 @@ export default function AssessmentStepBuilder({
                                 key={fileKey}
                                 type="button"
                                 role="tab"
+                                className="assessment-step-file-tab"
                                 aria-selected={isSelected}
                                 onClick={() => setActiveTab(index, fileKey)}
                                 style={{
@@ -390,6 +399,7 @@ export default function AssessmentStepBuilder({
 
                         <button
                           type="button"
+                          className="assessment-step-wildcard"
                           onClick={() => handleInsertWildcard(index, activeTab)}
                           style={{
                             padding: "4px 10px",
@@ -412,6 +422,7 @@ export default function AssessmentStepBuilder({
                         <div>
                           <label
                             htmlFor={`cp-starter-${index}-${activeTab}`}
+                            className="assessment-step-starter-label"
                             style={{
                               fontSize: "0.78rem",
                               fontWeight: 600,
@@ -459,6 +470,7 @@ export default function AssessmentStepBuilder({
                         >
                           <label
                             htmlFor={`cp-expected-${index}-${activeTab}`}
+                            className="assessment-step-expected-label"
                             style={{
                               fontSize: "0.8rem",
                               fontWeight: 700,
@@ -467,7 +479,10 @@ export default function AssessmentStepBuilder({
                           >
                             Expected Template ({CP_FILE_LABELS[activeTab]})
                           </label>
-                          <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                          <span
+                            className="assessment-step-expected-hint"
+                            style={{ fontSize: "0.75rem", color: "#64748b" }}
+                          >
                             {activeExpected.trim().length === 0
                               ? "Blank = Student's tab must remain empty"
                               : wildcardCount > 0
@@ -632,10 +647,11 @@ export function AssessmentLivePreview({
       {/* Interactive Maintainer Step Verification Sandbox */}
       {activeStep && (
         <div
+          className="assessment-preview-sandbox"
           style={{
             marginTop: "18px",
             paddingTop: "14px",
-            borderTop: "1px solid #e2e8f0",
+            borderTop: "1px solid var(--border-main, #e2e8f0)",
             display: "flex",
             flexDirection: "column",
             gap: "10px",
@@ -696,6 +712,7 @@ export function AssessmentLivePreview({
                 <button
                   key={key}
                   type="button"
+                  className={`assessment-preview-file-tab${activeTab === key ? " active" : ""}`}
                   onClick={() => setActiveTab(key)}
                   style={{
                     padding: "4px 10px",
@@ -704,10 +721,16 @@ export function AssessmentLivePreview({
                     fontWeight: 600,
                     border:
                       activeTab === key
-                        ? "1px solid #3b82f6"
+                        ? "1px solid var(--primary-color)"
                         : "1px solid #cbd5e1",
-                    background: activeTab === key ? "#eff6ff" : "#f8fafc",
-                    color: activeTab === key ? "#1d4ed8" : "#64748b",
+                    background:
+                      activeTab === key
+                        ? "var(--selected-background-color)"
+                        : "#f8fafc",
+                    color:
+                      activeTab === key
+                        ? "var(--selected-color)"
+                        : "#64748b",
                     cursor: "pointer",
                   }}
                 >
@@ -718,6 +741,7 @@ export function AssessmentLivePreview({
 
             <button
               type="button"
+              className="assessment-preview-fill-sample"
               onClick={handleFillPassingSample}
               style={{
                 fontSize: "0.75rem",
@@ -754,7 +778,6 @@ export function AssessmentLivePreview({
               type="button"
               className="btn-primary"
               onClick={handleRunCheck}
-              style={{ padding: "6px 14px", fontSize: "0.82rem" }}
             >
               Test Step {safeStepIdx + 1} Validation
             </button>

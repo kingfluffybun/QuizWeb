@@ -484,12 +484,14 @@ button.quick-action-btn:hover {
 .daily-goal-preview-hub {
     border-top: 1px solid var(--border-main);
     padding-top: 12px;
+    min-width: 0;
 }
 
 .daily-goal-preview-hub summary {
     color: var(--primary-color);
     cursor: pointer;
     font-weight: 600;
+    line-height: 1.4;
 }
 
 .daily-goal-preview-note {
@@ -513,13 +515,15 @@ button.quick-action-btn:hover {
 
 .daily-goal-preview-days {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
     gap: 8px;
 }
 
 .daily-goal-preview-hub input {
     width: 100%;
     min-width: 0;
+    min-height: 40px;
+    box-sizing: border-box;
     padding: 6px 8px;
     border: 1px solid var(--border-main);
     border-radius: 6px;
@@ -530,6 +534,7 @@ button.quick-action-btn:hover {
 
 .daily-goal-preview-reset {
     margin-top: 10px;
+    min-height: 40px;
     padding: 6px 10px;
     border: 1px solid var(--border-main);
     border-radius: 6px;
@@ -1339,10 +1344,6 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     /* Daily Goal Card & Graph */
     .daily-goal-xp {
         width: 100% !important;
-    }
-
-    .daily-goal-preview-days {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .daily-prograss-graph {

@@ -120,12 +120,12 @@ export default function MobileShell({ children }: { children: React.ReactNode })
       ),
     },
     {
-      label: "Quiz",
-      href: "/quiz",
+      label: "Profile",
+      href: "/profile",
       icon: (
-        <svg className="lucide lucide-target" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="m9 12 2 2 4-4" />
+        <svg className="lucide lucide-user" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21a8 8 0 0 0-16 0" />
+          <circle cx="12" cy="8" r="5" />
         </svg>
       ),
     },
@@ -384,7 +384,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
                   <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                   <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" />
                 </svg>
-                <span>Question Studio</span>
+                <span>Maintainer Studio</span>
               </Link>
               <Link href={`${isAdmin ? "/admin" : "/maintainer"}#quiz-workspace`} className="mobile-drawer-link">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
