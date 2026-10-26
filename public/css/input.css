@@ -2656,6 +2656,16 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   border-color: var(--border-main, #2d2d3d);
 }
 
+[data-theme="dark"] .radio-check {
+  accent-color: var(--primary-color, #672fce);
+}
+
+[data-theme="dark"] .assessment-step-input {
+  background: #15151e;
+  border-color: var(--border-main, #2d2d3d);
+  color: var(--text-main, #fafafa);
+}
+
 [data-theme="dark"] .form-input,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] .form-textarea,
