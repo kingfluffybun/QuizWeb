@@ -2628,6 +2628,10 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   box-shadow: none;
 }
 
+[data-theme="dark"] .lesson-preview-heading .preview-tab.active {
+  box-shadow: none;
+}
+
 [data-theme="dark"] .sort-wrapper {
   background-color: #1c1c24;
   border-color: var(--border-main, #2d2d3d);
