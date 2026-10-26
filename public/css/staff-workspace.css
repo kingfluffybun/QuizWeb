@@ -21,9 +21,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 24px;
   padding-bottom: 18px;
-  border-bottom: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
 }
 
 .staff-workspace-heading h2,
