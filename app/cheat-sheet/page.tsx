@@ -410,7 +410,6 @@ function CodeExample({
                     mobileViewport.removeEventListener("change", updateLineNumberWidth);
                 });
             }}
-            beforeMount={defineCodeTheme}
             options={{
                 ariaLabel: `${title} code example`,
                 automaticLayout: true,
