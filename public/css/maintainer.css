@@ -2137,8 +2137,8 @@ html[data-motion="reduce"] .maintainer-page *::after {
 .search-box-wrap svg {
   position: absolute;
   left: 12px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: var(--maintainer-text-subtle);
   pointer-events: none;
 }
@@ -2162,6 +2162,9 @@ html[data-motion="reduce"] .maintainer-page *::after {
 
 .maintainer-page .tracker-controls-right .tracker-search-input {
   border: 1.5px solid var(--maintainer-border);
+  color: var(--maintainer-text);
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .maintainer-page .tracker-controls-right .tracker-search-input:hover,
