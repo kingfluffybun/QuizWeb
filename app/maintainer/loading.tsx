@@ -29,7 +29,7 @@ export default function MaintainerLoading() {
           {/* 2. Stats Ribbon (4 Cards) */}
           <section className="maintainer-stats-ribbon" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, margin: "24px 0" }}>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="stat-card" style={{ padding: 18, borderRadius: 16, background: "var(--bg-card, #fff)", border: "1px solid var(--border-main, #e0e0e0)", display: "flex", alignItems: "center", gap: 14 }}>
+              <div key={i} className="stat-card" style={{ padding: 18, background: "var(--bg-card, #fff)", border: "1px solid var(--border-main, #e0e0e0)", display: "flex", alignItems: "center", gap: 14 }}>
                 <div className="skeleton-shimmer skeleton-circle" style={{ width: 44, height: 44 }} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
                   <div className="skeleton-shimmer skeleton-line" style={{ width: "70%", height: 12, margin: 0 }} />

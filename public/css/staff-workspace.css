@@ -2,7 +2,7 @@
   margin-top: 8px;
   padding: 28px;
   border: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
-  border-radius: 20px;
+  border-radius: var(--radius-md, 12px);
   background: var(--maintainer-surface, var(--bg-card, #fff));
   color: var(--maintainer-text, var(--text-main, #333));
   max-width: 1440px;
@@ -14,6 +14,12 @@
 
 .staff-workspace [hidden] {
   display: none !important;
+}
+
+.staff-workspace .admin-card,
+.staff-workspace .lesson-preview-card,
+.staff-workspace .recent-units-card {
+  border-radius: var(--radius-md, 12px);
 }
 
 .staff-workspace-heading {
@@ -58,7 +64,7 @@
 }
 
 .staff-workspace-heading > div:first-child > p:last-child {
-  margin-top: 6px;
+  /* margin-top: 6px; */
   color: var(--maintainer-text-muted, var(--text-muted, #666));
   font-size: 0.9rem;
 }
