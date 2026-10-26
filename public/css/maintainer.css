@@ -1606,8 +1606,8 @@ html[data-motion="reduce"] .maintainer-page *::after {
 /* Keyboard Accessible Focus Rings */
 .maintainer-page button:focus-visible,
 .maintainer-page a:focus-visible,
-.maintainer-page select:focus-visible,
-.maintainer-page input:focus-visible {
+.maintainer-page select:not(.tracker-sort-select):focus-visible,
+.maintainer-page input:not(.tracker-search-input):focus-visible {
   outline: 2px solid var(--maintainer-purple);
 }
 
@@ -2149,7 +2149,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   min-width: 240px;
   height: 40px;
   padding: 10px 36px;
-  border: 1.5px solid var(--maintainer-border);
+  border: 1px solid var(--maintainer-border);
   border-radius: 10px;
   background: var(--maintainer-surface-alt);
   color: var(--maintainer-text);
@@ -2161,7 +2161,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .maintainer-page .tracker-controls-right .tracker-search-input {
-  border: 1.5px solid var(--maintainer-border);
+  border-width: 1px;
   color: var(--maintainer-text);
   font-size: 0.88rem;
   font-weight: 700;
@@ -2173,7 +2173,11 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .tracker-search-input:focus {
-  box-shadow: 0 0 0 3px var(--maintainer-brand-glow);
+  box-shadow: none;
+}
+
+.tracker-search-input:focus-visible {
+  outline: none;
 }
 
 .search-clear-btn {
@@ -2213,6 +2217,10 @@ html[data-motion="reduce"] .maintainer-page *::after {
   transition: all 0.18s ease;
 }
 
+.tracker-sort-select:focus-visible {
+  outline: none;
+}
+
 .tracker-sort-select:hover,
 .tracker-sort-select:focus {
   border-color: var(--primary-color, #9966ff);
@@ -2220,7 +2228,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .tracker-sort-select:focus {
-  box-shadow: 0 0 0 3px var(--maintainer-brand-glow);
+  box-shadow: none;
 }
 
 .submissions-table-container {
