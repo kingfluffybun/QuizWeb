@@ -210,6 +210,10 @@
     font-size: 1rem;
 }
 
+.cheatsheet-search-group-heading.is-all-level-heading h3 {
+    font-size: 1.35rem;
+}
+
 .cheatsheet-level-heading {
     display: flex;
     align-items: center;
@@ -330,9 +334,9 @@
 
 .cheatsheet-code-editor {
     overflow: hidden;
-    border: 1px solid #e1e4ea;
+    border: 1px solid var(--border-main);
     border-radius: 10px;
-    background: #f3f4f6;
+    background: var(--bg-card);
 }
 
 .cheatsheet-code-editor,
@@ -342,12 +346,186 @@
     height: 100% !important;
 }
 
-.cheatsheet-code-editor .monaco-editor,
-.cheatsheet-code-editor .monaco-editor-background,
-.cheatsheet-code-editor .margin {
-    background-color: #f3f4f6 !important;
-}
-
 [data-theme="dark"] .cheatsheet-card:hover {
     box-shadow: 0 8px 20px rgba(0, 0, 0, .2);
+}
+
+@media (max-width: 768px) {
+    .dashboard-page.cheatsheet-page {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow: visible !important;
+    }
+
+    .cheatsheet-page > main {
+        flex: 0 0 auto !important;
+        align-items: stretch !important;
+        height: auto !important;
+        min-height: 0 !important;
+        min-width: 0;
+        overflow: visible !important;
+        padding: 24px 24px 32px !important;
+    }
+
+    .cheatsheet-content {
+        box-sizing: border-box;
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+        margin-right: 0;
+        padding: 14px 12px;
+        overflow: visible;
+    }
+
+    .cheatsheet-heading {
+        gap: 6px;
+        padding: 20px;
+        margin-bottom: 0;
+    }
+
+    .cheatsheet-heading h1 {
+        font-size: clamp(1.75rem, 7vw, 2.25rem);
+    }
+
+    .cheatsheet-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 0;
+    }
+
+    .cheatsheet-level-tabs {
+        display: flex;
+        flex: none;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        width: 100%;
+        box-sizing: border-box;
+        gap: 4px;
+        padding: 6px;
+        overflow-x: auto;
+        border-radius: 14px;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+    }
+
+    .cheatsheet-level-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .cheatsheet-level-tab {
+        flex: 0 0 auto;
+        min-width: 0;
+        min-height: 44px;
+        padding: 9px 14px;
+        scroll-snap-align: start;
+    }
+
+    .cheatsheet-search {
+        order: -1;
+        flex: 0 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .cheatsheet-level-heading {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .cheatsheet-level-heading h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .cheatsheet-section {
+        min-width: 0;
+        padding: 16px;
+        border-radius: 14px;
+        scroll-margin-top: 12px;
+    }
+
+    .cheatsheet-section-heading {
+        gap: 8px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+    }
+
+    .cheatsheet-search-group.is-search-result-group {
+        padding: 14px;
+    }
+
+    .cheatsheet-search-group-heading.is-all-level-heading h3 {
+        font-size: 1.2rem;
+    }
+
+    .cheatsheet-card-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .cheatsheet-card {
+        padding: 18px 16px 16px;
+    }
+
+    .cheatsheet-navigation {
+        gap: 6px;
+        margin-bottom: 20px;
+    }
+
+    .cheatsheet-navigation a {
+        max-width: 100%;
+        padding: 8px 11px;
+        overflow-wrap: anywhere;
+    }
+
+    .cheatsheet-sections {
+        gap: 16px;
+    }
+
+    .cheatsheet-search-groups {
+        gap: 16px;
+    }
+}
+
+@media (max-width: 420px) {
+    .cheatsheet-page > main {
+        padding: 16px 12px 24px !important;
+    }
+
+    .cheatsheet-content {
+        padding: 12px 8px;
+    }
+
+    .cheatsheet-heading {
+        padding: 18px 16px;
+        border-radius: 12px;
+    }
+
+    .cheatsheet-level-tabs {
+        gap: 2px;
+        padding: 4px;
+    }
+
+    .cheatsheet-level-tab {
+        padding-inline: 11px;
+        font-size: .8rem;
+    }
+
+    .cheatsheet-section {
+        padding: 13px;
+    }
+
+    .cheatsheet-search-group.is-search-result-group {
+        padding: 12px;
+    }
+
+    .cheatsheet-code-editor {
+        max-width: 100%;
+    }
 }

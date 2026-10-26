@@ -1,13 +1,12 @@
 "use client";
 
-import type { Monaco } from "@monaco-editor/react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), {
     ssr: false,
     loading: () => (
-        <div style={{ minHeight: "220px", width: "100%", background: "#1e1e1e" }} className="animate-pulse" />
+        <div style={{ minHeight: "220px", width: "100%", background: "var(--bg-card)" }} className="animate-pulse" />
     ),
 });
 import Sidebar from "@/app/components/Sidebar";
@@ -15,9 +14,12 @@ import "#css/dashboard.css";
 import "#css/sidebar.css";
 import "#css/cheatsheet.css";
 
-const levelNames = ["Beginner", "Intermediate", "Advanced"] as const;
+const difficultyLevels = ["Beginner", "Intermediate", "Advanced"] as const;
+const levelNames = ["All", ...difficultyLevels] as const;
 type LevelName = (typeof levelNames)[number];
+type DifficultyLevel = (typeof difficultyLevels)[number];
 type CodeLanguage = "html" | "css" | "javascript";
+type EditorTheme = "vs" | "vs-dark";
 
 interface Unit {
     title: string;
@@ -28,7 +30,7 @@ interface Unit {
 
 interface Section {
     id: string;
-    level: LevelName;
+    level: DifficultyLevel;
     title: string;
     units: Unit[];
 }
@@ -242,7 +244,7 @@ const sections: Section[] = [
                 example: "const name = \"Ada\";\nconst greeting = `Hello, ${name}!`;\nconst message = `First line\nSecond line`;",
             },
             {
-                title: "Unit 2: Destructuring & Spread (optional)",
+                title: "Unit 2: Destructuring & Spread",
                 topics: ["array destructuring", "object destructuring", "spread operator", "rest operator"],
                 description: "Destructuring pulls values into variables. Spread expands values; rest gathers remaining values.",
                 example: "const [first, ...others] = [1, 2, 3];\nconst lesson = {\n  title: \"Lesson\",\n};\nconst { title } = lesson;\nconst copy = [...others, 4];\n\nfunction show(firstArg, ...restArgs) {\n  console.log(firstArg, restArgs);\n}",
@@ -376,35 +378,17 @@ function getCodeLanguage(sectionTitle: string): CodeLanguage {
     return "javascript";
 }
 
-function defineCodeTheme(monaco: Monaco) {
-    monaco.editor.defineTheme("quiz-web", {
-        base: "vs",
-        inherit: true,
-        rules: [
-            { token: "tag", foreground: "#0F172A" },
-            { token: "attribute.name.html", foreground: "#7C3AED" },
-            { token: "attribute.value.html", foreground: "#10B981" },
-            { token: "delimiter.html", foreground: "#475569" },
-            { token: "string", foreground: "#10B981" },
-            { token: "comment", foreground: "#94A3B8" },
-        ],
-        colors: {
-            "editor.background": "#F3F4F6",
-            "editorLineNumber.foreground": "#9CA3AF",
-            "editorLineNumber.activeForeground": "#475569",
-            "editorCursor.foreground": "#111827",
-            "editor.selectionBackground": "#DBEAFE",
-            "editor.inactiveSelectionBackground": "#E2E8F0",
-            "editorIndentGuide.background": "#E5E7EB",
-            "editorIndentGuide.activeBackground": "#A1A1AA",
-            "editor.lineHighlightBackground": "#EEF2FF",
-            "editorGroupHeader.tabsBackground": "#F8FAFC",
-            "tab.inactiveBackground": "#F8FAFC",
-        },
-    });
-}
-
-function CodeExample({ title, sectionTitle, example }: { title: string; sectionTitle: string; example: string }) {
+function CodeExample({
+    title,
+    sectionTitle,
+    example,
+    theme,
+}: {
+    title: string;
+    sectionTitle: string;
+    example: string;
+    theme: EditorTheme;
+}) {
     const code = example.trimEnd();
     const height = code.split("\n").length * 22 + 2;
 
@@ -414,9 +398,20 @@ function CodeExample({ title, sectionTitle, example }: { title: string; sectionT
             height={`${height}px`}
             width="100%"
             language={getCodeLanguage(sectionTitle)}
-            theme="quiz-web"
+            theme={theme}
             value={code}
-            beforeMount={defineCodeTheme}
+            onMount={(editor) => {
+                const mobileViewport = window.matchMedia("(max-width: 768px)");
+                const updateLineNumberWidth = () => {
+                    editor.updateOptions({ lineNumbersMinChars: mobileViewport.matches ? 2 : 5 });
+                };
+
+                updateLineNumberWidth();
+                mobileViewport.addEventListener("change", updateLineNumberWidth);
+                editor.onDidDispose(() => {
+                    mobileViewport.removeEventListener("change", updateLineNumberWidth);
+                });
+            }}
             options={{
                 ariaLabel: `${title} code example`,
                 automaticLayout: true,
@@ -450,7 +445,7 @@ function CodeExample({ title, sectionTitle, example }: { title: string; sectionT
     );
 }
 
-function UnitCard({ unit, sectionTitle }: { unit: Unit; sectionTitle: string }) {
+function UnitCard({ unit, sectionTitle, theme }: { unit: Unit; sectionTitle: string; theme: EditorTheme }) {
     return (
         <article className="cheatsheet-card">
             <h3>{unit.title}</h3>
@@ -458,12 +453,20 @@ function UnitCard({ unit, sectionTitle }: { unit: Unit; sectionTitle: string }) 
             <ul className="cheatsheet-topics" aria-label={`${unit.title} topics`}>
                 {unit.topics.map((topic) => <li key={topic}>{topic}</li>)}
             </ul>
-            <CodeExample title={unit.title} sectionTitle={sectionTitle} example={unit.example} />
+            <CodeExample title={unit.title} sectionTitle={sectionTitle} example={unit.example} theme={theme} />
         </article>
     );
 }
 
-function CurriculumSection({ section, searchTerm }: { section: Section; searchTerm: string }) {
+function CurriculumSection({
+    section,
+    searchTerm,
+    theme,
+}: {
+    section: Section;
+    searchTerm: string;
+    theme: EditorTheme;
+}) {
     const title = searchTerm ? section.title.replace(/^(HTML|CSS|JavaScript) /, "") : section.title;
 
     return (
@@ -473,7 +476,7 @@ function CurriculumSection({ section, searchTerm }: { section: Section; searchTe
             </div>
             <div className="cheatsheet-card-grid">
                 {section.units.map((unit) => (
-                    <UnitCard key={unit.title} unit={unit} sectionTitle={section.title} />
+                    <UnitCard key={unit.title} unit={unit} sectionTitle={section.title} theme={theme} />
                 ))}
             </div>
         </section>
@@ -481,8 +484,33 @@ function CurriculumSection({ section, searchTerm }: { section: Section; searchTe
 }
 
 export default function CheatSheetPage() {
-    const [activeLevel, setActiveLevel] = useState<LevelName>("Beginner");
+    const [activeLevel, setActiveLevel] = useState<LevelName>("All");
     const [unitSearch, setUnitSearch] = useState("");
+    const [editorTheme, setEditorTheme] = useState<EditorTheme>("vs");
+
+    useEffect(() => {
+        const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+        const updateEditorTheme = () => {
+            const selectedTheme = document.documentElement.dataset.theme;
+            const isDark = selectedTheme === "dark" || (selectedTheme !== "light" && colorScheme.matches);
+            setEditorTheme(isDark ? "vs-dark" : "vs");
+        };
+
+        updateEditorTheme();
+        colorScheme.addEventListener("change", updateEditorTheme);
+
+        const themeObserver = new MutationObserver(updateEditorTheme);
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-theme"],
+        });
+
+        return () => {
+            colorScheme.removeEventListener("change", updateEditorTheme);
+            themeObserver.disconnect();
+        };
+    }, []);
+
     const searchTerm = unitSearch.trim().toLowerCase();
     const matchingSections = searchTerm
         ? sections
@@ -491,9 +519,9 @@ export default function CheatSheetPage() {
                 units: section.units.filter((unit) => unit.title.toLowerCase().includes(searchTerm)),
             }))
             .filter((section) => section.units.length > 0)
-        : sections.filter((section) => section.level === activeLevel);
-    const visibleLevelGroups = searchTerm
-        ? levelNames
+        : sections.filter((section) => activeLevel === "All" || section.level === activeLevel);
+    const visibleLevelGroups = searchTerm || activeLevel === "All"
+        ? difficultyLevels
             .map((level) => ({
                 name: level,
                 sections: matchingSections.filter((section) => section.level === level),
@@ -560,8 +588,10 @@ export default function CheatSheetPage() {
                                         className={`cheatsheet-search-group${searchTerm ? " is-search-result-group" : ""}`}
                                         key={group.name}
                                     >
-                                        {searchTerm && (
-                                            <header className="cheatsheet-search-group-heading">
+                                        {(searchTerm || activeLevel === "All") && (
+                                            <header
+                                                className={`cheatsheet-search-group-heading${activeLevel === "All" && !searchTerm ? " is-all-level-heading" : ""}`}
+                                            >
                                                 <h3>{group.name}</h3>
                                             </header>
                                         )}
@@ -578,6 +608,7 @@ export default function CheatSheetPage() {
                                                     key={section.id}
                                                     section={section}
                                                     searchTerm={searchTerm}
+                                                    theme={editorTheme}
                                                 />
                                             ))}
                                         </div>
