@@ -1585,14 +1585,14 @@ html[data-motion="reduce"] .maintainer-page *::after {
 .maintainer-header {
   position: relative;
   background: var(--maintainer-purple);
-  border: 1.5px solid var(--maintainer-border);
+  /* border: 2px solid var(--border-main); */
   border-radius: 12px;
   padding: var(--maintainer-space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--maintainer-space-6);
-  box-shadow: var(--maintainer-shadow-sm);
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   overflow: hidden;
   transition: var(--maintainer-transition);
 }
