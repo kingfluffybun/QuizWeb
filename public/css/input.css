@@ -1037,7 +1037,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   margin: 0;
   color: var(--text-main);
   font-family: "Poppins", sans-serif;
-  font-size: 1rem;
+  font-size: 12px;
   font-weight: 600;
 }
 .assessment-add {
@@ -1798,16 +1798,25 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   background: none;
   border: 2px solid #e0e0e0;
   color: #666;
-  padding: 8px 16px;
+  padding: 0 12px;
   border-radius: 12px;
   cursor: pointer;
   font-family: "Poppins", sans-serif;
-  font-size: 1rem;
+  font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
   transition: all 0.2s;
+}
+.filter-toggle-btn span {
+  color: var(--maintainer-text, var(--text-main, #333));
+}
+.filter-toggle-btn svg,
+.sort-wrapper .sort-label svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 .filter-toggle-btn:hover {
   border-color: var(--selected-color);
@@ -1818,6 +1827,9 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   border-color: var(--selected-color);
   color: #fff;
   background-color: var(--selected-color);
+}
+.filter-toggle-btn.active span {
+  color: #fff;
 }
 .filter-badge {
   background-color: #ff4d4d;
@@ -1953,6 +1965,15 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 .list-header-actions > * {
   height: 40px;
   box-sizing: border-box;
+}
+.list-header-actions > .sort-wrapper,
+.list-header-actions > .filter-toggle-btn {
+  height: 40px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
 }
 .sort-wrapper {
   position: relative;
