@@ -673,19 +673,29 @@ body:has(.pending-container) {
   text-align: center;
 }
 
+[data-theme="dark"] .pending-review-stack {
+  --pending-surface: #1c1c24;
+  --pending-background: #15151e;
+  --pending-border: #2d2d3d;
+  --pending-text: #fafafa;
+  --pending-muted: #a0a0b0;
+}
+
 [data-theme="dark"] .pending-card {
-  border-color: var(--pending-border);
+  border-color: #2d2d3d;
   background-color: #1c1c24;
   box-shadow: none;
 }
 
 [data-theme="dark"] .pending-payload {
-  background-color: #22222d;
-  color: var(--text-main, #fafafa);
+  background-color: #22222d !important;
+  color: var(--text-main, #fafafa) !important;
+  border-left-color: var(--primary-color, #672fce);
 }
 
 [data-theme="dark"] .pending-item {
   background-color: #1c1c24;
+  border-bottom-color: #2d2d3d;
 }
 
 [data-theme="dark"] .pending-status {
