@@ -341,6 +341,10 @@ export default function QuizLandingClient({
         if (typeof initialSlideOrder === "number" && initialSlideOrder > 0 && lessonSlides.length > 0) {
             setLessonSlideIndex(Math.min(lessonSlides.length - 1, Math.max(0, initialSlideOrder - 1)));
         }
+    } else if (lessonSlides.length > 0 && lessonSlideIndex >= lessonSlides.length) {
+        setLessonSlideIndex(lessonSlides.length - 1);
+    } else if (lessonSlideIndex < 0) {
+        setLessonSlideIndex(0);
     }
 
     const hasLesson = lessonSlides.some(

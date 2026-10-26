@@ -151,10 +151,14 @@ async function runTests() {
         console.error(`  ✗ Unit ${uId} mismatch: expected ${JSON.stringify(exp)}, got ${JSON.stringify(row)}`);
       }
 
-      const topics = typeof row.topics === "string" ? JSON.parse(row.topics) : row.topics;
-      if (!Array.isArray(topics) || topics.length === 0) {
+      if (row) {
+        const topics = typeof row.topics === "string" ? JSON.parse(row.topics) : row.topics;
+        if (!Array.isArray(topics) || topics.length === 0) {
+          allTopicsPresent = false;
+          console.error(`  ✗ Unit ${uId} missing valid topics array (got: ${JSON.stringify(row.topics)})`);
+        }
+      } else {
         allTopicsPresent = false;
-        console.error(`  ✗ Unit ${uId} missing valid topics array (got: ${JSON.stringify(row.topics)})`);
       }
     }
 
@@ -233,9 +237,9 @@ async function runTests() {
     const secProg4 = await getUserSectionProgress(testUserId, 4);
     assert(secProg4.section.cat_name === "CSS" && secProg4.section.sec_num === 1, "Section 4 is CSS Section 1");
     assert(secProg4.units.length === 3, `Section 4 contains 3 units (actual: ${secProg4.units.length})`);
-    assert(secProg4.units[0].unit_title === "Selectors" && secProg4.units[0].unit_order === 1, "First unit in CSS Sec 1 is Selectors (order 1)");
-    assert(secProg4.units[1].unit_title === "Applying CSS" && secProg4.units[1].unit_order === 2, "Second unit in CSS Sec 1 is Applying CSS (order 2)");
-    assert(secProg4.units[2].unit_title === "Pseudo-classes & Elements" && secProg4.units[2].unit_order === 3, "Third unit in CSS Sec 1 is Pseudo-classes (order 3)");
+    assert(secProg4.units[0]?.unit_title === "Selectors" && secProg4.units[0]?.unit_order === 1, "First unit in CSS Sec 1 is Selectors (order 1)");
+    assert(secProg4.units[1]?.unit_title === "Applying CSS" && secProg4.units[1]?.unit_order === 2, "Second unit in CSS Sec 1 is Applying CSS (order 2)");
+    assert(secProg4.units[2]?.unit_title === "Pseudo-classes & Elements" && secProg4.units[2]?.unit_order === 3, "Third unit in CSS Sec 1 is Pseudo-classes (order 3)");
 
     const secProgStr = await getUserSectionProgress(testUserId, "4" as unknown as number);
     assert(secProgStr.section.sec_id === 4, "String '4' coerced cleanly in getUserSectionProgress");
