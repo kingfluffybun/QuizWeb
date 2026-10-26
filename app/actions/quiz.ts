@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
-import { requireAdmin, requireStaff } from "@/lib/rbac";
+import { isStaff, requireAdmin, requireStaff } from "@/lib/rbac";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { PoolConnection } from "mysql2/promise";
 import {
@@ -1318,9 +1318,21 @@ export const getAvailableUnits = createSafeCache(
   { tags: ["curriculum"], revalidate: 3600 }
 );
 
-export async function getAvailableUnitsForStaff(): Promise<AvailableUnit[]> {
-  if (!(await requireStaff())) {
-    throw new Error("Unauthorized: Maintainer or Administrator access required.");
+export async function getAvailableUnitsForStaff(explicitUserId?: number): Promise<AvailableUnit[]> {
+  const staffSession = await requireStaff();
+  if (!staffSession) {
+    if (explicitUserId && Number.isInteger(explicitUserId) && explicitUserId > 0) {
+      const [rows] = await db.query<RowDataPacket[]>(
+        "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
+        [explicitUserId],
+      );
+      const role = rows[0]?.user_role;
+      if (!isStaff(role)) {
+        throw new Error("Unauthorized: Maintainer or Administrator access required.");
+      }
+    } else {
+      throw new Error("Unauthorized: Maintainer or Administrator access required.");
+    }
   }
   return fetchAvailableUnitsInternal(true);
 }
