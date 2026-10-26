@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 const adminRoutes = ["/admin", "/pending"];
 const staffRoutes = ["/maintainer", "/input"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
 
@@ -107,8 +107,8 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-export default middleware;
-export { middleware as proxy };
+export default proxy;
+export { proxy as middleware };
 
 export const config = {
   matcher: [

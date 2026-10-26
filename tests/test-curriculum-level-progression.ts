@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { RowDataPacket } from "mysql2/promise";
 
 const envPath = path.resolve(process.cwd(), ".env.local");
 if (fs.existsSync(envPath)) {
@@ -27,7 +28,6 @@ async function runTests() {
     getNextCurriculumUnit,
     isUnitUnlockedForUser,
     getAvailableUnitsForUser,
-    getUserCurriculumUnlockState,
   } = await import("../app/actions/progress");
   const { getAvailableUnits, getQuizMetadata } = await import("../app/actions/quiz");
 
@@ -49,7 +49,7 @@ async function runTests() {
     // Test Suite 1: Canonical 16-Section Hierarchy in Database
     // -------------------------------------------------------------
     console.log("[1] Verifying Canonical 16-Section Hierarchy in sec_tbl...");
-    const [secRows] = await db.query<any[]>(
+    const [secRows] = await db.query<RowDataPacket[]>(
       `SELECT s.sec_id, s.cat_id, s.sec_num, s.sec_title, s.difficulty_id,
               d.difficulty_name, c.cat_name
        FROM sec_tbl s
@@ -99,7 +99,7 @@ async function runTests() {
     // Test Suite 2: 20 Live Units Relational Mapping & Topics
     // -------------------------------------------------------------
     console.log("\n[2] Verifying 20 Live Units Relational Mapping & Topics...");
-    const [unitRows] = await db.query<any[]>(
+    const [unitRows] = await db.query<RowDataPacket[]>(
       `SELECT u.unit_id, u.unit_title, u.sec_id, u.unit_order, u.topics,
               s.sec_num, s.sec_title, c.cat_name, d.difficulty_name
        FROM unit_tbl u
@@ -175,13 +175,13 @@ async function runTests() {
     // Test Suite 3: 100% Data Preservation of Relational Children
     // -------------------------------------------------------------
     console.log("\n[3] Verifying 100% Data Preservation of Slides, Quizzes, Assessments...");
-    const [slides] = await db.query<any[]>("SELECT COUNT(*) AS c FROM lesson_slide_tbl");
+    const [slides] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM lesson_slide_tbl");
     assert(Number(slides[0].c) >= 150, `lesson_slide_tbl preserved >= 150 records (actual: ${slides[0].c})`);
 
-    const [quizzes] = await db.query<any[]>("SELECT COUNT(*) AS c FROM quiz_tbl");
+    const [quizzes] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM quiz_tbl");
     assert(Number(quizzes[0].c) >= 250, `quiz_tbl preserved >= 250 records (actual: ${quizzes[0].c})`);
 
-    const [assessments] = await db.query<any[]>("SELECT COUNT(*) AS c FROM unit_assessment_tbl");
+    const [assessments] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM unit_assessment_tbl");
     assert(Number(assessments[0].c) >= 20, `unit_assessment_tbl preserved >= 20 records (actual: ${assessments[0].c})`);
 
     // -------------------------------------------------------------
@@ -219,7 +219,7 @@ async function runTests() {
     // Test Suite 5: getUserSectionProgress Ordering & Metadata
     // -------------------------------------------------------------
     console.log("\n[5] Verifying getUserSectionProgress Ordering & Metadata...");
-    const [testUserRows] = await db.query<any[]>("SELECT user_id FROM user_auth_tbl ORDER BY user_id ASC LIMIT 1");
+    const [testUserRows] = await db.query<RowDataPacket[]>("SELECT user_id FROM user_auth_tbl ORDER BY user_id ASC LIMIT 1");
     const testUserId = Number(testUserRows[0].user_id);
 
     const secProg1 = await getUserSectionProgress(testUserId, 1);
@@ -237,7 +237,7 @@ async function runTests() {
     assert(secProg4.units[1].unit_title === "Applying CSS" && secProg4.units[1].unit_order === 2, "Second unit in CSS Sec 1 is Applying CSS (order 2)");
     assert(secProg4.units[2].unit_title === "Pseudo-classes & Elements" && secProg4.units[2].unit_order === 3, "Third unit in CSS Sec 1 is Pseudo-classes (order 3)");
 
-    const secProgStr = await getUserSectionProgress(testUserId, "4" as any);
+    const secProgStr = await getUserSectionProgress(testUserId, "4" as unknown as number);
     assert(secProgStr.section.sec_id === 4, "String '4' coerced cleanly in getUserSectionProgress");
 
     const secProg999 = await getUserSectionProgress(testUserId, 999);
@@ -259,7 +259,7 @@ async function runTests() {
     const res98 = await recordLessonSlideProgress(98, 6, 6, true, autoSecUser);
     assert(res98.success === true, "recordLessonSlideProgress(98) returned success");
 
-    const [playerSecAfter98] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    const [playerSecAfter98] = await db.query<RowDataPacket[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfter98[0].current_section) === 1,
       `User remains on Section 1 after completing only 1 of 2 units (actual: ${playerSecAfter98[0].current_section})`
@@ -270,7 +270,7 @@ async function runTests() {
     assert(res103.success === true, "recordLessonSlideProgress(103) returned success");
     assert(res103.advancedSectionId === 2, "recordLessonSlideProgress indicates advancement to section 2");
 
-    const [playerSecAfter103] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    const [playerSecAfter103] = await db.query<RowDataPacket[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfter103[0].current_section) === 2,
       `User current_section auto-advanced to Section 2 (actual: ${playerSecAfter103[0].current_section})`
@@ -279,7 +279,7 @@ async function runTests() {
     // Step 6c: Review non-regression: completing earlier unit does not regress current_section
     const reviewRes = await recordLessonSlideProgress(98, 1, 6, true, autoSecUser);
     assert(reviewRes.success === true, "Reviewing Unit 98 succeeded");
-    const [playerSecAfterReview] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    const [playerSecAfterReview] = await db.query<RowDataPacket[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfterReview[0].current_section) === 2,
       `User current_section did NOT regress on review (actual: ${playerSecAfterReview[0].current_section})`

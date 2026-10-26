@@ -296,6 +296,7 @@ export default function QuizLandingClient({
     const [bestStreak, setBestStreak] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
+    const [prevInitialSlideOrder, setPrevInitialSlideOrder] = useState(initialSlideOrder);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(() =>
         typeof initialSlideOrder === "number" && initialSlideOrder > 0
             ? initialSlideOrder - 1
@@ -334,6 +335,14 @@ export default function QuizLandingClient({
         : [{
             lesson_text: unitLessonCard.lesson_card?.lesson_text ?? unitLessonCard.lesson_text ?? "",
             }];
+
+    if (initialSlideOrder !== prevInitialSlideOrder) {
+        setPrevInitialSlideOrder(initialSlideOrder);
+        if (typeof initialSlideOrder === "number" && initialSlideOrder > 0 && lessonSlides.length > 0) {
+            setLessonSlideIndex(Math.min(lessonSlides.length - 1, Math.max(0, initialSlideOrder - 1)));
+        }
+    }
+
     const hasLesson = lessonSlides.some(
         (slide) => slide.lesson_title || slide.lesson_text || slide.lesson_code,
     );
@@ -405,12 +414,6 @@ export default function QuizLandingClient({
         });
     }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount]);
 
-    useEffect(() => {
-        if (typeof initialSlideOrder === "number" && initialSlideOrder > 0 && lessonSlides.length > 0) {
-            const clamped = Math.min(lessonSlides.length - 1, Math.max(0, initialSlideOrder - 1));
-            setLessonSlideIndex(clamped);
-        }
-    }, [initialSlideOrder, lessonSlides.length]);
 
     useEffect(() => {
         if (!resolvedUnitId || !hasLesson || isFinished) return;

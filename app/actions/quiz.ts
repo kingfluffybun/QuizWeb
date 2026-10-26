@@ -19,14 +19,14 @@ import {
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
 
-function createSafeCache<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
+function createSafeCache<Args extends unknown[], Return>(
+  fn: (...args: Args) => Promise<Return>,
   parts: string[],
   options?: { tags?: string[]; revalidate?: number | false }
-): T {
+): (...args: Args) => Promise<Return> {
   try {
     const cached = unstable_cache(fn, parts, options);
-    return (async (...args: Parameters<T>) => {
+    return async (...args: Args) => {
       try {
         return await cached(...args);
       } catch (err: unknown) {
@@ -36,7 +36,7 @@ function createSafeCache<T extends (...args: any[]) => Promise<any>>(
         }
         throw err;
       }
-    }) as T;
+    };
   } catch {
     return fn;
   }
@@ -343,6 +343,23 @@ export interface QuizMetricsData {
   facetedBreakdown: QuizFacetedCount[];
 }
 
+export interface QuizPayloadStructure {
+  [key: string]: unknown;
+  title?: string;
+  answer?: string;
+  correct_answer?: string;
+  options?: string[];
+  correct_index?: number;
+  items?: string[];
+  pairs?: { left: string; right: string }[];
+  steps?: { prompt: string; template?: string; expected: string }[];
+}
+
+export interface UnitLessonCardStructure {
+  [key: string]: unknown;
+  lesson_card?: { lesson_format?: string; lesson_text?: string };
+}
+
 export interface QuizRow extends RowDataPacket {
   quiz_id: number;
   cat_id: number;
@@ -354,7 +371,7 @@ export interface QuizRow extends RowDataPacket {
   difficulty_name: string;
   type_name: string;
   question_text: string;
-  quiz_payload: any;
+  quiz_payload: QuizPayloadStructure;
 }
 
 export interface UnitRow extends RowDataPacket {
@@ -511,26 +528,7 @@ function getQuizPayload(typeName: string, formData: FormData) {
   return { error: "Unsupported quiz type." };
 }
 
-async function tableExists(tableName: string) {
-  try {
-    await db.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
-async function quizHasColumn(columnName: string) {
-  try {
-    const [columns] = await db.query<RowDataPacket[]>(
-      "SHOW COLUMNS FROM quiz_tbl LIKE ?",
-      [columnName],
-    );
-    return columns.length > 0;
-  } catch {
-    return false;
-  }
-}
 
 async function fetchQuizMetadataInternal() {
   try {
@@ -660,7 +658,21 @@ async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
     }
   }
 
-  const cpMap = new Map<number, any>();
+  interface CPStepItem {
+    prompt: string;
+    template?: string;
+    expected: string;
+  }
+  interface CPMapItem {
+    [key: string]: unknown;
+    title: string;
+    steps: CPStepItem[];
+    prompts: string[];
+    prompt: string;
+    template: string;
+    expected: string;
+  }
+  const cpMap = new Map<number, CPMapItem>();
   if (cpIds.length > 0) {
     const [cpRows] = await db.query<RowDataPacket[]>(
       `SELECT quiz_id, title FROM quiz_cp_tbl WHERE quiz_id IN (?)`,
@@ -673,14 +685,14 @@ async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
        ORDER BY quiz_id, step_order ASC`,
       [cpIds],
     );
-    const stepsByQuiz = new Map<number, any[]>();
+    const stepsByQuiz = new Map<number, CPStepItem[]>();
     for (const s of stepRows) {
       const qId = Number(s.quiz_id);
       if (!stepsByQuiz.has(qId)) stepsByQuiz.set(qId, []);
       stepsByQuiz.get(qId)!.push({
-        prompt: s.prompt,
+        prompt: String(s.prompt ?? ""),
         template: s.template_code ?? "",
-        expected: s.expected_code,
+        expected: String(s.expected_code ?? ""),
       });
     }
     for (const c of cpRows) {
@@ -689,7 +701,7 @@ async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
       cpMap.set(qId, {
         title: c.title,
         steps,
-        prompts: steps.map((s: any) => s.prompt),
+        prompts: steps.map((s) => s.prompt),
         prompt: steps[0]?.prompt ?? "",
         template: steps[0]?.template ?? "",
         expected: steps[0]?.expected ?? "",
@@ -724,7 +736,7 @@ async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
 async function insertSlidesForUnit(
   connection: PoolConnection,
   unitId: number,
-  lessonSlides: any[],
+  lessonSlides: Array<Record<string, unknown>>,
 ) {
   for (let i = 0; i < lessonSlides.length; i++) {
     const s = lessonSlides[i];
@@ -745,7 +757,7 @@ async function insertSlidesForUnit(
 async function insertQuizzesForUnit(
   connection: PoolConnection,
   unitId: number,
-  quizzes: any[],
+  quizzes: Array<Record<string, unknown>>,
 ) {
   const [typeRows] = await connection.query<RowDataPacket[]>("SELECT quiz_type_id, type_name FROM quiz_type_tbl");
   const typeIdByName = new Map<string, number>(typeRows.map((t) => [String(t.type_name).toUpperCase(), Number(t.quiz_type_id)]));
@@ -778,7 +790,7 @@ async function insertQuizzesForUnit(
     );
     const quizId = qResult.insertId;
 
-    const payload = q.quiz_payload ?? {};
+    const payload = (q.quiz_payload ?? {}) as QuizPayloadStructure;
     if (quizTypeId === 1) {
       const options = Array.isArray(payload.options) ? payload.options : [];
       const correctIdx = Number(payload.correct_index ?? 0);
@@ -835,7 +847,7 @@ async function insertQuizzesForUnit(
 async function insertAssessmentForUnit(
   connection: PoolConnection,
   unitId: number,
-  assessmentCandidate: any,
+  assessmentCandidate: unknown,
   unitTitle: string,
 ) {
   if (!assessmentCandidate) return;
@@ -991,7 +1003,7 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     const newUnitId = unitResult.insertId;
 
     await insertSlidesForUnit(connection, newUnitId, lessonSlides);
-    await insertQuizzesForUnit(connection, newUnitId, parsedQuizJson);
+    await insertQuizzesForUnit(connection, newUnitId, parsedQuizJson as Array<Record<string, unknown>>);
     await insertAssessmentForUnit(
       connection,
       newUnitId,
@@ -1037,7 +1049,7 @@ export async function getUnits() {
        ORDER BY unit_id, slide_order ASC`,
       [unitIds],
     );
-    const slidesByUnit = new Map<number, any[]>();
+    const slidesByUnit = new Map<number, Array<{ lesson_title: string; lesson_text: string; lesson_code: string }>>();
     for (const s of slides) {
       const uId = Number(s.unit_id);
       if (!slidesByUnit.has(uId)) slidesByUnit.set(uId, []);
@@ -1063,7 +1075,7 @@ export async function getUnits() {
       [unitIds],
     );
     const populatedQuizzes = await populateQuizPayloads(quizzes as QuizRow[]);
-    const quizzesByUnit = new Map<number, any[]>();
+    const quizzesByUnit = new Map<number, QuizRow[]>();
     for (const q of populatedQuizzes) {
       const uId = Number(q.unit_id);
       if (!quizzesByUnit.has(uId)) quizzesByUnit.set(uId, []);
@@ -1077,7 +1089,7 @@ export async function getUnits() {
       [unitIds],
     );
     const assessmentIds = assessments.map((a) => Number(a.assessment_id));
-    const stepsByAssessment = new Map<number, any[]>();
+    const stepsByAssessment = new Map<number, RowDataPacket[]>();
     if (assessmentIds.length > 0) {
       const [steps] = await db.query<RowDataPacket[]>(
         `SELECT assessment_id, step_number, instruction, inherit_previous_code,
@@ -1094,7 +1106,7 @@ export async function getUnits() {
         stepsByAssessment.get(aId)!.push(st);
       }
     }
-    const assessmentByUnit = new Map<number, any>();
+    const assessmentByUnit = new Map<number, Record<string, unknown>>();
     for (const a of assessments) {
       const uId = Number(a.unit_id);
       const stList = stepsByAssessment.get(Number(a.assessment_id)) ?? [];
@@ -1337,37 +1349,7 @@ export async function getAvailableUnitsForStaff(explicitUserId?: number): Promis
   return fetchAvailableUnitsInternal(true);
 }
 
-function parseJsonColumn(value: unknown) {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
-}
 
-function getLessonTitlesFromDocument(value: unknown): string[] {
-  if (!value || typeof value !== "object") return [];
-
-  const lessonCard = value as Record<string, unknown>;
-  const slides = Array.isArray(lessonCard.lesson_slide)
-    ? lessonCard.lesson_slide
-    : Array.isArray(lessonCard.lesson_slides)
-      ? lessonCard.lesson_slides
-      : [];
-  const titles = slides.flatMap((slide) => {
-    if (!slide || typeof slide !== "object") return [];
-    const slideRecord = slide as Record<string, unknown>;
-    const title = slideRecord.lesson_title ?? slideRecord.title;
-    return typeof title === "string" ? [title] : [];
-  });
-
-  if (typeof lessonCard.lesson_title === "string") {
-    titles.push(lessonCard.lesson_title);
-  }
-
-  return titles;
-}
 
 export async function deleteUnit(unitId: number) {
   if (!(await requireAdmin())) {
@@ -1854,7 +1836,7 @@ async function fetchUnitByIdInternal(unitId: number) {
       [unitId],
     );
 
-    let assessmentObj: any = null;
+    let assessmentObj: Record<string, unknown> | null = null;
     if (assessments.length > 0) {
       const a = assessments[0];
       const [steps] = await db.query<RowDataPacket[]>(
@@ -2130,7 +2112,7 @@ export async function updateQuiz(quizId: number, formData: FormData) {
       await connection.query("DELETE FROM quiz_cp_tbl WHERE quiz_id = ?", [quizId]);
 
       const typeIdNum = Number(quizTypeId);
-      const payload = parsedPayload.payload as any;
+      const payload = (parsedPayload.payload ?? {}) as QuizPayloadStructure;
       if (typeIdNum === 1) {
         const options = Array.isArray(payload.options) ? payload.options : [];
         const correctIdx = Number(payload.correct_index ?? 0);
@@ -2264,9 +2246,9 @@ export interface PendingUnit {
   unit_id: number;
   unit_title: string;
   sec_id: number;
-  unit_lesson_card_json: any;
-  unit_quiz_json: any;
-  unit_assessment_json?: any;
+  unit_lesson_card_json: UnitLessonCardStructure;
+  unit_quiz_json: unknown;
+  unit_assessment_json?: unknown;
   pending_status: "pending" | "approved" | "rejected" | string;
   pending_name: string;
   pending_note?: string | null;
@@ -2275,7 +2257,7 @@ export interface PendingUnit {
   cat_name: string;
   difficulty_name: string;
   type_name: string;
-  quiz_payload: any;
+  quiz_payload: QuizPayloadStructure;
 }
 
 export async function getPendingQuizzes(statusFilter = "pending"): Promise<PendingUnit[]> {
@@ -2367,7 +2349,7 @@ export async function getPendingQuizById(pendingId: number) {
   if (!unit) {
     return { error: "The pending unit was not found." };
   }
-  const payload = unit.quiz_payload as any;
+  const payload = (unit.quiz_payload ?? {}) as Record<string, unknown>;
   return {
     pending_id: unit.unit_id,
     unit_id: unit.unit_id,
@@ -2684,7 +2666,7 @@ export async function updatePendingUnitFromForm(
 
     // Resync quizzes (cascades to subtype tables)
     await connection.query("DELETE FROM quiz_tbl WHERE unit_id = ?", [pendingId]);
-    await insertQuizzesForUnit(connection, pendingId, quizzes);
+    await insertQuizzesForUnit(connection, pendingId, quizzes as Array<Record<string, unknown>>);
 
     // Resync assessment (cascades to step table)
     await connection.query("DELETE FROM unit_assessment_tbl WHERE unit_id = ?", [pendingId]);

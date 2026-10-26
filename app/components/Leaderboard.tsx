@@ -2,7 +2,6 @@
 
 import { Fragment, useState } from "react";
 import type { LeaderboardEntriesByPeriod, LeaderboardPeriod } from "@/app/actions/leaderboard";
-import type { UserInfoResponse } from "@/app/api/db/user-info/route";
 
 interface LeaderboardProps {
     entriesByPeriod: LeaderboardEntriesByPeriod;

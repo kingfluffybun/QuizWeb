@@ -5,7 +5,6 @@ import type { RowDataPacket } from "mysql2";
 import {
   CPFileBuffersSchema,
   toPublicCodeProblem,
-  unwrapCodeProblemAssessment,
   type CodeProblemAssessment,
   type CPFileBuffers,
   type PublicCodeProblem,
@@ -14,15 +13,6 @@ import {
   validateCodeProblemStep,
   type StepValidationResult,
 } from "@/lib/cp-validator";
-
-function parseRawJson(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Resolves the authoritative `CodeProblemAssessment` from `unit_assessment_tbl` and `assessment_step_tbl`.

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { RowDataPacket } from "mysql2/promise";
 
 const envPath = path.resolve(process.cwd(), ".env.local");
 if (fs.existsSync(envPath)) {
@@ -8,7 +9,7 @@ if (fs.existsSync(envPath)) {
 
 async function runTests() {
   console.log("=== RUNNING ENHANCEMENTS & MIGRATION TEST SUITE ===");
-  const { getPaginatedRecentUnits, getQuizMetadata } = await import("../app/actions/quiz");
+  const { getPaginatedRecentUnits } = await import("../app/actions/quiz");
   const {
     getUserLastActiveProgress,
     getUserSectionProgress,
@@ -33,37 +34,37 @@ async function runTests() {
     // Test Suite 1: Normalized Database & Legacy Translation Conformance
     // -------------------------------------------------------------
     console.log("\n[1] Verifying Translated Legacy Data & Normalized Relational Counts...");
-    const [unitCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM unit_tbl");
+    const [unitCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM unit_tbl");
     const unitCount = Number(unitCountRows[0].c);
     assert(unitCount >= 20, `unit_tbl has >= 20 records (actual: ${unitCount})`);
 
-    const [slideCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM lesson_slide_tbl");
+    const [slideCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM lesson_slide_tbl");
     const slideCount = Number(slideCountRows[0].c);
     assert(slideCount >= 150, `lesson_slide_tbl has >= 150 records (actual: ${slideCount})`);
 
-    const [quizCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM quiz_tbl");
+    const [quizCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM quiz_tbl");
     const quizCount = Number(quizCountRows[0].c);
     assert(quizCount >= 250, `quiz_tbl has >= 250 records (actual: ${quizCount})`);
 
-    const [mcqCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM quiz_mcq_option_tbl");
+    const [mcqCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM quiz_mcq_option_tbl");
     assert(Number(mcqCountRows[0].c) >= 1000, `quiz_mcq_option_tbl has >= 1000 options (actual: ${mcqCountRows[0].c})`);
 
-    const [fitbCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM quiz_fitb_tbl");
+    const [fitbCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM quiz_fitb_tbl");
     assert(Number(fitbCountRows[0].c) >= 200, `quiz_fitb_tbl has >= 200 answers (actual: ${fitbCountRows[0].c})`);
 
-    const [orderCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM quiz_order_item_tbl");
+    const [orderCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM quiz_order_item_tbl");
     assert(Number(orderCountRows[0].c) >= 500, `quiz_order_item_tbl has >= 500 items (actual: ${orderCountRows[0].c})`);
 
-    const [pairCountRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM quiz_pair_tbl");
+    const [pairCountRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM quiz_pair_tbl");
     assert(Number(pairCountRows[0].c) >= 400, `quiz_pair_tbl has >= 400 pairs (actual: ${pairCountRows[0].c})`);
 
-    const [assessmentRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM unit_assessment_tbl");
+    const [assessmentRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM unit_assessment_tbl");
     assert(Number(assessmentRows[0].c) >= 20, `unit_assessment_tbl has >= 20 assessments (actual: ${assessmentRows[0].c})`);
 
-    const [userAuthRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM user_auth_tbl");
+    const [userAuthRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM user_auth_tbl");
     assert(Number(userAuthRows[0].c) >= 23, `user_auth_tbl has >= 23 users (actual: ${userAuthRows[0].c})`);
 
-    const [pendingRows] = await db.query<any[]>("SELECT COUNT(*) AS c FROM pending_tbl");
+    const [pendingRows] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS c FROM pending_tbl");
     assert(Number(pendingRows[0].c) >= 26, `pending_tbl has >= 26 submissions (actual: ${pendingRows[0].c})`);
 
     // -------------------------------------------------------------
@@ -144,7 +145,7 @@ async function runTests() {
     const completeResult = await recordLessonSlideProgress(testUnitId, testUnitSlideCount, testUnitSlideCount, true, testUserId);
     assert(completeResult.success === true, "recordLessonSlideProgress (completed) returned success");
 
-    const [dbCompleteRows] = await db.query<any[]>(
+    const [dbCompleteRows] = await db.query<RowDataPacket[]>(
       "SELECT is_completed, completed_at FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
       [testUserId, testUnitId]
     );
@@ -158,7 +159,7 @@ async function runTests() {
     // Step 3d-2: Reviewing an earlier slide retains is_completed = true
     const reviewResult = await recordLessonSlideProgress(testUnitId, 1, testUnitSlideCount, false, testUserId);
     assert(reviewResult.isCompleted === true, "reviewing earlier slide retains completed status in action result");
-    const [dbReviewRows] = await db.query<any[]>(
+    const [dbReviewRows] = await db.query<RowDataPacket[]>(
       "SELECT is_completed, current_slide_order FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
       [testUserId, testUnitId]
     );
@@ -191,8 +192,9 @@ async function runTests() {
         "INSERT INTO user_lesson_progress_tbl (user_id, unit_id, current_slide_order, total_slides) VALUES (999999, ?, 1, 5)",
         [testUnitId]
       );
-    } catch (err: any) {
-      if (err.message.includes("foreign key constraint") || err.code === "ER_NO_REFERENCED_ROW_2") {
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; code?: string };
+      if (errorObj.message?.includes("foreign key constraint") || errorObj.code === "ER_NO_REFERENCED_ROW_2") {
         fkFailed = true;
       }
     }
@@ -205,8 +207,9 @@ async function runTests() {
         "INSERT INTO user_lesson_progress_tbl (user_id, unit_id, current_slide_order, total_slides) VALUES (?, 999999, 1, 5)",
         [testUserId]
       );
-    } catch (err: any) {
-      if (err.message.includes("foreign key constraint") || err.code === "ER_NO_REFERENCED_ROW_2") {
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; code?: string };
+      if (errorObj.message?.includes("foreign key constraint") || errorObj.code === "ER_NO_REFERENCED_ROW_2") {
         unitFkFailed = true;
       }
     }

@@ -4,7 +4,7 @@ import path from "node:path";
 import "./env-loader";
 import { parseAssessmentImport, extractLessonSlides } from "../lib/assessment-json-import";
 import { db } from "../lib/db";
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { RowDataPacket } from "mysql2/promise";
 
 async function runMaintainerJsonImportTest() {
   console.log("================================================================================");
@@ -12,7 +12,7 @@ async function runMaintainerJsonImportTest() {
   console.log("================================================================================");
 
   // Set mock staff authentication for saveUnit and deleteUnit
-  (globalThis as any).__TEST_AUTH_SESSION__ = {
+  (globalThis as Record<string, unknown>).__TEST_AUTH_SESSION__ = {
     user: { id: "4", role: "admin", user_role: "admin", email: "clarence.luna651@gmail.com" },
   };
 
@@ -29,7 +29,7 @@ async function runMaintainerJsonImportTest() {
     assert.ok(fs.existsSync(exportPath), "exports/quizweb-units-latest.json must exist");
 
     const rawExport = JSON.parse(fs.readFileSync(exportPath, "utf8"));
-    const unit98 = rawExport.units?.find((u: any) => u.unit_id === 98);
+    const unit98 = rawExport.units?.find((u: { unit_id: number }) => u.unit_id === 98);
     assert.ok(unit98, "Unit 98 must be present in exported units");
     console.log(`✔ Found Unit 98: "${unit98.unit_title}" with ${unit98.unit_quiz_json?.length} quizzes`);
 
@@ -336,7 +336,7 @@ async function runMaintainerJsonImportTest() {
       assert.equal(remaining.length, 0, "Test unit must be deleted from DB");
       console.log("✔ Test unit successfully deleted and DB cleaned up.");
     }
-    (globalThis as any).__TEST_AUTH_SESSION__ = undefined;
+    (globalThis as Record<string, unknown>).__TEST_AUTH_SESSION__ = undefined;
   }
 }
 

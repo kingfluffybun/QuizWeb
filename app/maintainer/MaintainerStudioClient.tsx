@@ -57,93 +57,7 @@ interface StudioLauncherTool {
   iconSvg: React.ReactNode;
 }
 
-// -----------------------------------------------------------------------------
-// 2. Studio Launcher Tool Definitions (R5 Question Creation Studio)
-// -----------------------------------------------------------------------------
 
-const STUDIO_LAUNCHERS: StudioLauncherTool[] = [
-  {
-    id: "mcq",
-    title: "Multiple Choice",
-    typeBadge: "Quiz Question",
-    badgeClass: "badge-blue",
-    description: "Compose single or multi-select questions with syntax highlighting, hints, and explanations.",
-    iconSvg: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="m9 12 2 2 4-4" />
-      </svg>
-    ),
-  },
-  {
-    id: "fitb",
-    title: "Fill in the Blank",
-    typeBadge: "Quiz Question",
-    badgeClass: "badge-purple",
-    description: "Create code completion exercises testing keyword placement, syntax recall, and normalization.",
-    iconSvg: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
-        <path d="M8 7h6" />
-        <path d="M8 11h8" />
-      </svg>
-    ),
-  },
-  {
-    id: "pair",
-    title: "Matching Pairs",
-    typeBadge: "Interactive",
-    badgeClass: "badge-teal",
-    description: "Design interactive term-and-definition or code-and-output matching challenge blocks.",
-    iconSvg: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-      </svg>
-    ),
-  },
-  {
-    id: "order",
-    title: "Order Sequencing",
-    typeBadge: "Interactive",
-    badgeClass: "badge-amber",
-    description: "Structure code reordering puzzles challenging learners to sequence logical statement flow.",
-    iconSvg: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m3 16 4 4 4-4" />
-        <path d="M7 20V4" />
-        <path d="m21 8-4-4-4 4" />
-        <path d="M17 4v16" />
-      </svg>
-    ),
-  },
-  {
-    id: "cp",
-    title: "Coding Problem Steps",
-    typeBadge: "Assessment",
-    badgeClass: "badge-rose",
-    description: "Author multi-step coding challenges integrated with the in-browser Monaco IDE and test runner.",
-    iconSvg: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
-    ),
-  },
-  {
-    id: "unit",
-    title: "Full Lesson Unit",
-    typeBadge: "Curriculum Bundle",
-    badgeClass: "badge-indigo",
-    description: "Bundle comprehensive lesson cards, inline practice checks, and terminal assessments into a unit.",
-    iconSvg: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-    ),
-  },
-];
 
 // -----------------------------------------------------------------------------
 // 3. Main Component
@@ -152,7 +66,6 @@ const STUDIO_LAUNCHERS: StudioLauncherTool[] = [
 export default function MaintainerStudioClient({
   initialStats,
   initialSubmissions,
-  currentUser,
   children,
 }: MaintainerStudioClientProps) {
   const router = useRouter();
@@ -160,7 +73,6 @@ export default function MaintainerStudioClient({
   const [submissions, setSubmissions] = useState<MaintainerSubmission[]>(initialSubmissions);
   const [studioView, setStudioView] = useState<StudioViewMode>("all");
   const [mobileNoticeDismissed, setMobileNoticeDismissed] = useState(false);
-  const [activeLauncher, setActiveLauncher] = useState<string>("unit");
 
   // Client Filter & Sort State
   const [statusFilter, setStatusFilter] = useState<SubmissionFilterStatus>("all");
@@ -235,7 +147,6 @@ export default function MaintainerStudioClient({
   const handleLaunchNewCreation = (tool?: StudioLauncherTool) => {
     const targetToolId = tool?.id ?? "unit";
     const targetTitle = tool?.title ?? "Full Lesson Unit";
-    setActiveLauncher(targetToolId);
     if (studioView === "submissions") {
       setStudioView("all");
     }
