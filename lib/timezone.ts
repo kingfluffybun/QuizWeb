@@ -44,3 +44,26 @@ export function getClientLocalDate(): string {
     const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 }
+
+/**
+ * Subscribes to client date changes (minute tick, tab focus, visibility change)
+ * for use with React's useSyncExternalStore.
+ */
+export const subscribeClientDate = (onStoreChange: () => void) => {
+    if (typeof window === "undefined") {
+        return () => {};
+    }
+    const interval = setInterval(onStoreChange, 60000);
+    const handleEvent = () => onStoreChange();
+
+    window.addEventListener("visibilitychange", handleEvent);
+    window.addEventListener("focus", handleEvent);
+
+    return () => {
+        clearInterval(interval);
+        window.removeEventListener("visibilitychange", handleEvent);
+        window.removeEventListener("focus", handleEvent);
+    };
+};
+
+export const getServerLocalDate = () => null;

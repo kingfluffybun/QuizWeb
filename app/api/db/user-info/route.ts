@@ -16,6 +16,7 @@ export interface UserInfoResponse {
     current_streak?: number;
     max_streak?: number;
     created_at?: string;
+    completed_lessons?: number;
 }
 
 export const GET = async (): Promise<Response> => {
@@ -38,7 +39,8 @@ export const GET = async (): Promise<Response> => {
                 u.created_at,
                 p.xp,
                 p.current_streak,
-                p.max_streak
+                p.max_streak,
+                (SELECT COUNT(*) FROM user_lesson_progress_tbl WHERE user_id = u.user_id AND is_completed = 1) AS completed_lessons
             FROM user_auth_tbl u
             LEFT JOIN player_tbl p ON u.user_id = p.user_id
             WHERE u.email = ?
@@ -54,6 +56,7 @@ export const GET = async (): Promise<Response> => {
                 ...user,
                 daily_xp_goal: dailyGoal,
                 learning_goal: dailyGoal,
+                completed_lessons: Number(user.completed_lessons ?? 0),
                 created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
             });
         }

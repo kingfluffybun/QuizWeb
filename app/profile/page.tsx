@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { UserInfoResponse } from "@/app/api/db/user-info/route";
+import { getUserStreakData, type StreakData } from "@/app/actions/streak";
+import { getClientLocalDate, getServerLocalDate, subscribeClientDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
 import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
 // import { useRouter } from 'next/navigation';
@@ -35,27 +37,31 @@ function ProfileIcon({ name }: { name: ProfileIconName }) {
     );
 }
 
-const activity = [
-    { day: "Sun", completed: true },
-    { day: "Sat", completed: true },
-    { day: "Mon", completed: true },
-    { day: "Tue", completed: true },
-    { day: "Wed", completed: false, today: true },
-    { day: "Thu", completed: false },
-    { day: "Fri", completed: false },
-];
-
-const weeklyGoal = 7;
-const completedActivityDays = activity.filter(({ completed }) => completed).length;
-const currentStreakDays = completedActivityDays;
-
 export default function ProfilePage() {
     const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+    const [userData, setUserData] = useState<UserInfoResponse | undefined>();
+    const [streakData, setStreakData] = useState<StreakData | null>(null);
     const [username, setUsername] = useState<string | undefined>();
     const [email, setEmail] = useState<string | undefined>();
     const [avaColor, setAvaColor] = useState<string | undefined>();
     const [learningGoal, setLearningGoal] = useState<number | undefined>();
     const [createdDate, setCreatedDate] = useState<string>();
+
+    const clientToday = useSyncExternalStore(subscribeClientDate, getClientLocalDate, getServerLocalDate);
+
+    useEffect(() => {
+        let isMounted = true;
+        getUserStreakData(undefined, undefined, clientToday ?? undefined)
+            .then((data) => {
+                if (isMounted) setStreakData(data);
+            })
+            .catch((err: unknown) => {
+                console.error("Failed to load streak data:", err);
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [clientToday]);
 
     const [draft, setDraft] = useState<{ username?: string; email?: string; learningGoal?: number }>({
         username: undefined,
@@ -74,22 +80,21 @@ export default function ProfilePage() {
                 if (!isMounted || !res.ok) return;
                 if (Object.keys(json).length === 0) return;
                 
-                const userData: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
+                const loadedUser: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
+                setUserData(loadedUser);
 
-                const numericGoal = userData?.learning_goal != null ? Number(userData.learning_goal) : (userData?.daily_xp_goal != null ? Number(userData.daily_xp_goal) : undefined);
+                const numericGoal = loadedUser?.learning_goal != null ? Number(loadedUser.learning_goal) : (loadedUser?.daily_xp_goal != null ? Number(loadedUser.daily_xp_goal) : undefined);
 
-                setUsername(userData?.username);
-                setEmail(userData?.email);
-                setAvaColor(userData?.avatar_color);
-                setCreatedDate(userData?.created_at);
+                setUsername(loadedUser?.username);
+                setEmail(loadedUser?.email);
+                setAvaColor(loadedUser?.avatar_color);
+                setCreatedDate(loadedUser?.created_at);
                 setLearningGoal(numericGoal);
                 setDraft({
-                    username: userData?.username,
+                    username: loadedUser?.username,
                     learningGoal: numericGoal
                 });
                 setIsProfileLoaded(true);
-
-                console.log(userData);
             })
             .catch((err) => {
                 // Silently fallback to unauthenticated/user default
@@ -175,6 +180,15 @@ export default function ProfilePage() {
         .map((part) => part[0]?.toUpperCase() ?? "")
         .join("");
 
+    const weekDays = streakData?.weekDays ?? [];
+    const completedActivityDays = weekDays.filter((d) => d.isActive).length;
+    const currentStreakDays = streakData?.currentStreak ?? 0;
+    const isFlameActive = currentStreakDays > 0 || (streakData?.todayCompleted ?? false);
+    const weeklyGoal = 7;
+    const completedLessons = userData?.completed_lessons ?? 0;
+    const totalXp = userData?.xp ?? 0;
+    const longestStreak = streakData?.longestStreak ?? 0;
+
     if (!isProfileLoaded) {
         return <ProfileSkeleton />;
     }
@@ -209,13 +223,13 @@ export default function ProfilePage() {
                         <div className="profile-stats" aria-label="Learning statistics">
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="code" /></span>
-                                <div><strong>24</strong><span>Lesson completed</span></div>
-                                <small>+4 this week</small>
+                                <div><strong>{completedLessons}</strong><span>Lesson completed</span></div>
+                                <small>{completedLessons === 1 ? "1 lesson total" : `${completedLessons} lessons total`}</small>
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
-                                <div><strong>7 days</strong><span>Current streak</span></div>
-                                <small>Personal best: 12</small>
+                                <div><strong>{currentStreakDays} {currentStreakDays === 1 ? "day" : "days"}</strong><span>Current streak</span></div>
+                                <small>Personal best: {longestStreak}</small>
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
@@ -224,8 +238,8 @@ export default function ProfilePage() {
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="award" /></span>
-                                <div><strong>1,240 XP</strong><span>Total experience</span></div>
-                                <small>+120 this week</small>
+                                <div><strong>{totalXp.toLocaleString()} XP</strong><span>Total experience</span></div>
+                                <small>All-time XP</small>
                             </article>
                         </div>
                     </section>
@@ -238,7 +252,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="activity-streak-status">
                                 <svg className="activity-streak-flame" viewBox="0 0 547 624" aria-hidden="true">
-                                    <path fill="#FF7504" fillRule="evenodd" clipRule="evenodd" d="M219.095 23.8317C212.459 64.1343 205.4 86.4878 190.467 114.633C170.255 152.704 143.015 186.52 102.712 223.565C44.8828 276.689 14.8066 323.839 2.89081 380.1C-0.668852 396.963 -1.00068 431.474 2.22715 448.88C13.8112 511.295 57.402 566.56 119.485 597.602C146.243 610.965 167.45 617.24 200.09 621.403C210.558 622.761 219.518 623.847 219.97 623.847C220.453 623.847 217.044 621.313 212.459 618.236C202.142 611.327 184.585 594.525 176.681 584.057C151.431 550.542 143.648 506.83 156.288 469.393C165.58 441.791 185.188 413.585 210.92 390.87C229.985 374.037 249.021 360.703 287.996 336.871L292.431 334.186L299.972 356.842C311.798 392.348 314.965 398.532 336.564 427.763C343.925 437.718 352.523 450.117 355.66 455.336C371.709 482.033 377.259 513.346 370.592 539.561C361.693 574.645 341.964 604.51 317.348 620.106C310.319 624.601 309.987 624.571 336.625 621.403C382.448 615.973 415.179 606.772 444.682 591.055C481.455 571.477 507.549 544.327 524.925 507.584C535.182 485.925 541.275 463.782 545.046 434.4C547.309 416.994 546.947 376.058 544.413 361.457C535.574 310.234 513.492 260.006 474.728 202.72C456.356 175.63 439.101 154.845 412.584 127.937L388.24 103.23L377.561 124.618C371.678 136.383 366.58 146.007 366.188 146.007C365.796 146.007 364.227 142.869 362.689 139.068C347.364 100.877 317.107 62.445 281.661 36.1698C274.119 30.589 224.827 0 223.379 0C223.198 0 221.267 10.7393 219.095 23.8317Z" />
+                                    <path fill={isFlameActive ? "#FF7504" : "var(--text-muted)"} fillRule="evenodd" clipRule="evenodd" d="M219.095 23.8317C212.459 64.1343 205.4 86.4878 190.467 114.633C170.255 152.704 143.015 186.52 102.712 223.565C44.8828 276.689 14.8066 323.839 2.89081 380.1C-0.668852 396.963 -1.00068 431.474 2.22715 448.88C13.8112 511.295 57.402 566.56 119.485 597.602C146.243 610.965 167.45 617.24 200.09 621.403C210.558 622.761 219.518 623.847 219.97 623.847C220.453 623.847 217.044 621.313 212.459 618.236C202.142 611.327 184.585 594.525 176.681 584.057C151.431 550.542 143.648 506.83 156.288 469.393C165.58 441.791 185.188 413.585 210.92 390.87C229.985 374.037 249.021 360.703 287.996 336.871L292.431 334.186L299.972 356.842C311.798 392.348 314.965 398.532 336.564 427.763C343.925 437.718 352.523 450.117 355.66 455.336C371.709 482.033 377.259 513.346 370.592 539.561C361.693 574.645 341.964 604.51 317.348 620.106C310.319 624.601 309.987 624.571 336.625 621.403C382.448 615.973 415.179 606.772 444.682 591.055C481.455 571.477 507.549 544.327 524.925 507.584C535.182 485.925 541.275 463.782 545.046 434.4C547.309 416.994 546.947 376.058 544.413 361.457C535.574 310.234 513.492 260.006 474.728 202.72C456.356 175.63 439.101 154.845 412.584 127.937L388.24 103.23L377.561 124.618C371.678 136.383 366.58 146.007 366.188 146.007C365.796 146.007 364.227 142.869 362.689 139.068C347.364 100.877 317.107 62.445 281.661 36.1698C274.119 30.589 224.827 0 223.379 0C223.198 0 221.267 10.7393 219.095 23.8317Z" />
                                 </svg>
                                 <div className="activity-streak-copy">
                                     <strong>{currentStreakDays}</strong>
@@ -247,16 +261,16 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                             <div className="activity-week" aria-label={`${completedActivityDays} learning days this week`}>
-                                {activity.map(({ day, completed, today }) => (
-                                    <div className="activity-day-container" key={day}>
+                                {weekDays.map((day) => (
+                                    <div className="activity-day-container" key={day.date}>
                                         <span
-                                            className={`activity-day-marker${completed ? " is-complete" : ""}${today ? " is-today" : ""}`}
+                                            className={`activity-day-marker${day.isActive ? " is-complete" : ""}${day.isToday ? " is-today" : ""}`}
                                             role="img"
-                                            aria-label={`${day}: ${completed ? "learning completed" : "no learning activity"}`}
+                                            aria-label={`${day.dayName}: ${day.isActive ? "learning completed" : "no learning activity"}`}
                                         >
-                                            {completed && <ProfileIcon name="check" />}
+                                            {day.isActive && <ProfileIcon name="check" />}
                                         </span>
-                                        <span className="activity-day-name">{day[0]}</span>
+                                        <span className="activity-day-name">{day.dayName[0]}</span>
                                     </div>
                                 ))}
                             </div>

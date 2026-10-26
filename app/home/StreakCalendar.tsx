@@ -5,6 +5,11 @@ import {
     type StreakData,
     getUserStreakData,
 } from "@/app/actions/streak";
+import {
+    getClientLocalDate,
+    getServerLocalDate,
+    subscribeClientDate,
+} from "@/lib/timezone";
 
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -12,32 +17,6 @@ const MONTH_NAMES = [
 ];
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const subscribeClientDate = (onStoreChange: () => void) => {
-    if (typeof window === "undefined") {
-        return () => {};
-    }
-    const interval = setInterval(onStoreChange, 60000);
-    const handleEvent = () => onStoreChange();
-
-    window.addEventListener("visibilitychange", handleEvent);
-    window.addEventListener("focus", handleEvent);
-
-    return () => {
-        clearInterval(interval);
-        window.removeEventListener("visibilitychange", handleEvent);
-        window.removeEventListener("focus", handleEvent);
-    };
-};
-
-const getClientLocalDate = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-const getServerLocalDate = () => null;
 
 export default function StreakCalendar({ initialData }: { initialData: StreakData }) {
     const [streakData, setStreakData] = useState<StreakData>(initialData);
