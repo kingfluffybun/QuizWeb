@@ -2651,6 +2651,11 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   color: var(--text-main, #fafafa);
 }
 
+[data-theme="dark"] .options-grid {
+  background-color: #1c1c24;
+  border-color: var(--border-main, #2d2d3d);
+}
+
 [data-theme="dark"] .form-input,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] .form-textarea,
