@@ -27,6 +27,7 @@ import {
   verifyCodeProblemStep,
 } from "@/app/actions/cp-engine";
 import { recordUserActivity } from "@/app/actions/streak";
+import { getClientLocalDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
@@ -497,6 +498,7 @@ function CodeProblemRunner() {
           recordUserActivity({
             type: "quiz",
             xp: 50,
+            date: getClientLocalDate(),
           }).catch((err) => {
             console.error("Failed to record CP assessment XP:", err);
           });

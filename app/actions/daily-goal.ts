@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getAppLocalDate } from "@/lib/timezone";
 import type { RowDataPacket } from "mysql2/promise";
 import type { DailyGoalData } from "@/lib/daily-goal";
 
@@ -14,9 +15,11 @@ interface TotalXpRow extends RowDataPacket {
     xp: number | string;
 }
 
-function getUtcWeekDates(today: Date, offsetWeeks = 0): string[] {
-    const sunday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    sunday.setUTCDate(sunday.getUTCDate() - sunday.getUTCDay() + offsetWeeks * 7);
+function getWeekDates(todayDateStr: string, offsetWeeks = 0): string[] {
+    const d = new Date(todayDateStr + "T00:00:00Z");
+    const dayOfWeek = d.getUTCDay();
+    const sunday = new Date(d);
+    sunday.setUTCDate(sunday.getUTCDate() - dayOfWeek + offsetWeeks * 7);
 
     return Array.from({ length: 7 }, (_, index) => {
         const date = new Date(sunday);
@@ -33,13 +36,14 @@ function getAuthenticatedUserId(userId: string | undefined): number {
     return id;
 }
 
-export async function getDailyGoalData(): Promise<DailyGoalData> {
+export async function getDailyGoalData(clientToday?: string): Promise<DailyGoalData> {
     const session = await auth();
     const userId = getAuthenticatedUserId(session?.user?.id);
-    const today = new Date();
-    const todayDate = today.toISOString().slice(0, 10);
-    const weekDates = getUtcWeekDates(today);
-    const previousWeekDates = getUtcWeekDates(today, -1);
+    const todayDate = (clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday))
+        ? clientToday
+        : getAppLocalDate();
+    const weekDates = getWeekDates(todayDate);
+    const previousWeekDates = getWeekDates(todayDate, -1);
 
     try {
         const [[activityRows], [previousWeekTotalRows]] = await Promise.all([

@@ -23,6 +23,7 @@ import {
 import { recordLessonSlideProgress } from "@/app/actions/progress";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
+import { getClientLocalDate } from "@/lib/timezone";
 
 type AnswerResult = {
     correct: boolean;
@@ -352,9 +353,14 @@ export default function QuizLandingClient({
     }, [hasStartedQuiz]);
 
     useEffect(() => {
-        if (!isFinished || completionRecorded.current) return;
+        if (!isFinished) return;
 
+        const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);
+        if (!isPassed) return;
+
+        if (completionRecorded.current) return;
         completionRecorded.current = true;
+
         const targetUnitId = resolvedUnitId;
         if (targetUnitId) {
             recordLessonSlideProgress(
@@ -370,6 +376,7 @@ export default function QuizLandingClient({
             xpEarned: totalQuizXp,
             currentStreak,
             bestStreak,
+            date: getClientLocalDate(),
         }).then((response) => {
             if (!response.success) {
                 console.error("Failed to record quiz completion:", response.error);
@@ -378,7 +385,7 @@ export default function QuizLandingClient({
         }).catch((error) => {
             console.error("Failed to record quiz completion:", error);
         });
-    }, [isFinished, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length]);
+    }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length]);
 
     useEffect(() => {
         if (typeof initialSlideOrder === "number" && initialSlideOrder > 0 && lessonSlides.length > 0) {
@@ -686,6 +693,7 @@ export default function QuizLandingClient({
     const areChoicesLocked = Boolean(result);
 
     if (isFinished) {
+        const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);
         const backHref = completionDestination === "home" ? "/home" : "/input";
         const backLabel = completionDestination === "home" ? "Back to Home" : "Back to Quiz Input";
         const hasCodingAssessment = Boolean(
@@ -700,33 +708,33 @@ export default function QuizLandingClient({
                 <Sidebar />
                 <main className="quiz-completion-main">
                     <div className="quiz-complete-card">
-                        <h1>{lives === 0 ? "Game Over" : "Quiz Complete!"}</h1>
+                        <h1>{!isPassed ? "Game Over" : "Quiz Complete!"}</h1>
                         <h2>Score: {score} / {quizzes.length}</h2>
                         <p className="quiz-completion-message">
-                            {lives === 0
+                            {!isPassed
                                 ? "You ran out of lives. Try again to sharpen your skills!"
                                 : hasCodingAssessment
                                   ? "Outstanding performance! Ready to tackle the Unit Coding Assessment?"
                                   : "Outstanding performance!"}
                         </p>
-                        {lives > 0 && nextUnit && (
+                        {isPassed && hasCodingAssessment && (
                             <Link
-                                href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
+                                href={codingAssessmentHref}
                                 className="options"
                                 id="submit"
                                 style={{ textDecoration: "none" }}
                             >
-                                Next Unit: {nextUnit.unit_title}
+                                Code Problem
                             </Link>
                         )}
-                        {lives > 0 && hasCodingAssessment && (
+                        {isPassed && nextUnit && (
                             <Link
-                                href={codingAssessmentHref}
+                                href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
                                 className="options"
-                                id={nextUnit ? undefined : "submit"}
+                                id={hasCodingAssessment ? undefined : "submit"}
                                 style={{
                                     textDecoration: "none",
-                                    ...(nextUnit
+                                    ...(hasCodingAssessment
                                         ? {
                                               display: "flex",
                                               alignItems: "center",
@@ -740,16 +748,16 @@ export default function QuizLandingClient({
                                         : {}),
                                 }}
                             >
-                                Start Coding Assessment
+                                Next Unit: {nextUnit.unit_title}
                             </Link>
                         )}
                         <button
                             className="options"
-                            id={lives > 0 && (nextUnit || hasCodingAssessment) ? undefined : "submit"}
+                            id={isPassed ? undefined : "submit"}
                             type="button"
                             onClick={() => window.location.reload()}
                             style={
-                                lives > 0 && (nextUnit || hasCodingAssessment)
+                                isPassed
                                     ? {
                                           display: "flex",
                                           alignItems: "center",
@@ -763,7 +771,7 @@ export default function QuizLandingClient({
                                     : undefined
                             }
                         >
-                            Play Again
+                            {!isPassed ? "Try Again" : "Play Again"}
                         </button>
                         <Link href={backHref} className="options back-to-input-btn">
                             {backLabel}

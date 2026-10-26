@@ -18,12 +18,16 @@ async function runTests() {
     getPreviousSectionId,
     getSectionById,
     getCurriculumMetadata,
+    computeCurriculumUnlockState,
   } = await import("../lib/curriculum");
   const {
     getUserLastActiveProgress,
     getUserSectionProgress,
     recordLessonSlideProgress,
     getNextCurriculumUnit,
+    isUnitUnlockedForUser,
+    getAvailableUnitsForUser,
+    getUserCurriculumUnlockState,
   } = await import("../app/actions/progress");
   const { getAvailableUnits, getQuizMetadata } = await import("../app/actions/quiz");
 
@@ -245,46 +249,47 @@ async function runTests() {
     // Test Suite 6: Automatic Section Progression via recordLessonSlideProgress
     // -------------------------------------------------------------
     console.log("\n[6] Verifying Automatic Section Progression...");
-    // Reset test user's current_section to 1
-    await db.query("UPDATE player_tbl SET current_section = 1 WHERE user_id = ?", [testUserId]);
-
-    // Clean up test user progress for Section 1 units (98 and 103)
-    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id IN (98, 103)", [testUserId]);
+    const autoSecUser = 99995;
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("INSERT IGNORE INTO user_auth_tbl (user_id, email, password_hash) VALUES (?, 'autosec@test.com', 'hash')", [autoSecUser]);
+    await db.query("INSERT INTO player_tbl (user_id, username, current_section) VALUES (?, 'autosec_user', 1)", [autoSecUser]);
 
     // Step 6a: Complete Unit 98 (1 of 2 in Section 1)
-    const res98 = await recordLessonSlideProgress(98, 6, 6, true, testUserId);
+    const res98 = await recordLessonSlideProgress(98, 6, 6, true, autoSecUser);
     assert(res98.success === true, "recordLessonSlideProgress(98) returned success");
 
-    const [playerSecAfter98] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [testUserId]);
+    const [playerSecAfter98] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfter98[0].current_section) === 1,
       `User remains on Section 1 after completing only 1 of 2 units (actual: ${playerSecAfter98[0].current_section})`
     );
 
     // Step 6b: Complete Unit 103 (2 of 2 in Section 1 -> Should Auto-Advance to Section 2!)
-    const res103 = await recordLessonSlideProgress(103, 6, 6, true, testUserId);
+    const res103 = await recordLessonSlideProgress(103, 6, 6, true, autoSecUser);
     assert(res103.success === true, "recordLessonSlideProgress(103) returned success");
     assert(res103.advancedSectionId === 2, "recordLessonSlideProgress indicates advancement to section 2");
 
-    const [playerSecAfter103] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [testUserId]);
+    const [playerSecAfter103] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfter103[0].current_section) === 2,
       `User current_section auto-advanced to Section 2 (actual: ${playerSecAfter103[0].current_section})`
     );
 
     // Step 6c: Review non-regression: completing earlier unit does not regress current_section
-    const reviewRes = await recordLessonSlideProgress(98, 1, 6, true, testUserId);
+    const reviewRes = await recordLessonSlideProgress(98, 1, 6, true, autoSecUser);
     assert(reviewRes.success === true, "Reviewing Unit 98 succeeded");
-    const [playerSecAfterReview] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [testUserId]);
+    const [playerSecAfterReview] = await db.query<any[]>("SELECT current_section FROM player_tbl WHERE user_id = ?", [autoSecUser]);
     assert(
       Number(playerSecAfterReview[0].current_section) === 2,
       `User current_section did NOT regress on review (actual: ${playerSecAfterReview[0].current_section})`
     );
 
     // Clean up test records
-    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id IN (98, 103)", [testUserId]);
-    await db.query("UPDATE player_tbl SET current_section = 1 WHERE user_id = ?", [testUserId]);
-    console.log("  ✓ Cleaned up test lesson progress records and reset player current_section to 1");
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [autoSecUser]);
+    await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [autoSecUser]);
+    console.log("  ✓ Cleaned up test lesson progress records and test user");
 
     // -------------------------------------------------------------
     // Test Suite 7: getAvailableUnits Backward Compatibility
@@ -369,6 +374,102 @@ async function runTests() {
     await db.query("DELETE FROM player_tbl WHERE user_id = ?", [testProgUser]);
     await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [testProgUser]);
     console.log("  ✓ Cleaned up forward target test user");
+
+    // -------------------------------------------------------------
+    // Test Suite 9: Per-Unit and Section Unlock Progression
+    // -------------------------------------------------------------
+    console.log("\n[9] Verifying Strict Per-Unit and Section Unlock Progression...");
+
+    // 9.1 Pure domain logic test with computeCurriculumUnlockState
+    const mockUnits = [
+      { unit_id: 1, unit_order: 1, sec_id: 1 },
+      { unit_id: 2, unit_order: 2, sec_id: 1 },
+      { unit_id: 3, unit_order: 1, sec_id: 2 },
+      { unit_id: 4, unit_order: 2, sec_id: 2 },
+      { unit_id: 5, unit_order: 1, sec_id: 3 },
+    ];
+
+    // State 0: No units completed
+    const state0 = computeCurriculumUnlockState(mockUnits, new Set());
+    assert(state0.unlockedSectionIds.has(1), "Initial state: Section 1 is unlocked");
+    assert(!state0.unlockedSectionIds.has(2), "Initial state: Section 2 is locked");
+    assert(state0.unlockedUnitIds.has(1), "Initial state: Unit 1 is unlocked");
+    assert(!state0.unlockedUnitIds.has(2), "Initial state: Unit 2 is locked");
+    assert(!state0.unlockedUnitIds.has(3), "Initial state: Unit 3 (Sec 2) is locked");
+
+    // State 1: Unit 1 completed
+    const state1 = computeCurriculumUnlockState(mockUnits, new Set([1]));
+    assert(state1.unlockedSectionIds.has(1), "Unit 1 done: Section 1 is unlocked");
+    assert(!state1.unlockedSectionIds.has(2), "Unit 1 done: Section 2 is STILL locked (Sec 1 not fully completed)");
+    assert(state1.unlockedUnitIds.has(1), "Unit 1 done: Unit 1 is unlocked (reviewable)");
+    assert(state1.unlockedUnitIds.has(2), "Unit 1 done: Unit 2 is now unlocked");
+    assert(!state1.unlockedUnitIds.has(3), "Unit 1 done: Unit 3 is locked");
+
+    // State 2: Unit 1 and Unit 2 completed (Section 1 fully done)
+    const state2 = computeCurriculumUnlockState(mockUnits, new Set([1, 2]));
+    assert(state2.completedSectionIds.has(1), "Sec 1 done: Section 1 is marked completed");
+    assert(state2.unlockedSectionIds.has(2), "Sec 1 done: Section 2 is now unlocked");
+    assert(!state2.unlockedSectionIds.has(3), "Sec 1 done: Section 3 is still locked");
+    assert(state2.unlockedUnitIds.has(3), "Sec 1 done: Unit 3 (first unit of Sec 2) is unlocked");
+    assert(!state2.unlockedUnitIds.has(4), "Sec 1 done: Unit 4 (second unit of Sec 2) is locked until Unit 3 completed");
+
+    // 9.2 Live Database End-to-End Unlock State
+    const unlockTestUser = 99997;
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [unlockTestUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [unlockTestUser]);
+    await db.query("INSERT IGNORE INTO user_auth_tbl (user_id, email, password_hash) VALUES (?, 'unlock@test.com', 'hash')", [unlockTestUser]);
+    await db.query("INSERT INTO player_tbl (user_id, username, current_section) VALUES (?, 'unlock_user', 1)", [unlockTestUser]);
+
+    // Initial state: only Unit 98 is unlocked
+    const is98UnlockedInit = await isUnitUnlockedForUser(98, unlockTestUser);
+    const is103UnlockedInit = await isUnitUnlockedForUser(103, unlockTestUser);
+    const is105UnlockedInit = await isUnitUnlockedForUser(105, unlockTestUser);
+    assert(is98UnlockedInit === true, "Database: Fresh user has Unit 98 unlocked");
+    assert(is103UnlockedInit === false, "Database: Fresh user has Unit 103 locked");
+    assert(is105UnlockedInit === false, "Database: Fresh user has Unit 105 (Sec 2) locked");
+
+    const availUnitsInit = await getAvailableUnitsForUser(unlockTestUser);
+    const unlockedUnitsInit = availUnitsInit.filter((u) => !u.is_locked);
+    const lockedUnitsInit = availUnitsInit.filter((u) => u.is_locked);
+    assert(unlockedUnitsInit.length === 1, `Database: Fresh user has exactly 1 unlocked unit (actual: ${unlockedUnitsInit.length})`);
+    assert(unlockedUnitsInit[0].unit_id === 98, "Database: Unlocked unit is Unit 98");
+    assert(lockedUnitsInit.length === 19, `Database: Fresh user has exactly 19 locked units (actual: ${lockedUnitsInit.length})`);
+
+    const secProgInit = await getUserSectionProgress(unlockTestUser, 1);
+    assert(secProgInit.units[0].is_locked === false, "Dashboard: Unit 98 is unlocked");
+    assert(secProgInit.units[1].is_locked === true, "Dashboard: Unit 103 is locked");
+
+    // User completes Unit 98: Unit 103 unlocks, Section 2 remains locked
+    await recordLessonSlideProgress(98, 6, 6, true, unlockTestUser);
+    const is98Post = await isUnitUnlockedForUser(98, unlockTestUser);
+    const is103Post = await isUnitUnlockedForUser(103, unlockTestUser);
+    const is105Post = await isUnitUnlockedForUser(105, unlockTestUser);
+    assert(is98Post === true, "After Unit 98: Unit 98 remains unlocked");
+    assert(is103Post === true, "After Unit 98: Unit 103 is unlocked");
+    assert(is105Post === false, "After Unit 98: Unit 105 (Sec 2) remains locked");
+
+    const availUnitsStep1 = await getAvailableUnitsForUser(unlockTestUser);
+    const unlockedUnitsStep1 = availUnitsStep1.filter((u) => !u.is_locked);
+    assert(unlockedUnitsStep1.length === 2, `After Unit 98: Exactly 2 units unlocked (actual: ${unlockedUnitsStep1.length})`);
+
+    // User completes Unit 103: Section 1 completes -> Section 2 unlocks -> Unit 105 unlocks -> Unit 104 is locked
+    await recordLessonSlideProgress(103, 6, 6, true, unlockTestUser);
+    const is105Step2 = await isUnitUnlockedForUser(105, unlockTestUser);
+    const is104Step2 = await isUnitUnlockedForUser(104, unlockTestUser);
+    const is101Step2 = await isUnitUnlockedForUser(101, unlockTestUser); // Sec 3 Unit 1
+    assert(is105Step2 === true, "After Sec 1 complete: Unit 105 (Sec 2 Unit 1) is unlocked");
+    assert(is104Step2 === false, "After Sec 1 complete: Unit 104 (Sec 2 Unit 2) is locked until Unit 105 is done");
+    assert(is101Step2 === false, "After Sec 1 complete: Section 3 Unit 1 is locked");
+
+    const availUnitsStep2 = await getAvailableUnitsForUser(unlockTestUser);
+    const unlockedUnitsStep2 = availUnitsStep2.filter((u) => !u.is_locked);
+    assert(unlockedUnitsStep2.length === 3, `After Sec 1 complete: Exactly 3 units unlocked (98, 103, 105) (actual: ${unlockedUnitsStep2.length})`);
+
+    // Clean up test user
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [unlockTestUser]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [unlockTestUser]);
+    await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [unlockTestUser]);
+    console.log("  ✓ Cleaned up unlock test user");
 
     console.log(`\n=== RESULTS: ${passed} PASSED, ${failed} FAILED ===`);
     if (failed > 0) {

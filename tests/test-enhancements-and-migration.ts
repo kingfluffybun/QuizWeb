@@ -90,16 +90,19 @@ async function runTests() {
     // Test Suite 3: Player Lesson Progress Tracking & 3NF Compliance
     // -------------------------------------------------------------
     console.log("\n[3] Verifying user_lesson_progress_tbl & progress actions...");
-    // Fetch a real user_id and unit_id from the database to test progress tracking
-    const [testUserRows] = await db.query<any[]>("SELECT user_id FROM user_auth_tbl ORDER BY user_id ASC LIMIT 1");
-    const testUserId = Number(testUserRows[0].user_id);
-    const testUnitId = firstUnit.unit_id;
+    // Use an isolated test user and canonical unlocked Unit 98 to test progress tracking
+    const testUserId = 99991;
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [testUserId]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [testUserId]);
+    await db.query("INSERT IGNORE INTO user_auth_tbl (user_id, email, password_hash) VALUES (?, 'enhancements_test@test.com', 'hash')", [testUserId]);
+    await db.query("INSERT INTO player_tbl (user_id, username, current_section) VALUES (?, 'enhancements_test', 1)", [testUserId]);
 
-    // Clean up any existing progress for this user/unit before testing
-    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?", [testUserId, testUnitId]);
+    const testUnitId = 98;
+    const testUnitSlideCount = 7;
+    const testUnitSecId = 1;
 
     // Step 3a: Record initial slide progress (slide 1)
-    const recordResult1 = await recordLessonSlideProgress(testUnitId, 1, firstUnit.slide_count, false, testUserId);
+    const recordResult1 = await recordLessonSlideProgress(testUnitId, 1, testUnitSlideCount, false, testUserId);
     assert(recordResult1.success === true, "recordLessonSlideProgress (slide 1) returned success");
 
     // Step 3b: Query last active progress
@@ -110,7 +113,7 @@ async function runTests() {
     assert(active1?.is_completed === false, "active progress is_completed is false");
 
     // Step 3c: Advance slide progress (slide 2)
-    const recordResult2 = await recordLessonSlideProgress(testUnitId, 2, firstUnit.slide_count, false, testUserId);
+    const recordResult2 = await recordLessonSlideProgress(testUnitId, 2, testUnitSlideCount, false, testUserId);
     assert(recordResult2.success === true, "recordLessonSlideProgress (slide 2) returned success");
 
     const active2 = await getUserLastActiveProgress(testUserId);
@@ -120,8 +123,8 @@ async function runTests() {
     // Must NOT mark unit completed just because final slide was reached!
     const recordResultFinalSlide = await recordLessonSlideProgress(
       testUnitId,
-      firstUnit.slide_count,
-      firstUnit.slide_count,
+      testUnitSlideCount,
+      testUnitSlideCount,
       false,
       testUserId,
     );
@@ -129,31 +132,41 @@ async function runTests() {
     assert(recordResultFinalSlide.isCompleted === false, "recordLessonSlideProgress does not prematurely report completion");
 
     const activeFinalSlide = await getUserLastActiveProgress(testUserId);
-    assert(activeFinalSlide?.current_slide_order === firstUnit.slide_count, `active progress reaches slide ${firstUnit.slide_count}`);
+    assert(activeFinalSlide?.current_slide_order === testUnitSlideCount, `active progress reaches slide ${testUnitSlideCount}`);
     assert(activeFinalSlide?.is_completed === false, "active progress is_completed remains false before explicit completion");
     assert(activeFinalSlide?.completed_at === null, "completed_at remains null before explicit completion");
 
-    const sectionProgressIncomplete = await getUserSectionProgress(testUserId, firstUnit.sec_id);
+    const sectionProgressIncomplete = await getUserSectionProgress(testUserId, testUnitSecId);
     const targetIncomplete = sectionProgressIncomplete.units.find((u) => u.unit_id === testUnitId);
     assert(targetIncomplete?.percentage === 99, `incomplete unit on last slide is capped at 99% until completed (${targetIncomplete?.percentage}%)`);
 
     // Step 3d: Complete unit progress explicitly
-    const completeResult = await recordLessonSlideProgress(testUnitId, firstUnit.slide_count, firstUnit.slide_count, true, testUserId);
+    const completeResult = await recordLessonSlideProgress(testUnitId, testUnitSlideCount, testUnitSlideCount, true, testUserId);
     assert(completeResult.success === true, "recordLessonSlideProgress (completed) returned success");
 
+    const [dbCompleteRows] = await db.query<any[]>(
+      "SELECT is_completed, completed_at FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
+      [testUserId, testUnitId]
+    );
+    assert(Number(dbCompleteRows[0]?.is_completed) === 1, "active progress is_completed is now true in database");
+    assert(dbCompleteRows[0]?.completed_at !== null, `active progress has completed_at timestamp (${dbCompleteRows[0]?.completed_at})`);
+
     const active3 = await getUserLastActiveProgress(testUserId);
-    assert(active3?.is_completed === true, "active progress is_completed is now true");
-    assert(active3?.completed_at !== null, `active progress has completed_at timestamp (${active3?.completed_at})`);
+    assert(active3?.unit_id === 103, `after completing unit 98, active progress advances to unit 103 (${active3?.unit_id})`);
+    assert(active3?.resume_type === "up_next", "active progress next unit has resume_type 'up_next'");
 
     // Step 3d-2: Reviewing an earlier slide retains is_completed = true
-    const reviewResult = await recordLessonSlideProgress(testUnitId, 1, firstUnit.slide_count, false, testUserId);
+    const reviewResult = await recordLessonSlideProgress(testUnitId, 1, testUnitSlideCount, false, testUserId);
     assert(reviewResult.isCompleted === true, "reviewing earlier slide retains completed status in action result");
-    const activeReview = await getUserLastActiveProgress(testUserId);
-    assert(activeReview?.is_completed === true, "active progress is_completed stays true when reviewing earlier slide");
-    assert(activeReview?.current_slide_order === 1, "active progress current_slide_order updates to review slide 1");
+    const [dbReviewRows] = await db.query<any[]>(
+      "SELECT is_completed, current_slide_order FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
+      [testUserId, testUnitId]
+    );
+    assert(Number(dbReviewRows[0]?.is_completed) === 1, "active progress is_completed stays true when reviewing earlier slide");
+    assert(Number(dbReviewRows[0]?.current_slide_order) === 1, "active progress current_slide_order updates to review slide 1");
 
     // Step 3e: Section progress aggregation
-    const sectionProgress = await getUserSectionProgress(testUserId, firstUnit.sec_id);
+    const sectionProgress = await getUserSectionProgress(testUserId, testUnitSecId);
     assert(sectionProgress.units.length > 0, `sectionProgress contains ${sectionProgress.units.length} units`);
     const targetUnitProgress = sectionProgress.units.find((u) => u.unit_id === testUnitId);
     assert(targetUnitProgress !== undefined, "sectionProgress includes test unit");
@@ -162,8 +175,10 @@ async function runTests() {
     assert(sectionProgress.completedUnits >= 1, `sectionProgress completedUnits >= 1 (${sectionProgress.completedUnits})`);
 
     // Clean up test record
-    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?", [testUserId, testUnitId]);
-    console.log("  ✓ Cleaned up test lesson progress records");
+    await db.query("DELETE FROM user_lesson_progress_tbl WHERE user_id = ?", [testUserId]);
+    await db.query("DELETE FROM player_tbl WHERE user_id = ?", [testUserId]);
+    await db.query("DELETE FROM user_auth_tbl WHERE user_id = ?", [testUserId]);
+    console.log("  ✓ Cleaned up test lesson progress records and test user");
 
     // -------------------------------------------------------------
     // Test Suite 4: Strict Schema & 3NF Referential Integrity

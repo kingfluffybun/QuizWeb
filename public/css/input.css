@@ -749,9 +749,9 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   box-sizing: border-box;
   background: var(--bg-card);
   border: 2px solid var(--border-main);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: var(--studio-space-6);
-  box-shadow: 0 8px 24px #9966ff0d;
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   display: flex;
   flex-direction: column;
   gap: var(--studio-space-4);
@@ -1185,10 +1185,6 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 }
 .lesson-slide-group {
   margin: 0 0 24px;
-  padding: 16px 16px 16px;
-  border: 2px solid #cbd5e1;
-  border-radius: 16px;
-  background: var(--bg-main);
 }
 .lesson-slide-fields {
   margin-bottom: 16px;
@@ -1404,7 +1400,14 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   transform: none;
 }
 .btn-secondary {
-    cursor: pointer;
+  background-color: #fff;
+  cursor: pointer;
+}
+.btn-secondary.active,
+.btn-secondary:active {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+  font-weight: 500;
 }
 .pending-quiz-counter {
   color: #475569;

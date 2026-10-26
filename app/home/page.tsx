@@ -111,32 +111,44 @@ export default async function DashboardPage() {
                                     </div>
                                     <hr></hr>
                                     <div className="unit-list-dashboard">
-                                        {sectionProgress.units.length > 0 ? (
-                                            sectionProgress.units.map((unit, index) => (
-                                                <Link
-                                                    key={unit.unit_id}
-                                                    href={`/quiz?unitId=${unit.unit_id}&slide=${unit.current_slide_order || 1}&source=quiz`}
-                                                    className="unit row"
-                                                    style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-                                                    title={`Open ${unit.unit_title}`}
-                                                >
-                                                    <div className="unit-no row"><p>{index + 1}</p></div>
-                                                    <div className="unit-info">
-                                                        <div className="unit-description">
-                                                            <p id="unit-title">{unit.unit_title}</p>
-                                                            <p>{unit.is_completed ? `${unit.total_slides}/${unit.total_slides}` : `${unit.current_slide_order}/${unit.total_slides}`}</p>
-                                                        </div>
-                                                        <div className="unit-progress-bar">
-                                                            <div className="progress-bar-fill" style={{ width: `${unit.percentage}%` }}></div>
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                            ))
-                                        ) : (
-                                            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", padding: "8px 0" }}>
-                                                No units in this section yet.
-                                            </p>
-                                        )}
+                                        {(() => {
+                                            const visibleUnits = sectionProgress.units.filter((unit) => !unit.is_locked);
+                                            return visibleUnits.length > 0 ? (
+                                                visibleUnits.map((unit, index) => {
+                                                    const isCompleted = Boolean(unit.is_completed);
+                                                    return (
+                                                        <Link
+                                                            key={unit.unit_id}
+                                                            href={`/quiz?unitId=${unit.unit_id}&slide=${unit.current_slide_order || 1}&source=quiz`}
+                                                            className="unit row"
+                                                            style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+                                                            title={`Open ${unit.unit_title}`}
+                                                        >
+                                                            <div className="unit-no row">
+                                                                <p>{index + 1}</p>
+                                                            </div>
+                                                            <div className="unit-info">
+                                                                <div className="unit-description">
+                                                                    <p id="unit-title">{unit.unit_title}</p>
+                                                                    <p>
+                                                                        {isCompleted
+                                                                            ? `${unit.total_slides}/${unit.total_slides}`
+                                                                            : `${unit.current_slide_order}/${unit.total_slides}`}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="unit-progress-bar">
+                                                                    <div className="progress-bar-fill" style={{ width: `${unit.percentage}%` }}></div>
+                                                                </div>
+                                                            </div>
+                                                        </Link>
+                                                    );
+                                                })
+                                            ) : (
+                                                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", padding: "8px 0" }}>
+                                                    No units currently available.
+                                                </p>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </div>

@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, startTransition } from "react";
+import React, {
+  useState,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useCallback,
+  startTransition,
+} from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 
@@ -50,6 +57,11 @@ import {
   extractLessonSlides,
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
+import {
+  exportUnitToImportJson,
+  reconcileCategory,
+  stampUnitFields,
+} from "@/lib/unit-form-sync";
 
 export interface SavedLessonSlide {
   lesson_text?: string;
@@ -174,7 +186,7 @@ interface QuizInputFormProps {
   categories: Category[];
   difficulties: Difficulty[];
   types: QuizType[];
-  sections?: { sec_id: number; sec_num: string }[];
+  sections?: { sec_id: number; sec_num: string; cat_id?: number }[];
   initialRecentUnits?: RecentUnitItem[];
   initialRecentQuizzes?: RecentQuizItem[];
   initialPage: number;
@@ -290,101 +302,6 @@ export default function QuizInputForm({
     text: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (initialEditingQuiz || typeof window === "undefined") return;
-
-    const loadPendingQuiz = (pendingId: string | null) => {
-      if (!pendingId) return;
-      const parsedPendingId = Number(pendingId);
-      if (!Number.isInteger(parsedPendingId) || parsedPendingId < 1) {
-        window.sessionStorage.removeItem("quizweb-edit-pending-id");
-        setMessage({ type: "error", text: "The pending unit ID is invalid." });
-        return;
-      }
-
-      void getPendingQuizById(parsedPendingId)
-        .then((quiz) => {
-          window.sessionStorage.removeItem("quizweb-edit-pending-id");
-          if (!quiz || "error" in quiz) {
-            setMessage({
-              type: "error",
-              text:
-                quiz && "error" in quiz
-                  ? quiz.error ?? "The pending unit could not be loaded."
-                  : `Could not load pending unit ${parsedPendingId}. It may have been deleted or is no longer available.`,
-            });
-            return;
-          }
-          handleEdit(quiz as unknown as RecentQuizItem);
-        })
-        .catch((error: unknown) => {
-          window.sessionStorage.removeItem("quizweb-edit-pending-id");
-          console.error("Failed to load pending unit for editing:", error);
-          setMessage({
-            type: "error",
-            text:
-              error instanceof Error
-                ? `The pending unit could not be loaded: ${error.message}`
-                : "The pending unit could not be loaded. Please try again.",
-          });
-        });
-    };
-    const handleEditRequest = (event: Event) => {
-      loadPendingQuiz((event as CustomEvent<string>).detail);
-    };
-
-    const handleStudioLaunch = (event: Event) => {
-      const detail = (event as CustomEvent<{ toolId?: string; title?: string }>).detail;
-      const toolId = (detail?.toolId ?? "unit").toLowerCase();
-      setEditingQuiz(null);
-      setMessage(null);
-
-      if (toolId === "cp") {
-        setUnitInputTab("assessment");
-        setPreviewTab("assessment");
-        window.setTimeout(() => {
-          document.getElementById("assessment_title")?.focus();
-        }, 80);
-        return;
-      }
-
-      setUnitInputTab("lesson");
-      setPreviewTab("lesson");
-
-      if (toolId === "unit") {
-        window.setTimeout(() => {
-          document.getElementById("unit_title")?.focus();
-        }, 80);
-        return;
-      }
-
-      const matchedType = types.find(
-        (t) => t.type_name.toLowerCase() === toolId,
-      );
-      if (matchedType) {
-        setSelectedTypeId(matchedType.quiz_type_id.toString());
-      }
-      window.setTimeout(() => {
-        const questionInput = document.getElementById("question_text");
-        if (questionInput) {
-          questionInput.scrollIntoView({ behavior: "smooth", block: "center" });
-          questionInput.focus();
-        }
-      }, 100);
-    };
-
-    window.addEventListener("quizweb-edit-pending", handleEditRequest);
-    window.addEventListener("quizweb-studio-launch", handleStudioLaunch);
-
-    const urlPendingId = new URLSearchParams(window.location.search).get("pending_id");
-    const sessionPendingId = window.sessionStorage.getItem("quizweb-edit-pending-id");
-    loadPendingQuiz(urlPendingId || sessionPendingId);
-
-    return () => {
-      window.removeEventListener("quizweb-edit-pending", handleEditRequest);
-      window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
-    };
-  }, [initialEditingQuiz, types]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [idFilter, setIdFilter] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState<string>("");
@@ -456,8 +373,8 @@ export default function QuizInputForm({
   const [expectedOutcome, setExpectedOutcome] = useState("");
   const [previewTab, setPreviewTab] = useState<"lesson" | "assessment">("lesson");
   const [unitInputTab, setUnitInputTab] = useState<
-    "lesson" | "quiz" | "assessment" | "import"
-  >("lesson");
+    "unit" | "lesson" | "quiz" | "assessment" | "import"
+  >("unit");
   const [importJsonText, setImportJsonText] = useState("");
   const [importJsonMessage, setImportJsonMessage] = useState<{
     type: "success" | "error";
@@ -685,13 +602,9 @@ export default function QuizInputForm({
       return;
     }
 
-    if (editingQuiz?._pendingUnit) {
-      setImportJsonMessage({
-        type: "error",
-        text: "This unit already has quiz questions. Import assessment-only JSON here to keep its existing quizzes unchanged.",
-      });
-      return;
-    }
+    // Full JSON may also be applied to an existing unit: capture its identity so the
+    // imported content replaces the unit in place (updatePendingUnitFromForm) on save.
+    const existingUnit = editingQuiz?._pendingUnit ? editingQuiz : null;
 
     const importErrors: string[] = [];
     result.data.unit_quiz_json.forEach((quiz, index) => {
@@ -794,17 +707,49 @@ export default function QuizInputForm({
     );
     const { sec_id: firstQuizSectionId, ...firstQuizWithoutSection } =
       firstQuiz;
-    setEditingQuiz({
-      ...firstQuizWithoutSection,
-      ...(firstQuizSectionId == null ? {} : { sec_id: firstQuizSectionId }),
-      type_name: firstQuizType?.type_name ?? "",
-      _queuedUnitQuiz: true,
-    });
+    if (existingUnit) {
+      const validIncomingSecId =
+        incomingSecId != null &&
+        sections.some((s) => s.sec_id === Number(incomingSecId))
+          ? Number(incomingSecId)
+          : undefined;
+      // The original unit quizzes are replaced by the imported ones on save.
+      setOriginalUnitQuizzes(
+        result.data.unit_quiz_json.map(({ sec_id, ...question }) => ({
+          ...question,
+          ...(sec_id == null ? {} : { sec_id }),
+        })),
+      );
+      setEditingQuiz({
+        ...firstQuizWithoutSection,
+        sec_id: validIncomingSecId ?? firstQuizSectionId ?? existingUnit.sec_id,
+        type_name: firstQuizType?.type_name ?? "",
+        quiz_id: existingUnit.quiz_id,
+        unit_id: existingUnit.unit_id,
+        pending_id: existingUnit.pending_id,
+        pending_status: existingUnit.pending_status,
+        difficulty_name: existingUnit.difficulty_name,
+        _pendingUnit: true,
+        unit_assessment: {
+          ...importedAssessment,
+          cp_steps: importedAssessment.steps,
+        },
+      });
+    } else {
+      setEditingQuiz({
+        ...firstQuizWithoutSection,
+        ...(firstQuizSectionId == null ? {} : { sec_id: firstQuizSectionId }),
+        type_name: firstQuizType?.type_name ?? "",
+        _queuedUnitQuiz: true,
+      });
+    }
     const slideMsg =
       slides && slides.length > 0 ? `, ${slides.length} lesson slide(s),` : "";
     setImportJsonMessage({
       type: "success",
-      text: `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s). You can review all sections or submit directly.`,
+      text: existingUnit
+        ? `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s) into Unit #${existingUnit.pending_id}. Saving will replace the unit's lesson, quizzes and assessment.`
+        : `Loaded ${result.data.unit_quiz_json.length} quiz question(s)${slideMsg} and ${importedAssessment.steps.length} assessment step(s). You can review all sections or submit directly.`,
     });
   };
 
@@ -1028,6 +973,63 @@ export default function QuizInputForm({
       currentEntry,
       ...orderedQueuedQuizzes.slice(activeQuizIndex),
     ];
+  };
+
+  // Serializes the whole unit currently in the form (lesson, quizzes, assessment) into the
+  // canonical import JSON. Quiz selection mirrors handleSubmit so the export equals what
+  // would be saved.
+  const buildCurrentUnitImportJson = () => {
+    const quizzes = preserveQuizDataOnSave
+      ? originalUnitQuizzes
+      : unitInputTab === "import" && fullJsonImport?.unit_quiz_json?.length
+        ? fullJsonImport.unit_quiz_json
+        : buildQuizBatch(buildCurrentQuizEntry());
+    return JSON.stringify(
+      exportUnitToImportJson({
+        unitTitle,
+        secId: selectedSecId,
+        catId: selectedCatId,
+        lessonSlides,
+        assessment: {
+          title: assessmentTitle,
+          description: assessmentDescription,
+          steps: cpSteps,
+          expectedOutcome,
+        },
+        quizzes,
+      }),
+      null,
+      2,
+    );
+  };
+
+  const handleExportUnitJson = async (target: "clipboard" | "editor") => {
+    const json = buildCurrentUnitImportJson();
+    if (target === "editor") {
+      setImportJsonText(json);
+      setUnitInputTab("import");
+      setImportJsonMessage({
+        type: "success",
+        text: "Current unit exported below. Edit it and click Validate & Load to apply it to this unit.",
+      });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(json);
+      setImportJsonMessage({
+        type: "success",
+        text: "Unit JSON copied to clipboard.",
+      });
+      setMessage({ type: "success", text: "Unit JSON copied to clipboard." });
+    } catch {
+      // Clipboard can be unavailable (e.g. insecure context): fall back to the editor.
+      setImportJsonText(json);
+      setUnitInputTab("import");
+      setImportJsonMessage({
+        type: "error",
+        text: "Clipboard is unavailable. The unit JSON was placed in the editor below instead.",
+      });
+    }
   };
 
   const handleAddToUnitQueue = () => {
@@ -1258,6 +1260,15 @@ export default function QuizInputForm({
       hasInitializedType.current = true;
     }
   }, [types, categories, difficulties]);
+
+  // A unit's category is always its section's category: keep Category in step with the
+  // selected Section however it was set (click, edit-load, or JSON import).
+  useEffect(() => {
+    const nextCatId = reconcileCategory(sections, selectedSecId, selectedCatId);
+    if (nextCatId !== selectedCatId) {
+      startTransition(() => setSelectedCatId(nextCatId));
+    }
+  }, [sections, selectedSecId, selectedCatId]);
 
   // Synchronize live authoring telemetry states with editing state
   useEffect(() => {
@@ -1558,7 +1569,11 @@ export default function QuizInputForm({
       ? originalUnitQuizzes
       : unitInputTab === "import" && fullJsonImport?.unit_quiz_json?.length
         ? fullJsonImport.unit_quiz_json
-        : buildQuizBatch(buildCurrentQuizEntry());
+        : stampUnitFields(buildQuizBatch(buildCurrentQuizEntry()), {
+            catId: selectedCatId,
+            secId: selectedSecId,
+            unit: selectedUnit,
+          });
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
     }
@@ -1799,7 +1814,113 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
-  const loadQueuedQuiz = (quiz: QueuedQuizEntry) => {
+  // Effect Event: always calls the latest handleEdit without making the listener
+  // effect below re-subscribe (and re-load the pending unit) on every render.
+  const onPendingUnitLoaded = useEffectEvent((quiz: RecentQuizItem) => {
+    handleEdit(quiz);
+  });
+
+  useEffect(() => {
+    if (initialEditingQuiz || typeof window === "undefined") return;
+
+    const loadPendingQuiz = (pendingId: string | null) => {
+      if (!pendingId) return;
+      const parsedPendingId = Number(pendingId);
+      if (!Number.isInteger(parsedPendingId) || parsedPendingId < 1) {
+        window.sessionStorage.removeItem("quizweb-edit-pending-id");
+        setMessage({ type: "error", text: "The pending unit ID is invalid." });
+        return;
+      }
+
+      void getPendingQuizById(parsedPendingId)
+        .then((quiz) => {
+          window.sessionStorage.removeItem("quizweb-edit-pending-id");
+          if (!quiz || "error" in quiz) {
+            setMessage({
+              type: "error",
+              text:
+                quiz && "error" in quiz
+                  ? quiz.error ?? "The pending unit could not be loaded."
+                  : `Could not load pending unit ${parsedPendingId}. It may have been deleted or is no longer available.`,
+            });
+            return;
+          }
+          onPendingUnitLoaded(quiz as unknown as RecentQuizItem);
+        })
+        .catch((error: unknown) => {
+          window.sessionStorage.removeItem("quizweb-edit-pending-id");
+          console.error("Failed to load pending unit for editing:", error);
+          setMessage({
+            type: "error",
+            text:
+              error instanceof Error
+                ? `The pending unit could not be loaded: ${error.message}`
+                : "The pending unit could not be loaded. Please try again.",
+          });
+        });
+    };
+    const handleEditRequest = (event: Event) => {
+      loadPendingQuiz((event as CustomEvent<string>).detail);
+    };
+
+    const handleStudioLaunch = (event: Event) => {
+      const detail = (event as CustomEvent<{ toolId?: string; title?: string }>).detail;
+      const toolId = (detail?.toolId ?? "unit").toLowerCase();
+      setEditingQuiz(null);
+      setMessage(null);
+
+      if (toolId === "cp") {
+        setUnitInputTab("assessment");
+        setPreviewTab("assessment");
+        window.setTimeout(() => {
+          document.getElementById("assessment_title")?.focus();
+        }, 80);
+        return;
+      }
+
+      setUnitInputTab(toolId === "unit" ? "unit" : "lesson");
+      setPreviewTab("lesson");
+
+      if (toolId === "unit") {
+        window.setTimeout(() => {
+          document.getElementById("unit_title")?.focus();
+        }, 80);
+        return;
+      }
+
+      const matchedType = types.find(
+        (t) => t.type_name.toLowerCase() === toolId,
+      );
+      if (matchedType) {
+        setSelectedTypeId(matchedType.quiz_type_id.toString());
+      }
+      window.setTimeout(() => {
+        const questionInput = document.getElementById("question_text");
+        if (questionInput) {
+          questionInput.scrollIntoView({ behavior: "smooth", block: "center" });
+          questionInput.focus();
+        }
+      }, 100);
+    };
+
+    window.addEventListener("quizweb-edit-pending", handleEditRequest);
+    window.addEventListener("quizweb-studio-launch", handleStudioLaunch);
+
+    const urlPendingId = new URLSearchParams(window.location.search).get("pending_id");
+    const sessionPendingId = window.sessionStorage.getItem("quizweb-edit-pending-id");
+    loadPendingQuiz(urlPendingId || sessionPendingId);
+
+    return () => {
+      window.removeEventListener("quizweb-edit-pending", handleEditRequest);
+      window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
+    };
+  }, [initialEditingQuiz, types]);
+
+  const loadQueuedQuiz = (queuedQuiz: QueuedQuizEntry) => {
+    // Category/Section/Unit belong to the unit, not to individual quizzes. Drop them so
+    // stepping through quizzes never overwrites the unit-level selections.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cat_id: _catId, sec_id: _secId, unit: _unit, ...quiz } = queuedQuiz;
     const typeName =
       types.find(
         (type) =>
@@ -2572,15 +2693,29 @@ export default function QuizInputForm({
               : "Create New Unit"}
           </h2>
           {editingQuiz && !editingQuiz._queuedUnitQuiz && (
-            <button
-              type="button"
-              className="btn-delete"
-              onClick={handleCancelEdit}
-              disabled={isPending}
-              style={{ padding: "6px 12px", fontSize: "0.82rem" }}
-            >
-              Discard &amp; New Unit
-            </button>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {editingQuiz._pendingUnit && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void handleExportUnitJson("clipboard")}
+                  disabled={isPending}
+                  style={{ padding: "6px 12px", fontSize: "0.82rem" }}
+                  title="Copy this whole unit as import JSON"
+                >
+                  Copy Unit JSON
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-delete"
+                onClick={handleCancelEdit}
+                disabled={isPending}
+                style={{ padding: "6px 12px", fontSize: "0.82rem" }}
+              >
+                Discard &amp; New Unit
+              </button>
+            </div>
           )}
         </div>
         {editingQuiz && (
@@ -2644,6 +2779,14 @@ export default function QuizInputForm({
           <div className="preview-tabs unit-input-tabs" role="group" aria-label="Unit input section">
             <button
               type="button"
+              className={`preview-tab${unitInputTab === "unit" ? " active" : ""}`}
+              aria-pressed={unitInputTab === "unit"}
+              onClick={() => setUnitInputTab("unit")}
+            >
+              Unit
+            </button>
+            <button
+              type="button"
               className={`preview-tab${unitInputTab === "lesson" ? " active" : ""}`}
               aria-pressed={unitInputTab === "lesson"}
               onClick={() => {
@@ -2683,21 +2826,105 @@ export default function QuizInputForm({
               Import JSON
             </button>
           </div>
-          <div hidden={unitInputTab !== "lesson"}>
+          <div hidden={unitInputTab !== "unit"}>
           <div className="form-group">
-            <label htmlFor="unit_title">Lesson Title</label>
+            <label htmlFor="unit_title">Unit Title</label>
             <input
               id="unit_title"
               name="unit_title"
               type="text"
               className="form-input"
-              placeholder="Enter the lesson title..."
+              placeholder="Enter the unit title..."
               value={unitTitle}
               onChange={(event) => setUnitTitle(event.target.value)}
               required
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="cat_id">Category</label>
+            <select
+              id="cat_id"
+              name="cat_id"
+              className="form-select"
+              required
+              value={selectedCatId}
+              onChange={(e) => {
+                setSelectedCatId(e.target.value);
+                const current = sections.find(
+                  (s) => s.sec_id.toString() === selectedSecId,
+                );
+                if (
+                  current?.cat_id != null &&
+                  current.cat_id.toString() !== e.target.value
+                ) {
+                  setSelectedSecId("");
+                }
+              }}
+            >
+              <option value="" disabled>
+                Select Category
+              </option>
+              {categories.map((cat) => (
+                <option key={cat.cat_id} value={cat.cat_id.toString()}>
+                  {cat.cat_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="form-group">
+              <label htmlFor="sec_id">Section</label>
+              <select
+                id="sec_id"
+                name="sec_id"
+                className="form-select"
+                required
+                value={selectedSecId}
+                onChange={(e) => setSelectedSecId(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select Section
+                </option>
+                {sections
+                  .filter(
+                    (s) =>
+                      !selectedCatId ||
+                      s.cat_id == null ||
+                      s.cat_id.toString() === selectedCatId,
+                  )
+                  .map((section) => (
+                  <option key={section.sec_id} value={section.sec_id.toString()}>
+                    {section.sec_num}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="unit">Unit</label>
+              <select
+                id="unit"
+                name="unit"
+                className="form-select"
+                required
+                value={selectedUnit}
+                onChange={(e) => setSelectedUnit(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select Unit
+                </option>
+                {[1, 2, 3].map((unitNumber) => (
+                  <option key={unitNumber} value={unitNumber.toString()}>
+                    {unitNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          </div>
+          <div hidden={unitInputTab !== "lesson"}>
           <div className="lesson-slide-section">
             <div className="lesson-slide-heading">
               <h3>Lesson slide</h3>
@@ -2887,7 +3114,7 @@ export default function QuizInputForm({
                     fontSize: "0.82rem",
                     borderRadius: "6px",
                     border: idx === currentLessonSlide ? "2px solid var(--primary-color, #9966ff)" : undefined,
-                    fontWeight: idx === currentLessonSlide ? 700 : 500,
+                    fontWeight: 500,
                   }}
                   onClick={() => setCurrentLessonSlide(idx)}
                 >
@@ -2968,27 +3195,6 @@ export default function QuizInputForm({
             </div>
           )}
           <div className="form-group">
-            <label htmlFor="cat_id">Category</label>
-            <select
-              id="cat_id"
-              name="cat_id"
-              className="form-select"
-              required
-              value={selectedCatId}
-              onChange={(e) => setSelectedCatId(e.target.value)}
-            >
-              <option value="" disabled>
-                Select Category
-              </option>
-              {categories.map((cat) => (
-                <option key={cat.cat_id} value={cat.cat_id.toString()}>
-                  {cat.cat_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
             <label htmlFor="difficulty_id">Difficulty</label>
             <select
               id="difficulty_id"
@@ -3010,50 +3216,6 @@ export default function QuizInputForm({
                 </option>
               ))}
             </select>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div className="form-group">
-              <label htmlFor="sec_id">Section</label>
-              <select
-                id="sec_id"
-                name="sec_id"
-                className="form-select"
-                required
-                value={selectedSecId}
-                onChange={(e) => setSelectedSecId(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select Section
-                </option>
-                {sections.map((section) => (
-                  <option key={section.sec_id} value={section.sec_id.toString()}>
-                    {section.sec_num}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="unit">Unit</label>
-              <select
-                id="unit"
-                name="unit"
-                className="form-select"
-                required
-                value={selectedUnit}
-                onChange={(e) => setSelectedUnit(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select Unit
-                </option>
-                {[1, 2, 3].map((unitNumber) => (
-                  <option key={unitNumber} value={unitNumber.toString()}>
-                    {unitNumber}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="form-group">
@@ -3665,7 +3827,7 @@ export default function QuizInputForm({
                         fontSize: "0.82rem",
                         borderRadius: "6px",
                         border: idx === currentPendingQuizIndex ? "2px solid var(--primary-color, #9966ff)" : undefined,
-                        fontWeight: idx === currentPendingQuizIndex ? 700 : 500,
+                        fontWeight: 500,
                       }}
                       onClick={() => {
                         handleSelectPendingQuiz(idx);
@@ -3763,9 +3925,12 @@ export default function QuizInputForm({
             <p>
               {editingQuiz?._pendingUnit ? (
                 <>
-                  This unit already has quizzes. Paste JSON containing only{" "}
-                  <code>unit_assessment_json</code> to replace its assessment
-                  while keeping its quiz questions unchanged.
+                  Click <strong>Export Current Unit</strong> to load this whole unit
+                  (title, section, lesson slides, quizzes and assessment) as JSON,
+                  edit it, then <strong>Validate &amp; Load</strong> to apply it to
+                  this unit. Saving replaces the unit&apos;s content in place. JSON
+                  containing only <code>unit_assessment_json</code> replaces just the
+                  assessment and keeps the existing quiz questions unchanged.
                 </>
               ) : (
                 <>
@@ -3849,6 +4014,24 @@ export default function QuizInputForm({
                 marginTop: "10px",
               }}
             >
+              {editingQuiz?._pendingUnit && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void handleExportUnitJson("editor")}
+                  >
+                    Export Current Unit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void handleExportUnitJson("clipboard")}
+                  >
+                    Copy Unit JSON
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="btn-primary"

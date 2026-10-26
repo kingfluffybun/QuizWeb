@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { invalidateLeaderboardCache } from "@/app/actions/leaderboard";
+import { getAppLocalDate } from "@/lib/timezone";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export interface WeekDayStatus {
@@ -99,12 +100,11 @@ export async function getUserStreakData(
     clientToday?: string
 ): Promise<StreakData> {
     const session = await auth();
-    const now = new Date();
 
-    // Use clientToday if valid YYYY-MM-DD, otherwise default to server UTC date
+    // Use clientToday if valid YYYY-MM-DD, otherwise default to application local date (Asia/Manila)
     const todayDate = (clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday))
         ? clientToday
-        : now.toISOString().slice(0, 10);
+        : getAppLocalDate();
 
     const [todayYearStr, todayMonthStr] = todayDate.split("-");
     const resolvedYear = targetYear ?? Number(todayYearStr);
@@ -336,7 +336,7 @@ export async function recordUserActivity(options?: {
     const xpEarned = typeof options?.xp === "number" ? Math.min(Math.max(0, options.xp), 100) : 4;
     const activityDate = (options?.date && /^\d{4}-\d{2}-\d{2}$/.test(options.date))
         ? options.date
-        : new Date().toISOString().slice(0, 10);
+        : getAppLocalDate();
 
     try {
         const connection = await db.getConnection();
@@ -432,6 +432,7 @@ export async function recordQuizCompletion(options: {
     xpEarned: number;
     currentStreak: number;
     bestStreak: number;
+    date?: string;
 }): Promise<{ success: boolean; error?: string }> {
     const session = await auth();
     if (!session?.user?.id) {
@@ -452,23 +453,26 @@ export async function recordQuizCompletion(options: {
 
     // Cap quiz XP to prevent client-side tampering (0 - 500 XP per quiz)
     const validatedXp = Math.min(Math.max(0, options.xpEarned), 500);
+    const activityDate = (options.date && /^\d{4}-\d{2}-\d{2}$/.test(options.date))
+        ? options.date
+        : getAppLocalDate();
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query<ResultSetHeader>(
             `INSERT INTO user_activity_tbl (user_id, activity_date, activity_type, xp_earned)
-             VALUES (?, CURRENT_DATE, 'quiz', ?)`,
-            [userId, validatedXp],
+             VALUES (?, ?, 'quiz', ?)`,
+            [userId, activityDate, validatedXp],
         );
         await connection.query<ResultSetHeader>(
             `UPDATE player_tbl
              SET xp = COALESCE(xp, 0) + ?,
                  current_streak = ?,
                  max_streak = GREATEST(COALESCE(max_streak, 0), ?),
-                 last_quiz_date = CURRENT_DATE
+                 last_quiz_date = ?
              WHERE user_id = ?`,
-            [validatedXp, options.currentStreak, options.bestStreak, userId],
+            [validatedXp, options.currentStreak, options.bestStreak, activityDate, userId],
         );
         await connection.commit();
         await invalidateLeaderboardCache();

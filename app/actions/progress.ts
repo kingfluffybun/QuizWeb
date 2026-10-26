@@ -2,7 +2,13 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { getNextSectionId, getNextAvailableSectionId } from "@/lib/curriculum";
+import {
+  getNextSectionId,
+  getNextAvailableSectionId,
+  computeCurriculumUnlockState,
+  type CanonicalUnitSummary,
+} from "@/lib/curriculum";
+import { getAvailableUnits, type AvailableUnit } from "@/app/actions/quiz";
 import { revalidatePath } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
@@ -37,6 +43,7 @@ export interface UnitProgressItem {
   current_slide_order: number;
   total_slides: number;
   is_completed: boolean;
+  is_locked: boolean;
   percentage: number;
   unit_order?: number;
 }
@@ -50,6 +57,7 @@ export interface UserSectionProgress {
     sec_title?: string;
     difficulty_name?: string;
     difficulty_id?: number;
+    is_locked?: boolean;
   };
   units: UnitProgressItem[];
   overallPercentage: number;
@@ -67,183 +75,230 @@ export async function getUserLastActiveProgress(
   try {
     let userId = explicitUserId;
     if (!userId) {
-      const session = await auth();
-      if (!session?.user?.id) return null;
-      userId = Number(session.user.id);
+      try {
+        const session = await auth();
+        if (session?.user?.id) userId = Number(session.user.id);
+      } catch {
+        return null;
+      }
+      if (!userId) return null;
     }
     if (!Number.isInteger(userId) || userId < 1) return null;
 
-    const [rows] = await db.query<RowDataPacket[]>(
+    const unlockState = await getUserCurriculumUnlockState(userId);
+
+    const [allUnitRows] = await db.query<RowDataPacket[]>(
       `SELECT 
-         p.progress_id,
-         p.user_id,
-         p.unit_id,
-         p.current_slide_order,
-         p.total_slides,
-         p.is_completed,
-         p.completed_at,
-         p.last_accessed_at,
+         u.unit_id,
          u.unit_title,
-         u.sec_id,
+         u.unit_order,
+         COALESCE(sc.slide_count, 1) AS total_slides,
+         s.sec_id,
          s.sec_num,
          s.sec_title,
          d.difficulty_name,
          c.cat_id,
          c.cat_name
-       FROM user_lesson_progress_tbl p
-       JOIN unit_tbl u ON p.unit_id = u.unit_id
+       FROM unit_tbl u
        JOIN sec_tbl s ON u.sec_id = s.sec_id
        JOIN cat_tbl c ON s.cat_id = c.cat_id
        LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
-       WHERE p.user_id = ?
-       ORDER BY p.last_accessed_at DESC, p.progress_id DESC
-       LIMIT 1`,
-      [userId],
+       LEFT JOIN (
+         SELECT unit_id, COUNT(*) AS slide_count FROM lesson_slide_tbl GROUP BY unit_id
+       ) sc ON u.unit_id = sc.unit_id
+       WHERE u.status = 'approved'
+       ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
     );
 
-    // If user has not started any unit yet, point them to the first canonical approved unit
-    if (rows.length === 0) {
-      const [firstUnitRows] = await db.query<RowDataPacket[]>(
-        `SELECT 
-           u.unit_id,
-           u.unit_title,
-           s.sec_id,
-           s.sec_num,
-           s.sec_title,
-           d.difficulty_name,
-           c.cat_id,
-           c.cat_name
-         FROM unit_tbl u
-         JOIN sec_tbl s ON u.sec_id = s.sec_id
-         JOIN cat_tbl c ON s.cat_id = c.cat_id
-         LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
-         WHERE u.status = 'approved'
-         ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC
-         LIMIT 1`,
-      );
-      if (firstUnitRows.length === 0) return null;
+    if (allUnitRows.length === 0) return null;
 
-      const f = firstUnitRows[0];
+    // Check if user completed all approved units in curriculum
+    const allCompleted = allUnitRows.every((u) =>
+      unlockState.completedUnitIds.has(Number(u.unit_id)),
+    );
+    if (allCompleted) {
+      const last = allUnitRows[allUnitRows.length - 1];
+      const lastTotal = Math.max(1, Number(last.total_slides));
       return {
         progress_id: 0,
         user_id: userId,
-        unit_id: Number(f.unit_id),
-        current_slide_order: 1,
-        total_slides: 1,
-        is_completed: false,
-        completed_at: null,
+        unit_id: Number(last.unit_id),
+        current_slide_order: lastTotal,
+        total_slides: lastTotal,
+        is_completed: true,
+        completed_at: new Date().toISOString(),
         last_accessed_at: new Date().toISOString(),
-        unit_title: String(f.unit_title),
-        sec_id: Number(f.sec_id),
-        sec_num: Number(f.sec_num),
-        sec_title: f.sec_title != null ? String(f.sec_title) : undefined,
-        difficulty_name: f.difficulty_name != null ? String(f.difficulty_name) : undefined,
-        cat_id: Number(f.cat_id),
-        cat_name: String(f.cat_name),
-        resume_type: "up_next",
-        next_unit_id: Number(f.unit_id),
-        next_unit_title: String(f.unit_title),
-        next_sec_id: Number(f.sec_id),
-        next_sec_num: Number(f.sec_num),
-        next_cat_name: String(f.cat_name),
-        next_slide_order: 1,
+        unit_title: String(last.unit_title),
+        sec_id: Number(last.sec_id),
+        sec_num: Number(last.sec_num),
+        sec_title: last.sec_title != null ? String(last.sec_title) : undefined,
+        difficulty_name: last.difficulty_name != null ? String(last.difficulty_name) : undefined,
+        cat_id: Number(last.cat_id),
+        cat_name: String(last.cat_name),
+        resume_type: "completed_all",
+        next_unit_id: Number(last.unit_id),
+        next_unit_title: String(last.unit_title),
+        next_sec_id: Number(last.sec_id),
+        next_sec_num: Number(last.sec_num),
+        next_cat_name: String(last.cat_name),
+        next_slide_order: lastTotal,
       };
     }
 
-    const r = rows[0];
-    const isCompleted = Boolean(r.is_completed);
+    // Target unit is strictly the curriculum's active (first incomplete) unit
+    const targetUnitId = unlockState.activeUnitId ?? Number(allUnitRows[0].unit_id);
+    const targetUnit =
+      allUnitRows.find((u) => Number(u.unit_id) === targetUnitId) ?? allUnitRows[0];
 
-    let resumeType: "in_progress" | "up_next" | "completed_all" = isCompleted
-      ? "up_next"
-      : "in_progress";
-    let nextUnitId: number | null = Number(r.unit_id);
-    let nextUnitTitle: string | null = String(r.unit_title);
-    let nextSecId: number | null = Number(r.sec_id);
-    let nextSecNum: number | null = Number(r.sec_num);
-    let nextCatName: string | null = String(r.cat_name);
-    let nextSlideOrder: number | null = Math.max(1, Number(r.current_slide_order));
+    // Check if user has recorded progress on this active unit
+    const [progRows] = await db.query<RowDataPacket[]>(
+      `SELECT progress_id, current_slide_order, is_completed, completed_at, last_accessed_at
+       FROM user_lesson_progress_tbl
+       WHERE user_id = ? AND unit_id = ?
+       LIMIT 1`,
+      [userId, targetUnitId],
+    );
 
-    if (isCompleted) {
-      // Find the next incomplete approved unit in the canonical progression
-      const [allUnitRows] = await db.query<RowDataPacket[]>(
-        `SELECT 
-           u.unit_id,
-           u.unit_title,
-           u.unit_order,
-           s.sec_id,
-           s.sec_num,
-           s.sec_title,
-           c.cat_name,
-           COALESCE(p.is_completed, 0) AS is_completed
-         FROM unit_tbl u
-         JOIN sec_tbl s ON u.sec_id = s.sec_id
-         JOIN cat_tbl c ON s.cat_id = c.cat_id
-         LEFT JOIN user_lesson_progress_tbl p ON u.unit_id = p.unit_id AND p.user_id = ?
-         WHERE u.status = 'approved'
-         ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
-        [userId],
-      );
+    const pr = progRows[0];
+    const totalSlides = Math.max(1, Number(targetUnit.total_slides));
+    const currentSlide = pr
+      ? Math.min(totalSlides, Math.max(1, Number(pr.current_slide_order || 1)))
+      : 1;
+    const hasStartedActiveUnit = pr && Number(pr.current_slide_order) > 1 && !pr.is_completed;
 
-      const curIndex = allUnitRows.findIndex(
-        (u) => Number(u.unit_id) === Number(r.unit_id),
-      );
-      // Look forward first
-      let targetUnit = allUnitRows
-        .slice(curIndex >= 0 ? curIndex + 1 : 0)
-        .find((u) => !Number(u.is_completed));
-
-      // If no incomplete unit found ahead, check from beginning
-      if (!targetUnit) {
-        targetUnit = allUnitRows.find((u) => !Number(u.is_completed));
-      }
-
-      if (targetUnit) {
-        resumeType = "up_next";
-        nextUnitId = Number(targetUnit.unit_id);
-        nextUnitTitle = String(targetUnit.unit_title);
-        nextSecId = Number(targetUnit.sec_id);
-        nextSecNum = Number(targetUnit.sec_num);
-        nextCatName = String(targetUnit.cat_name);
-        nextSlideOrder = 1;
-      } else {
-        resumeType = "completed_all";
-        nextUnitId = Number(r.unit_id);
-        nextUnitTitle = String(r.unit_title);
-        nextSecId = Number(r.sec_id);
-        nextSecNum = Number(r.sec_num);
-        nextCatName = String(r.cat_name);
-        nextSlideOrder = Math.max(1, Number(r.total_slides));
-      }
-    }
+    const resumeType: "in_progress" | "up_next" | "completed_all" = hasStartedActiveUnit
+      ? "in_progress"
+      : "up_next";
 
     return {
-      progress_id: Number(r.progress_id),
-      user_id: Number(r.user_id),
-      unit_id: Number(r.unit_id),
-      current_slide_order: Number(r.current_slide_order),
-      total_slides: Math.max(1, Number(r.total_slides)),
-      is_completed: isCompleted,
-      completed_at: r.completed_at ? new Date(r.completed_at).toISOString() : null,
-      last_accessed_at: new Date(r.last_accessed_at).toISOString(),
-      unit_title: String(r.unit_title),
-      sec_id: Number(r.sec_id),
-      sec_num: Number(r.sec_num),
-      sec_title: r.sec_title != null ? String(r.sec_title) : undefined,
-      difficulty_name: r.difficulty_name != null ? String(r.difficulty_name) : undefined,
-      cat_id: Number(r.cat_id),
-      cat_name: String(r.cat_name),
+      progress_id: pr ? Number(pr.progress_id) : 0,
+      user_id: userId,
+      unit_id: targetUnitId,
+      current_slide_order: currentSlide,
+      total_slides: totalSlides,
+      is_completed: false,
+      completed_at: null,
+      last_accessed_at: pr?.last_accessed_at
+        ? new Date(pr.last_accessed_at).toISOString()
+        : new Date().toISOString(),
+      unit_title: String(targetUnit.unit_title),
+      sec_id: Number(targetUnit.sec_id),
+      sec_num: Number(targetUnit.sec_num),
+      sec_title: targetUnit.sec_title != null ? String(targetUnit.sec_title) : undefined,
+      difficulty_name: targetUnit.difficulty_name != null ? String(targetUnit.difficulty_name) : undefined,
+      cat_id: Number(targetUnit.cat_id),
+      cat_name: String(targetUnit.cat_name),
       resume_type: resumeType,
-      next_unit_id: nextUnitId,
-      next_unit_title: nextUnitTitle,
-      next_sec_id: nextSecId,
-      next_sec_num: nextSecNum,
-      next_cat_name: nextCatName,
-      next_slide_order: nextSlideOrder,
+      next_unit_id: targetUnitId,
+      next_unit_title: String(targetUnit.unit_title),
+      next_sec_id: Number(targetUnit.sec_id),
+      next_sec_num: Number(targetUnit.sec_num),
+      next_cat_name: String(targetUnit.cat_name),
+      next_slide_order: currentSlide,
     };
   } catch (error) {
     console.error("Failed to get user last active progress:", error);
     return null;
   }
+}
+
+/**
+ * Computes the user's unlocked units and sections across the entire curriculum.
+ *
+ * Enforces strict per-unit progression:
+ * - A unit is unlocked only if the user has completed its predecessor.
+ * - A section becomes available only once all units in the previous section are completed.
+ */
+export async function getUserCurriculumUnlockState(
+  explicitUserId?: number,
+): Promise<{
+  unlockedUnitIds: Set<number>;
+  unlockedSectionIds: Set<number>;
+  completedSectionIds: Set<number>;
+  completedUnitIds: Set<number>;
+  activeUnitId: number | null;
+  activeSectionId: number | null;
+}> {
+  try {
+    let userId = explicitUserId;
+    if (!userId) {
+      try {
+        const session = await auth();
+        if (session?.user?.id) userId = Number(session.user.id);
+      } catch {
+        // Handled gracefully when invoked outside a Next.js request context (e.g., tests/scripts)
+      }
+    }
+
+    const [unitRows] = await db.query<RowDataPacket[]>(
+      `SELECT u.unit_id, u.unit_order, s.sec_id
+       FROM unit_tbl u
+       JOIN sec_tbl s ON u.sec_id = s.sec_id
+       WHERE u.status = 'approved'
+       ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
+    );
+
+    const allUnitsOrdered: CanonicalUnitSummary[] = unitRows.map((r) => ({
+      unit_id: Number(r.unit_id),
+      unit_order: Number(r.unit_order || 1),
+      sec_id: Number(r.sec_id),
+    }));
+
+    const completedUnitIds = new Set<number>();
+    if (userId && Number.isInteger(userId) && userId > 0) {
+      const [progressRows] = await db.query<RowDataPacket[]>(
+        "SELECT unit_id FROM user_lesson_progress_tbl WHERE user_id = ? AND is_completed = 1",
+        [userId],
+      );
+      for (const pr of progressRows) {
+        completedUnitIds.add(Number(pr.unit_id));
+      }
+    }
+
+    const state = computeCurriculumUnlockState(allUnitsOrdered, completedUnitIds);
+
+    return {
+      ...state,
+      completedUnitIds,
+    };
+  } catch (error) {
+    console.error("Failed to get curriculum unlock state:", error);
+    return {
+      unlockedUnitIds: new Set<number>([98]),
+      unlockedSectionIds: new Set<number>([1]),
+      completedSectionIds: new Set<number>(),
+      completedUnitIds: new Set<number>(),
+      activeUnitId: 98,
+      activeSectionId: 1,
+    };
+  }
+}
+
+/**
+ * Checks whether a specific unit is currently unlocked for the user.
+ */
+export async function isUnitUnlockedForUser(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<boolean> {
+  const state = await getUserCurriculumUnlockState(explicitUserId);
+  return state.unlockedUnitIds.has(Number(unitId));
+}
+
+/**
+ * Returns all available units enriched with user-specific unlock and completion states.
+ */
+export async function getAvailableUnitsForUser(
+  explicitUserId?: number,
+): Promise<AvailableUnit[]> {
+  const baseUnits = await getAvailableUnits();
+  const unlockState = await getUserCurriculumUnlockState(explicitUserId);
+
+  return baseUnits.map((u) => ({
+    ...u,
+    is_completed: unlockState.completedUnitIds.has(u.unit_id),
+    is_locked: !unlockState.unlockedUnitIds.has(u.unit_id),
+  }));
 }
 
 /**
@@ -262,6 +317,7 @@ export async function getUserSectionProgress(
       sec_title: "Getting Started",
       difficulty_id: 1,
       difficulty_name: "Beginner",
+      is_locked: false,
     },
     units: [],
     overallPercentage: 0,
@@ -272,11 +328,17 @@ export async function getUserSectionProgress(
   try {
     let userId = explicitUserId;
     if (!userId) {
-      const session = await auth();
-      if (!session?.user?.id) return defaultFallback;
-      userId = Number(session.user.id);
+      try {
+        const session = await auth();
+        if (session?.user?.id) userId = Number(session.user.id);
+      } catch {
+        return defaultFallback;
+      }
+      if (!userId) return defaultFallback;
     }
     if (!Number.isInteger(userId) || userId < 1) return defaultFallback;
+
+    const unlockState = await getUserCurriculumUnlockState(userId);
 
     let targetSectionId =
       explicitSectionId != null && Number.isFinite(Number(explicitSectionId))
@@ -284,11 +346,7 @@ export async function getUserSectionProgress(
         : undefined;
 
     if (!targetSectionId || targetSectionId < 1) {
-      const [playerRows] = await db.query<RowDataPacket[]>(
-        "SELECT current_section FROM player_tbl WHERE user_id = ? LIMIT 1",
-        [userId],
-      );
-      targetSectionId = Number(playerRows[0]?.current_section || 1);
+      targetSectionId = unlockState.activeSectionId ?? 1;
     }
 
     if (!explicitSectionId) {
@@ -343,6 +401,7 @@ export async function getUserSectionProgress(
         sec_title: String(secRows[0].sec_title ?? ""),
         difficulty_id: Number(secRows[0].difficulty_id ?? 1),
         difficulty_name: String(secRows[0].difficulty_name ?? "Beginner"),
+        is_locked: !unlockState.unlockedSectionIds.has(targetSectionId),
       };
     } else {
       // If targetSectionId is invalid/missing in sec_tbl, fall back targetSectionId to Section 1
@@ -365,19 +424,22 @@ export async function getUserSectionProgress(
     );
 
     const units: UnitProgressItem[] = unitRows.map((r) => {
+      const uId = Number(r.unit_id);
       const totalSlides = Math.max(1, Number(r.total_slides));
       const currentSlide = Math.min(totalSlides, Math.max(0, Number(r.current_slide_order)));
-      const isCompleted = Boolean(r.is_completed);
+      const isCompleted = Boolean(r.is_completed) || unlockState.completedUnitIds.has(uId);
+      const isLocked = !unlockState.unlockedUnitIds.has(uId);
       const percentage = isCompleted
         ? 100
         : Math.min(99, Math.round((currentSlide / totalSlides) * 100));
 
       return {
-        unit_id: Number(r.unit_id),
+        unit_id: uId,
         unit_title: String(r.unit_title),
-        current_slide_order: currentSlide,
+        current_slide_order: isLocked ? 0 : currentSlide,
         total_slides: totalSlides,
         is_completed: isCompleted,
+        is_locked: isLocked,
         percentage,
         unit_order: r.unit_order != null ? Number(r.unit_order) : 1,
       };
@@ -414,15 +476,20 @@ export async function recordLessonSlideProgress(
   totalSlides?: number,
   isCompleted = false,
   explicitUserId?: number,
+  skipUnlockCheck = false,
 ) {
   try {
     let userId = explicitUserId;
     if (!userId) {
-      const session = await auth();
-      if (!session?.user?.id) {
+      try {
+        const session = await auth();
+        if (session?.user?.id) userId = Number(session.user.id);
+      } catch {
         return { success: false, error: "Unauthorized" };
       }
-      userId = Number(session.user.id);
+      if (!userId) {
+        return { success: false, error: "Unauthorized" };
+      }
     }
     if (!Number.isInteger(userId) || userId < 1) {
       return { success: false, error: "Invalid user ID" };
@@ -432,6 +499,13 @@ export async function recordLessonSlideProgress(
     }
     if (!Number.isInteger(slideOrder) || slideOrder < 1) {
       return { success: false, error: "Invalid slide order" };
+    }
+
+    if (!skipUnlockCheck) {
+      const isUnlocked = await isUnitUnlockedForUser(unitId, userId);
+      if (!isUnlocked) {
+        return { success: false, error: "Unit is locked in the curriculum" };
+      }
     }
 
     let resolvedTotal = totalSlides;

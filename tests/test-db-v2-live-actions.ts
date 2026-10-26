@@ -51,10 +51,10 @@ async function runLiveConformanceTests() {
   assert.ok(Array.isArray(payload.lesson_card.lesson_slide), "Lesson card must contain lesson_slide array");
   assert.ok(payload.lesson_card.lesson_slide.length > 0, "Lesson slides must not be empty");
   assert.ok(Array.isArray(payload.quizzes), "Payload must contain quizzes array");
-  assert.equal(payload.quizzes.length, 9, "Unit 98 must contain 9 quizzes");
+  assert.equal(payload.quizzes.length, 11, "Unit 98 must contain 11 quizzes");
   assert.ok(payload.assessment, "Unit 98 must contain assessment object");
   assert.ok(Array.isArray(payload.assessment.cp_steps), "Assessment must contain cp_steps");
-  assert.equal(payload.assessment.cp_steps.length, 5, "Unit 98 assessment must have 5 steps");
+  assert.equal(payload.assessment.cp_steps.length, 4, "Unit 98 assessment must have 4 steps");
   console.log(`✔ getUnitById(98) verified: ${payload.lesson_card.lesson_slide.length} slides, ${payload.quizzes.length} quizzes, ${payload.assessment.cp_steps.length} assessment steps`);
 
   // 3. Test resolveAuthoritativeAssessment(98) and getPublicCodeProblem(98)
@@ -64,14 +64,14 @@ async function runLiveConformanceTests() {
   assert.equal(res98.resolvedUnitId, 98);
   assert.equal(res98.unitTitle, "Document Structure");
   const assessment98 = res98.assessment;
-  assert.equal(assessment98.title, "Unit 1 Assessment");
-  assert.equal(assessment98.steps.length, 5, "Must contain 5 CP steps");
+  assert.equal(assessment98.title, "Build an HTML Skeleton");
+  assert.equal(assessment98.steps.length, 4, "Must contain 4 CP steps");
   assert.ok(assessment98.steps[0].instruction, "Step 1 must have instruction");
   assert.ok(assessment98.steps[0].expectedTemplate.html, "Step 1 must have expectedTemplate html");
 
   const publicProblem = await getPublicCodeProblem(98);
   assert.ok(publicProblem, "Public code problem must resolve");
-  assert.equal(publicProblem.steps.length, 5);
+  assert.equal(publicProblem.steps.length, 4);
   assert.equal((publicProblem.steps[0] as any).expectedTemplate, undefined, "expectedTemplate must be stripped from public payload");
   console.log(`✔ resolveAuthoritativeAssessment(98) & getPublicCodeProblem(98) verified: "${assessment98.title}" with ${assessment98.steps.length} steps (private templates protected)`);
 
@@ -93,7 +93,7 @@ async function runLiveConformanceTests() {
   };
   const analytics = await getAdminAnalytics();
   assert.ok(analytics, "Analytics must return valid data");
-  assert.equal(analytics.totalQuizzes, 256, "Expected 256 quizzes in database");
+  assert.equal(analytics.totalQuizzes, 258, "Expected 258 quizzes in database");
   assert.ok(analytics.categories.length > 0, "Category distribution must not be empty");
   assert.ok(analytics.difficulties.length > 0, "Difficulty distribution must not be empty");
   console.log(`✔ getAdminAnalytics() verified: RBAC guard enforced; retrieved ${analytics.totalQuizzes} total quizzes across ${analytics.categories.length} categories`);
@@ -139,10 +139,10 @@ async function runLiveConformanceTests() {
   assert.ok(recent.quizzes[0].quiz_payload, "First quiz must have populated quiz_payload");
   console.log(`✔ getPaginatedRecentQuizzes() verified: page 1 returned ${recent.quizzes.length} populated quizzes out of ${recent.totalCount}`);
 
-  // 9. Test User Info Query Conformance (No learning_goal or created_at in user_auth_tbl)
+  // 9. Test User Info Query Conformance (learning_goal, daily_xp_goal, and created_at in user_auth_tbl)
   console.log("\n[Test 9] Testing User Info Query Conformance...");
   const [userRows] = await db.query<any[]>(
-    `SELECT u.user_id, u.email, p.username, u.user_role, u.avatar_color, u.daily_xp_goal,
+    `SELECT u.user_id, u.email, p.username, u.user_role, u.avatar_color, u.daily_xp_goal, u.learning_goal, u.created_at,
             p.xp, p.current_streak, p.max_streak
      FROM user_auth_tbl u
      LEFT JOIN player_tbl p ON u.user_id = p.user_id
@@ -151,8 +151,11 @@ async function runLiveConformanceTests() {
   assert.ok(userRows.length > 0, "Expected at least one user record");
   const user = userRows[0];
   assert.ok("daily_xp_goal" in user, "Must select daily_xp_goal");
-  assert.ok(!("learning_goal" in user), "Must NOT select non-existent learning_goal from user_auth_tbl");
-  console.log(`✔ User Info query verified for user_id=${user.user_id}, email=${user.email}, daily_xp_goal=${user.daily_xp_goal}`);
+  assert.ok("learning_goal" in user, "Must select learning_goal from user_auth_tbl");
+  assert.equal(typeof user.learning_goal, "number", "learning_goal must be numeric");
+  assert.ok("created_at" in user, "Must select created_at from user_auth_tbl");
+  assert.ok(user.created_at != null, "created_at must not be null");
+  console.log(`✔ User Info query verified for user_id=${user.user_id}, email=${user.email}, daily_xp_goal=${user.daily_xp_goal}, learning_goal=${user.learning_goal}, created_at=${user.created_at}`);
 
   // 10. Test getPendingQuizzes("all")
   console.log("\n[Test 10] Testing getPendingQuizzes('all')...");
@@ -169,7 +172,7 @@ async function runLiveConformanceTests() {
   // 11. Test getQuizzes()
   console.log("\n[Test 11] Testing getQuizzes()...");
   const activeQuizzes = await getQuizzes();
-  assert.equal(activeQuizzes.length, 256, "Expected 256 approved quizzes for active learners");
+  assert.equal(activeQuizzes.length, 258, "Expected 258 approved quizzes for active learners");
   const firstActiveQuiz = activeQuizzes[0];
   assert.ok(firstActiveQuiz.quiz_payload, "Active quiz must have quiz_payload");
   assert.ok(firstActiveQuiz.cat_name, "Active quiz must have cat_name");
@@ -178,7 +181,7 @@ async function runLiveConformanceTests() {
   const htmlQuizzes = await getQuizzes({ cat_id: 1 });
   assert.ok(htmlQuizzes.length > 0, "Expected HTML quizzes");
   assert.ok(htmlQuizzes.every((q) => q.cat_id === 1), "All returned quizzes must belong to cat_id 1");
-  console.log(`✔ getQuizzes() verified: 256 approved quizzes; cat_id=1 filter returned ${htmlQuizzes.length} HTML quizzes`);
+  console.log(`✔ getQuizzes() verified: ${activeQuizzes.length} approved quizzes; cat_id=1 filter returned ${htmlQuizzes.length} HTML quizzes`);
 
   // 12. Test getCodeProblems()
   console.log("\n[Test 12] Testing getCodeProblems()...");
