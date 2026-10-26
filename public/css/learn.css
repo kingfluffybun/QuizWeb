@@ -116,7 +116,6 @@ main {
     border-radius: 24px;
     margin-bottom: 0;
     &::before {
-        content: "";
         position: absolute;
         z-index: -1;
         top: calc(-1 * var(--learn-main-padding));
