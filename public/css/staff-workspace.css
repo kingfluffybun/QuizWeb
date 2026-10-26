@@ -237,6 +237,7 @@
   border-color: var(--primary-color, #9966ff);
   background: var(--primary-color, #9966ff);
   color: #fff;
+  box-shadow: none;
 }
 
 [data-theme="dark"] .staff-readonly-note {
