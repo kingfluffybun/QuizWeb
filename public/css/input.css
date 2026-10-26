@@ -1849,7 +1849,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   border: 2px solid #e0e0e0;
   border-radius: 16px;
   padding: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1869,7 +1869,6 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
 }
 .filter-label-container {
@@ -2633,6 +2632,11 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 }
 
 [data-theme="dark"] .sort-wrapper {
+  background-color: #1c1c24;
+  border-color: var(--border-main, #2d2d3d);
+}
+
+[data-theme="dark"] .filter-panel {
   background-color: #1c1c24;
   border-color: var(--border-main, #2d2d3d);
 }
