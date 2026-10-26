@@ -2,8 +2,6 @@
 
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 // import Link from "next/link";
-import type { AvailableUnit } from "@/app/actions/quiz";
-// import { getCanonicalSortOrder } from "@/lib/curriculum";
 import Sidebar from "@/app/components/Sidebar";
 import "#css/quiz.css";
 import "#css/nav.css";
@@ -11,7 +9,7 @@ import "#css/sidebar.css";
 import "#css/learn.css";
 import Link from "next/link";
 
-export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) {
+export default function LearnUiPage() {
     const [showLessonDetail, setShowLessonDetail] = useState(false);
 
     const handleLevelClick = (event: MouseEvent<HTMLDivElement>) => {
