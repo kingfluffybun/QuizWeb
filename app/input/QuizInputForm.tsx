@@ -50,6 +50,7 @@ import {
   extractLessonSlides,
   type AssessmentBulkImport,
 } from "@/lib/assessment-json-import";
+import { reconcileCategory, stampUnitFields } from "@/lib/unit-form-sync";
 
 export interface SavedLessonSlide {
   lesson_text?: string;
@@ -174,7 +175,7 @@ interface QuizInputFormProps {
   categories: Category[];
   difficulties: Difficulty[];
   types: QuizType[];
-  sections?: { sec_id: number; sec_num: string }[];
+  sections?: { sec_id: number; sec_num: string; cat_id?: number }[];
   initialRecentUnits?: RecentUnitItem[];
   initialRecentQuizzes?: RecentQuizItem[];
   initialPage: number;
@@ -348,7 +349,7 @@ export default function QuizInputForm({
         return;
       }
 
-      setUnitInputTab("lesson");
+      setUnitInputTab(toolId === "unit" ? "unit" : "lesson");
       setPreviewTab("lesson");
 
       if (toolId === "unit") {
@@ -456,8 +457,8 @@ export default function QuizInputForm({
   const [expectedOutcome, setExpectedOutcome] = useState("");
   const [previewTab, setPreviewTab] = useState<"lesson" | "assessment">("lesson");
   const [unitInputTab, setUnitInputTab] = useState<
-    "lesson" | "quiz" | "assessment" | "import"
-  >("lesson");
+    "unit" | "lesson" | "quiz" | "assessment" | "import"
+  >("unit");
   const [importJsonText, setImportJsonText] = useState("");
   const [importJsonMessage, setImportJsonMessage] = useState<{
     type: "success" | "error";
@@ -1259,6 +1260,15 @@ export default function QuizInputForm({
     }
   }, [types, categories, difficulties]);
 
+  // A unit's category is always its section's category: keep Category in step with the
+  // selected Section however it was set (click, edit-load, or JSON import).
+  useEffect(() => {
+    const nextCatId = reconcileCategory(sections, selectedSecId, selectedCatId);
+    if (nextCatId !== selectedCatId) {
+      startTransition(() => setSelectedCatId(nextCatId));
+    }
+  }, [sections, selectedSecId, selectedCatId]);
+
   // Synchronize live authoring telemetry states with editing state
   useEffect(() => {
     if (!editingQuiz && !hasEnteredEditSession.current) return;
@@ -1558,7 +1568,11 @@ export default function QuizInputForm({
       ? originalUnitQuizzes
       : unitInputTab === "import" && fullJsonImport?.unit_quiz_json?.length
         ? fullJsonImport.unit_quiz_json
-        : buildQuizBatch(buildCurrentQuizEntry());
+        : stampUnitFields(buildQuizBatch(buildCurrentQuizEntry()), {
+            catId: selectedCatId,
+            secId: selectedSecId,
+            unit: selectedUnit,
+          });
     if (unitQuizBatch.length > 0) {
       formData.set("quiz_json", JSON.stringify(unitQuizBatch));
     }
@@ -1799,7 +1813,11 @@ export default function QuizInputForm({
     setMessage(null);
   };
 
-  const loadQueuedQuiz = (quiz: QueuedQuizEntry) => {
+  const loadQueuedQuiz = (queuedQuiz: QueuedQuizEntry) => {
+    // Category/Section/Unit belong to the unit, not to individual quizzes. Drop them so
+    // stepping through quizzes never overwrites the unit-level selections.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cat_id: _catId, sec_id: _secId, unit: _unit, ...quiz } = queuedQuiz;
     const typeName =
       types.find(
         (type) =>
@@ -2644,6 +2662,14 @@ export default function QuizInputForm({
           <div className="preview-tabs unit-input-tabs" role="group" aria-label="Unit input section">
             <button
               type="button"
+              className={`preview-tab${unitInputTab === "unit" ? " active" : ""}`}
+              aria-pressed={unitInputTab === "unit"}
+              onClick={() => setUnitInputTab("unit")}
+            >
+              Unit
+            </button>
+            <button
+              type="button"
               className={`preview-tab${unitInputTab === "lesson" ? " active" : ""}`}
               aria-pressed={unitInputTab === "lesson"}
               onClick={() => {
@@ -2683,21 +2709,105 @@ export default function QuizInputForm({
               Import JSON
             </button>
           </div>
-          <div hidden={unitInputTab !== "lesson"}>
+          <div hidden={unitInputTab !== "unit"}>
           <div className="form-group">
-            <label htmlFor="unit_title">Lesson Title</label>
+            <label htmlFor="unit_title">Unit Title</label>
             <input
               id="unit_title"
               name="unit_title"
               type="text"
               className="form-input"
-              placeholder="Enter the lesson title..."
+              placeholder="Enter the unit title..."
               value={unitTitle}
               onChange={(event) => setUnitTitle(event.target.value)}
               required
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="cat_id">Category</label>
+            <select
+              id="cat_id"
+              name="cat_id"
+              className="form-select"
+              required
+              value={selectedCatId}
+              onChange={(e) => {
+                setSelectedCatId(e.target.value);
+                const current = sections.find(
+                  (s) => s.sec_id.toString() === selectedSecId,
+                );
+                if (
+                  current?.cat_id != null &&
+                  current.cat_id.toString() !== e.target.value
+                ) {
+                  setSelectedSecId("");
+                }
+              }}
+            >
+              <option value="" disabled>
+                Select Category
+              </option>
+              {categories.map((cat) => (
+                <option key={cat.cat_id} value={cat.cat_id.toString()}>
+                  {cat.cat_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="form-group">
+              <label htmlFor="sec_id">Section</label>
+              <select
+                id="sec_id"
+                name="sec_id"
+                className="form-select"
+                required
+                value={selectedSecId}
+                onChange={(e) => setSelectedSecId(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select Section
+                </option>
+                {sections
+                  .filter(
+                    (s) =>
+                      !selectedCatId ||
+                      s.cat_id == null ||
+                      s.cat_id.toString() === selectedCatId,
+                  )
+                  .map((section) => (
+                  <option key={section.sec_id} value={section.sec_id.toString()}>
+                    {section.sec_num}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="unit">Unit</label>
+              <select
+                id="unit"
+                name="unit"
+                className="form-select"
+                required
+                value={selectedUnit}
+                onChange={(e) => setSelectedUnit(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select Unit
+                </option>
+                {[1, 2, 3].map((unitNumber) => (
+                  <option key={unitNumber} value={unitNumber.toString()}>
+                    {unitNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          </div>
+          <div hidden={unitInputTab !== "lesson"}>
           <div className="lesson-slide-section">
             <div className="lesson-slide-heading">
               <h3>Lesson slide</h3>
@@ -2968,27 +3078,6 @@ export default function QuizInputForm({
             </div>
           )}
           <div className="form-group">
-            <label htmlFor="cat_id">Category</label>
-            <select
-              id="cat_id"
-              name="cat_id"
-              className="form-select"
-              required
-              value={selectedCatId}
-              onChange={(e) => setSelectedCatId(e.target.value)}
-            >
-              <option value="" disabled>
-                Select Category
-              </option>
-              {categories.map((cat) => (
-                <option key={cat.cat_id} value={cat.cat_id.toString()}>
-                  {cat.cat_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
             <label htmlFor="difficulty_id">Difficulty</label>
             <select
               id="difficulty_id"
@@ -3010,50 +3099,6 @@ export default function QuizInputForm({
                 </option>
               ))}
             </select>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div className="form-group">
-              <label htmlFor="sec_id">Section</label>
-              <select
-                id="sec_id"
-                name="sec_id"
-                className="form-select"
-                required
-                value={selectedSecId}
-                onChange={(e) => setSelectedSecId(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select Section
-                </option>
-                {sections.map((section) => (
-                  <option key={section.sec_id} value={section.sec_id.toString()}>
-                    {section.sec_num}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="unit">Unit</label>
-              <select
-                id="unit"
-                name="unit"
-                className="form-select"
-                required
-                value={selectedUnit}
-                onChange={(e) => setSelectedUnit(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select Unit
-                </option>
-                {[1, 2, 3].map((unitNumber) => (
-                  <option key={unitNumber} value={unitNumber.toString()}>
-                    {unitNumber}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="form-group">
