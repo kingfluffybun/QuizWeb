@@ -198,10 +198,6 @@
 }
 
 @media (max-width: 760px) {
-  .staff-workspace {
-    padding: 16px;
-  }
-
   .staff-workspace-heading {
     align-items: stretch;
     flex-direction: column;
