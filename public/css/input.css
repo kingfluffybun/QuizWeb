@@ -1407,7 +1407,7 @@ textarea {
 .btn-secondary:active {
   background-color: var(--primary-color);
   color: var(--text-inverse);
-  font-weight: 400;
+  font-weight: 500;
 }
 .pending-quiz-counter {
   color: #475569;

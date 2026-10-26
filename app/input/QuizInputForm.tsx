@@ -2887,7 +2887,7 @@ export default function QuizInputForm({
                     fontSize: "0.82rem",
                     borderRadius: "6px",
                     border: idx === currentLessonSlide ? "2px solid var(--primary-color, #9966ff)" : undefined,
-                    fontWeight: idx === currentLessonSlide ? 700 : 500,
+                    fontWeight: 500,
                   }}
                   onClick={() => setCurrentLessonSlide(idx)}
                 >
@@ -3665,7 +3665,7 @@ export default function QuizInputForm({
                         fontSize: "0.82rem",
                         borderRadius: "6px",
                         border: idx === currentPendingQuizIndex ? "2px solid var(--primary-color, #9966ff)" : undefined,
-                        fontWeight: idx === currentPendingQuizIndex ? 700 : 500,
+                        fontWeight: 500,
                       }}
                       onClick={() => {
                         handleSelectPendingQuiz(idx);
