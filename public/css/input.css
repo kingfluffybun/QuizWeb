@@ -171,6 +171,30 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   background: var(--primary-color);
   color: #fff;
 }
+.preview-tabs .preview-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
+  border-radius: 10px;
+  background: var(--maintainer-surface-alt, transparent);
+  color: var(--maintainer-text, var(--text-main, #333));
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+.preview-tabs .preview-tab:hover:not(.active) {
+  border-color: var(--primary-color, #9966ff);
+  color: var(--primary-color, #9966ff);
+}
+.preview-tabs .preview-tab.active {
+  border-color: var(--primary-color, #9966ff);
+  background: var(--primary-color, #9966ff);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(153, 102, 255, 0.25);
+}
 .preview-tab:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 4px;
@@ -988,7 +1012,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   gap: 0 20px;
 }
 .form-group {
-  margin-bottom: var(--studio-space-4);
+  /* margin-bottom: var(--studio-space-3); */
 }
 .assessment-details .form-group:last-child {
   margin-bottom: 16px;
@@ -1188,7 +1212,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 }
 .lesson-slide-fields {
   margin-bottom: 16px;
-  padding: 16px 20px 0;
+  padding: 16px;
   border: 1px solid #cbd5e1;
   border-radius: 12px;
   background: var(--bg-card);
@@ -2584,6 +2608,10 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 }
 
 @media (max-width: 768px) {
+  .lesson-slide-fields {
+    padding: 12px;
+  }
+
   .unit-input-tabs {
     width: 100%;
     max-width: 100%;
@@ -2662,6 +2690,16 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   .admin-card {
     padding: 20px 16px !important;
     border-radius: 14px !important;
+  }
+
+  .admin-card.unit-authoring-card {
+    gap: 12px;
+  }
+
+  .unit-form-fields:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .assessment-step {

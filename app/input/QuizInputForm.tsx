@@ -2826,7 +2826,7 @@ export default function QuizInputForm({
               Import JSON
             </button>
           </div>
-          <div hidden={unitInputTab !== "unit"}>
+          <div className="unit-form-fields" hidden={unitInputTab !== "unit"}>
           <div className="form-group">
             <label htmlFor="unit_title">Unit Title</label>
             <input
