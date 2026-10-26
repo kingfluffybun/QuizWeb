@@ -330,9 +330,9 @@
 
 .cheatsheet-code-editor {
     overflow: hidden;
-    border: 1px solid #e1e4ea;
+    border: 1px solid var(--border-main);
     border-radius: 10px;
-    background: #f3f4f6;
+    background: var(--bg-card);
 }
 
 .cheatsheet-code-editor,
@@ -340,12 +340,6 @@
 .cheatsheet-code-editor > .monaco-editor > .overflow-guard {
     width: 100% !important;
     height: 100% !important;
-}
-
-.cheatsheet-code-editor .monaco-editor,
-.cheatsheet-code-editor .monaco-editor-background,
-.cheatsheet-code-editor .margin {
-    background-color: #f3f4f6 !important;
 }
 
 [data-theme="dark"] .cheatsheet-card:hover {
