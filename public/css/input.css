@@ -1,4 +1,4 @@
-:root {
+:is(.admin-app-layout, .maintainer-page, .quiz-input-studio-page, .pending-review-page) {
   --studio-space-1: 4px;
   --studio-space-2: 8px;
   --studio-space-3: 12px;
@@ -23,7 +23,7 @@
   --input-approved: #1d4ed8;
   --input-approved-background: #dbeafe;
 }
-[data-theme="dark"] {
+html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-studio-page, .pending-review-page) {
   --input-surface: #1c1c24;
   --input-on-accent: #fafafa;
   --input-background: #15151e;
@@ -37,7 +37,7 @@
   --input-approved: #60a5fa;
   --input-approved-background: rgba(59, 130, 246, 0.18);
 }
-body {
+:is(.admin-app-layout, .maintainer-page, .quiz-input-studio-page, .pending-review-page) {
   background-color: var(--input-background);
   font-family: "Poppins", "Montserrat", sans-serif;
   color: var(--input-text);
@@ -45,9 +45,9 @@ body {
   padding: 0;
   margin: 0;
 }
-input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
-select,
-textarea {
+:is(.admin-app-layout, .maintainer-page, .quiz-input-studio-page, .pending-review-page) input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
+:is(.admin-app-layout, .maintainer-page, .quiz-input-studio-page, .pending-review-page) select,
+:is(.admin-app-layout, .maintainer-page, .quiz-input-studio-page, .pending-review-page) textarea {
   border: 2px solid var(--border-main);
 }
 .admin-header {
@@ -1527,14 +1527,13 @@ textarea {
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: 12px;
-  color: #333;
+  color: var(--admin-text-main);
   font-family: "Poppins", sans-serif;
 }
 .quiz-badge-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
 }
 .badge {
   font-family: "Montserrat", sans-serif;

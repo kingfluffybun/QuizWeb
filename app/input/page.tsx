@@ -17,7 +17,7 @@ export default async function InputPage() {
   ]);
 
   return (
-    <div>
+    <div className="quiz-input-studio-page">
       <header className="admin-header">
         <div>
           <h1>QuizWeb Unit &amp; Assessment Studio</h1>

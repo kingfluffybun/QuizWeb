@@ -15,7 +15,7 @@ export default async function PendingPage() {
   ]);
 
   return (
-    <div>
+    <div className="pending-review-page">
       <header className="admin-header">
         <h1>Pending Quiz Review</h1>
         <Link href="/input" className="header-link">
