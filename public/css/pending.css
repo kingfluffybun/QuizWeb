@@ -217,10 +217,10 @@ body:has(.pending-container) {
   min-height: 720px;
   max-height: 720px;
   padding: 30px;
-  border: 2px solid var(--pending-border);
-  border-radius: 20px;
+  border: 2px solid var(--border-main);
+  border-radius: 12px;
   background-color: var(--pending-surface);
-  box-shadow: 0 8px 24px rgba(153, 102, 255, 0.05);
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   display: flex;
   flex-direction: column;
 }

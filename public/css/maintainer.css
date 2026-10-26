@@ -1709,7 +1709,18 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .maintainer-stats-ribbon > * {
+  border: 2px solid var(--border-main);
   border-radius: var(--radius-md);
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
+  transform: none;
+}
+
+.maintainer-stats-ribbon > .stat-card:hover {
+  transform: none;
+}
+
+.maintainer-stats-ribbon > .stat-card.active-stat-card {
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a !important;
 }
 
 .stat-card {

@@ -749,9 +749,9 @@ textarea {
   box-sizing: border-box;
   background: var(--bg-card);
   border: 2px solid var(--border-main);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: var(--studio-space-6);
-  box-shadow: 0 8px 24px #9966ff0d;
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
   display: flex;
   flex-direction: column;
   gap: var(--studio-space-4);
