@@ -2765,6 +2765,86 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   color: #cbd5e1;
 }
 
+[data-theme="dark"] .quiz-badge-row .badge-cat,
+[data-theme="dark"] .quiz-badge-row .badge-type,
+[data-theme="dark"] .quiz-badge-row .badge-diff,
+[data-theme="dark"] .quiz-badge-row .badge-author,
+[data-theme="dark"] .quiz-badge-row .badge-metric-tag {
+  background-color: #22222d;
+  border: 1px solid #2d2d3d;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-cat {
+  background-color: rgba(103, 47, 206, 0.12);
+  border-color: rgba(103, 47, 206, 0.22);
+  color: #b39adf;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-type {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #91a9cb;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-diff {
+  color: #fdba74;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-status-approved {
+  background-color: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-status-pending {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-status-rejected {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-id-container {
+  background-color: #22222d;
+  border-color: #2d2d3d;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-id {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-id-filter-btn {
+  border-left-color: #2d2d3d;
+  color: #a0a0b0;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-id-filter-btn.filtered {
+  background-color: var(--selected-color);
+  border-left-color: var(--selected-color);
+  color: #fff;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge {
+  background-color: #22222d;
+  border: 1px solid #2d2d3d;
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-cat {
+  background-color: rgba(103, 47, 206, 0.12);
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-type {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .quiz-badge-row .badge-status-pending {
+  background-color: rgba(180, 110, 24, 0.12);
+  border-color: rgba(180, 110, 24, 0.22);
+  color: #d6a35e;
+}
+
 [data-theme="dark"] .list-header-actions .filter-toggle-btn:not(.active) {
   background-color: var(--maintainer-surface-alt, #22222d);
 }
