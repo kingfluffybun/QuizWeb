@@ -765,15 +765,18 @@ button.quick-action-btn:hover {
     }
 }
 
+html[data-theme="dark"] .podium,
 html[data-theme="dark"] .dashboard-page:not(.leaderboard-page) .podium {
     --podium-second-color: #8055ba;
     --podium-third-color: #60438e;
 }
 
+html[data-theme="dark"] .podium-place#second-place,
 html[data-theme="dark"] .dashboard-page .podium-place#second-place {
     background-color: var(--podium-second-color);
 }
 
+html[data-theme="dark"] .podium-place#third-place,
 html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     background-color: var(--podium-third-color);
 }
