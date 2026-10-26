@@ -754,7 +754,6 @@ export function AssessmentLivePreview({
               type="button"
               className="btn-primary"
               onClick={handleRunCheck}
-              style={{ padding: "6px 14px", fontSize: "0.82rem" }}
             >
               Test Step {safeStepIdx + 1} Validation
             </button>
