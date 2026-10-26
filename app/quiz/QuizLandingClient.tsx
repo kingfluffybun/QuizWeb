@@ -340,9 +340,15 @@ export default function QuizLandingClient({
     const isShowingLesson = hasLesson && !hasStartedQuiz;
     const totalProgressItems = (hasLesson ? lessonSlides.length : 0)
         + (isLessonOnlyUnit ? 0 : quizzes.length);
+    const correctQuestionCount = Object.values(questionProgress).filter(
+        (entry) => entry?.result?.correct,
+    ).length;
     const activeProgressIndex = isShowingLesson
         ? lessonSlideIndex
-        : (hasLesson ? lessonSlides.length : 0) + currentIndex;
+        : (hasLesson ? lessonSlides.length : 0) + correctQuestionCount;
+    const progressValue = isShowingLesson
+        ? Math.min(activeProgressIndex + 1, totalProgressItems)
+        : Math.min(activeProgressIndex, totalProgressItems);
 
     const resolvedUnitId = unitId ?? selectedQuiz?.unit_id ?? (quizzes[0] as UnitQuizData)?.unit_id;
 
@@ -924,10 +930,10 @@ export default function QuizLandingClient({
                             aria-label="Quiz progress"
                             aria-valuemin={0}
                             aria-valuemax={Math.max(totalProgressItems, 1)}
-                            aria-valuenow={Math.min(activeProgressIndex + 1, totalProgressItems)}
+                            aria-valuenow={progressValue}
                             aria-valuetext={
                                 totalProgressItems > 0
-                                    ? `Item ${Math.min(activeProgressIndex + 1, totalProgressItems)} of ${totalProgressItems}`
+                                    ? `Item ${progressValue} of ${totalProgressItems}`
                                     : "No progress items"
                             }
                         >
@@ -935,7 +941,7 @@ export default function QuizLandingClient({
                                 className="quiz-progress-bar-fill"
                                 style={{
                                     width: `${totalProgressItems > 0
-                                        ? Math.min(100, ((activeProgressIndex + 1) / totalProgressItems) * 100)
+                                        ? Math.min(100, (progressValue / totalProgressItems) * 100)
                                         : 0}%`,
                                 }}
                             />
