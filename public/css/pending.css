@@ -372,7 +372,9 @@ body:has(.pending-container) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 40px 10px 16px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 40px 0 16px;
   border: 1.5px solid var(--maintainer-border, var(--pending-border));
   border-radius: 10px;
   background: var(--maintainer-surface-alt, var(--pending-surface));
