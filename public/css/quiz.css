@@ -1683,7 +1683,7 @@ footer.incorrect {
         box-sizing: border-box !important;
     }
 
-    .quiz-page:not(#code-problem):not(.learn-page):not(.profile-page) > main {
+    .quiz-page:not(#code-problem):not(.learn-page):not(.profile-page):not(.quiz-completion-main) > main:not(.quiz-completion-main) {
         padding-top: calc(112px + env(safe-area-inset-top)) !important;
     }
 
