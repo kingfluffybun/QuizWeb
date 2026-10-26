@@ -2151,7 +2151,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   padding: 10px 36px;
   border: 1px solid var(--maintainer-border);
   border-radius: 10px;
-  background: var(--maintainer-surface-alt);
+  background: var(--input-control-surface, var(--maintainer-surface-alt));
   color: var(--maintainer-text);
   font: inherit;
   font-size: 0.88rem;
@@ -2198,7 +2198,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   padding: 10px 40px 10px 16px;
   border: 1.5px solid var(--maintainer-border);
   border-radius: 10px;
-  background: var(--maintainer-surface-alt);
+  background: var(--input-control-surface, var(--maintainer-surface-alt));
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
