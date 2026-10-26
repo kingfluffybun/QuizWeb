@@ -26,6 +26,11 @@ import {
   getPublicCodeProblem,
   verifyCodeProblemStep,
 } from "@/app/actions/cp-engine";
+import {
+  getSequentialSkipQueue,
+  completeSequentialSkip,
+  type SequentialSkipQueuePayload,
+} from "@/app/actions/section-skip";
 import { recordUserActivity } from "@/app/actions/streak";
 import { getClientLocalDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
@@ -134,7 +139,13 @@ function getSessionStorageKey(unitId: number): string {
   return `quizweb:cp-session:v2:${unitId}`;
 }
 
-export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = {}) {
+export function CodeProblemRunner({
+  unitId: propUnitId,
+  skipTargetSecId: propSkipTargetSecId,
+}: {
+  unitId?: number;
+  skipTargetSecId?: number;
+} = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const playQuizSound = useQuizSounds();
@@ -145,6 +156,22 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
     (unitIdParam && Number.isFinite(Number(unitIdParam))
       ? Number(unitIdParam)
       : undefined);
+
+  const skipParam =
+    searchParams.get("skipTargetSecId") || searchParams.get("to");
+  const requestedSkipTargetSecId =
+    propSkipTargetSecId ??
+    (skipParam && Number.isFinite(Number(skipParam))
+      ? Number(skipParam)
+      : undefined);
+
+  const [skipPayload, setSkipPayload] =
+    useState<SequentialSkipQueuePayload | null>(null);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(300);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [timeWarning, setTimeWarning] = useState<string | null>(null);
+  const [milestoneMessage, setMilestoneMessage] = useState<string | null>(null);
 
   const [problem, setProblem] = useState<PublicCodeProblem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -226,15 +253,74 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
   }, [isMobileViewport]);
 
   const [prevUnitId, setPrevUnitId] = useState(requestedUnitId);
-  if (requestedUnitId !== prevUnitId) {
+  const [prevSkipSecId, setPrevSkipSecId] = useState(requestedSkipTargetSecId);
+  if (
+    requestedUnitId !== prevUnitId ||
+    requestedSkipTargetSecId !== prevSkipSecId
+  ) {
     setPrevUnitId(requestedUnitId);
+    setPrevSkipSecId(requestedSkipTargetSecId);
     setIsLoading(true);
     setLoadError(null);
   }
 
-  // Fetch public problem definition (with expectedTemplate stripped on server)
+  // Fetch problem definition (single-unit CP or multi-problem sequential skip queue)
   useEffect(() => {
     let isActive = true;
+
+    if (requestedSkipTargetSecId) {
+      getSequentialSkipQueue(requestedSkipTargetSecId)
+        .then((payload) => {
+          if (!isActive) return;
+          if (!payload) {
+            setSkipPayload(null);
+            setProblem(null);
+            setLoadError(
+              "Unable to load the sequential skip challenge for this section.",
+            );
+            return;
+          }
+
+          if (payload.unitsQueue.length === 0) {
+            setSkipPayload(payload);
+            setStatus("completed");
+            completeSequentialSkip({
+              targetSectionId: requestedSkipTargetSecId,
+            }).catch((err) => {
+              console.error("Failed to complete sequential skip:", err);
+            });
+            return;
+          }
+
+          setSkipPayload(payload);
+          setQueueIndex(0);
+          const firstItem = payload.unitsQueue[0];
+          setProblem(firstItem.problem);
+          const firstStepStarter =
+            firstItem.problem.steps[0]?.starterCode ?? defaultFiles;
+
+          setCurrentStepIndex(0);
+          setCode({ ...firstStepStarter });
+          setStepSnapshots({});
+          setLives(5);
+          setTimerSeconds(300);
+          setIsTimerActive(true);
+          setStatus("active");
+          setStepFeedback(null);
+        })
+        .catch(() => {
+          if (isActive) {
+            setLoadError("Unable to load the sequential skip challenge.");
+          }
+        })
+        .finally(() => {
+          if (isActive) setIsLoading(false);
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }
 
     getPublicCodeProblem(requestedUnitId)
       .then((loadedProblem) => {
@@ -295,7 +381,37 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
     return () => {
       isActive = false;
     };
-  }, [requestedUnitId]);
+  }, [requestedUnitId, requestedSkipTargetSecId]);
+
+  // 5-minute countdown timer per coding problem in skip mode
+  useEffect(() => {
+    if (!requestedSkipTargetSecId || !isTimerActive || status !== "active") {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimerSeconds((prev) => {
+        if (prev <= 1) {
+          playQuizSound("wrong-answer");
+          setLives((currentLives) => {
+            const nextLives = Math.max(0, currentLives - 1);
+            if (nextLives <= 0) {
+              setIsTimerActive(false);
+              setStatus("gameover");
+              return 0;
+            }
+            return nextLives;
+          });
+          setTimeWarning("Time's up for this problem! -1 Heart. Timer reset.");
+          setTimeout(() => setTimeWarning(null), 4000);
+          return 300; // Reset 5:00 for the problem
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [requestedSkipTargetSecId, isTimerActive, status, playQuizSound]);
 
   // Persist active progress in sessionStorage so refreshes don't lose student code
   useEffect(() => {
@@ -457,6 +573,22 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
 
   // Restart entire assessment after completion or Game Over
   const handleRestartAssessment = () => {
+    if (requestedSkipTargetSecId && skipPayload && skipPayload.unitsQueue.length > 0) {
+      setQueueIndex(0);
+      const firstItem = skipPayload.unitsQueue[0];
+      setProblem(firstItem.problem);
+      setCurrentStepIndex(0);
+      setCode({ ...(firstItem.problem.steps[0]?.starterCode ?? defaultFiles) });
+      setStepSnapshots({});
+      setLives(5);
+      setTimerSeconds(300);
+      setIsTimerActive(true);
+      setStatus("active");
+      setStepFeedback(null);
+      setConsoleMessages([]);
+      return;
+    }
+
     if (!problem) return;
     const firstStepStarter = problem.steps[0]?.starterCode ?? defaultFiles;
     if (typeof window !== "undefined") {
@@ -494,6 +626,44 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
         setStepSnapshots(updatedSnapshots);
 
         if (result.isFinalStep) {
+          if (requestedSkipTargetSecId && skipPayload) {
+            // Check if there are more coding problems in the queue
+            if (queueIndex < skipPayload.unitsQueue.length - 1) {
+              playQuizSound("lesson-complete");
+              const nextQueueIndex = queueIndex + 1;
+              const nextItem = skipPayload.unitsQueue[nextQueueIndex];
+
+              setMilestoneMessage(
+                `Problem ${queueIndex + 1} of ${skipPayload.totalCodingProblems} completed! Starting ${nextItem.unitTitle}...`,
+              );
+              setTimeout(() => setMilestoneMessage(null), 3500);
+
+              setQueueIndex(nextQueueIndex);
+              setProblem(nextItem.problem);
+              setCurrentStepIndex(0);
+              setCode({
+                ...(nextItem.problem.steps[0]?.starterCode ?? defaultFiles),
+              });
+              setStepSnapshots({});
+              setStepFeedback(null);
+              setTimerSeconds(300); // 5-minute timer resets for the new problem
+              // lives is preserved across all problems in skip session
+              return;
+            }
+
+            // All problems in the queue are completed!
+            playQuizSound("lesson-complete");
+            setIsTimerActive(false);
+            setStatus("completed");
+
+            completeSequentialSkip({
+              targetSectionId: requestedSkipTargetSecId,
+            }).catch((err) => {
+              console.error("Failed to complete sequential skip:", err);
+            });
+            return;
+          }
+
           playQuizSound("lesson-complete");
           if (typeof window !== "undefined") {
             window.sessionStorage.removeItem(
@@ -538,11 +708,12 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
         }
         if (isMobileViewport) setMobileTab("code");
         if (nextLives <= 0) {
-          if (typeof window !== "undefined") {
+          if (typeof window !== "undefined" && !requestedSkipTargetSecId) {
             window.sessionStorage.removeItem(
               getSessionStorageKey(problem.unit_id),
             );
           }
+          setIsTimerActive(false);
           setStatus("gameover");
         }
       }
@@ -562,38 +733,73 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
 
   if (status === "completed" || status === "gameover") {
     const isVictory = status === "completed";
+    const isSkipMode = Boolean(requestedSkipTargetSecId && skipPayload);
+
     return (
       <div className="quiz-page quiz-no-footer-page">
         <Sidebar />
         <main className="quiz-completion-main">
           <div className="quiz-complete-card">
-            <h1>{isVictory ? "Assessment Complete!" : "Game Over"}</h1>
+            <h1>
+              {isVictory
+                ? isSkipMode
+                  ? "🎉 Section Skip Complete!"
+                  : "Assessment Complete!"
+                : isSkipMode
+                  ? "💔 Skip Challenge Failed"
+                  : "Game Over"}
+            </h1>
             <h2>
               {isVictory
-                ? `${problem?.steps.length ?? 0} / ${problem?.steps.length ?? 0} Steps Passed (+50 XP)`
-                : `Step ${currentStepIndex + 1} of ${problem?.steps.length ?? 1}`}
+                ? isSkipMode
+                  ? `Unlocked Section ${skipPayload?.targetSectionNum}: ${skipPayload?.targetSectionTitle} (+${(skipPayload?.totalCodingProblems ?? 0) * 50 + 50} XP)`
+                  : `${problem?.steps.length ?? 0} / ${problem?.steps.length ?? 0} Steps Passed (+50 XP)`
+                : isSkipMode
+                  ? `Out of hearts on Problem ${queueIndex + 1} of ${skipPayload?.totalCodingProblems ?? 1}`
+                  : `Step ${currentStepIndex + 1} of ${problem?.steps.length ?? 1}`}
             </h2>
             <p className="quiz-completion-message">
               {isVictory
-                ? problem?.expected_outcome ||
-                  "Outstanding work! You built and verified every step of the coding assessment."
-                : stepFeedback?.message ||
-                  "You ran out of hearts. Review the step instructions and try again!"}
+                ? isSkipMode
+                  ? (skipPayload?.totalCodingProblems ?? 0) > 0
+                    ? `Outstanding achievement! You mastered all ${skipPayload?.totalCodingProblems} coding challenges within the time limit. Section ${skipPayload?.targetSectionNum} is now unlocked on your roadmap!`
+                    : `All preceding units are completed! Section ${skipPayload?.targetSectionNum} is unlocked on your roadmap!`
+                  : problem?.expected_outcome ||
+                    "Outstanding work! You built and verified every step of the coding assessment."
+                : isSkipMode
+                  ? "You ran out of hearts during the skip challenge. Don't worry, your existing roadmap progress is completely preserved!"
+                  : stepFeedback?.message ||
+                    "You ran out of hearts. Review the step instructions and try again!"}
             </p>
-            <button
-              className="options"
-              id="submit"
-              type="button"
-              onClick={handleRestartAssessment}
+            {isVictory && isSkipMode ? (
+              <Link href="/learn-ui" className="options" id="submit">
+                Continue to Roadmap
+              </Link>
+            ) : (
+              <button
+                className="options"
+                id="submit"
+                type="button"
+                onClick={handleRestartAssessment}
+              >
+                {isVictory
+                  ? "Practice Again"
+                  : isSkipMode
+                    ? "Retry Skip Challenge"
+                    : "Try Again"}
+              </button>
+            )}
+            <Link
+              href={isSkipMode ? "/learn-ui" : "/learn"}
+              className="options back-to-input-btn"
             >
-              {isVictory ? "Practice Again" : "Try Again"}
-            </button>
-            <Link href="/learn" className="options back-to-input-btn">
-              Back to Curriculum
+              {isSkipMode ? "Back to Roadmap" : "Back to Curriculum"}
             </Link>
-            <Link href="/home" className="options back-to-input-btn">
-              Back to Home
-            </Link>
+            {!isSkipMode && (
+              <Link href="/home" className="options back-to-input-btn">
+                Back to Home
+              </Link>
+            )}
           </div>
         </main>
       </div>
@@ -641,7 +847,9 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
               type="button"
               className="quiz-close-button"
               aria-label="Exit coding assessment"
-              onClick={() => router.push("/learn")}
+              onClick={() =>
+                router.push(requestedSkipTargetSecId ? "/learn-ui" : "/learn")
+              }
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -666,10 +874,49 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
                 />
               ))}
             </div>
+
+            {requestedSkipTargetSecId && (
+              <div
+                className={`cp-skip-timer ${
+                  timerSeconds < 20
+                    ? "urgent"
+                    : timerSeconds < 60
+                      ? "warning"
+                      : ""
+                }`}
+                title="5 minutes per coding problem"
+                aria-label={`Time remaining: ${String(
+                  Math.floor(timerSeconds / 60),
+                ).padStart(2, "0")}:${String(timerSeconds % 60).padStart(
+                  2,
+                  "0",
+                )}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>
+                  {String(Math.floor(timerSeconds / 60)).padStart(2, "0")}:
+                  {String(timerSeconds % 60).padStart(2, "0")}
+                </span>
+              </div>
+            )}
+
             <div
               className="heart-container"
               data-lives={lives}
-              title={`${lives} of 5 hearts remaining`}
+              title={`${lives} of 5 hearts remaining across entire skip session`}
               aria-label={`${lives} of 5 hearts remaining`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#EE5555" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart-icon lucide-heart"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>
@@ -711,6 +958,16 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
             minHeight: "0",
           }}
         >
+          {timeWarning && (
+            <div className="cp-timeout-banner" role="alert">
+              {timeWarning}
+            </div>
+          )}
+          {milestoneMessage && (
+            <div className="cp-milestone-banner" role="status">
+              {milestoneMessage}
+            </div>
+          )}
           {problem && problem.steps[currentStepIndex] && (
             <div
               className={`cp-mobile-banner${
@@ -816,9 +1073,18 @@ export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = 
                     <path d="M4 9h2" />
                     <path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02" />
                   </svg>
-                  <div style={{display: "flex", width: "100%", justifyContent: "space-between"}}>
+                  <div style={{display: "flex", width: "100%", justifyContent: "space-between", flexDirection: "column"}}>
+                    {requestedSkipTargetSecId && skipPayload && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
+                        <span className="cp-skip-badge">
+                          ⚡ Problem {queueIndex + 1} of {skipPayload.totalCodingProblems}
+                        </span>
+                        <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                          Target: Section {skipPayload.targetSectionNum} ({skipPayload.targetSectionTitle})
+                        </span>
+                      </div>
+                    )}
                     <h2>{problem?.title ? problem.title : "Instructions"}{" "}</h2>
-                    {/* <h2>{problem ? `Step ${currentStepIndex + 1}/${problem.steps.length}` : ""}</h2> */}
                   </div>
                 </div>
               </div>

@@ -67,6 +67,15 @@ export default function LearnRoadmapClient({
     roadmapData.sections.find((s) => s.sec_id === activeSectionId) ??
     roadmapData.sections[0];
 
+  const activeSectionIndex = roadmapData.sections.findIndex(
+    (s) => s.sec_id === activeSection?.sec_id,
+  );
+  const nextSection =
+    activeSectionIndex >= 0 &&
+    activeSectionIndex < roadmapData.sections.length - 1
+      ? roadmapData.sections[activeSectionIndex + 1]
+      : null;
+
   const isStaffUser = Boolean(
     roadmapData.userProgression.isStaff ||
       userRole === "admin" ||
@@ -379,6 +388,45 @@ export default function LearnRoadmapClient({
                   </p>
                 </div>
               </div>
+
+              {/* Section Skip Challenge Quick Action */}
+              {nextSection && (nextSection.is_locked || !activeSection?.is_completed) && (
+                <div className="section-skip-rail-box">
+                  <div className="section-skip-rail-header">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    <span>Skip to Next Section</span>
+                  </div>
+                  <p className="section-skip-rail-desc">
+                    Ready to advance? Pass all remaining coding problems to jump straight to{" "}
+                    <strong>
+                      {nextSection.cat_name}, Sec {nextSection.sec_num}: {nextSection.sec_title}
+                    </strong>
+                    .
+                  </p>
+                  <div className="section-skip-badges">
+                    <span className="section-skip-chip">⏱️ 5 min / problem</span>
+                    <span className="section-skip-chip">❤️ 5 hearts total</span>
+                  </div>
+                  <Link
+                    href={`/quiz-cp/skip/${nextSection.sec_id}`}
+                    className="section-skip-rail-btn"
+                  >
+                    Take Skip Challenge
+                  </Link>
+                </div>
+              )}
             </div>
           </aside>
 
@@ -548,15 +596,22 @@ export default function LearnRoadmapClient({
                   <h2 id="modal-node-title">{selectedNode.unitTitle}</h2>
                 </div>
 
-                {selectedNode.isLocked ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="lesson-link disabled"
-                    style={{ cursor: "not-allowed", border: "none" }}
-                  >
-                    <p>{selectedNode.lockReason ?? "Locked"}</p>
-                  </button>
+                {selectedNode.nodeType === "checkpoint" ? (
+                  <div className="skip-modal-content">
+                    <p className="skip-modal-desc">
+                      Skip directly to this section by passing the coding assessment for every preceding uncompleted unit.
+                    </p>
+                    <div className="section-skip-badges" style={{ marginBottom: "12px" }}>
+                      <span className="section-skip-chip">⏱️ 5 min / problem</span>
+                      <span className="section-skip-chip">❤️ 5 hearts total</span>
+                    </div>
+                    <Link
+                      href={`/quiz-cp/skip/${selectedNode.secId}`}
+                      className="lesson-link"
+                    >
+                      <p>⚡ Start Skip Challenge</p>
+                    </Link>
+                  </div>
                 ) : selectedNode.nodeType === "coming_soon" ? (
                   <button
                     type="button"
@@ -566,14 +621,25 @@ export default function LearnRoadmapClient({
                   >
                     <p>Coming Soon</p>
                   </button>
-                ) : selectedNode.nodeType === "checkpoint" ? (
-                  <button
-                    type="button"
-                    className="lesson-link"
-                    onClick={() => handleJumpToSection(selectedNode.secId)}
-                  >
-                    <p>Jump to Section</p>
-                  </button>
+                ) : selectedNode.isLocked ? (
+                  <div className="locked-node-modal-content">
+                    <button
+                      type="button"
+                      disabled
+                      className="lesson-link disabled"
+                      style={{ cursor: "not-allowed", border: "none" }}
+                    >
+                      <p>{selectedNode.lockReason ?? "Locked"}</p>
+                    </button>
+                    {selectedNode.secId > 1 && (
+                      <Link
+                        href={`/quiz-cp/skip/${selectedNode.secId}`}
+                        className="skip-secondary-link"
+                      >
+                        ⚡ Skip ahead to Section {selectedNode.secNum}
+                      </Link>
+                    )}
+                  </div>
                 ) : (
                   <Link
                     href={
@@ -657,9 +723,10 @@ export default function LearnRoadmapClient({
                         <div className="level">
                           <button
                             type="button"
-                            className="level-btn disabled"
+                            className="level-btn checkpoint"
                             onClick={() => handleSelectCheckpoint(section)}
-                            aria-label={`Skip Section Checkpoint for ${section.sec_title} (Locked)`}
+                            aria-label={`Skip Section Checkpoint for ${section.sec_title}`}
+                            title={`Skip ahead to ${section.sec_title}`}
                           >
                             <svg
                               width="28"

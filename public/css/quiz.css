@@ -2629,3 +2629,82 @@ footer.incorrect {
         transform: translateY(1px);
     }
 }
+
+/* Section Skip Challenge Timer & Badges */
+.cp-skip-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-main);
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.cp-skip-timer.warning {
+    color: #F59E0B;
+    border-color: #F59E0B;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.cp-skip-timer.urgent {
+    color: #EF4444;
+    border-color: #EF4444;
+    background: rgba(239, 68, 68, 0.15);
+    animation: cp-timer-pulse 1s infinite ease-in-out;
+}
+
+@keyframes cp-timer-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.cp-skip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cp-timeout-banner {
+    width: 100%;
+    max-width: 1080px;
+    background: #EF4444;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    padding: 10px 16px;
+    border-radius: 12px;
+    animation: quiz-elevate-in 200ms ease-out both;
+}
+
+.cp-milestone-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 1080px;
+    background: #10B981;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    padding: 10px 16px;
+    border-radius: 12px;
+    animation: quiz-elevate-in 200ms ease-out both;
+}
+
