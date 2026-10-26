@@ -94,8 +94,8 @@
   transition: all 0.18s ease;
 }
 
-#pending-submissions {
-  background: var(--maintainer-surface-alt, #fcfbff);
+#pending-submissions:not(.active) {
+  background: var(--maintainer-surface, #ffffff);
 }
 
 .staff-workspace-tab:hover:not(.active) {
