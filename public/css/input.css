@@ -209,7 +209,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  margin: 0 0 var(--studio-space-1);
+  margin: 0;
   text-transform: uppercase;
 }
 .lesson-preview-card .lesson-preview-surface,
