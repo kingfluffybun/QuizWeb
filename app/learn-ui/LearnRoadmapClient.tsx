@@ -33,6 +33,17 @@ interface LearnRoadmapClientProps {
   username?: string;
 }
 
+/**
+ * Calculates a sinusoidal displacement factor for roadmap nodes, forming
+ * repeating wave patterns calculated to be exactly multiple waves end to end.
+ */
+function getWaveFactor(nodeIndex: number, totalNodes: number): number {
+  if (totalNodes <= 1) return 0;
+  const waves = Math.max(1, Math.round(totalNodes / 6));
+  const angle = ((nodeIndex + 1) / (totalNodes + 1)) * Math.PI * 2 * waves;
+  return Number(Math.sin(angle).toFixed(3));
+}
+
 export default function LearnRoadmapClient({
   roadmapData,
   userRole,
@@ -591,8 +602,17 @@ export default function LearnRoadmapClient({
             )}
 
             {/* Sections & Interactive Nodes */}
-            {roadmapData.sections.map((section, sIndex) => {
+            {roadmapData.sections.map((section) => {
               const hasUnits = section.units.length > 0;
+              const totalSectionNodes = section.units.reduce(
+                (count, u) =>
+                  count +
+                  1 +
+                  (u.quiz_count > 0 ? 1 : 0) +
+                  (u.has_coding_assessment ? 1 : 0),
+                0,
+              );
+              let sectionNodeIndex = 0;
 
               return (
                 <section
@@ -601,7 +621,6 @@ export default function LearnRoadmapClient({
                   data-section-id={section.sec_id}
                   className="curriculum-section"
                   aria-labelledby={`section-title-${section.sec_id}`}
-                  style={sIndex > 0 ? { marginTop: "20px" } : undefined}
                 >
                   {/* Section Title Header */}
                   <div
@@ -629,7 +648,10 @@ export default function LearnRoadmapClient({
 
                   {/* If section is locked and has units, display the Skip / Jump checkpoint row */}
                   {section.is_locked && hasUnits && (
-                    <div className="level-row">
+                    <div
+                      className="level-row"
+                      style={{ "--wave-factor": 0 } as React.CSSProperties}
+                    >
                       <div className="level-content">
                         {/* Skip Section */}
                         <div className="level">
@@ -671,6 +693,19 @@ export default function LearnRoadmapClient({
                   {/* Section Units */}
                   {hasUnits ? (
                     section.units.map((unit, unitIndex) => {
+                      const lessonWave = getWaveFactor(
+                        sectionNodeIndex++,
+                        totalSectionNodes,
+                      );
+                      const quizWave =
+                        unit.quiz_count > 0
+                          ? getWaveFactor(sectionNodeIndex++, totalSectionNodes)
+                          : 0;
+                      const cpWave =
+                        unit.has_coding_assessment
+                          ? getWaveFactor(sectionNodeIndex++, totalSectionNodes)
+                          : 0;
+
                       // Accurate per-node status determination:
                       // 1. Lesson:
                       const isLessonCompleted =
@@ -706,7 +741,7 @@ export default function LearnRoadmapClient({
                           : undefined;
 
                       return (
-                        <div key={unit.unit_id}>
+                        <div key={unit.unit_id} className="curriculum-unit-group">
                           {/* Unit Title Divider between units */}
                           {unitIndex > 0 && (
                             <div className="level-row-divider">
@@ -718,7 +753,14 @@ export default function LearnRoadmapClient({
                           )}
 
                           {/* Lesson Node */}
-                          <div className="level-row">
+                          <div
+                            className="level-row"
+                            style={
+                              {
+                                "--wave-factor": lessonWave,
+                              } as React.CSSProperties
+                            }
+                          >
                             <div className="level-content">
                               <div className="level">
                                 <button
@@ -789,7 +831,14 @@ export default function LearnRoadmapClient({
 
                           {/* Quiz Node */}
                           {unit.quiz_count > 0 && (
-                            <div className="level-row">
+                            <div
+                              className="level-row"
+                              style={
+                                {
+                                  "--wave-factor": quizWave,
+                                } as React.CSSProperties
+                              }
+                            >
                               <div className="level-content">
                                 <div className="level">
                                   <button
@@ -868,7 +917,14 @@ export default function LearnRoadmapClient({
 
                           {/* Code Problem Node */}
                           {unit.has_coding_assessment && (
-                            <div className="level-row">
+                            <div
+                              className="level-row"
+                              style={
+                                {
+                                  "--wave-factor": cpWave,
+                                } as React.CSSProperties
+                              }
+                            >
                               <div className="level-content">
                                 <div className="level">
                                   <button
@@ -942,7 +998,10 @@ export default function LearnRoadmapClient({
                     })
                   ) : (
                     /* Empty Section Placeholder: Units coming soon */
-                    <div className="level-row">
+                    <div
+                      className="level-row"
+                      style={{ "--wave-factor": 0 } as React.CSSProperties}
+                    >
                       <div className="level-content">
                         {/* Skip Section / Coming soon */}
                         <div className="level">

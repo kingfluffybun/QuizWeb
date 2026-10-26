@@ -1,3 +1,13 @@
+:root {
+    --roadmap-wave-amplitude: 52px;
+}
+
+@media (max-width: 600px) {
+    :root {
+        --roadmap-wave-amplitude: 36px;
+    }
+}
+
 .learn-page {
     --learn-sidebar-width: 240px;
 }
@@ -78,6 +88,15 @@ main {
     position: relative;
 }
 
+.curriculum-section,
+.curriculum-unit-group {
+    display: flex;
+    flex-direction: column;
+    row-gap: 36px;
+    width: 100%;
+    align-items: center;
+}
+
 .section-header {
     isolation: isolate;
     position: sticky;
@@ -95,7 +114,7 @@ main {
         0 8px 0 rgb(0 0 0 / 20%),
         0 8px 0 var(--primary-color);
     border-radius: 24px;
-    margin-bottom: 24px;
+    margin-bottom: 0;
     &::before {
         content: "";
         position: absolute;
@@ -122,7 +141,9 @@ main {
 .level-row {
     display: flex;
     justify-content: center;
-    gap: 100px;
+    width: 100%;
+    transform: translateX(calc(var(--wave-factor, 0) * var(--roadmap-wave-amplitude, 52px)));
+    transition: transform 0.25s ease;
 }
 
 .level-content {
@@ -200,6 +221,7 @@ main {
 
 .level-row-divider {
     width: 100%;
+    max-width: 360px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -340,8 +362,13 @@ main {
     .lesson-detail-container {
         animation: none !important;
     }
+    .level-row {
+        transition: none !important;
+    }
 }
 
-html[data-motion="reduce"] .lesson-detail-container {
+html[data-motion="reduce"] .lesson-detail-container,
+html[data-motion="reduce"] .level-row {
     animation: none !important;
+    transition: none !important;
 }
