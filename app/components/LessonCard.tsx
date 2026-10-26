@@ -7,7 +7,15 @@ const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
     <div
-      style={{ minHeight: "180px", width: "100%", background: "#1e1e1e" }}
+      style={{
+        height: "180px",
+        minHeight: "180px",
+        maxHeight: "180px",
+        width: "100%",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        background: "#1e1e1e",
+      }}
       className="lesson-code-editor animate-pulse flex items-center justify-center text-neutral-500 text-xs"
     >
       Loading code editor...
