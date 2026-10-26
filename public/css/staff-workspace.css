@@ -1,14 +1,8 @@
 .staff-workspace {
-  margin-top: 8px;
-  padding: 28px;
-  border: 1.5px solid var(--maintainer-border, var(--border-main, #e0e0e0));
-  border-radius: var(--radius-md, 12px);
-  background: var(--maintainer-surface, var(--bg-card, #fff));
   color: var(--maintainer-text, var(--text-main, #333));
   max-width: 1440px;
   width: 100%;
   margin-inline: auto;
-  box-shadow: var(--maintainer-shadow-sm, 0 4px 16px rgba(15, 23, 42, 0.05));
   box-sizing: border-box;
 }
 
