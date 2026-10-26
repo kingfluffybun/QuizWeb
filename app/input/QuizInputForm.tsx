@@ -3175,7 +3175,7 @@ export default function QuizInputForm({
           </div>
 
           </div>
-          <div hidden={unitInputTab !== "quiz"}>
+          <div className="unit-form-fields" hidden={unitInputTab !== "quiz"}>
           {preserveQuizDataOnSave && (
             <div
               className="status-message status-success"
@@ -3810,7 +3810,6 @@ export default function QuizInputForm({
               alignItems: "stretch",
               gap: "12px",
               marginTop: "0",
-              marginBottom: "18px",
             }}
           >
             {(queuedQuizzes.length > 0 || editingQuiz?._queuedUnitQuiz || editingQuiz?._pendingUnit) ? (
@@ -4233,6 +4232,23 @@ export default function QuizInputForm({
                   </svg>
                   <span className="sort-label-text">Sort:</span>
                 </label>
+                <span className="sort-select-visible-value" aria-hidden="true">
+                  {sortBy === "id_desc"
+                    ? "ID: High to Low (Newest)"
+                    : sortBy === "id_asc"
+                      ? "ID: Low to High (Oldest)"
+                      : sortBy === "title_asc"
+                        ? "Title: A → Z"
+                        : sortBy === "title_desc"
+                          ? "Title: Z → A"
+                          : sortBy === "slides_desc"
+                            ? "Most Slides"
+                            : sortBy === "quizzes_desc"
+                              ? "Most Questions"
+                              : sortBy === "diff_asc"
+                                ? "Difficulty: Easy → Hard"
+                                : "Difficulty: Hard → Easy"}
+                </span>
                 <select
                   id="sort-by-select"
                   value={sortBy}

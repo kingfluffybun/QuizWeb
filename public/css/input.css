@@ -109,6 +109,11 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 .unit-authoring-card > form {
   gap: var(--studio-space-4);
 }
+.unit-form-fields:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .lesson-preview-card {
   min-width: 0;
   align-self: start;
@@ -1013,6 +1018,11 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 }
 .form-group {
   /* margin-bottom: var(--studio-space-3); */
+}
+.assessment-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .assessment-details .form-group:last-child {
   margin-bottom: 16px;
@@ -1945,22 +1955,36 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   box-sizing: border-box;
 }
 .sort-wrapper {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   background-color: #ffffff;
   border: 2px solid #e0e0e0;
   border-radius: 12px;
-  padding: 0 12px 0 12px;
+  padding: 0 28px 0 12px;
   height: 40px;
   box-sizing: border-box;
   transition: all 0.2s ease;
+}
+.sort-wrapper::after {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid #666;
+  border-bottom: 1.5px solid #666;
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
 }
 .sort-wrapper:hover,
 .sort-wrapper:focus-within {
   border-color: var(--selected-color);
 }
 .sort-label {
+  pointer-events: none;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1976,16 +2000,29 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   color: var(--selected-color);
   flex-shrink: 0;
 }
-.sort-select {
-  border: none;
-  background: transparent;
+.sort-select-visible-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--maintainer-text, var(--text-main, #333));
   font-family: "Poppins", sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sort-select {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  opacity: 0;
   outline: none;
   cursor: pointer;
-  padding: 4px 0;
+  padding: 0;
 }
 .active-filters-bar {
   display: flex;
