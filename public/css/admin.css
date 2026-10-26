@@ -257,26 +257,35 @@ html[data-motion="reduce"] .admin-main *::after {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 140px;
+  min-height: 0;
   margin-bottom: 4px;
-  padding: 24px;
+  padding: 16px;
   overflow: hidden;
-  color: var(--admin-text-main);
-  background: var(--admin-card-bg);
-  border: 1.5px solid var(--admin-border);
-  border-radius: var(--admin-radius-xl);
-  box-shadow: var(--admin-shadow-sm);
+  color: var(--admin-text-inverse);
+  background: var(--admin-primary);
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px #00000014, 0 12px 24px #0000001a;
 }
 
 .admin-app-layout .admin-dashboard-header::before {
+  content: none;
+}
+
+.admin-app-layout .admin-dashboard-header::after {
   position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
+  right: -8px;
+  bottom: -40px;
+  width: 180px;
+  height: 180px;
   content: "";
-  background: linear-gradient(90deg, #2563eb, #818cf8, #9966ff);
+  background: url("/assets/landing-page/Clouds-right.svg") center / contain no-repeat;
+  pointer-events: none;
 }
 
 .admin-dashboard-header-content {
+  position: relative;
+  z-index: 1;
   min-width: 0;
 }
 
@@ -304,7 +313,13 @@ html[data-motion="reduce"] .admin-main *::after {
 }
 
 .admin-app-layout .admin-dashboard-header .admin-header-title {
-  color: var(--admin-text-main);
+  font-family: 'Poppins', sans-serif;
+  color: var(--admin-text-inverse);
+  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .admin-header-subtitle,
@@ -316,7 +331,10 @@ html[data-motion="reduce"] .admin-main *::after {
 }
 
 .admin-app-layout .admin-dashboard-header .admin-header-subtitle {
-  color: var(--admin-text-muted);
+  color: var(--text-inverse);
+  font-size: 1rem;
+  line-height: 1.4;
+  max-width: 600px;
 }
 
 .admin-header-badge {
@@ -1892,7 +1910,7 @@ html[data-motion="reduce"] .admin-main *::after {
 
   .admin-app-layout .admin-dashboard-header {
     min-height: 0;
-    padding: 24px;
+    padding: 16px;
   }
 
   .admin-toolbar,
