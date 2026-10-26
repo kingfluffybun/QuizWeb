@@ -190,7 +190,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                                 </button>
                                             ) : (
                                                 <Link
-                                                    href={`/quiz?unitId=${unit.pending_id}&source=quiz`}
+                                                    href={`/quiz/${unit.pending_id}`}
                                                     className="available-unit-link"
                                                 >
                                                     {isCompleted

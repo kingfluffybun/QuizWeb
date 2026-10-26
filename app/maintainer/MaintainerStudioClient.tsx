@@ -732,7 +732,7 @@ export default function MaintainerStudioClient({
 
                         {isApproved && (
                           <Link
-                            href={`/quiz?unitId=${item.pending_id}`}
+                            href={`/quiz/${item.pending_id}`}
                             className="btn-action-view"
                           >
                             <span>View in Quiz</span>

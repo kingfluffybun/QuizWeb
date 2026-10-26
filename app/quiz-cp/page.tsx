@@ -134,16 +134,17 @@ function getSessionStorageKey(unitId: number): string {
   return `quizweb:cp-session:v2:${unitId}`;
 }
 
-function CodeProblemRunner() {
+export function CodeProblemRunner({ unitId: propUnitId }: { unitId?: number } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const playQuizSound = useQuizSounds();
 
   const unitIdParam = searchParams.get("unitId");
   const requestedUnitId =
-    unitIdParam && Number.isFinite(Number(unitIdParam))
+    propUnitId ??
+    (unitIdParam && Number.isFinite(Number(unitIdParam))
       ? Number(unitIdParam)
-      : undefined;
+      : undefined);
 
   const [problem, setProblem] = useState<PublicCodeProblem | null>(null);
   const [isLoading, setIsLoading] = useState(true);

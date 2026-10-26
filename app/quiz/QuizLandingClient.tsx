@@ -768,7 +768,7 @@ export default function QuizLandingClient({
             unwrapCodeProblemAssessment(selectedQuizzes[0]?.unit_assessment),
         );
         const codingAssessmentHref = unitId
-            ? `/quiz-cp?unitId=${unitId}`
+            ? `/quiz-cp/${unitId}`
             : "/quiz-cp";
 
         return (
@@ -825,7 +825,7 @@ export default function QuizLandingClient({
                         )}
                         {isPassed && nextUnit && (
                             <Link
-                                href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
+                                href={`/quiz/${nextUnit.unit_id}`}
                                 className="options"
                                 id={hasCodingAssessment ? undefined : "submit"}
                                 aria-disabled={!isLessonProgressSaved}

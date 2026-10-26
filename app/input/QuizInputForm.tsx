@@ -4725,7 +4725,7 @@ export default function QuizInputForm({
                             <button
                               type="button"
                               className="btn-preview"
-                              onClick={() => router.push(`/quiz?unitId=${unit.unit_id}`)}
+                              onClick={() => router.push(`/quiz/${unit.unit_id}`)}
                               title={`Preview Unit (ID: #${unit.unit_id})`}
                               aria-label={`Preview Unit (ID: #${unit.unit_id})`}
                             >
@@ -4964,7 +4964,7 @@ export default function QuizInputForm({
                               type="button"
                               className="btn-preview"
                               onClick={() =>
-                                router.push(`/quiz?unitId=${quiz.quiz_id}`)
+                                router.push(`/quiz/${quiz.quiz_id}`)
                               }
                               title={`Preview Question (ID: #${quiz.quiz_id})`}
                               aria-label={`Preview Question (ID: #${quiz.quiz_id})`}

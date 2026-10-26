@@ -55,8 +55,8 @@ export default async function DashboardPage() {
 
     const resumeHref = lastActiveProgress
         ? (lastActiveProgress.resume_type === "up_next" && lastActiveProgress.next_unit_id
-            ? `/quiz?unitId=${lastActiveProgress.next_unit_id}&slide=${lastActiveProgress.next_slide_order ?? 1}&source=quiz`
-            : `/quiz?unitId=${lastActiveProgress.unit_id}&slide=${lastActiveProgress.current_slide_order}&source=quiz`)
+            ? `/quiz/${lastActiveProgress.next_unit_id}`
+            : `/quiz/${lastActiveProgress.unit_id}`)
         : "/learn";
 
     const quickActionLabel = lastActiveProgress
@@ -119,7 +119,7 @@ export default async function DashboardPage() {
                                                     return (
                                                         <Link
                                                             key={unit.unit_id}
-                                                            href={`/quiz?unitId=${unit.unit_id}&slide=${unit.current_slide_order || 1}&source=quiz`}
+                                                            href={`/quiz/${unit.unit_id}`}
                                                             className="unit row"
                                                             style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
                                                             title={`Open ${unit.unit_title}`}

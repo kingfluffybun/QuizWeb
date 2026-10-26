@@ -9,7 +9,7 @@ import QuizLandingClient from "./QuizLandingClient";
 
 export const revalidate = 3600;
 
-function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
+export function unwrapUnitQuizzes(quizzes: unknown[]): QuizData[] {
     return quizzes.flatMap((quiz) => {
         const quizRecord = quiz as Partial<QuizData>;
         const payload = quizRecord.quiz_payload ?? {};
@@ -63,7 +63,14 @@ export default async function QuizPage({
     searchParams: Promise<{ quizId?: string; unitId?: string; source?: string; slide?: string }>;
 }) {
     const { quizId, unitId, source, slide } = await searchParams;
-    if (!quizId && !unitId) {
+    if (unitId) {
+        const queryParams = new URLSearchParams();
+        if (slide) queryParams.set("slide", slide);
+        if (source) queryParams.set("source", source);
+        const qs = queryParams.toString();
+        redirect(`/quiz/${unitId}${qs ? `?${qs}` : ""}`);
+    }
+    if (!quizId) {
         redirect("/learn");
     }
 
