@@ -2658,12 +2658,65 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 
 [data-theme="dark"] .radio-check {
   accent-color: var(--primary-color, #672fce);
+  color-scheme: dark;
 }
 
 [data-theme="dark"] .assessment-step-input {
   background: #15151e;
   border-color: var(--border-main, #2d2d3d);
   color: var(--text-main, #fafafa);
+}
+
+[data-theme="dark"] .assessment-step-card {
+  background: #1c1c24 !important;
+  border-color: var(--border-main, #2d2d3d) !important;
+}
+
+[data-theme="dark"] .assessment-step-list {
+  background: #15151e;
+  border-color: var(--border-main, #2d2d3d);
+}
+
+[data-theme="dark"] .assessment-step-file-editor {
+  background: #15151e !important;
+  border-color: var(--border-main, #2d2d3d) !important;
+}
+
+[data-theme="dark"] .assessment-step-file-header {
+  border-bottom-color: var(--border-main, #2d2d3d) !important;
+}
+
+[data-theme="dark"] .assessment-step-file-tab[aria-selected="true"] {
+  background: rgba(103, 47, 206, 0.2) !important;
+  border-color: var(--primary-color, #672fce) !important;
+  color: #c4b5fd !important;
+}
+
+[data-theme="dark"] .assessment-step-file-tab[aria-selected="false"] {
+  background: #1c1c24 !important;
+  border-color: var(--border-main, #2d2d3d) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .assessment-step-wildcard {
+  background: rgba(16, 185, 129, 0.14) !important;
+  border-color: #047857 !important;
+  color: #6ee7b7 !important;
+}
+
+[data-theme="dark"] .assessment-step-instruction-label,
+[data-theme="dark"] .assessment-step-expected-label {
+  color: var(--text-main, #fafafa) !important;
+}
+
+[data-theme="dark"] .assessment-step-starter-label,
+[data-theme="dark"] .assessment-step-expected-hint,
+[data-theme="dark"] .assessment-step-carryover-label {
+  color: var(--text-muted, #a0a0b0) !important;
+}
+
+[data-theme="dark"] .assessment-add {
+  color: #34d399;
 }
 
 [data-theme="dark"] .form-input,
