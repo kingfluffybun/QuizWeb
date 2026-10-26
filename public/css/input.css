@@ -2629,12 +2629,7 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 }
 
 [data-theme="dark"] .sort-wrapper {
-  background-color: var(--bg-card, #1c1c24);
-  border-color: var(--border-main, #2d2d3d);
-}
-
-[data-theme="dark"] .filter-toggle-btn:not(.active) {
-  background-color: var(--bg-card, #1c1c24);
+  background-color: #1c1c24;
   border-color: var(--border-main, #2d2d3d);
 }
 
@@ -2666,6 +2661,10 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   background-color: #22222d;
   border-color: #2d2d3d;
   color: #cbd5e1;
+}
+
+[data-theme="dark"] .list-header-actions .filter-toggle-btn:not(.active) {
+  background-color: #1c1c24;
 }
 
 /* =============================================================================
