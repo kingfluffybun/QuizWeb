@@ -711,6 +711,7 @@ export function AssessmentLivePreview({
                 <button
                   key={key}
                   type="button"
+                  className={`assessment-preview-file-tab${activeTab === key ? " active" : ""}`}
                   onClick={() => setActiveTab(key)}
                   style={{
                     padding: "4px 10px",
@@ -719,10 +720,16 @@ export function AssessmentLivePreview({
                     fontWeight: 600,
                     border:
                       activeTab === key
-                        ? "1px solid #3b82f6"
+                        ? "1px solid var(--primary-color)"
                         : "1px solid #cbd5e1",
-                    background: activeTab === key ? "#eff6ff" : "#f8fafc",
-                    color: activeTab === key ? "#1d4ed8" : "#64748b",
+                    background:
+                      activeTab === key
+                        ? "var(--selected-background-color)"
+                        : "#f8fafc",
+                    color:
+                      activeTab === key
+                        ? "var(--selected-color)"
+                        : "#64748b",
                     cursor: "pointer",
                   }}
                 >
@@ -733,6 +740,7 @@ export function AssessmentLivePreview({
 
             <button
               type="button"
+              className="assessment-preview-fill-sample"
               onClick={handleFillPassingSample}
               style={{
                 fontSize: "0.75rem",

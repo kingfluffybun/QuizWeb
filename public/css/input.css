@@ -2719,6 +2719,19 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   color: #34d399;
 }
 
+[data-theme="dark"] .assessment-preview-file-tab:not(.active),
+[data-theme="dark"] .assessment-preview-fill-sample {
+  background: #1c1c24 !important;
+  border-color: var(--border-main, #2d2d3d) !important;
+  color: var(--text-main, #fafafa);
+}
+
+[data-theme="dark"] .assessment-preview-file-tab.active {
+  background: var(--selected-background-color) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
 [data-theme="dark"] .form-input,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] .form-textarea,
