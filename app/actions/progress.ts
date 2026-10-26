@@ -8,7 +8,12 @@ import {
   computeCurriculumUnlockState,
   type CanonicalUnitSummary,
 } from "@/lib/curriculum";
-import { getAvailableUnits, type AvailableUnit } from "@/app/actions/quiz";
+import {
+  getAvailableUnits,
+  getAvailableUnitsForStaff,
+  type AvailableUnit,
+} from "@/app/actions/quiz";
+import { requireStaff } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
@@ -281,6 +286,7 @@ export async function isUnitUnlockedForUser(
   unitId: number,
   explicitUserId?: number,
 ): Promise<boolean> {
+  if (await requireStaff()) return true;
   const state = await getUserCurriculumUnlockState(explicitUserId);
   return state.unlockedUnitIds.has(Number(unitId));
 }
@@ -291,6 +297,15 @@ export async function isUnitUnlockedForUser(
 export async function getAvailableUnitsForUser(
   explicitUserId?: number,
 ): Promise<AvailableUnit[]> {
+  if (await requireStaff()) {
+    const staffUnits = await getAvailableUnitsForStaff();
+    return staffUnits.map((unit) => ({
+      ...unit,
+      is_completed: false,
+      is_locked: false,
+    }));
+  }
+
   const baseUnits = await getAvailableUnits();
   const unlockState = await getUserCurriculumUnlockState(explicitUserId);
 
