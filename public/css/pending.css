@@ -372,16 +372,16 @@ body:has(.pending-container) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 30px 8px 12px;
-  border: 2px solid #e0e0e0;
+  padding: 10px 40px 10px 16px;
+  border: 1.5px solid var(--maintainer-border, var(--pending-border));
   border-radius: 10px;
-  background: none;
-  color: #666;
+  background: var(--maintainer-surface-alt, var(--pending-surface));
+  color: var(--maintainer-text, var(--pending-text));
   cursor: pointer;
-  font-family: "Poppins", sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
 }
 
 .pending-status-select-wrap::after {
@@ -399,9 +399,8 @@ body:has(.pending-container) {
 
 .pending-status-select-wrap:hover,
 .pending-status-select-wrap:focus-within {
-  border-color: var(--pending-accent-dark);
-  color: var(--pending-accent-dark);
-  background-color: #fcfaff;
+  border-color: var(--primary-color, #9966ff);
+  color: var(--primary-color, #9966ff);
 }
 
 .pending-status-select {
@@ -419,6 +418,10 @@ body:has(.pending-container) {
 
 .pending-status-select-value {
   text-transform: capitalize;
+}
+
+.pending-status-select-wrap .pending-status-select-value {
+  color: inherit;
 }
 
 .pending-status-select-value.pending {
@@ -721,6 +724,17 @@ body:has(.pending-container) {
 [data-theme="dark"] .pending-status-select-wrap:hover,
 [data-theme="dark"] .pending-status-select-wrap:focus-within {
   background-color: #22222d;
+}
+
+[data-theme="dark"] .pending-status-select-wrap {
+  background: var(--maintainer-surface-alt, #22222d);
+  color: var(--maintainer-text, #fafafa);
+}
+
+[data-theme="dark"] .pending-status-select-wrap:hover,
+[data-theme="dark"] .pending-status-select-wrap:focus-within {
+  border-color: var(--primary-color, #672fce);
+  color: var(--primary-color, #672fce);
 }
 
 @media (max-width: 700px) {

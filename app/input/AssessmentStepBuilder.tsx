@@ -647,10 +647,11 @@ export function AssessmentLivePreview({
       {/* Interactive Maintainer Step Verification Sandbox */}
       {activeStep && (
         <div
+          className="assessment-preview-sandbox"
           style={{
             marginTop: "18px",
             paddingTop: "14px",
-            borderTop: "1px solid #e2e8f0",
+            borderTop: "1px solid var(--border-main, #e2e8f0)",
             display: "flex",
             flexDirection: "column",
             gap: "10px",

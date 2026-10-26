@@ -2131,6 +2131,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   position: relative;
   display: flex;
   align-items: center;
+  height: 40px;
 }
 
 .search-box-wrap svg {
@@ -2143,21 +2144,32 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .tracker-search-input {
-  padding: 8px 32px 8px 36px;
+  box-sizing: border-box;
+  width: 280px;
+  min-width: 240px;
+  height: 40px;
+  padding: 10px 36px;
   border: 1.5px solid var(--maintainer-border);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: var(--maintainer-surface-alt);
   color: var(--maintainer-text);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 1rem;
-  min-width: 240px;
-  transition: var(--maintainer-transition);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
   outline: none;
 }
 
+.maintainer-page .tracker-controls-right .tracker-search-input {
+  border: 1.5px solid var(--maintainer-border);
+}
+
+.maintainer-page .tracker-controls-right .tracker-search-input:hover,
+.maintainer-page .tracker-controls-right .tracker-search-input:focus {
+  border-color: var(--primary-color, #9966ff);
+}
+
 .tracker-search-input:focus {
-  border-color: var(--maintainer-brand);
-  background: var(--maintainer-surface);
   box-shadow: 0 0 0 3px var(--maintainer-brand-glow);
 }
 
@@ -2173,21 +2185,38 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .tracker-sort-select {
-  padding: 8px 16px;
+  box-sizing: border-box;
+  min-width: 180px;
+  height: 40px;
+  padding: 10px 40px 10px 16px;
   border: 1.5px solid var(--maintainer-border);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: var(--maintainer-surface-alt);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) calc(50% - 1px),
+    calc(100% - 12px) calc(50% - 1px);
+  background-repeat: no-repeat;
+  background-size: 6px 6px;
   color: var(--maintainer-text);
-  font-family: 'Poppins', sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
   cursor: pointer;
+  appearance: none;
   outline: none;
-  transition: var(--maintainer-transition);
+  transition: all 0.18s ease;
+}
+
+.tracker-sort-select:hover,
+.tracker-sort-select:focus {
+  border-color: var(--primary-color, #9966ff);
+  color: var(--primary-color, #9966ff);
 }
 
 .tracker-sort-select:focus {
-  border-color: var(--maintainer-brand);
   box-shadow: 0 0 0 3px var(--maintainer-brand-glow);
 }
 
