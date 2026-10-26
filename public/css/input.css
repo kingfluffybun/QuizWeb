@@ -2624,6 +2624,20 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
   color: var(--text-main, #fafafa);
 }
 
+[data-theme="dark"] .unit-input-tabs .preview-tab.active {
+  box-shadow: none;
+}
+
+[data-theme="dark"] .sort-wrapper {
+  background-color: var(--bg-card, #1c1c24);
+  border-color: var(--border-main, #2d2d3d);
+}
+
+[data-theme="dark"] .filter-toggle-btn:not(.active) {
+  background-color: var(--bg-card, #1c1c24);
+  border-color: var(--border-main, #2d2d3d);
+}
+
 [data-theme="dark"] .form-input,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] .form-textarea,
