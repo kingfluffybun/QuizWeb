@@ -94,6 +94,10 @@
   transition: all 0.18s ease;
 }
 
+#pending-submissions:not(.active) {
+  background: var(--maintainer-surface, #ffffff);
+}
+
 .staff-workspace-tab:hover:not(.active) {
   border-color: var(--primary-color, #9966ff);
   color: var(--primary-color, #9966ff);

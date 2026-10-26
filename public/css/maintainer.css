@@ -861,10 +861,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: var(--radius-full);
+  border-radius: 10px;
   border: 1px solid var(--maintainer-border);
-  background: transparent;
-  color: var(--maintainer-text-muted);
+  background: var(--input-control-surface, var(--maintainer-surface-alt));
+  color: var(--maintainer-text);
   font-family: 'Poppins', sans-serif;
   font-size: 12px;
   font-weight: 600;
@@ -873,17 +873,16 @@
   outline: none;
 }
 
-.filter-tab-btn:hover {
-  background: var(--maintainer-surface-hover);
-  color: var(--maintainer-text);
-  border-color: var(--maintainer-border-strong);
+.filter-tab-btn:hover:not(.active) {
+  border-color: var(--primary-color, #9966ff);
+  color: var(--primary-color, #9966ff);
 }
 
 .filter-tab-btn.active {
-  background: var(--maintainer-brand);
+  background: var(--primary-color, #9966ff);
   color: #ffffff;
-  border-color: var(--maintainer-brand);
-  box-shadow: 0 2px 8px var(--maintainer-brand-glow);
+  border-color: var(--primary-color, #9966ff);
+  box-shadow: 0 2px 8px var(--maintainer-purple-glow, rgba(153, 102, 255, 0.25));
 }
 
 .filter-tab-count {
@@ -2078,7 +2077,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
 }
 
 .tracker-toolbar {
-  padding: var(--maintainer-space-4) var(--maintainer-space-6);
+  padding: var(--maintainer-space-6) var(--maintainer-space-6);
   background: var(--maintainer-surface);
   border: 1.5px solid var(--maintainer-border);
   border-radius: var(--radius-lg);
@@ -2151,7 +2150,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   padding: 10px 36px;
   border: 1px solid var(--maintainer-border);
   border-radius: 10px;
-  background: var(--maintainer-surface-alt);
+  background: var(--input-control-surface, var(--maintainer-surface-alt));
   color: var(--maintainer-text);
   font: inherit;
   font-size: 0.88rem;
@@ -2198,7 +2197,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   padding: 10px 40px 10px 16px;
   border: 1.5px solid var(--maintainer-border);
   border-radius: 10px;
-  background: var(--maintainer-surface-alt);
+  background: var(--input-control-surface, var(--maintainer-surface-alt));
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
