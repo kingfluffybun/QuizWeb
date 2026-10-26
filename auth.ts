@@ -170,14 +170,78 @@ async function getActiveSessionUser(): Promise<{ id: string; email?: string } | 
     return null;
 }
 
-interface UserAuthRecord {
+export interface UserAuthRecord {
     user_role: string;
     token_version: number;
     username?: string;
     isMockNonArray?: boolean;
 }
 
-const getCachedUserAuthRecord = cache(async (userId: string): Promise<UserAuthRecord | null> => {
+interface CachedAuthEntry {
+    record: UserAuthRecord | null;
+    expiresAt: number;
+}
+
+const AUTH_CACHE_TTL_MS = 20_000;
+const MAX_AUTH_CACHE_SIZE = 10_000;
+
+const globalForAuthCache = globalThis as unknown as {
+    __userAuthMemoryCache?: Map<string, CachedAuthEntry>;
+    __userAuthInflight?: Map<string, Promise<UserAuthRecord | null>>;
+    __userAuthGeneration?: Map<string, number>;
+    __globalAuthGeneration?: number;
+};
+
+const userAuthMemoryCache =
+    globalForAuthCache.__userAuthMemoryCache ?? new Map<string, CachedAuthEntry>();
+const inflightAuthQueries =
+    globalForAuthCache.__userAuthInflight ?? new Map<string, Promise<UserAuthRecord | null>>();
+const userAuthGeneration =
+    globalForAuthCache.__userAuthGeneration ?? new Map<string, number>();
+
+if (!globalForAuthCache.__userAuthMemoryCache) {
+    globalForAuthCache.__userAuthMemoryCache = userAuthMemoryCache;
+}
+if (!globalForAuthCache.__userAuthInflight) {
+    globalForAuthCache.__userAuthInflight = inflightAuthQueries;
+}
+if (!globalForAuthCache.__userAuthGeneration) {
+    globalForAuthCache.__userAuthGeneration = userAuthGeneration;
+}
+if (globalForAuthCache.__globalAuthGeneration === undefined) {
+    globalForAuthCache.__globalAuthGeneration = 0;
+}
+
+function pruneExpiredCacheEntries(now: number): void {
+    for (const [key, entry] of userAuthMemoryCache.entries()) {
+        if (entry.expiresAt <= now) {
+            userAuthMemoryCache.delete(key);
+        }
+    }
+    if (userAuthMemoryCache.size > MAX_AUTH_CACHE_SIZE) {
+        // Evict oldest entries if still over capacity
+        const keysToPrune = Array.from(userAuthMemoryCache.keys()).slice(0, 1000);
+        for (const k of keysToPrune) {
+            userAuthMemoryCache.delete(k);
+        }
+    }
+}
+
+export function invalidateUserAuthCache(userId?: string | number): void {
+    if (userId !== undefined) {
+        const idKey = String(userId);
+        userAuthMemoryCache.delete(idKey);
+        inflightAuthQueries.delete(idKey);
+        userAuthGeneration.set(idKey, (userAuthGeneration.get(idKey) ?? 0) + 1);
+    } else {
+        userAuthMemoryCache.clear();
+        inflightAuthQueries.clear();
+        userAuthGeneration.clear();
+        globalForAuthCache.__globalAuthGeneration = (globalForAuthCache.__globalAuthGeneration ?? 0) + 1;
+    }
+}
+
+async function fetchUserAuthRecordFromDb(userId: string): Promise<UserAuthRecord | null> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT u.user_role, u.token_version, p.username 
          FROM user_auth_tbl u 
@@ -203,6 +267,50 @@ const getCachedUserAuthRecord = cache(async (userId: string): Promise<UserAuthRe
         token_version: Number(rows[0]?.token_version ?? 1),
         username: (rows[0]?.username as string) || undefined,
     };
+}
+
+export const getCachedUserAuthRecord = cache(async (userId: string): Promise<UserAuthRecord | null> => {
+    const idKey = String(userId);
+    const now = Date.now();
+    const cached = userAuthMemoryCache.get(idKey);
+    if (cached) {
+        if (cached.expiresAt > now) {
+            return cached.record;
+        }
+        userAuthMemoryCache.delete(idKey);
+    }
+
+    const inflight = inflightAuthQueries.get(idKey);
+    if (inflight) {
+        return inflight;
+    }
+
+    const initialGlobalGen = globalForAuthCache.__globalAuthGeneration ?? 0;
+    const initialUserGen = userAuthGeneration.get(idKey) ?? 0;
+
+    const queryPromise = (async () => {
+        try {
+            const record = await fetchUserAuthRecordFromDb(idKey);
+            const currentGlobalGen = globalForAuthCache.__globalAuthGeneration ?? 0;
+            const currentUserGen = userAuthGeneration.get(idKey) ?? 0;
+            // Guard against race condition: do not cache if invalidation occurred while in flight
+            if (currentGlobalGen === initialGlobalGen && currentUserGen === initialUserGen) {
+                if (userAuthMemoryCache.size >= MAX_AUTH_CACHE_SIZE) {
+                    pruneExpiredCacheEntries(Date.now());
+                }
+                userAuthMemoryCache.set(idKey, {
+                    record,
+                    expiresAt: Date.now() + AUTH_CACHE_TTL_MS,
+                });
+            }
+            return record;
+        } finally {
+            inflightAuthQueries.delete(idKey);
+        }
+    })();
+
+    inflightAuthQueries.set(idKey, queryPromise);
+    return queryPromise;
 });
 
 export const authConfig: NextAuthConfig = {
@@ -283,6 +391,7 @@ export const authConfig: NextAuthConfig = {
                         "UPDATE user_auth_tbl SET token_version = token_version + 1 WHERE user_id = ?",
                         [userId]
                     );
+                    invalidateUserAuthCache(userId);
                 }
             } catch (err) {
                 console.error("Error updating token_version on signOut event:", err);
@@ -389,6 +498,9 @@ export const authConfig: NextAuthConfig = {
                 extToken.role = extUser.role || extUser.user_role || "user";
                 extToken.user_role = extUser.user_role || extUser.role || "user";
                 extToken.tokenVersion = extUser.token_version || extUser.tokenVersion || 1;
+                if (extUser.name) {
+                    extToken.name = extUser.name;
+                }
                 return extToken;
             }
 
@@ -409,9 +521,15 @@ export const authConfig: NextAuthConfig = {
                 }
             }
 
-            // Refresh token role and name from database in Node runtime to ensure re-encrypted cookie is up to date
+            // Refresh token role and name from database in Node runtime only when updating or unpopulated
             const userId = (extToken.id || extToken.sub) as string | undefined;
-            if (userId && typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge") {
+            const needsRefresh =
+                trigger === "update" ||
+                !extToken.role ||
+                extToken.tokenVersion === undefined ||
+                !extToken.name;
+
+            if (userId && needsRefresh && typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge") {
                 try {
                     const userRecord = await getCachedUserAuthRecord(String(userId));
                     if (userRecord && !userRecord.isMockNonArray) {
@@ -421,6 +539,8 @@ export const authConfig: NextAuthConfig = {
                         }
                         if (userRecord.username) {
                             extToken.name = userRecord.username;
+                        } else if (!extToken.name) {
+                            extToken.name = "Player";
                         }
                         // NOTE: Never overwrite extToken.tokenVersion here. extToken.tokenVersion
                         // records issuance counter and must be compared against userRecord.token_version in session callback.

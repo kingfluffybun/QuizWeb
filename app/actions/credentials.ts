@@ -3,7 +3,7 @@
 import argon2 from "argon2";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import { db } from "@/lib/db";
-import { auth } from "@/auth";
+import { auth, invalidateUserAuthCache } from "@/auth";
 
 // -----------------------------------------------------------------------------
 // Validation Constants (Authoritative Contracts per PROJECT.md & test-rbac-e2e)
@@ -129,6 +129,8 @@ export async function updateUsername(newUsername: string): Promise<ActionResult>
       session.name = newUsername;
     }
 
+    invalidateUserAuthCache(userId);
+
     return { success: true };
   } catch (err: unknown) {
     // Catch MySQL ER_DUP_ENTRY / 1062 during concurrent claims (Boundary B7)
@@ -217,6 +219,8 @@ export async function changePassword(
     [newHash, userId]
   );
 
+  invalidateUserAuthCache(userId);
+
   return { success: true };
 }
 
@@ -282,6 +286,8 @@ export async function setPasswordForOAuth(
     "UPDATE user_auth_tbl SET password_hash = ?, token_version = token_version + 1 WHERE user_id = ?",
     [newHash, userId]
   );
+
+  invalidateUserAuthCache(userId);
 
   return { success: true };
 }

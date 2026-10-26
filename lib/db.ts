@@ -22,8 +22,6 @@ const poolConfig: mysql.PoolOptions = {
 const globalForDb = globalThis as unknown as { mysqlPool?: mysql.Pool };
 export const db = globalForDb.mysqlPool ?? mysql.createPool(poolConfig);
 
-if (process.env.NODE_ENV !== "production") {
-    globalForDb.mysqlPool = db;
-}
+globalForDb.mysqlPool = db;
 
 export default db;

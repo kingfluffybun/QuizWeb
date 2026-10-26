@@ -2,7 +2,7 @@
 
 import type { RowDataPacket } from "mysql2";
 import { db } from "@/lib/db";
-import { auth } from "@/auth";
+import { auth, invalidateUserAuthCache } from "@/auth";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { verifyAdminSecretKey, requireAdmin } from "@/lib/rbac";
 import { reviewPendingQuiz as reviewPendingQuizAction } from "@/app/actions/quiz";
@@ -120,6 +120,8 @@ export async function claimAdminWithSecretKey(secretKey: string): Promise<Action
     testSession.user.user_role = "admin";
   }
 
+  invalidateUserAuthCache(numericUserId);
+
   return { success: true };
 }
 
@@ -172,6 +174,8 @@ export async function promoteUser(
     [targetRole, targetUserId]
   );
 
+  invalidateUserAuthCache(targetUserId);
+
   return { success: true };
 }
 
@@ -203,6 +207,8 @@ export async function demoteUser(targetUserId: number): Promise<ActionResult> {
     "UPDATE user_auth_tbl SET user_role = 'user' WHERE user_id = ?",
     [targetUserId]
   );
+
+  invalidateUserAuthCache(targetUserId);
 
   return { success: true };
 }

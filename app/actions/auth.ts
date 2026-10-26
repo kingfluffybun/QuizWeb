@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { randomInt } from "crypto";
 import { sendEmail } from "@/lib/email";
-import { auth, signOut } from "@/auth";
+import { auth, signOut, invalidateUserAuthCache } from "@/auth";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 
 const ARGON2_OPTIONS: Parameters<typeof argon2.hash>[1] = {
@@ -762,6 +762,8 @@ export async function resetPass(email: string, otpCode: string, newPassword: str
             [hashed, userId]
         );
 
+        invalidateUserAuthCache(userId);
+
         // Transition OTP record to consumed status (is_used = 2) to prevent replay (SEC-02)
         await db.query(
             "UPDATE user_otp_tbl SET is_used = 2 WHERE otp_id = ?",
@@ -896,6 +898,7 @@ export async function signOutAction() {
                 "UPDATE user_auth_tbl SET token_version = token_version + 1 WHERE user_id = ?",
                 [session.user.id]
             );
+            invalidateUserAuthCache(session.user.id);
         }
     } catch (err) {
         console.error("Error updating token_version during signOutAction:", err);
@@ -918,6 +921,7 @@ export async function logoutUser(userId?: string | number) {
             "UPDATE user_auth_tbl SET token_version = token_version + 1 WHERE user_id = ?",
             [targetUserId]
         );
+        invalidateUserAuthCache(targetUserId);
     }
     try {
         await signOut({ redirectTo: "/?signedOut=1" });

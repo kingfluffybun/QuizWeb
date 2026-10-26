@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 
@@ -30,9 +31,6 @@ function isActiveRoute(pathname: string, href: string) {
 export default function MobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [role, setRole] = useState<string>("user");
-  const [username, setUsername] = useState<string>("Player");
-  const [email, setEmail] = useState<string>("");
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
 
@@ -68,24 +66,11 @@ export default function MobileShell({ children }: { children: React.ReactNode })
     };
   }, [isDrawerOpen]);
 
-  // Fetch session on mount to detect role & identity
-  useEffect(() => {
-    let isMounted = true;
-    fetch("/api/auth/session")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((session) => {
-        if (!isMounted || !session?.user) return;
-        const userRole = session.user.role || session.user.user_role || "user";
-        setRole(userRole);
-        if (session.user.name) setUsername(session.user.name);
-        else if (session.user.email) setUsername(session.user.email.split("@")[0]);
-        if (session.user.email) setEmail(session.user.email);
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { data: session } = useSession();
+  const sessionUser = session?.user as { role?: string; user_role?: string; name?: string; email?: string } | undefined;
+  const role = sessionUser?.role || sessionUser?.user_role || "user";
+  const username = sessionUser?.name || (sessionUser?.email ? sessionUser.email.split("@")[0] : "Player");
+  const email = sessionUser?.email || "";
 
   // Suppress mobile shell on public / marketing / full-screen exercise routes
   if (isExcludedRoute(pathname)) {

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import { auth } from "@/auth";
+import { auth, invalidateUserAuthCache } from "@/auth";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.\- ]{3,30}$/;
 
@@ -135,6 +135,7 @@ export const POST = async (req: Request): Promise<Response> => {
                     `UPDATE player_tbl SET username = ? WHERE user_id = ?`,
                     [trimmedUsername, userId]
                 );
+                invalidateUserAuthCache(userId);
                 finalUsername = trimmedUsername;
             }
         }
