@@ -368,10 +368,11 @@ body:has(.pending-container) {
 }
 
 .pending-status-select-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 30px 8px 12px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   background: none;
@@ -383,6 +384,19 @@ body:has(.pending-container) {
   transition: all 0.2s;
 }
 
+.pending-status-select-wrap::after {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
 .pending-status-select-wrap:hover,
 .pending-status-select-wrap:focus-within {
   border-color: var(--pending-accent-dark);
@@ -391,24 +405,31 @@ body:has(.pending-container) {
 }
 
 .pending-status-select {
-  min-width: 92px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--pending-accent-dark);
+  opacity: 0;
   cursor: pointer;
   font: inherit;
 }
 
-.pending-status-select.pending {
+.pending-status-select-value {
+  text-transform: capitalize;
+}
+
+.pending-status-select-value.pending {
   color: #c2410c;
 }
 
-.pending-status-select.approved {
+.pending-status-select-value.approved {
   color: var(--pending-approved);
 }
 
-.pending-status-select.rejected {
+.pending-status-select-value.rejected {
   color: var(--pending-danger);
 }
 
