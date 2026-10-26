@@ -14,8 +14,10 @@ import "#css/dashboard.css";
 import "#css/sidebar.css";
 import "#css/cheatsheet.css";
 
-const levelNames = ["Beginner", "Intermediate", "Advanced"] as const;
+const difficultyLevels = ["Beginner", "Intermediate", "Advanced"] as const;
+const levelNames = ["All", ...difficultyLevels] as const;
 type LevelName = (typeof levelNames)[number];
+type DifficultyLevel = (typeof difficultyLevels)[number];
 type CodeLanguage = "html" | "css" | "javascript";
 type EditorTheme = "vs" | "vs-dark";
 
@@ -28,7 +30,7 @@ interface Unit {
 
 interface Section {
     id: string;
-    level: LevelName;
+    level: DifficultyLevel;
     title: string;
     units: Unit[];
 }
@@ -242,7 +244,7 @@ const sections: Section[] = [
                 example: "const name = \"Ada\";\nconst greeting = `Hello, ${name}!`;\nconst message = `First line\nSecond line`;",
             },
             {
-                title: "Unit 2: Destructuring & Spread (optional)",
+                title: "Unit 2: Destructuring & Spread",
                 topics: ["array destructuring", "object destructuring", "spread operator", "rest operator"],
                 description: "Destructuring pulls values into variables. Spread expands values; rest gathers remaining values.",
                 example: "const [first, ...others] = [1, 2, 3];\nconst lesson = {\n  title: \"Lesson\",\n};\nconst { title } = lesson;\nconst copy = [...others, 4];\n\nfunction show(firstArg, ...restArgs) {\n  console.log(firstArg, restArgs);\n}",
@@ -482,7 +484,7 @@ function CurriculumSection({
 }
 
 export default function CheatSheetPage() {
-    const [activeLevel, setActiveLevel] = useState<LevelName>("Beginner");
+    const [activeLevel, setActiveLevel] = useState<LevelName>("All");
     const [unitSearch, setUnitSearch] = useState("");
     const [editorTheme, setEditorTheme] = useState<EditorTheme>("vs");
 
@@ -517,9 +519,9 @@ export default function CheatSheetPage() {
                 units: section.units.filter((unit) => unit.title.toLowerCase().includes(searchTerm)),
             }))
             .filter((section) => section.units.length > 0)
-        : sections.filter((section) => section.level === activeLevel);
-    const visibleLevelGroups = searchTerm
-        ? levelNames
+        : sections.filter((section) => activeLevel === "All" || section.level === activeLevel);
+    const visibleLevelGroups = searchTerm || activeLevel === "All"
+        ? difficultyLevels
             .map((level) => ({
                 name: level,
                 sections: matchingSections.filter((section) => section.level === level),
@@ -586,8 +588,10 @@ export default function CheatSheetPage() {
                                         className={`cheatsheet-search-group${searchTerm ? " is-search-result-group" : ""}`}
                                         key={group.name}
                                     >
-                                        {searchTerm && (
-                                            <header className="cheatsheet-search-group-heading">
+                                        {(searchTerm || activeLevel === "All") && (
+                                            <header
+                                                className={`cheatsheet-search-group-heading${activeLevel === "All" && !searchTerm ? " is-all-level-heading" : ""}`}
+                                            >
                                                 <h3>{group.name}</h3>
                                             </header>
                                         )}

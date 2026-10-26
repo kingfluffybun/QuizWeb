@@ -210,6 +210,10 @@
     font-size: 1rem;
 }
 
+.cheatsheet-search-group-heading.is-all-level-heading h3 {
+    font-size: 1.35rem;
+}
+
 .cheatsheet-level-heading {
     display: flex;
     align-items: center;
