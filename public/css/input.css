@@ -1812,6 +1812,9 @@ html[data-theme="dark"] :is(.admin-app-layout, .maintainer-page, .quiz-input-stu
 .filter-toggle-btn span {
   color: var(--maintainer-text, var(--text-main, #333));
 }
+.filter-toggle-btn:hover:not(.active) span {
+  color: var(--primary-color, #9966ff) !important;
+}
 .filter-toggle-btn svg,
 .sort-wrapper .sort-label svg {
   width: 18px;
