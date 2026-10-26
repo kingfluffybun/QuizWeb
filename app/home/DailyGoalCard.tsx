@@ -68,7 +68,7 @@ export default function DailyGoalCard({
     );
     const goalThresholds = getDailyXpGoalThresholds(previousWeekXp);
     const maximumGoal = goalThresholds[goalThresholds.length - 1];
-    const goal = goalThresholds.find((threshold) => todayXp < threshold) ?? maximumGoal;
+    const goal = goalData.dailyGoal;
     const todayProgress = Math.min(todayXp / goal, 1) * 100;
     const chartTicks = [0, ...goalThresholds].reverse();
 
