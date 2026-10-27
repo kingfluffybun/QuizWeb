@@ -259,7 +259,7 @@ html[data-motion="reduce"] .admin-main *::after {
   justify-content: flex-start;
   min-height: 0;
   margin-bottom: 4px;
-  padding: 16px;
+  padding: 24px;
   overflow: hidden;
   color: var(--admin-text-inverse);
   background: var(--admin-primary);

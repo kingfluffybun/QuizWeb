@@ -216,7 +216,190 @@
     -webkit-overflow-scrolling: touch;
 }
 
-.quiz-complete-card {
+.completion-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 24px;
+    height: 100%;
+    width: 620px;
+}
+
+.completion-header {
+    width: 100%;
+    text-align: center;
+    font-weight: 400;
+}
+
+.quiz-complete-message {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 12px;
+    .quiz-complete-submessage {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        p {text-align: center;}
+
+    }
+}
+
+.complete-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 160px; height: 152px;
+    border-radius: 50%;
+    background-color: #22c55e;
+    border-bottom: 8px solid #1FB255;
+    svg {height: 100px; width: 100px; stroke-width: 4; margin-top: 8px;}
+}
+
+.quiz-summary-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.stats-card {
+    display: flex;
+    gap: 8px;
+    > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        padding: 16px;
+        border-radius: 16px;
+        background-color: var(--bg-card);
+        border: 2px solid var(--border-main);
+        p {font-weight: 400; font-size: 16px;}
+        div {
+            display: flex; align-items: center;
+            svg.lucide-timer {padding-bottom: 2px;}
+            gap: 4px;
+        }
+    }
+}
+
+.stats-card div#xp {
+    border: 2px solid color-mix(in srgb, var(--selected-color) 30%, transparent);
+    h2, svg {color: var(--selected-color);}
+    svg {fill: var(--selected-color);}
+    background-color: color-mix(in srgb, var(--selected-color) 10%, transparent);
+}
+
+.stats-card div#accuracy {
+    border: 2px solid #22C55E4d;
+    h2, svg {color: #22C55E;}
+    background-color: #22C55E1A;
+}
+
+.stats-card div#time {
+    border: 2px solid #38BDF84d;
+    h2, svg {color: #38BDF8;}
+    background-color: #38BDF81A;
+}
+
+.daily-goal-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    .daily-goal-progress-bar {
+        width: 100%;
+        height: 12px;
+        border-radius: 999px;
+        background-color: var(--bg-card);
+        .daily-goal-progress-bar-fill {
+            display: block;
+            width: 50%;
+            height: 12px;
+            border-radius: 999px;
+            background-color: var(--primary-color);
+        }
+    }
+    .daily-goal-progress-bar-label {
+        display: flex;
+        justify-content: space-between;
+        p {font-size: 16px;}
+    }
+}
+
+.next-level-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    div {
+        display: flex;
+        justify-content: space-between;
+        p {color: var(--text-main);}
+        svg {color: var(--text-muted);}
+    }
+    gap: 24px;
+}
+
+.next-level-card {
+    padding: 16px;
+    background-color: var(--bg-card);
+    border: 2px solid var(--border-main);
+    display: flex; align-items: center;
+    border-radius: 16px;
+}
+
+.next-level-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.next-level-title {
+    display: flex;
+    flex-direction: column;
+    p {font-size: 14px; color: var(--text-muted) !important;}
+}
+
+.next-level-type {
+    padding: 16px;
+    border-radius: 999px;
+    background-color: var(--primary-color);
+    svg {color: var(--text-inverse) !important; stroke-width: 4px;}
+}
+
+.completion-action {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    button.options {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        border: none;
+        border-radius: 16px;
+        height: 60px;
+    }
+}
+
+.completion-action > button.options#submit {
+    border-bottom: 6px solid #6b36da;
+    background-color: var(--selected-color);
+    p {color:var(--text-inverse);}
+}
+
+.completion-action > button.options#submit:active {
+    border-bottom-width: 0;
+}
+
+.completion-action > button.options#back {
+    border: 2px solid var(--border-main);
+}
+
+/* .quiz-complete-card {
     text-align: center;
     background-color: var(--bg-card);
     padding: 48px 32px;
@@ -258,7 +441,7 @@
     border: 2px solid var(--border-main);
     color: var(--text-main);
     text-decoration: none;
-}
+} */
 
 .quiz-page .available-units {
     width: 100%;

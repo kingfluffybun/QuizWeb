@@ -307,6 +307,8 @@ export default function QuizLandingClient({
     );
     const [accessibilityOpen, setAccessibilityOpen] = useState(false);
     const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [lessonProgressState, setLessonProgressState] = useState<
         "idle" | "saving" | "saved" | "failed"
     >("idle");
@@ -430,6 +432,25 @@ export default function QuizLandingClient({
             console.error("Failed to record slide progress:", err);
         });
     }, [resolvedUnitId, hasLesson, lessonSlideIndex, lessonSlides.length, isFinished]);
+
+    useEffect(() => {
+        if (!hasStartedQuiz || isFinished) {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+            return;
+        }
+        timerRef.current = setInterval(() => {
+            setElapsedSeconds((s) => s + 1);
+        }, 1000);
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [hasStartedQuiz, isFinished]);
 
     const persistStreak = (nextCurrentStreak: number, nextBestStreak: number) => {
         updatePlayerQuizStreak(nextCurrentStreak, nextBestStreak).then((response) => {
@@ -774,7 +795,172 @@ export default function QuizLandingClient({
             <div className="quiz-page quiz-no-footer-page">
                 <Sidebar />
                 <main className="quiz-completion-main">
-                    <div className="quiz-complete-card">
+                    <div className="completion-content">
+                        <div className="quiz-complete-message">
+                            {isPassed ? (
+                                <div className="complete-check">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" > <path d="M20 6 9 17l-5-5" /> </svg>
+                                </div>
+                            ) : (
+                                <div className="complete-check" style={{ backgroundColor: "#EF4444", borderBottomColor: "#DC2626" }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" > <path d="M18 6 6 18" /> <path d="m6 6 12 12" /> </svg>
+                                </div>
+                            )}
+                            <h1>{isPassed ? "Quiz Complete!" : "Game Over"}</h1>
+                            <div className="quiz-complete-submessage">
+                                <p>
+                                    {!isPassed
+                                        ? "You ran out of lives. Try again to sharpen your skills!"
+                                        : allQuestionsCorrect
+                                          ? "Perfect score! You answered every single question correctly, so keep that momentum going."
+                                          : hasCodingAssessment
+                                            ? "Outstanding performance! Ready to tackle the Unit Coding Assessment?"
+                                            : "Outstanding performance!"}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="quiz-summary-stats">
+                            {/* <p className="completion-header">Quiz Summary</p> */}
+                            <div className="stats-card">
+                                <div id="xp">
+                                    <div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zap preview-icon"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/></svg>
+                                        <h2>{totalQuizXp}</h2>
+                                    </div>
+                                    <p>XP Gained</p>
+                                </div>
+                                <div id="accuracy">
+                                    <div>
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"> <path d="M11 12C11 12.2652 11.1054 12.5196 11.2929 12.7071C11.4804 12.8946 11.7348 13 12 13C12.2652 13 12.5196 12.8946 12.7071 12.7071C12.8946 12.5196 13 12.2652 13 12C13 11.7348 12.8946 11.4804 12.7071 11.2929C12.5196 11.1054 12.2652 11 12 11C11.7348 11 11.4804 11.1054 11.2929 11.2929C11.1054 11.4804 11 11.7348 11 12Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/> <path d="M12 7C11.0111 7 10.0444 7.29324 9.22215 7.84265C8.39991 8.39206 7.75904 9.17295 7.3806 10.0866C7.00217 11.0002 6.90315 12.0055 7.09608 12.9755C7.289 13.9454 7.76521 14.8363 8.46447 15.5355C9.16373 16.2348 10.0546 16.711 11.0246 16.9039C11.9945 17.0969 12.9998 16.9978 13.9134 16.6194C14.827 16.241 15.6079 15.6001 16.1574 14.7779C16.7068 13.9556 17 12.9889 17 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/> <path d="M13 3.05514C11.1461 2.84715 9.2733 3.22042 7.64079 4.12331C6.00827 5.0262 4.69667 6.41409 3.88743 8.095C3.07818 9.77591 2.81128 11.6667 3.12365 13.506C3.43601 15.3452 4.31221 17.0419 5.63103 18.3614C6.94985 19.6809 8.64611 20.5579 10.4852 20.8712C12.3242 21.1845 14.2152 20.9186 15.8965 20.1102C17.5779 19.3018 18.9664 17.9909 19.8701 16.3588C20.7738 14.7267 21.148 12.8542 20.941 11.0001" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/> <path d="M15 6V9H18L21 6H18V3L15 6Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/> <path d="M15 9L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/> </svg>
+                                        <h2>{quizzes.length > 0 ? Math.round((score / quizzes.length) * 100) : 0}%</h2>
+                                    </div>
+                                    <p>Accuracy</p>
+                                </div>
+                                <div id="time">
+                                    <div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-timer preview-icon"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+                                        <h2>{`${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, "0")}`}</h2>
+                                    </div>
+                                    <p>Time Spent</p>
+                                </div>
+                            </div>
+                            <div className="daily-goal-stats">
+                                <div className="daily-goal-progress-bar">
+                                    <span className="daily-goal-progress-bar-fill" style={{ width: `${Math.min(100, (totalQuizXp / 200) * 100)}%` }}></span>
+                                </div>
+                                <div className="daily-goal-progress-bar-label">
+                                    <p>Daily Goal</p>
+                                    <p>{totalQuizXp}/200 XP</p>
+                                </div>
+                            </div>
+                        </div>
+                        {isPassed && nextUnit && (
+                            <div className="next-level-container">
+                                {/* <p className="completion-header">Next Lesson</p> */}
+                                <Link
+                                    href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
+                                    className="next-level-card"
+                                    aria-disabled={!isLessonProgressSaved}
+                                    onClick={(event) => {
+                                        if (!isLessonProgressSaved) event.preventDefault();
+                                    }}
+                                    style={{ textDecoration: "none" }}
+                                >
+                                    <div className="next-level-content">
+                                        <div className="next-level-type">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open preview-icon"><path d="M12 5v16"/><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"/></svg>
+                                        </div>
+                                        <div className="next-level-title">
+                                            <p>{nextUnit.sec_num != null ? `Section ${nextUnit.sec_num}` : nextUnit.cat_name ?? "Next"}</p>
+                                            <h2>{nextUnit.unit_title}</h2>
+                                        </div>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right preview-icon"><path d="m9 18 6-6-6-6"/></svg>
+                                </Link>
+                            </div>
+                        )}
+                        {isPassed && resolvedUnitId && (
+                            lessonProgressState === "saving" || isLessonProgressPending
+                        ) && (
+                            <p role="status" style={{ color: "var(--text-muted)", fontSize: "14px" }}>Saving lesson progress...</p>
+                        )}
+                        {isPassed && resolvedUnitId && lessonProgressState === "failed" && (
+                            <div role="alert" style={{ textAlign: "center" }}>
+                                <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "8px" }}>{lessonProgressError}</p>
+                                <button
+                                    className="options"
+                                    type="button"
+                                    style={{ fontSize: "14px", padding: "8px 16px", margin: "0 auto" }}
+                                    onClick={() => {
+                                        setLessonProgressState("saving");
+                                        setLessonProgressError(null);
+                                        setCompletionRetryCount((count) => count + 1);
+                                    }}
+                                >
+                                    Retry saving progress
+                                </button>
+                            </div>
+                        )}
+                        <div className="completion-action">
+                            {isPassed ? (
+                                hasCodingAssessment ? (
+                                    <Link
+                                        href={codingAssessmentHref}
+                                        className="options"
+                                        id="submit"
+                                        aria-disabled={!isLessonProgressSaved}
+                                        onClick={(event) => {
+                                            if (!isLessonProgressSaved) event.preventDefault();
+                                        }}
+                                        style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", height: "60px", borderRadius: "16px" }}
+                                    >
+                                        <p>Code Problem</p>
+                                    </Link>
+                                ) : nextUnit ? (
+                                    <Link
+                                        href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`}
+                                        className="options"
+                                        id="submit"
+                                        aria-disabled={!isLessonProgressSaved}
+                                        onClick={(event) => {
+                                            if (!isLessonProgressSaved) event.preventDefault();
+                                        }}
+                                        style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", height: "60px", borderRadius: "16px" }}
+                                    >
+                                        <p>Continue</p>
+                                    </Link>
+                                ) : (
+                                    <button
+                                        className="options"
+                                        id="submit"
+                                        type="button"
+                                        onClick={() => window.location.reload()}
+                                        disabled={!isLessonProgressSaved}
+                                    >
+                                        <p>Play Again</p>
+                                    </button>
+                                )
+                            ) : (
+                                <button
+                                    className="options"
+                                    id="submit"
+                                    type="button"
+                                    onClick={() => window.location.reload()}
+                                >
+                                    <p>Try Again</p>
+                                </button>
+                            )}
+                            <button
+                                className="options"
+                                id="back"
+                                type="button"
+                                onClick={() => router.push(backHref)}
+                            >
+                                <p>{backLabel}</p>
+                            </button>
+                        </div>
+                    </div>
+                    {/* <div className="quiz-complete-card">
                         <h1>{!isPassed ? "Game Over" : "Quiz Complete!"}</h1>
                         <h2>Score: {score} / {quizzes.length}</h2>
                         <p className="quiz-completion-message">
@@ -876,7 +1062,7 @@ export default function QuizLandingClient({
                         <Link href={backHref} className="options back-to-input-btn">
                             {backLabel}
                         </Link>
-                    </div>
+                    </div> */}
                 </main>
             </div>
         );
