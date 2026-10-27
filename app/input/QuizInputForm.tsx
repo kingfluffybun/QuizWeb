@@ -143,6 +143,7 @@ export interface RecentQuizItem {
   unit_id?: number;
   pending_id?: number;
   pending_status?: string;
+  unit_order?: number;
   cat_id?: number;
   sec_id?: number;
   difficulty_id?: number;
@@ -1282,7 +1283,8 @@ export default function QuizInputForm({
         if (editingQuiz.difficulty_id)
           setSelectedDiffId(editingQuiz.difficulty_id.toString());
         if (editingQuiz.sec_id) setSelectedSecId(editingQuiz.sec_id.toString());
-        if (editingQuiz.unit) setSelectedUnit(editingQuiz.unit.toString());
+        const unitOrder = editingQuiz.unit_order ?? editingQuiz.unit;
+        if (unitOrder) setSelectedUnit(unitOrder.toString());
         setQuestionText(editingQuiz.question_text ?? "");
 
         if (!editingQuiz._queuedUnitQuiz) {
@@ -1748,6 +1750,7 @@ export default function QuizInputForm({
       }
       setEditingQuiz({
         ...firstQuiz,
+        unit_order: quiz.unit_order,
         sec_id: resolvedSecId,
         quiz_id: quiz.quiz_id,
         type_name: firstQuizTypeName,
@@ -2903,10 +2906,10 @@ export default function QuizInputForm({
             </div>
 
             <div className="form-group">
-              <label htmlFor="unit">Unit</label>
+              <label htmlFor="unit_order">Unit</label>
               <select
-                id="unit"
-                name="unit"
+                id="unit_order"
+                name="unit_order"
                 className="form-select"
                 required
                 value={selectedUnit}

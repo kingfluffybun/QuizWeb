@@ -888,6 +888,10 @@ export async function saveUnit(_state: unknown, formData: FormData) {
   if (!Number.isInteger(sectionIdNumber) || sectionIdNumber < 1) {
     return { error: "A valid Section ID is required." };
   }
+  const unitOrderNumber = Number(formData.get("unit_order") ?? 1);
+  if (!Number.isInteger(unitOrderNumber) || unitOrderNumber < 1) {
+    return { error: "A valid Unit order is required." };
+  }
 
   const getText = (name: string) => String(formData.get(name) ?? "").trim();
   const lessonTitle = getText("unit_title");
@@ -984,9 +988,9 @@ export async function saveUnit(_state: unknown, formData: FormData) {
     }
 
     const [unitResult] = await connection.query<ResultSetHeader>(
-      `INSERT INTO unit_tbl (unit_title, sec_id, author_id, lesson_format, status)
-       VALUES (?, ?, ?, 'slides', 'pending')`,
-      [lessonTitle, sectionIdNumber, authorId],
+      `INSERT INTO unit_tbl (unit_title, sec_id, unit_order, author_id, lesson_format, status)
+       VALUES (?, ?, ?, ?, 'slides', 'pending')`,
+      [lessonTitle, sectionIdNumber, unitOrderNumber, authorId],
     );
     const newUnitId = unitResult.insertId;
 
@@ -1797,7 +1801,7 @@ async function fetchUnitByIdInternal(unitId: number) {
 
   try {
     const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT u.unit_id, u.unit_title, u.sec_id, u.author_id, u.status, u.pending_note,
+      `SELECT u.unit_id, u.unit_title, u.sec_id, u.unit_order, u.author_id, u.status, u.pending_note,
               s.sec_num, c.cat_id, c.cat_name,
               COALESCE(p.username, ua.email, 'Administrator') AS pending_name
        FROM unit_tbl u
@@ -1896,6 +1900,7 @@ async function fetchUnitByIdInternal(unitId: number) {
       unit_id: Number(unit.unit_id),
       cat_id: Number(unit.cat_id ?? 0),
       sec_id: Number(unit.sec_id ?? 1),
+      unit_order: Number(unit.unit_order ?? 1),
       difficulty_id: populatedQuizzes[0]?.difficulty_id ?? 0,
       quiz_type_id: populatedQuizzes[0]?.quiz_type_id ?? 0,
       question_text: String(unit.unit_title),
@@ -2373,6 +2378,7 @@ export async function getPendingQuizById(pendingId: number) {
     unit_id: unit.unit_id,
     unit_title: unit.question_text,
     sec_id: unit.sec_id,
+    unit_order: unit.unit_order,
     sec_num: unit.sec_num,
     pending_status: unit.difficulty_name,
     pending_name: payload?.pending_name ?? "Administrator",
@@ -2580,6 +2586,7 @@ export async function updatePendingUnitFromForm(
   const unitTitle = String(formData.get("unit_title") ?? "").trim();
   const sectionId = formData.get("sec_id");
   const sectionIdNumber = Number(sectionId);
+  const unitOrderNumber = Number(formData.get("unit_order") ?? 1);
   const lessonSlides = Array.from(formData.entries())
     .filter(([name]) => /^lesson_text_\d+$/.test(name))
     .sort(
@@ -2622,10 +2629,14 @@ export async function updatePendingUnitFromForm(
     !unitTitle ||
     !Number.isInteger(sectionIdNumber) ||
     sectionIdNumber < 1 ||
+    !Number.isInteger(unitOrderNumber) ||
+    unitOrderNumber < 1 ||
     lessonSlides.length === 0 ||
     lessonSlides.some((slide) => !slide.lesson_text)
   ) {
-    return { error: "Unit title, section, and lesson text are required." };
+    return {
+      error: "Unit title, section, unit order, and lesson text are required.",
+    };
   }
 
   let quizzes: unknown[];
@@ -2665,12 +2676,12 @@ export async function updatePendingUnitFromForm(
 
     const [unitUpdate] = await connection.query<ResultSetHeader>(
       `UPDATE unit_tbl
-       SET unit_title = ?, sec_id = ?,
+       SET unit_title = ?, sec_id = ?, unit_order = ?,
            status = CASE WHEN status = 'rejected' THEN 'pending' ELSE status END,
            pending_note = CASE WHEN status = 'rejected' THEN NULL ELSE pending_note END,
            updated_at = CURRENT_TIMESTAMP
        WHERE unit_id = ?`,
-      [unitTitle, sectionIdNumber, pendingId],
+      [unitTitle, sectionIdNumber, unitOrderNumber, pendingId],
     );
 
     if (unitUpdate.affectedRows === 0) {
