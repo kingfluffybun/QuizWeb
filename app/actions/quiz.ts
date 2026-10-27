@@ -1661,6 +1661,7 @@ export interface RecentUnitItem {
   unit_id: number;
   unit_title: string;
   sec_id: number;
+  unit_order: number;
   sec_num?: string | number;
   cat_id: number;
   cat_name: string;
@@ -1745,7 +1746,7 @@ export async function getPaginatedRecentUnits(
     const offset = (currentPage - 1) * safePageSize;
 
     const [units] = await db.query<RowDataPacket[]>(
-      `SELECT u.unit_id, u.unit_title, u.sec_id, u.author_id, u.status, u.pending_note,
+      `SELECT u.unit_id, u.unit_title, u.sec_id, u.unit_order, u.author_id, u.status, u.pending_note,
               u.created_at, u.updated_at,
               s.sec_num, c.cat_id, COALESCE(c.cat_name, 'General') AS cat_name,
               COALESCE(p.username, ua.email, 'Administrator') AS author_name,
@@ -1769,6 +1770,7 @@ export async function getPaginatedRecentUnits(
         unit_id: Number(u.unit_id),
         unit_title: String(u.unit_title),
         sec_id: Number(u.sec_id),
+        unit_order: Number(u.unit_order ?? 1),
         sec_num: u.sec_num != null ? Number(u.sec_num) : undefined,
         cat_id: Number(u.cat_id),
         cat_name: String(u.cat_name),

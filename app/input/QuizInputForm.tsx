@@ -4900,6 +4900,9 @@ export default function QuizInputForm({
                               Section {unit.sec_num}
                             </span>
                           )}
+                          <span className="badge badge-type">
+                            Unit {unit.unit_order}
+                          </span>
                           <span className={`badge badge-status badge-status-${unit.status}`}>
                             {unit.status.toUpperCase()}
                           </span>
