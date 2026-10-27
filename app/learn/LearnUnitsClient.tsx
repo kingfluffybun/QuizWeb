@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { AvailableUnit } from "@/app/actions/quiz";
 import { getCanonicalSortOrder } from "@/lib/curriculum";
+import { getCachedUnit } from "@/lib/learn-cache";
 import Sidebar from "@/app/components/Sidebar";
 import "#css/quiz.css";
 import "#css/nav.css";
@@ -14,7 +15,17 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
     const [searchQuery, setSearchQuery] = useState<string>("");
 
     const visibleUnits = useMemo(() => {
-        return units.filter((u) => !u.is_locked);
+        return units
+            .map((u) => {
+                const cached = getCachedUnit(u.unit_id);
+                if (!cached) return u;
+                return {
+                    ...u,
+                    is_completed: Boolean(u.is_completed || cached.is_completed),
+                    is_locked: u.is_locked && !cached.is_unlocked,
+                };
+            })
+            .filter((u) => !u.is_locked);
     }, [units]);
 
     const sections = useMemo(() => {
@@ -190,6 +201,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                                 </button>
                                             ) : (
                                                 <Link
+                                                    prefetch={true}
                                                     href={`/quiz/${unit.pending_id}`}
                                                     className="available-unit-link"
                                                 >

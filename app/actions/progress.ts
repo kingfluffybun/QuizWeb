@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import {
+  CANONICAL_SECTIONS,
   getNextAvailableSectionId,
   computeCurriculumUnlockState,
   type CanonicalUnitSummary,
@@ -10,11 +11,76 @@ import {
 import {
   getAvailableUnits,
   getAvailableUnitsForStaff,
+  getSectionUnitsBundle,
   type AvailableUnit,
 } from "@/app/actions/quiz";
 import { isStaff, requireStaff } from "@/lib/rbac";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+
+function createSafeCache<Args extends unknown[], Return>(
+  fn: (...args: Args) => Promise<Return>,
+  parts: string[],
+  options?: { tags?: string[]; revalidate?: number | false },
+): (...args: Args) => Promise<Return> {
+  try {
+    const cached = unstable_cache(fn, parts, options);
+    return async (...args: Args) => {
+      try {
+        return await cached(...args);
+      } catch (err: unknown) {
+        const msg = (err as { message?: string })?.message || "";
+        if (msg.includes("incrementalCache missing")) {
+          return await fn(...args);
+        }
+        throw err;
+      }
+    };
+  } catch {
+    return fn;
+  }
+}
+
+export interface CanonicalCurriculumUnitItem {
+  unit_id: number;
+  unit_title: string;
+  unit_order: number;
+  sec_id: number;
+  sec_num: number;
+  cat_name: string;
+}
+
+async function fetchCanonicalCurriculumUnitSequenceInternal(): Promise<CanonicalCurriculumUnitItem[]> {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT 
+       u.unit_id,
+       u.unit_title,
+       u.unit_order,
+       s.sec_id,
+       s.sec_num,
+       c.cat_name
+     FROM unit_tbl u
+     JOIN sec_tbl s ON u.sec_id = s.sec_id
+     JOIN cat_tbl c ON s.cat_id = c.cat_id
+     WHERE u.status = 'approved'
+     ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
+  );
+
+  return rows.map((r) => ({
+    unit_id: Number(r.unit_id),
+    unit_title: String(r.unit_title),
+    unit_order: Number(r.unit_order || 1),
+    sec_id: Number(r.sec_id),
+    sec_num: Number(r.sec_num),
+    cat_name: String(r.cat_name),
+  }));
+}
+
+export const getCanonicalCurriculumUnitSequence = createSafeCache(
+  fetchCanonicalCurriculumUnitSequenceInternal,
+  ["canonical-curriculum-unit-sequence"],
+  { tags: ["curriculum"], revalidate: 3600 },
+);
 
 export interface UserLessonProgress {
   progress_id: number;
@@ -291,19 +357,7 @@ export async function getUserCurriculumUnlockState(
       }
     }
 
-    const [unitRows] = await db.query<RowDataPacket[]>(
-      `SELECT u.unit_id, u.unit_order, s.sec_id
-       FROM unit_tbl u
-       JOIN sec_tbl s ON u.sec_id = s.sec_id
-       WHERE u.status = 'approved'
-       ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
-    );
-
-    const allUnitsOrdered: CanonicalUnitSummary[] = unitRows.map((r) => ({
-      unit_id: Number(r.unit_id),
-      unit_order: Number(r.unit_order || 1),
-      sec_id: Number(r.sec_id),
-    }));
+    const allUnitsOrdered: CanonicalUnitSummary[] = await getCanonicalCurriculumUnitSequence();
 
     const completedUnitIds = new Set<number>();
     if (userId && Number.isInteger(userId) && userId > 0) {
@@ -724,20 +778,7 @@ export async function getNextCurriculumUnit(currentUnitId: number): Promise<{
   cat_name: string;
 } | null> {
   try {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT 
-         u.unit_id,
-         u.unit_title,
-         s.sec_id,
-         s.sec_num,
-         c.cat_name
-       FROM unit_tbl u
-       JOIN sec_tbl s ON u.sec_id = s.sec_id
-       JOIN cat_tbl c ON s.cat_id = c.cat_id
-       WHERE u.status = 'approved'
-       ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
-    );
-
+    const rows = await getCanonicalCurriculumUnitSequence();
     if (rows.length === 0) return null;
     const currentIndex = rows.findIndex(
       (r) => Number(r.unit_id) === Number(currentUnitId),
@@ -757,4 +798,286 @@ export async function getNextCurriculumUnit(currentUnitId: number): Promise<{
     console.error("Failed to get next curriculum unit:", error);
     return null;
   }
+}
+
+export interface PreloadedSectionMeta {
+  sec_id: number;
+  sec_num: number;
+  sec_title: string;
+  cat_id: number;
+  cat_name: string;
+  difficulty_id: number;
+  difficulty_name: string;
+}
+
+export interface PreloadedUnitPayload {
+  unit_id: number;
+  unit_title: string;
+  unit_order: number;
+  sec_id: number;
+  sec_num: number;
+  cat_id: number;
+  cat_name: string;
+  difficulty_id: number;
+  difficulty_name: string;
+  type_name: string;
+  is_unlocked: boolean;
+  is_completed: boolean;
+  current_slide_order: number;
+  total_slides: number;
+  has_coding_assessment: boolean;
+  quiz_count: number;
+  lesson_card: {
+    lesson_title: string;
+    lesson_slide: Array<{
+      lesson_title: string;
+      lesson_text: string;
+      lesson_code: string;
+    }>;
+  };
+  quizzes: unknown[];
+  assessment: Record<string, unknown> | null;
+  nextUnit: {
+    unit_id: number;
+    unit_title: string;
+    sec_id: number;
+    sec_num: number;
+    cat_name: string;
+  } | null;
+}
+
+export interface LearnPreloadResponse {
+  currentSection: PreloadedSectionMeta;
+  nextSection: PreloadedSectionMeta | null;
+  activeUnitId: number | null;
+  activeSectionId: number;
+  nextSectionId: number | null;
+  units: Record<number, PreloadedUnitPayload>;
+  unitIds: number[];
+  cachedAt: number;
+}
+
+function getCanonicalSectionMeta(secId: number): PreloadedSectionMeta {
+  const found = CANONICAL_SECTIONS.find((s) => s.sec_id === secId);
+  if (found) {
+    return {
+      sec_id: found.sec_id,
+      sec_num: found.sec_num,
+      sec_title: found.sec_title,
+      cat_id: found.cat_id,
+      cat_name: found.cat_name,
+      difficulty_id: found.difficulty_id,
+      difficulty_name: found.difficulty_name,
+    };
+  }
+  return {
+    sec_id: 1,
+    sec_num: 1,
+    sec_title: "Getting Started",
+    cat_id: 1,
+    cat_name: "HTML",
+    difficulty_id: 1,
+    difficulty_name: "Beginner",
+  };
+}
+
+/**
+ * Preloads the entire active learn section and the next available learn section
+ * for the authenticated user, returning full lesson slides, quizzes, and assessments
+ * so units are never served on-demand.
+ */
+export async function getPreloadLearnSectionData(
+  explicitUserId?: number,
+  requestedSectionId?: number,
+): Promise<LearnPreloadResponse> {
+  let userId = explicitUserId;
+  if (!userId) {
+    try {
+      const session = await auth();
+      if (session?.user?.id) userId = Number(session.user.id);
+    } catch {
+      // Handled gracefully outside request context
+    }
+  }
+
+  const [unlockState, canonicalUnits] = await Promise.all([
+    getUserCurriculumUnlockState(userId),
+    getCanonicalCurriculumUnitSequence(),
+  ]);
+
+  const availableSectionIds = new Set<number>(
+    canonicalUnits.map((u) => u.sec_id),
+  );
+
+  // Build O(1) lookup for nextUnit in canonical sequence
+  const nextUnitMap = new Map<
+    number,
+    {
+      unit_id: number;
+      unit_title: string;
+      sec_id: number;
+      sec_num: number;
+      cat_name: string;
+    } | null
+  >();
+  for (let i = 0; i < canonicalUnits.length; i++) {
+    const curr = canonicalUnits[i];
+    const next = i + 1 < canonicalUnits.length ? canonicalUnits[i + 1] : null;
+    nextUnitMap.set(
+      curr.unit_id,
+      next
+        ? {
+            unit_id: next.unit_id,
+            unit_title: next.unit_title,
+            sec_id: next.sec_id,
+            sec_num: next.sec_num,
+            cat_name: next.cat_name,
+          }
+        : null,
+    );
+  }
+
+  let targetSectionId =
+    requestedSectionId != null &&
+    Number.isInteger(Number(requestedSectionId)) &&
+    Number(requestedSectionId) > 0
+      ? Number(requestedSectionId)
+      : (unlockState.activeSectionId ?? 1);
+
+  if (
+    availableSectionIds.size > 0 &&
+    !availableSectionIds.has(targetSectionId)
+  ) {
+    const nextAvail = getNextAvailableSectionId(
+      targetSectionId,
+      availableSectionIds,
+    );
+    if (nextAvail !== null) {
+      targetSectionId = nextAvail;
+    } else if (canonicalUnits[0]?.sec_id) {
+      targetSectionId = canonicalUnits[0].sec_id;
+    }
+  }
+
+  const nextSectionId = getNextAvailableSectionId(
+    targetSectionId,
+    availableSectionIds,
+  );
+
+  const [currentSecBundle, nextSecBundle] = await Promise.all([
+    getSectionUnitsBundle(targetSectionId),
+    nextSectionId != null
+      ? getSectionUnitsBundle(nextSectionId)
+      : Promise.resolve([]),
+  ]);
+
+  const combinedBundle = [...currentSecBundle, ...nextSecBundle];
+  const allBundleUnitIds = combinedBundle.map((u) => u.unit_id);
+
+  const userProgressMap = new Map<
+    number,
+    { current_slide_order: number; is_completed: boolean }
+  >();
+  if (
+    userId &&
+    Number.isInteger(userId) &&
+    userId > 0 &&
+    allBundleUnitIds.length > 0
+  ) {
+    try {
+      const [progRows] = await db.query<RowDataPacket[]>(
+        `SELECT unit_id, current_slide_order, is_completed
+         FROM user_lesson_progress_tbl
+         WHERE user_id = ? AND unit_id IN (?)`,
+        [userId, allBundleUnitIds],
+      );
+      for (const r of progRows) {
+        userProgressMap.set(Number(r.unit_id), {
+          current_slide_order: Number(r.current_slide_order ?? 0),
+          is_completed: Boolean(r.is_completed),
+        });
+      }
+    } catch {
+      // Ignore if progress query fails
+    }
+  }
+
+  const unitsRecord: Record<number, PreloadedUnitPayload> = {};
+  const unitIdsList: number[] = [];
+
+  for (const entry of combinedBundle) {
+    const uId = entry.unit_id;
+    const rawPayload = entry.unitPayload.quiz_payload ?? {};
+    const lessonCard = (rawPayload.lesson_card as {
+      lesson_title?: string;
+      lesson_slide?: Array<{
+        lesson_title?: string;
+        lesson_text?: string;
+        lesson_code?: string;
+      }>;
+    }) ?? { lesson_title: entry.unit_title, lesson_slide: [] };
+
+    const slides = Array.isArray(lessonCard.lesson_slide)
+      ? lessonCard.lesson_slide.map((s) => ({
+          lesson_title: String(s.lesson_title ?? ""),
+          lesson_text: String(s.lesson_text ?? ""),
+          lesson_code: String(s.lesson_code ?? ""),
+        }))
+      : [];
+
+    const quizzes = Array.isArray(rawPayload.quizzes) ? rawPayload.quizzes : [];
+    const assessment =
+      rawPayload.assessment && typeof rawPayload.assessment === "object"
+        ? (rawPayload.assessment as Record<string, unknown>)
+        : null;
+
+    const totalSlides = Math.max(1, slides.length);
+    const prog = userProgressMap.get(uId);
+    const isCompleted =
+      Boolean(prog?.is_completed) || unlockState.completedUnitIds.has(uId);
+    const isUnlocked = unlockState.unlockedUnitIds.has(uId);
+    const currentSlideOrder = isUnlocked
+      ? Math.min(totalSlides, Math.max(0, Number(prog?.current_slide_order ?? 0)))
+      : 0;
+
+    unitsRecord[uId] = {
+      unit_id: uId,
+      unit_title: entry.unit_title,
+      unit_order: entry.unit_order,
+      sec_id: entry.sec_id,
+      sec_num: entry.sec_num,
+      cat_id: entry.cat_id,
+      cat_name: entry.cat_name,
+      difficulty_id: entry.difficulty_id,
+      difficulty_name: entry.difficulty_name,
+      type_name: "Unit",
+      is_unlocked: isUnlocked,
+      is_completed: isCompleted,
+      current_slide_order: currentSlideOrder,
+      total_slides: totalSlides,
+      has_coding_assessment: Boolean(assessment),
+      quiz_count: quizzes.length,
+      lesson_card: {
+        lesson_title: String(lessonCard.lesson_title ?? entry.unit_title),
+        lesson_slide: slides,
+      },
+      quizzes,
+      assessment,
+      nextUnit: nextUnitMap.get(uId) ?? null,
+    };
+
+    unitIdsList.push(uId);
+  }
+
+  return {
+    currentSection: getCanonicalSectionMeta(targetSectionId),
+    nextSection:
+      nextSectionId != null ? getCanonicalSectionMeta(nextSectionId) : null,
+    activeUnitId: unlockState.activeUnitId,
+    activeSectionId: targetSectionId,
+    nextSectionId,
+    units: unitsRecord,
+    unitIds: unitIdsList,
+    cachedAt: Date.now(),
+  };
 }

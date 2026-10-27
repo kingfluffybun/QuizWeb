@@ -10,9 +10,9 @@ used for project status.
 ## Active agent
 
 - **Agent:** Antigravity Coding Assistant
-- **Session:** `58a0201d-895d-48fb-bc3d-6f6d6d6ee129`
+- **Session:** `79761089-f1a9-4d19-941b-c2281d635b25`
 - **Status:** Ready
-- **Last update:** 2026-10-19
+- **Last update:** 2026-10-27
 
 ## Coordination protocol
 
@@ -25,22 +25,27 @@ used for project status.
 
 ## Current work
 
-Completed. Implemented and hardened Phase 2: Next.js Rendering & Static Acceleration.
+Completed. Implemented Serverless-First 3-Tier Preload & Caching Architecture for current and next learn sections on user sign-in.
 
 Completed changes:
-- `app/components/SessionWrapper.tsx`: Created isolated client component wrapping NextAuth `<SessionProvider>` without an eager server session prop, accepting and forwarding `SessionProviderProps` (`...props`) for full flexibility. Allows Next.js App Router to statically pre-render public routes (`/`, `/about`, `/cheat-sheet`, `/_not-found`, `/login`, `/learn`, `/profile`, `/quiz-cp`) instead of forcing 100% dynamic SSR across the entire application.
-- `app/layout.tsx`: Decoupled `await auth()` from `RootLayout`, changing `RootLayout` into a synchronous component wrapping children with `<SessionWrapper>`. Optimized Google Fonts: trimmed `Poppins` and `Montserrat` from 9 weights down to `['400', '500', '600', '700', '800']` (matching CSS usage) and added `display: "swap"` across `Poppins`, `Montserrat`, and `JetBrains_Mono` to avoid Flash of Invisible Text (FOIT) and eliminate unneeded font asset payloads.
-- `tests/test-phase2-rendering.ts`: Created dedicated Phase 2 automated verification suite checking font configurations, RootLayout decoupling, prerender manifest static routes (`/`, `/_not-found`, `/about`, `/cheat-sheet`, `/login`, `/profile`, `/quiz-cp`), ISR caching (`/learn` 1h), and dynamic SSR security preservation for authenticated routes (`/home`, `/admin`, etc.).
+- `app/actions/quiz.ts`: Parallelized quiz modality queries in `populateQuizPayloads` and parallelized slide, quiz, and assessment queries in `fetchUnitByIdInternal`. Added `getSectionUnitsBundle(secId)` wrapped in `createSafeCache` (`unstable_cache` with `"curriculum"` tag) to batch-fetch and pre-warm unit payloads per section across Vercel Serverless instances.
+- `app/actions/progress.ts`: Added `getCanonicalCurriculumUnitSequence()` cache, `getPreloadLearnSectionData()`, and optimized `getNextCurriculumUnit` & `getUserCurriculumUnlockState` to eliminate repetitive table scans.
+- `app/api/learn/preload/route.ts`: Created `GET /api/learn/preload` route handler returning the user's active section and next available section units with `Cache-Control: private, max-age=120, stale-while-revalidate=600`.
+- `lib/learn-cache.ts`: Created client-side persistent unit cache engine (`sessionStorage` + in-memory store, request deduplication, O(1) unit lookup, optimistic slide & completion updates, `toQuizLandingQuizzes` converter, and cache purge on sign-out).
+- `app/login/page.tsx`: Triggered `preloadLearnSections(undefined, true)` immediately upon successful `signIn`.
+- `app/components/LearnPreloadSync.tsx` & `app/components/SessionWrapper.tsx`: Added background preload synchronization for authenticated / OAuth sessions and automatic cleanup on user switch / sign-out.
+- `app/components/Sidebar.tsx` & `app/components/MobileShell.tsx`: Wired `clearLearnCache()` on sign-out form submission.
+- `app/quiz/QuizLandingClient.tsx`, `app/home/page.tsx`, & `app/learn/LearnUnitsClient.tsx`: Hydrated from client cache, marked units completed locally, background-preloaded subsequent sections on section boundary completion, and enabled route `prefetch={true}`.
+- `tests/test-learn-preload.ts`: Created comprehensive 49-assertion verification suite.
 
 Validation completed:
-- `npm run build`: Production build verified. Static routes (`/`, `/_not-found`, `/about`, `/cheat-sheet`, `/learn`, `/login`, `/profile`, `/quiz-cp`) successfully pre-rendered as `○ (Static)` with zero build errors. Authenticated/dynamic routes (`/admin`, `/home`, `/input`, `/leaderboard`, `/maintainer`, `/pending`, `/post-login`, `/quiz`, `/settings`, `/verify-email/[token]`) correctly preserved as `ƒ (Dynamic)`.
-- `npx tsx tests/test-phase2-rendering.ts` (All 4 verification suites passing)
-- `npx eslint app/layout.tsx app/components/SessionWrapper.tsx tests/test-phase2-rendering.ts` (0 errors, 0 warnings)
-- `npx tsc --noEmit` (0 errors)
-- `npx tsx tests/test-phase1-optimization.ts` (All 4 verification suites passing)
-- `npx tsx tests/test-maintainer-json-import.ts` (All 10 normalized tables verified)
-- `npx tsx tests/test-db-v2-live-actions.ts` (All 13 conformance tests passing)
+- `npx tsx tests/test-learn-preload.ts` (49/49 tests passing)
+- `npx tsx tests/test-curriculum-roadmap-integration.ts` (61/61 tests passing)
+- `npx tsx tests/test-phase3-optimization.ts` (All tests passing)
 - `npx tsx tests/test-rbac-e2e.ts` (137/137 tests passing)
+- `npx tsc --noEmit` (0 errors)
+- `npx eslint` on all modified files (0 errors, 0 warnings)
+- `npm run build` (Clean production build; `/api/learn/preload` compiled and verified)
 
 Before starting work, an agent should replace this section with the files it
 intends to change and a short description. After finishing, it should replace
@@ -48,6 +53,8 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-10-27: Implemented Serverless-First 3-Tier Preload & Caching Architecture (`GET /api/learn/preload`, `lib/learn-cache.ts`, `getSectionUnitsBundle`, `getPreloadLearnSectionData`, `LearnPreloadSync`) to preload the user's current and next learn sections on sign-in and eliminate on-demand unit serving across Vercel Serverless functions and browser runtime. Verified with 49/49 preload tests, 61/61 roadmap integration tests, 137/137 RBAC E2E tests, ESLint (0 warnings), TypeScript (0 errors), and Next.js production build.
 
 - 2026-10-25: Implemented Phase 2: Next.js Rendering & Static Acceleration. Decoupled `auth()` from `RootLayout` (`app/layout.tsx`) by introducing `app/components/SessionWrapper.tsx`. Unblocked Next.js automatic static generation: `/`, `/_not-found`, `/about`, `/cheat-sheet`, `/learn`, `/login`, `/profile`, and `/quiz-cp` are now statically pre-rendered (`○ Static`), eliminating full-app dynamic SSR penalties. Optimized Google Fonts (`Poppins`, `Montserrat`, `JetBrains_Mono`) with `display: "swap"` and pruned unused weights down to `['400', '500', '600', '700', '800']`. Verified with ESLint (0 warnings), TypeScript (0 errors), Next.js production build, all 137 RBAC E2E tests, 13 live DB action tests, maintainer JSON import tests, and Phase 1 optimization tests.
 

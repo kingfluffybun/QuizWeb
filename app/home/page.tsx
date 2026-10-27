@@ -119,6 +119,7 @@ export default async function DashboardPage() {
                                                     return (
                                                         <Link
                                                             key={unit.unit_id}
+                                                            prefetch={true}
                                                             href={`/quiz/${unit.unit_id}`}
                                                             className="unit row"
                                                             style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}

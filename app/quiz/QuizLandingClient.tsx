@@ -24,6 +24,14 @@ import { recordLessonSlideProgress } from "@/app/actions/progress";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
 import { getClientLocalDate } from "@/lib/timezone";
+import { shuffleQuizOptions } from "@/app/quiz/shuffle";
+import {
+    getCachedUnit,
+    markUnitCompletedLocally,
+    preloadLearnSections,
+    toQuizLandingQuizzes,
+    updateUnitSlideProgressLocally,
+} from "@/lib/learn-cache";
 
 type AnswerResult = {
     correct: boolean;
@@ -283,7 +291,15 @@ export default function QuizLandingClient({
     const router = useRouter();
     const playQuizSound = useQuizSounds();
     const { quizzes: allQuizzes } = useQuizData();
-    const quizzes = initialQuizzes ?? allQuizzes;
+    const cachedUnit = unitId != null ? getCachedUnit(unitId) : null;
+    const cachedQuizzes = cachedUnit
+        ? toQuizLandingQuizzes(cachedUnit).map(shuffleQuizOptions)
+        : undefined;
+    const quizzes =
+        initialQuizzes && initialQuizzes.length > 0
+            ? initialQuizzes
+            : cachedQuizzes ?? allQuizzes;
+    const resolvedNextUnit = nextUnit !== undefined ? nextUnit : cachedUnit?.nextUnit ?? null;
     const selectedQuizzes = quizzes as UnitQuizData[];
     const [questionOrder, setQuestionOrder] = useState<number[] | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -393,7 +409,16 @@ export default function QuizLandingClient({
             true,
         ).then((response) => {
             if (response.success && response.isCompleted) {
+                markUnitCompletedLocally(resolvedUnitId);
                 setLessonProgressState("saved");
+                // If advancing into a new section, preload that section + its successor
+                if (
+                    resolvedNextUnit?.sec_id &&
+                    selectedQuiz?.sec_id &&
+                    resolvedNextUnit.sec_id !== selectedQuiz.sec_id
+                ) {
+                    preloadLearnSections(resolvedNextUnit.sec_id, true).catch(() => {});
+                }
                 return;
             }
             completionRecorded.current = false;
@@ -422,13 +447,14 @@ export default function QuizLandingClient({
         }).catch((error) => {
             console.error("Failed to record quiz completion:", error);
         });
-    }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount]);
+    }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount, resolvedNextUnit, selectedQuiz]);
 
 
     useEffect(() => {
         if (!resolvedUnitId || !hasLesson || isFinished) return;
         const currentOrder = lessonSlideIndex + 1;
         const total = Math.max(1, lessonSlides.length);
+        updateUnitSlideProgressLocally(resolvedUnitId, currentOrder);
         recordLessonSlideProgress(resolvedUnitId, currentOrder, total, false).then((response) => {
             if (!response.success) {
                 console.error("Failed to record slide progress:", response.error);
@@ -829,9 +855,10 @@ export default function QuizLandingClient({
                                 Code Problem
                             </Link>
                         )}
-                        {isPassed && nextUnit && (
+                        {isPassed && resolvedNextUnit && (
                             <Link
-                                href={`/quiz/${nextUnit.unit_id}`}
+                                prefetch={true}
+                                href={`/quiz/${resolvedNextUnit.unit_id}`}
                                 className="options"
                                 id={hasCodingAssessment ? undefined : "submit"}
                                 aria-disabled={!isLessonProgressSaved}
@@ -854,7 +881,7 @@ export default function QuizLandingClient({
                                         : {}),
                                 }}
                             >
-                                Next Unit: {nextUnit.unit_title}
+                                Next Unit: {resolvedNextUnit.unit_title}
                             </Link>
                         )}
                         <button

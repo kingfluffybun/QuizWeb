@@ -2,6 +2,7 @@
 
 import { useGoogleReCaptcha, GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import { signUp, reqPassReset, verifyOTP, resetPass, checkLoginRateLimit, recordFailedLogin } from "@/app/actions/auth";
+import { preloadLearnSections } from "@/lib/learn-cache";
 import { useState, useRef, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -111,6 +112,11 @@ function AuthPage() {
             setIsLoading(false);
             return;
         }
+
+        // Preload current and next learn sections immediately on signIn
+        preloadLearnSections(undefined, true).catch((err) => {
+            console.warn("Background learn preload notice:", err);
+        });
 
         const targetUrl = sanitizeRedirectUrl(callbackUrl);
         router.push(targetUrl);

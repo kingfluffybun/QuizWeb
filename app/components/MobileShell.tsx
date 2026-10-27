@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
+import { clearLearnCache } from "@/lib/learn-cache";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 
 const EXCLUDED_PREFIXES = [
@@ -405,7 +406,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="mobile-drawer-footer">
-          <form action={signOutAction} className="mobile-drawer-signout-form">
+          <form action={signOutAction} onSubmit={() => clearLearnCache()} className="mobile-drawer-signout-form">
             <button type="submit" className="mobile-drawer-signout-btn">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

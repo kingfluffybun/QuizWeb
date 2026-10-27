@@ -586,78 +586,9 @@ async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
   }
 
   const mcqMap = new Map<number, { options: string[]; correct_index: number }>();
-  if (mcqIds.length > 0) {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT quiz_id, option_index, option_text, is_correct
-       FROM quiz_mcq_option_tbl
-       WHERE quiz_id IN (?)
-       ORDER BY quiz_id, option_index ASC`,
-      [mcqIds],
-    );
-    for (const r of rows) {
-      const qId = Number(r.quiz_id);
-      if (!mcqMap.has(qId)) {
-        mcqMap.set(qId, { options: [], correct_index: 0 });
-      }
-      const entry = mcqMap.get(qId)!;
-      entry.options.push(String(r.option_text ?? ""));
-      if (Boolean(r.is_correct)) {
-        entry.correct_index = entry.options.length - 1;
-      }
-    }
-  }
-
   const fitbMap = new Map<number, { answer: string }>();
-  if (fitbIds.length > 0) {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT quiz_id, correct_answer
-       FROM quiz_fitb_tbl
-       WHERE quiz_id IN (?)`,
-      [fitbIds],
-    );
-    for (const r of rows) {
-      fitbMap.set(Number(r.quiz_id), { answer: String(r.correct_answer ?? "") });
-    }
-  }
-
   const orderMap = new Map<number, { items: string[] }>();
-  if (orderIds.length > 0) {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT quiz_id, canonical_order, item_text
-       FROM quiz_order_item_tbl
-       WHERE quiz_id IN (?)
-       ORDER BY quiz_id, canonical_order ASC`,
-      [orderIds],
-    );
-    for (const r of rows) {
-      const qId = Number(r.quiz_id);
-      if (!orderMap.has(qId)) {
-        orderMap.set(qId, { items: [] });
-      }
-      orderMap.get(qId)!.items.push(String(r.item_text ?? ""));
-    }
-  }
-
   const pairMap = new Map<number, { pairs: { left: string; right: string }[] }>();
-  if (pairIds.length > 0) {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT quiz_id, pair_order, left_text, right_text
-       FROM quiz_pair_tbl
-       WHERE quiz_id IN (?)
-       ORDER BY quiz_id, pair_order ASC, pair_id ASC`,
-      [pairIds],
-    );
-    for (const r of rows) {
-      const qId = Number(r.quiz_id);
-      if (!pairMap.has(qId)) {
-        pairMap.set(qId, { pairs: [] });
-      }
-      pairMap.get(qId)!.pairs.push({
-        left: String(r.left_text ?? ""),
-        right: String(r.right_text ?? ""),
-      });
-    }
-  }
 
   interface CPStepItem {
     prompt: string;
@@ -674,41 +605,125 @@ async function populateQuizPayloads(quizzes: QuizRow[]): Promise<QuizRow[]> {
     expected: string;
   }
   const cpMap = new Map<number, CPMapItem>();
-  if (cpIds.length > 0) {
-    const [cpRows] = await db.query<RowDataPacket[]>(
-      `SELECT quiz_id, title FROM quiz_cp_tbl WHERE quiz_id IN (?)`,
-      [cpIds],
-    );
-    const [stepRows] = await db.query<RowDataPacket[]>(
-      `SELECT quiz_id, step_order, prompt, template_code, expected_code
-       FROM quiz_cp_step_tbl
-       WHERE quiz_id IN (?)
-       ORDER BY quiz_id, step_order ASC`,
-      [cpIds],
-    );
-    const stepsByQuiz = new Map<number, CPStepItem[]>();
-    for (const s of stepRows) {
-      const qId = Number(s.quiz_id);
-      if (!stepsByQuiz.has(qId)) stepsByQuiz.set(qId, []);
-      stepsByQuiz.get(qId)!.push({
-        prompt: String(s.prompt ?? ""),
-        template: s.template_code ?? "",
-        expected: String(s.expected_code ?? ""),
-      });
-    }
-    for (const c of cpRows) {
-      const qId = Number(c.quiz_id);
-      const steps = stepsByQuiz.get(qId) ?? [];
-      cpMap.set(qId, {
-        title: c.title,
-        steps,
-        prompts: steps.map((s) => s.prompt),
-        prompt: steps[0]?.prompt ?? "",
-        template: steps[0]?.template ?? "",
-        expected: steps[0]?.expected ?? "",
-      });
-    }
-  }
+
+  await Promise.all([
+    mcqIds.length > 0
+      ? db
+          .query<RowDataPacket[]>(
+            `SELECT quiz_id, option_index, option_text, is_correct
+             FROM quiz_mcq_option_tbl
+             WHERE quiz_id IN (?)
+             ORDER BY quiz_id, option_index ASC`,
+            [mcqIds],
+          )
+          .then(([rows]) => {
+            for (const r of rows) {
+              const qId = Number(r.quiz_id);
+              if (!mcqMap.has(qId)) {
+                mcqMap.set(qId, { options: [], correct_index: 0 });
+              }
+              const entry = mcqMap.get(qId)!;
+              entry.options.push(String(r.option_text ?? ""));
+              if (Boolean(r.is_correct)) {
+                entry.correct_index = entry.options.length - 1;
+              }
+            }
+          })
+      : Promise.resolve(),
+    fitbIds.length > 0
+      ? db
+          .query<RowDataPacket[]>(
+            `SELECT quiz_id, correct_answer
+             FROM quiz_fitb_tbl
+             WHERE quiz_id IN (?)`,
+            [fitbIds],
+          )
+          .then(([rows]) => {
+            for (const r of rows) {
+              fitbMap.set(Number(r.quiz_id), { answer: String(r.correct_answer ?? "") });
+            }
+          })
+      : Promise.resolve(),
+    orderIds.length > 0
+      ? db
+          .query<RowDataPacket[]>(
+            `SELECT quiz_id, canonical_order, item_text
+             FROM quiz_order_item_tbl
+             WHERE quiz_id IN (?)
+             ORDER BY quiz_id, canonical_order ASC`,
+            [orderIds],
+          )
+          .then(([rows]) => {
+            for (const r of rows) {
+              const qId = Number(r.quiz_id);
+              if (!orderMap.has(qId)) {
+                orderMap.set(qId, { items: [] });
+              }
+              orderMap.get(qId)!.items.push(String(r.item_text ?? ""));
+            }
+          })
+      : Promise.resolve(),
+    pairIds.length > 0
+      ? db
+          .query<RowDataPacket[]>(
+            `SELECT quiz_id, pair_order, left_text, right_text
+             FROM quiz_pair_tbl
+             WHERE quiz_id IN (?)
+             ORDER BY quiz_id, pair_order ASC, pair_id ASC`,
+            [pairIds],
+          )
+          .then(([rows]) => {
+            for (const r of rows) {
+              const qId = Number(r.quiz_id);
+              if (!pairMap.has(qId)) {
+                pairMap.set(qId, { pairs: [] });
+              }
+              pairMap.get(qId)!.pairs.push({
+                left: String(r.left_text ?? ""),
+                right: String(r.right_text ?? ""),
+              });
+            }
+          })
+      : Promise.resolve(),
+    cpIds.length > 0
+      ? Promise.all([
+          db.query<RowDataPacket[]>(
+            `SELECT quiz_id, title FROM quiz_cp_tbl WHERE quiz_id IN (?)`,
+            [cpIds],
+          ),
+          db.query<RowDataPacket[]>(
+            `SELECT quiz_id, step_order, prompt, template_code, expected_code
+             FROM quiz_cp_step_tbl
+             WHERE quiz_id IN (?)
+             ORDER BY quiz_id, step_order ASC`,
+            [cpIds],
+          ),
+        ]).then(([[cpRows], [stepRows]]) => {
+          const stepsByQuiz = new Map<number, CPStepItem[]>();
+          for (const s of stepRows) {
+            const qId = Number(s.quiz_id);
+            if (!stepsByQuiz.has(qId)) stepsByQuiz.set(qId, []);
+            stepsByQuiz.get(qId)!.push({
+              prompt: String(s.prompt ?? ""),
+              template: s.template_code ?? "",
+              expected: String(s.expected_code ?? ""),
+            });
+          }
+          for (const c of cpRows) {
+            const qId = Number(c.quiz_id);
+            const steps = stepsByQuiz.get(qId) ?? [];
+            cpMap.set(qId, {
+              title: c.title,
+              steps,
+              prompts: steps.map((s) => s.prompt),
+              prompt: steps[0]?.prompt ?? "",
+              template: steps[0]?.template ?? "",
+              expected: steps[0]?.expected ?? "",
+            });
+          }
+        })
+      : Promise.resolve(),
+  ]);
 
   for (const q of quizzes) {
     if (q.quiz_payload && typeof q.quiz_payload === "object" && Object.keys(q.quiz_payload).length > 0) {
@@ -1795,13 +1810,75 @@ async function fetchUnitByIdInternal(unitId: number) {
     const unit = rows[0];
     if (!unit) return null;
 
-    const [slides] = await db.query<RowDataPacket[]>(
-      `SELECT slide_id, slide_order, slide_title, slide_text, slide_code
-       FROM lesson_slide_tbl
-       WHERE unit_id = ?
-       ORDER BY slide_order ASC`,
-      [unitId],
-    );
+    const [[slides], populatedQuizzes, assessmentObj] = await Promise.all([
+      db.query<RowDataPacket[]>(
+        `SELECT slide_id, slide_order, slide_title, slide_text, slide_code
+         FROM lesson_slide_tbl
+         WHERE unit_id = ?
+         ORDER BY slide_order ASC`,
+        [unitId],
+      ),
+      db
+        .query<QuizRow[]>(
+          `SELECT q.quiz_id, q.unit_id, q.difficulty_id, q.quiz_type_id, q.quiz_order, q.question_text,
+                  d.difficulty_name, t.type_name,
+                  u.sec_id, s.sec_num, s.cat_id, c.cat_name
+           FROM quiz_tbl q
+           JOIN unit_tbl u ON q.unit_id = u.unit_id
+           JOIN sec_tbl s ON u.sec_id = s.sec_id
+           JOIN cat_tbl c ON s.cat_id = c.cat_id
+           JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
+           JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
+           WHERE q.unit_id = ?
+           ORDER BY q.quiz_order ASC, q.quiz_id ASC`,
+          [unitId],
+        )
+        .then(([quizzes]) => populateQuizPayloads(quizzes)),
+      db
+        .query<RowDataPacket[]>(
+          `SELECT assessment_id, unit_id, title, description, expected_outcome
+           FROM unit_assessment_tbl
+           WHERE unit_id = ?
+           LIMIT 1`,
+          [unitId],
+        )
+        .then(async ([assessments]) => {
+          if (assessments.length === 0) return null;
+          const a = assessments[0];
+          const [steps] = await db.query<RowDataPacket[]>(
+            `SELECT step_number, instruction, inherit_previous_code,
+                    starter_html, starter_css, starter_js,
+                    expected_html, expected_css, expected_js
+             FROM assessment_step_tbl
+             WHERE assessment_id = ?
+             ORDER BY step_number ASC`,
+            [a.assessment_id],
+          );
+          return {
+            schemaVersion: 2,
+            title: a.title,
+            description: a.description,
+            expected_outcome: a.expected_outcome,
+            steps: steps.map((s) => s.instruction),
+            cp_steps: steps.map((s) => ({
+              stepNumber: Number(s.step_number),
+              instruction: s.instruction,
+              inheritPreviousCode: Boolean(s.inherit_previous_code),
+              starterCode: {
+                html: s.starter_html ?? "",
+                css: s.starter_css ?? "",
+                js: s.starter_js ?? "",
+              },
+              expectedTemplate: {
+                html: s.expected_html ?? "",
+                css: s.expected_css ?? "",
+                js: s.expected_js ?? "",
+              },
+            })),
+            assessment: steps.map((s) => s.instruction).join("\n\n"),
+          } as Record<string, unknown>;
+        }),
+    ]);
 
     const lessonCard = {
       lesson_title: unit.unit_title,
@@ -1811,68 +1888,6 @@ async function fetchUnitByIdInternal(unitId: number) {
         lesson_code: s.slide_code ?? "",
       })),
     };
-
-    const [quizzes] = await db.query<QuizRow[]>(
-      `SELECT q.quiz_id, q.unit_id, q.difficulty_id, q.quiz_type_id, q.quiz_order, q.question_text,
-              d.difficulty_name, t.type_name,
-              u.sec_id, s.sec_num, s.cat_id, c.cat_name
-       FROM quiz_tbl q
-       JOIN unit_tbl u ON q.unit_id = u.unit_id
-       JOIN sec_tbl s ON u.sec_id = s.sec_id
-       JOIN cat_tbl c ON s.cat_id = c.cat_id
-       JOIN difficulty_tbl d ON q.difficulty_id = d.difficulty_id
-       JOIN quiz_type_tbl t ON q.quiz_type_id = t.quiz_type_id
-       WHERE q.unit_id = ?
-       ORDER BY q.quiz_order ASC, q.quiz_id ASC`,
-      [unitId],
-    );
-
-    const populatedQuizzes = await populateQuizPayloads(quizzes);
-
-    const [assessments] = await db.query<RowDataPacket[]>(
-      `SELECT assessment_id, unit_id, title, description, expected_outcome
-       FROM unit_assessment_tbl
-       WHERE unit_id = ?
-       LIMIT 1`,
-      [unitId],
-    );
-
-    let assessmentObj: Record<string, unknown> | null = null;
-    if (assessments.length > 0) {
-      const a = assessments[0];
-      const [steps] = await db.query<RowDataPacket[]>(
-        `SELECT step_number, instruction, inherit_previous_code,
-                starter_html, starter_css, starter_js,
-                expected_html, expected_css, expected_js
-         FROM assessment_step_tbl
-         WHERE assessment_id = ?
-         ORDER BY step_number ASC`,
-        [a.assessment_id],
-      );
-      assessmentObj = {
-        schemaVersion: 2,
-        title: a.title,
-        description: a.description,
-        expected_outcome: a.expected_outcome,
-        steps: steps.map((s) => s.instruction),
-        cp_steps: steps.map((s) => ({
-          stepNumber: Number(s.step_number),
-          instruction: s.instruction,
-          inheritPreviousCode: Boolean(s.inherit_previous_code),
-          starterCode: {
-            html: s.starter_html ?? "",
-            css: s.starter_css ?? "",
-            js: s.starter_js ?? "",
-          },
-          expectedTemplate: {
-            html: s.expected_html ?? "",
-            css: s.expected_css ?? "",
-            js: s.expected_js ?? "",
-          },
-        })),
-        assessment: steps.map((s) => s.instruction).join("\n\n"),
-      };
-    }
 
     return {
       quiz_id: Number(unit.unit_id),
@@ -1906,6 +1921,77 @@ async function fetchUnitByIdInternal(unitId: number) {
 export const getUnitById = createSafeCache(
   fetchUnitByIdInternal,
   ["unit-by-id"],
+  { tags: ["curriculum"], revalidate: 3600 }
+);
+
+export interface SectionUnitBundleEntry {
+  unit_id: number;
+  unit_title: string;
+  unit_order: number;
+  sec_id: number;
+  sec_num: number;
+  sec_title: string;
+  cat_id: number;
+  cat_name: string;
+  difficulty_id: number;
+  difficulty_name: string;
+  unitPayload: NonNullable<Awaited<ReturnType<typeof fetchUnitByIdInternal>>>;
+}
+
+async function fetchSectionUnitsBundleInternal(secId: number): Promise<SectionUnitBundleEntry[]> {
+  if (!Number.isInteger(secId) || secId < 1) return [];
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT u.unit_id, u.unit_title, u.unit_order,
+              s.sec_id, s.sec_num, s.sec_title, s.difficulty_id,
+              COALESCE(d.difficulty_name, 'Beginner') AS difficulty_name,
+              c.cat_id, c.cat_name
+       FROM unit_tbl u
+       JOIN sec_tbl s ON u.sec_id = s.sec_id
+       JOIN cat_tbl c ON s.cat_id = c.cat_id
+       LEFT JOIN difficulty_tbl d ON s.difficulty_id = d.difficulty_id
+       WHERE u.sec_id = ? AND u.status = 'approved'
+       ORDER BY u.unit_order ASC, u.unit_id ASC`,
+      [secId],
+    );
+
+    if (rows.length === 0) return [];
+
+    const unitPayloads = await Promise.all(
+      rows.map((r) => getUnitById(Number(r.unit_id))),
+    );
+
+    const results: SectionUnitBundleEntry[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const payload = unitPayloads[i];
+      if (!payload) continue;
+      results.push({
+        unit_id: Number(r.unit_id),
+        unit_title: String(r.unit_title),
+        unit_order: Number(r.unit_order ?? 1),
+        sec_id: Number(r.sec_id),
+        sec_num: Number(r.sec_num),
+        sec_title: String(r.sec_title ?? ""),
+        cat_id: Number(r.cat_id),
+        cat_name: String(r.cat_name),
+        difficulty_id: Number(r.difficulty_id ?? 1),
+        difficulty_name: String(r.difficulty_name ?? "Beginner"),
+        unitPayload: payload,
+      });
+    }
+
+    return results;
+  } catch (error) {
+    console.error("Failed to fetch section units bundle:", error);
+    return [];
+  }
+}
+
+export const getSectionUnitsBundle = createSafeCache(
+  fetchSectionUnitsBundleInternal,
+  ["section-units-bundle"],
   { tags: ["curriculum"], revalidate: 3600 }
 );
 

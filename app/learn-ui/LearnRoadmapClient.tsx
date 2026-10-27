@@ -648,14 +648,14 @@ export default function LearnRoadmapClient({
                         Skip directly to this section by passing the coding assessment for every preceding uncompleted unit.
                       </p>
                       <div className="section-skip-badges" style={{ marginBottom: "12px" }}>
-                        <span className="section-skip-chip">⏱️ 5 min / problem</span>
-                        <span className="section-skip-chip">❤️ 5 hearts total</span>
+                        <span className="section-skip-chip">⏱️ 5 minutes/Unit</span>
+                        <span className="section-skip-chip">❤️ 5 lives only</span>
                       </div>
                       <Link
                         href={`/quiz-cp/skip/${selectedNode.secId}`}
                         className="lesson-link"
                       >
-                        <p>⚡ Start Skip Challenge</p>
+                        <p>Start Skip Challenge</p>
                       </Link>
                     </div>
                   )
