@@ -53,7 +53,8 @@ export async function getSequentialSkipQueue(
 ): Promise<SequentialSkipQueuePayload | null> {
   try {
     const targetId = Number(targetSectionId);
-    if (!Number.isFinite(targetId) || targetId <= 1) {
+    // Section 1 is the starting level and cannot be skipped; minimum target is Section 3
+    if (!Number.isFinite(targetId) || targetId <= 2) {
       return null;
     }
 
@@ -63,8 +64,13 @@ export async function getSequentialSkipQueue(
         const session = await auth();
         if (session?.user?.id) userId = Number(session.user.id);
       } catch {
-        // Continue for guest mode if invoked outside session
+        // Outside Next.js request context
       }
+    }
+
+    // Guests cannot access skip functions
+    if (!userId || !Number.isInteger(userId) || userId <= 0) {
+      return null;
     }
 
     const targetSection = CANONICAL_SECTIONS.find((s) => s.sec_id === targetId);
@@ -181,13 +187,14 @@ export async function completeSequentialSkip(input: {
 }> {
   try {
     const targetSectionId = Number(input?.targetSectionId);
-    if (!Number.isFinite(targetSectionId) || targetSectionId <= 1) {
+    // Section 1 is the starting level and cannot be skipped; minimum target is Section 3
+    if (!Number.isFinite(targetSectionId) || targetSectionId <= 2) {
       return {
         success: false,
         unlockedSectionId: 1,
         skippedUnitsCount: 0,
         awardedXp: 0,
-        error: "Invalid target section ID.",
+        error: "Invalid target section ID. Starting level cannot be skipped.",
       };
     }
 

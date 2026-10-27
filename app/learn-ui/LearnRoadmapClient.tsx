@@ -82,6 +82,9 @@ export default function LearnRoadmapClient({
       userRole === "maintainer",
   );
 
+  const isGuest = !roadmapData.userProgression.userId && !username;
+  const firstUnitId = roadmapData.sections[0]?.units[0]?.unit_id ?? 98;
+
   // Auto-sync active section in left rail as the learner scrolls
   useEffect(() => {
     const sectionElements = document.querySelectorAll<HTMLElement>(
@@ -389,44 +392,77 @@ export default function LearnRoadmapClient({
                 </div>
               </div>
 
-              {/* Section Skip Challenge Quick Action */}
-              {nextSection && (nextSection.is_locked || !activeSection?.is_completed) && (
-                <div className="section-skip-rail-box">
-                  <div className="section-skip-rail-header">
+              {/* Guest Preview Notice in Left Rail */}
+              {isGuest && (
+                <div className="guest-rail-notice-box">
+                  <div className="guest-rail-notice-header">
                     <svg
                       width="18"
                       height="18"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="2.5"
+                      strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       aria-hidden="true"
                     >
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
                     </svg>
-                    <span>Skip to Next Section</span>
+                    <span>Guest Preview Mode</span>
                   </div>
-                  <p className="section-skip-rail-desc">
-                    Ready to advance? Pass all remaining coding problems to jump straight to{" "}
-                    <strong>
-                      {nextSection.cat_name}, Sec {nextSection.sec_num}: {nextSection.sec_title}
-                    </strong>
-                    .
+                  <p className="guest-rail-notice-desc">
+                    You are exploring as a guest. The first unit is open to preview. Sign in to save your progress, unlock all units, and track your streaks!
                   </p>
-                  <div className="section-skip-badges">
-                    <span className="section-skip-chip">⏱️ 5 min / problem</span>
-                    <span className="section-skip-chip">❤️ 5 hearts total</span>
-                  </div>
-                  <Link
-                    href={`/quiz-cp/skip/${nextSection.sec_id}`}
-                    className="section-skip-rail-btn"
-                  >
-                    Take Skip Challenge
+                  <Link href="/login" className="guest-rail-login-btn">
+                    Sign In to Unlock All
                   </Link>
                 </div>
               )}
+
+              {/* Section Skip Challenge Quick Action: Authenticated learners only, and NOT on Section 1 */}
+              {!isGuest &&
+                activeSection &&
+                activeSection.sec_id > 1 &&
+                nextSection &&
+                (nextSection.is_locked || !activeSection?.is_completed) && (
+                  <div className="section-skip-rail-box">
+                    <div className="section-skip-rail-header">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      </svg>
+                      <span>Skip to Next Section</span>
+                    </div>
+                    <p className="section-skip-rail-desc">
+                      Ready to advance? Pass all remaining coding problems to jump straight to{" "}
+                      <strong>
+                        {nextSection.cat_name}, Sec {nextSection.sec_num}: {nextSection.sec_title}
+                      </strong>
+                      .
+                    </p>
+                    <div className="section-skip-badges">
+                      <span className="section-skip-chip">⏱️ 5 min / problem</span>
+                      <span className="section-skip-chip">❤️ 5 hearts total</span>
+                    </div>
+                    <Link
+                      href={`/quiz-cp/skip/${nextSection.sec_id}`}
+                      className="section-skip-rail-btn"
+                    >
+                      Take Skip Challenge
+                    </Link>
+                  </div>
+                )}
             </div>
           </aside>
 
@@ -597,21 +633,32 @@ export default function LearnRoadmapClient({
                 </div>
 
                 {selectedNode.nodeType === "checkpoint" ? (
-                  <div className="skip-modal-content">
-                    <p className="skip-modal-desc">
-                      Skip directly to this section by passing the coding assessment for every preceding uncompleted unit.
-                    </p>
-                    <div className="section-skip-badges" style={{ marginBottom: "12px" }}>
-                      <span className="section-skip-chip">⏱️ 5 min / problem</span>
-                      <span className="section-skip-chip">❤️ 5 hearts total</span>
+                  isGuest ? (
+                    <div className="guest-unit-lock-modal">
+                      <p className="guest-unit-lock-desc">
+                        Section skip challenges are reserved for registered learners. Sign in to take skip challenges, earn XP, and track your streak!
+                      </p>
+                      <Link href="/login" className="lesson-link">
+                        <p>Sign In to Continue</p>
+                      </Link>
                     </div>
-                    <Link
-                      href={`/quiz-cp/skip/${selectedNode.secId}`}
-                      className="lesson-link"
-                    >
-                      <p>⚡ Start Skip Challenge</p>
-                    </Link>
-                  </div>
+                  ) : (
+                    <div className="skip-modal-content">
+                      <p className="skip-modal-desc">
+                        Skip directly to this section by passing the coding assessment for every preceding uncompleted unit.
+                      </p>
+                      <div className="section-skip-badges" style={{ marginBottom: "12px" }}>
+                        <span className="section-skip-chip">⏱️ 5 min / problem</span>
+                        <span className="section-skip-chip">❤️ 5 hearts total</span>
+                      </div>
+                      <Link
+                        href={`/quiz-cp/skip/${selectedNode.secId}`}
+                        className="lesson-link"
+                      >
+                        <p>⚡ Start Skip Challenge</p>
+                      </Link>
+                    </div>
+                  )
                 ) : selectedNode.nodeType === "coming_soon" ? (
                   <button
                     type="button"
@@ -623,21 +670,34 @@ export default function LearnRoadmapClient({
                   </button>
                 ) : selectedNode.isLocked ? (
                   <div className="locked-node-modal-content">
-                    <button
-                      type="button"
-                      disabled
-                      className="lesson-link disabled"
-                      style={{ cursor: "not-allowed", border: "none" }}
-                    >
-                      <p>{selectedNode.lockReason ?? "Locked"}</p>
-                    </button>
-                    {selectedNode.secId > 1 && (
-                      <Link
-                        href={`/quiz-cp/skip/${selectedNode.secId}`}
-                        className="skip-secondary-link"
-                      >
-                        ⚡ Skip ahead to Section {selectedNode.secNum}
-                      </Link>
+                    {isGuest ? (
+                      <div className="guest-unit-lock-modal">
+                        <p className="guest-unit-lock-desc">
+                          Guest preview includes the first unit (Document Structure). Sign in to unlock this unit, earn XP, and track your streak!
+                        </p>
+                        <Link href="/login" className="lesson-link">
+                          <p>Sign In to Continue</p>
+                        </Link>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          disabled
+                          className="lesson-link disabled"
+                          style={{ cursor: "not-allowed", border: "none" }}
+                        >
+                          <p>{selectedNode.lockReason ?? "Locked"}</p>
+                        </button>
+                        {selectedNode.secId >= 3 && (
+                          <Link
+                            href={`/quiz-cp/skip/${selectedNode.secId}`}
+                            className="skip-secondary-link"
+                          >
+                            ⚡ Skip ahead to Section {selectedNode.secNum}
+                          </Link>
+                        )}
+                      </>
                     )}
                   </div>
                 ) : (
@@ -712,8 +772,8 @@ export default function LearnRoadmapClient({
                     <h2 id={`section-title-${section.sec_id}`}>{section.sec_title}</h2>
                   </div>
 
-                  {/* If section is locked and has units, display the Skip / Jump checkpoint row */}
-                  {section.is_locked && hasUnits && (
+                  {/* If section is locked and has units, display the Skip / Jump checkpoint row for Section 3+ (Authenticated only) */}
+                  {!isGuest && section.sec_id >= 3 && section.is_locked && hasUnits && (
                     <div
                       className="level-row"
                       style={{ "--wave-factor": 0 } as React.CSSProperties}
@@ -774,12 +834,23 @@ export default function LearnRoadmapClient({
                           : 0;
 
                       // Accurate per-node status determination:
+                      const isGuestUnitLocked = isGuest && unit.unit_id !== firstUnitId;
+
                       // 1. Lesson:
                       const isLessonCompleted =
                         unit.is_completed ||
                         (unit.slide_count > 0 &&
                           unit.current_slide_order >= unit.slide_count);
-                      const isLessonLocked = isStaffUser ? false : unit.is_locked;
+                      const isLessonLocked = isStaffUser
+                        ? false
+                        : isGuestUnitLocked
+                          ? true
+                          : unit.is_locked;
+                      const lessonLockReason = isGuestUnitLocked
+                        ? "Sign in to unlock"
+                        : isLessonLocked
+                          ? "Locked"
+                          : undefined;
 
                       // 2. Quiz:
                       const isLessonDoneForQuiz =
@@ -789,23 +860,31 @@ export default function LearnRoadmapClient({
                       const isQuizCompleted = unit.is_completed;
                       const isQuizLocked = isStaffUser
                         ? false
-                        : unit.is_locked || (!isLessonDoneForQuiz && !unit.is_completed);
-                      const quizLockReason = unit.is_locked
-                        ? "Locked"
-                        : !isLessonDoneForQuiz
-                          ? "Complete Lesson first"
-                          : undefined;
+                        : isGuestUnitLocked
+                          ? true
+                          : unit.is_locked || (!isLessonDoneForQuiz && !unit.is_completed);
+                      const quizLockReason = isGuestUnitLocked
+                        ? "Sign in to unlock"
+                        : unit.is_locked
+                          ? "Locked"
+                          : !isLessonDoneForQuiz
+                            ? "Complete Lesson first"
+                            : undefined;
 
                       // 3. Code Problem:
                       const isCpCompleted = unit.is_completed;
                       const isCpLocked = isStaffUser
                         ? false
-                        : unit.is_locked || !unit.is_completed;
-                      const cpLockReason = unit.is_locked
-                        ? "Locked"
-                        : !unit.is_completed
-                          ? "Complete Quiz first"
-                          : undefined;
+                        : isGuestUnitLocked
+                          ? true
+                          : unit.is_locked || !unit.is_completed;
+                      const cpLockReason = isGuestUnitLocked
+                        ? "Sign in to unlock"
+                        : unit.is_locked
+                          ? "Locked"
+                          : !unit.is_completed
+                            ? "Complete Quiz first"
+                            : undefined;
 
                       return (
                         <div key={unit.unit_id} className="curriculum-unit-group">
@@ -846,7 +925,7 @@ export default function LearnRoadmapClient({
                                       "lesson",
                                       isLessonCompleted,
                                       isLessonLocked,
-                                      isLessonLocked ? "Locked" : undefined,
+                                      lessonLockReason,
                                     )
                                   }
                                   aria-label={`Lesson for ${unit.unit_title}${
