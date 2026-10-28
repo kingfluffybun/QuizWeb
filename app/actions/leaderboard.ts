@@ -2,6 +2,8 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getLeaderboardDateRange } from "@/lib/leaderboard-period";
+import { getAppLocalDate } from "@/lib/timezone";
 import { unstable_cache, updateTag, revalidateTag } from "next/cache";
 import type { RowDataPacket } from "mysql2/promise";
 
@@ -25,18 +27,12 @@ interface LeaderboardRow extends RowDataPacket {
 
 const periods: LeaderboardPeriod[] = ["daily", "weekly", "monthly", "all-time"];
 
-const periodConditions: Record<LeaderboardPeriod, string> = {
-    daily: "a.activity_date = DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))",
-    weekly: "a.activity_date >= DATE_SUB(DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00')), INTERVAL WEEKDAY(DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))) DAY) AND a.activity_date <= DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))",
-    monthly: "a.activity_date >= DATE_FORMAT(DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00')), '%Y-%m-01') AND a.activity_date <= DATE(CONVERT_TZ(NOW(), '+00:00', '+08:00'))",
-    "all-time": "1 = 1",
-};
-
 async function getEntriesForPeriod(
     period: LeaderboardPeriod,
+    asOfDate: string,
     limit: number | null = 10,
 ): Promise<LeaderboardEntry[]> {
-    if (!Object.hasOwn(periodConditions, period)) {
+    if (!periods.some((validPeriod) => validPeriod === period)) {
         throw new Error("Invalid leaderboard period");
     }
 
@@ -54,16 +50,23 @@ async function getEntriesForPeriod(
         );
         rows = allTimeRows;
     } else {
+        const { startDate, endDate } = getLeaderboardDateRange(period, asOfDate);
+        const params: (string | number)[] = [startDate, endDate];
+        if (limit !== null) params.push(limit);
+
         const [periodRows] = await db.query<LeaderboardRow[]>(
-            `SELECT p.user_id, p.username, SUM(a.xp_earned) AS xp, u.avatar_color
+            `SELECT p.user_id, p.username,
+                LEAST(SUM(a.xp_earned), COALESCE(p.xp, 0)) AS xp,
+                u.avatar_color
             FROM user_activity_tbl a
             INNER JOIN player_tbl p ON p.user_id = a.user_id
             LEFT JOIN user_auth_tbl u ON p.user_id = u.user_id
-            WHERE ${periodConditions[period]}
-            GROUP BY p.user_id, p.username, u.avatar_color
-            ORDER BY SUM(a.xp_earned) DESC, p.username ASC, p.user_id ASC
+            WHERE a.activity_date BETWEEN ? AND ?
+                AND a.xp_earned BETWEEN 0 AND CASE WHEN a.activity_type = 'quiz' THEN 500 ELSE 100 END
+            GROUP BY p.user_id, p.username, p.xp, u.avatar_color
+            ORDER BY xp DESC, p.username ASC, p.user_id ASC
             ${limit === null ? "" : "LIMIT ?"}`,
-            limit === null ? [] : [limit],
+            params,
         );
         rows = periodRows;
     }
@@ -85,10 +88,11 @@ async function requireAuthenticatedUser(): Promise<void> {
 
 const fetchLeaderboardEntriesByPeriod = async (
     includeAll: boolean,
+    asOfDate: string,
 ): Promise<LeaderboardEntriesByPeriod> => {
     const [daily, weekly, monthly, allTime] = await Promise.all(
         periods.map((period) =>
-            getEntriesForPeriod(period, includeAll ? null : 10)
+            getEntriesForPeriod(period, asOfDate, includeAll ? null : 10)
         )
     );
 
@@ -123,15 +127,16 @@ export async function invalidateLeaderboardCache(): Promise<void> {
 
 export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<LeaderboardEntry[]> {
     await requireAuthenticatedUser();
-    if (!Object.hasOwn(periodConditions, period)) {
+    if (!periods.some((validPeriod) => validPeriod === period)) {
         throw new Error("Invalid leaderboard period");
     }
+    const asOfDate = getAppLocalDate();
     try {
-        const entries = await getCachedLeaderboardEntriesByPeriod(false);
+        const entries = await getCachedLeaderboardEntriesByPeriod(false, asOfDate);
         return entries[period];
     } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("incrementalCache missing")) {
-            const entries = await fetchLeaderboardEntriesByPeriod(false);
+            const entries = await fetchLeaderboardEntriesByPeriod(false, asOfDate);
             return entries[period];
         }
         throw err;
@@ -142,11 +147,12 @@ export async function getLeaderboardEntriesByPeriod(
     options: { includeAll?: boolean } = {},
 ): Promise<LeaderboardEntriesByPeriod> {
     await requireAuthenticatedUser();
+    const asOfDate = getAppLocalDate();
     try {
-        return await getCachedLeaderboardEntriesByPeriod(Boolean(options.includeAll));
+        return await getCachedLeaderboardEntriesByPeriod(Boolean(options.includeAll), asOfDate);
     } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("incrementalCache missing")) {
-            return fetchLeaderboardEntriesByPeriod(Boolean(options.includeAll));
+            return fetchLeaderboardEntriesByPeriod(Boolean(options.includeAll), asOfDate);
         }
         throw err;
     }
