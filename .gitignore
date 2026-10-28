@@ -43,6 +43,7 @@ tests/*
 !tests/test-enhancements-and-migration.ts
 !tests/test-curriculum-level-progression.ts
 !tests/test-staff-unit-immunity.ts
+!tests/test-leaderboard-period.ts
 
 # debug
 npm-debug.log*
@@ -66,4 +67,3 @@ WEBSITE_ARCHITECTURE_GUIDE.md
 
 # Database exports
 /exports/*.json
-
