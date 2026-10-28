@@ -1988,6 +1988,7 @@ footer.incorrect {
         width: 100% !important;
         min-width: 0 !important;
         padding-top: 0 !important;
+        padding-bottom: 14px !important;
     }
 
     .lesson-text-container {

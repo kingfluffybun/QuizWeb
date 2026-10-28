@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { UserInfoResponse } from "@/app/api/db/user-info/route";
+import { getUserStreakData, type StreakData } from "@/app/actions/streak";
 import Sidebar from "@/app/components/Sidebar";
 import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
 // import { useRouter } from 'next/navigation';
@@ -35,22 +36,11 @@ function ProfileIcon({ name }: { name: ProfileIconName }) {
     );
 }
 
-const activity = [
-    { day: "Sun", completed: true },
-    { day: "Sat", completed: true },
-    { day: "Mon", completed: true },
-    { day: "Tue", completed: true },
-    { day: "Wed", completed: false, today: true },
-    { day: "Thu", completed: false },
-    { day: "Fri", completed: false },
-];
-
 const weeklyGoal = 7;
-const completedActivityDays = activity.filter(({ completed }) => completed).length;
-const currentStreakDays = completedActivityDays;
 
 export default function ProfilePage() {
     const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+    const [streakData, setStreakData] = useState<StreakData | null>(null);
     const [username, setUsername] = useState<string | undefined>();
     const [email, setEmail] = useState<string | undefined>();
     const [avaColor, setAvaColor] = useState<string | undefined>();
@@ -99,6 +89,31 @@ export default function ProfilePage() {
             isMounted = false;
         };
     }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+        getUserStreakData()
+            .then((data) => {
+                if (isMounted) setStreakData(data);
+            })
+            .catch((error: unknown) => {
+                console.error("Failed to fetch profile streak data:", error);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const currentStreakDays = streakData?.currentStreak ?? 0;
+    const longestStreakDays = streakData?.longestStreak ?? 0;
+    const completedActivityDays =
+        streakData?.weekDays.filter(({ isActive }) => isActive).length ?? 0;
+    const streakMessage = streakData?.todayCompleted
+        ? "You're on a roll! Streak maintained for today!"
+        : currentStreakDays > 0
+            ? `You're on a roll! Finish a lesson today to make it ${currentStreakDays + 1}.`
+            : "Complete a lesson or quiz today to start your streak!";
 
     const oldDate = createdDate ? new Date(createdDate) : null;
     const formatDate = oldDate && !isNaN(oldDate.getTime())
@@ -214,8 +229,8 @@ export default function ProfilePage() {
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
-                                <div><strong>7 days</strong><span>Current streak</span></div>
-                                <small>Personal best: 12</small>
+                                <div><strong>{currentStreakDays} days</strong><span>Current streak</span></div>
+                                <small>Personal best: {longestStreakDays} days</small>
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
@@ -243,20 +258,31 @@ export default function ProfilePage() {
                                 <div className="activity-streak-copy">
                                     <strong>{currentStreakDays}</strong>
                                     <span>day streak!</span>
-                                    <p>{currentStreakDays ? `You're on a roll! Finish a lesson today to make it ${currentStreakDays + 1}.` : "Start a streak with a lesson today."}</p>
+                                    <p>{streakMessage}</p>
                                 </div>
                             </div>
                             <div className="activity-week" aria-label={`${completedActivityDays} learning days this week`}>
-                                {activity.map(({ day, completed, today }) => (
-                                    <div className="activity-day-container" key={day}>
+                                {streakData?.weekDays.map((day) => (
+                                    <div className="activity-day-container" key={day.date}>
                                         <span
-                                            className={`activity-day-marker${completed ? " is-complete" : ""}${today ? " is-today" : ""}`}
+                                            className={`activity-day-marker${day.isActive ? " is-complete" : ""}${day.isToday && !day.isActive ? " is-today" : ""}`}
                                             role="img"
-                                            aria-label={`${day}: ${completed ? "learning completed" : "no learning activity"}`}
+                                            aria-label={`${day.dayName}: ${day.isActive ? "learning completed" : day.isToday ? "today, no activity yet" : "no learning activity"}`}
                                         >
-                                            {completed && <ProfileIcon name="check" />}
+                                            {day.isActive && (
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="20"
+                                                    height="20"
+                                                    viewBox="0 0 24 24"
+                                                    fill="currentColor"
+                                                    aria-hidden="true"
+                                                >
+                                                    <path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" />
+                                                </svg>
+                                            )}
                                         </span>
-                                        <span className="activity-day-name">{day[0]}</span>
+                                        <span className="activity-day-name">{day.dayLetter}</span>
                                     </div>
                                 ))}
                             </div>

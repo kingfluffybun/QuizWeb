@@ -25,8 +25,6 @@
 }
 
 .profile-page main {
-    --profile-gutter: clamp(16px, 2.2vw, 32px);
-    --profile-max: 1200px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -36,21 +34,17 @@
     min-height: 0;
     overflow: hidden;
     overscroll-behavior: contain;
-    padding: 32px var(--profile-gutter) 24px;
+    padding: 24px;
 }
 
 .profile-content {
-    --profile-side: max(0px, calc((100% - var(--profile-max)) / 2));
     box-sizing: border-box;
     flex: 1 1 auto;
     width: auto;
-    max-width: none;
+    margin-inline:auto;
     min-width: 0;
     min-height: 0;
-    margin-right: calc(-1 * var(--profile-gutter));
-    padding-left: var(--profile-side);
-    padding-right: calc(var(--profile-gutter) + var(--profile-side));
-    padding-bottom: 24px;
+    max-width: 1440px;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -368,8 +362,8 @@
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: var(--selected-background-color);
-    color: var(--primary-color);
+    background: #ff75041a;
+    color: #ff7504;
 }
 
 .activity-heading-icon svg {
@@ -443,16 +437,16 @@
 }
 
 .activity-day-marker.is-complete {
-    border-color: var(--primary-color);
-    background: var(--primary-color);
+    border-color: #ff7504;
+    background: #ff7504;
     color: #fff;
 }
 
 .activity-day-marker.is-today {
-    border-color: var(--primary-color);
+    border-color: #ff7504;
     border-style: dashed;
     background: transparent;
-    color: var(--primary-color);
+    color: #ff7504;
 }
 
 .activity-day-marker svg {
@@ -492,7 +486,7 @@
 }
 
 .activity-goal-labels > span:last-child {
-    color: var(--primary-color);
+    color: #ff7504;
     font-weight: 700;
 }
 
@@ -508,7 +502,7 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--primary-color);
+    background: #ff7504;
     transition: width 180ms ease;
 }
 
