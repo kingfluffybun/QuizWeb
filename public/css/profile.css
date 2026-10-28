@@ -2,7 +2,6 @@
     align-items: stretch;
     grid-template-areas: "sidebar main";
     grid-template-columns: 240px minmax(0, 1fr);
-    transition: grid-template-columns 0.2s ease;
     grid-template-rows: minmax(0, 1fr);
     height: 100vh;
     height: 100dvh;

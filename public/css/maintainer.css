@@ -215,6 +215,17 @@
   color: var(--maintainer-text);
 }
 
+.maintainer-page > .sidebar {
+  grid-area: sidebar;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  border-right: 2px solid var(--maintainer-border);
+  background-color: var(--maintainer-bg);
+}
+
 .maintainer-page.sidebar-collapsed {
   grid-template-columns: 80px minmax(0, 1fr);
 }
