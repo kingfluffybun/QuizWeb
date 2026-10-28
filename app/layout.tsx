@@ -58,6 +58,18 @@ const themeInitScript = `
 })();
 `;
 
+const sidebarInitScript = `
+(function() {
+    try {
+        if (localStorage.getItem('quizweb-sidebar-collapsed') === 'true') {
+            document.documentElement.classList.add('quizweb-sidebar-collapsed');
+        } else {
+            document.documentElement.classList.remove('quizweb-sidebar-collapsed');
+        }
+    } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -75,6 +87,9 @@ export default function RootLayout({
                     <MobileShell>{children}</MobileShell>
                     <Script id="theme-init" strategy="beforeInteractive">
                         {themeInitScript}
+                    </Script>
+                    <Script id="sidebar-init" strategy="beforeInteractive">
+                        {sidebarInitScript}
                     </Script>
                 </SessionWrapper>
             </body>

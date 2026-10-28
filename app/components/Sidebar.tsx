@@ -171,7 +171,7 @@ export default function Sidebar(props: SidebarProps = {}) {
         if (parentContainer) {
             parentContainer.classList.toggle("sidebar-collapsed", isCollapsed);
         }
-    }, [isCollapsed]);
+    });
 
     const handleToggleCollapse = () => {
         const next = !isCollapsed;

@@ -1606,7 +1606,9 @@ function CodeProblemRunner() {
             </div>
           </div>
 
-          <div className="cp-mobile-actionbar">
+          <div
+            className={`cp-mobile-actionbar${activeFile === "js" ? "" : " no-run"}`}
+          >
             <button
               type="button"
               className="cp-mobile-action-btn"
