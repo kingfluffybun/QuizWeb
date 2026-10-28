@@ -95,7 +95,7 @@
 }
 
 #pending-submissions:not(.active) {
-  background: var(--maintainer-surface, #ffffff);
+  background: var(--input-control-surface, #ffffff);
 }
 
 .staff-workspace-tab:hover:not(.active) {

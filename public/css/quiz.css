@@ -255,7 +255,14 @@
     border-radius: 50%;
     background-color: #22c55e;
     border-bottom: 8px solid #1FB255;
+    animation: answer-message-pop 300ms ease-out both;
     svg {height: 100px; width: 100px; stroke-width: 4; margin-top: 8px;}
+}
+
+@keyframes answer-message-pop {
+    0% { transform: scale(0.5); }
+    65% { transform: scale(1.25); }
+    100% { transform: scale(1); }
 }
 
 .quiz-summary-stats {
@@ -334,13 +341,14 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    div {
+    .next-level-card {
         display: flex;
         justify-content: space-between;
         p {color: var(--text-main);}
-        svg {color: var(--text-muted);}
+        
     }
     gap: 24px;
+    
 }
 
 .next-level-card {
@@ -350,6 +358,7 @@
     display: flex; align-items: center;
     justify-content: space-between;
     border-radius: 16px;
+    svg {color: var(--text-muted);}
 }
 
 .next-level-content {
@@ -1387,7 +1396,7 @@
     transition: all ease 200ms;
     > div .check-circle {
         min-width: 28px; height: 28px; 
-        border: 1px solid var(--border-main);
+        border: 2px solid var(--border-main);
         border-radius: 50%;
         svg {color: white;}
     }

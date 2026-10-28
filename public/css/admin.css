@@ -196,15 +196,6 @@ html[data-motion="reduce"] .admin-main *::after {
   transition: background-color 0.3s ease;
 }
 
-.admin-app-layout > .sidebar {
-  grid-area: sidebar;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100dvh;
-  overflow-y: auto;
-}
-
 .admin-app-layout > .admin-main {
   grid-area: main;
   width: 100%;
