@@ -371,6 +371,7 @@ html[data-motion="reduce"] .settings-main *::after {
   grid-template-areas: "sidebar main";
   grid-template-rows: minmax(0, 1fr);
   grid-template-columns: 240px minmax(0, 1fr);
+  transition: grid-template-columns 0.2s ease;
   min-height: 100vh;
   height: 100vh;
   height: 100dvh;
