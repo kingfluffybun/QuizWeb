@@ -166,6 +166,7 @@ code {
     padding: 0 8px;
     font-family: var(--font-jetbrains-mono), monospace;
     border-radius: 4px;
+    color: var(--primary-color);
 }
 
 .col {

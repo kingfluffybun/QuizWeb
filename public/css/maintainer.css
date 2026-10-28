@@ -227,6 +227,7 @@
   overflow-y: auto;
   background-color: var(--maintainer-bg);
   scroll-behavior: smooth;
+  padding: 24px !important;
 }
 
 .maintainer-container {
@@ -1610,7 +1611,7 @@ html[data-motion="reduce"] .maintainer-page *::after {
   background: var(--maintainer-purple);
   /* border: 2px solid var(--border-main); */
   border-radius: 16px;
-  padding: var(--maintainer-space-4);
+  padding: var(--maintainer-space-6);
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;

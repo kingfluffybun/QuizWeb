@@ -552,21 +552,6 @@ export default function MaintainerStudioClient({
         </div>
       </section>
 
-      {/* ------------------------------------------------------------------- */}
-      {/* 3.5. Embedded Authoring Workspace (/input Integrated Studio)         */}
-      {/* ------------------------------------------------------------------- */}
-      {children && (
-        <div
-          className="maintainer-embedded-workspace"
-          hidden={studioView === "submissions"}
-        >
-          {children}
-        </div>
-      )}
-
-      {/* ------------------------------------------------------------------- */}
-      {/* 4. "My Submissions" Filterable Tracker                              */}
-      {/* ------------------------------------------------------------------- */}
       <section
         id="my-submissions-section"
         className="submissions-tracker-section"
@@ -593,17 +578,6 @@ export default function MaintainerStudioClient({
             <button
               type="button"
               role="tab"
-              aria-selected={statusFilter === "pending"}
-              className={`filter-tab-btn ${statusFilter === "pending" ? "active" : ""}`}
-              onClick={() => setStatusFilter("pending")}
-            >
-              <span className="tab-dot dot-pending" />
-              <span>Pending</span>
-              <span className="tab-count">{stats.pending}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
               aria-selected={statusFilter === "approved"}
               className={`filter-tab-btn ${statusFilter === "approved" ? "active" : ""}`}
               onClick={() => setStatusFilter("approved")}
@@ -611,6 +585,17 @@ export default function MaintainerStudioClient({
               <span className="tab-dot dot-approved" />
               <span>Approved</span>
               <span className="tab-count">{stats.approved}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={statusFilter === "pending"}
+              className={`filter-tab-btn ${statusFilter === "pending" ? "active" : ""}`}
+              onClick={() => setStatusFilter("pending")}
+            >
+              <span className="tab-dot dot-pending" />
+              <span>Pending</span>
+              <span className="tab-count">{stats.pending}</span>
             </button>
             <button
               type="button"
@@ -841,6 +826,18 @@ export default function MaintainerStudioClient({
           )}
         </div>
       </section>
+
+      {/* ------------------------------------------------------------------- */}
+      {/* 3.5. Embedded Authoring Workspace (/input Integrated Studio)         */}
+      {/* ------------------------------------------------------------------- */}
+      {children && (
+        <div
+          className="maintainer-embedded-workspace"
+          hidden={studioView === "submissions"}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }
