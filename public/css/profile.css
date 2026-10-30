@@ -108,6 +108,7 @@
 
 .profile-hero {
     position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -139,6 +140,7 @@
     height: 150px;
     content: "";
     pointer-events: none;
+    bottom: 0;
 }
 
 .profile-hero::before {
@@ -190,7 +192,6 @@
 
 .profile-identity > p {
     margin-top: 4px;
-    color: rgba(255, 255, 255, .88);
 }
 
 .profile-meta {
@@ -291,7 +292,6 @@
 .profile-stat-main > div {
     display: flex;
     flex-direction: column;
-    gap: 4px;
     min-width: 0;
 }
 
@@ -835,6 +835,11 @@
         gap: 12px;
     }
 
+    .profile-details {
+        padding-top: 36px;
+        padding-bottom: 16px;
+    }
+
     .profile-hero {
         height: 120px;
         gap: 16px;
@@ -918,6 +923,8 @@
         padding: 8px 0;
         flex-wrap: wrap;
         gap: 4px 16px;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .profile-details-list dd {
@@ -973,11 +980,10 @@
     }
 }
 
-.profile-skeleton .profile-skeleton-heading,
-.profile-skeleton .profile-skeleton-subheading,
 .profile-skeleton .profile-skeleton-name,
 .profile-skeleton .profile-skeleton-handle,
 .profile-skeleton .profile-skeleton-joined,
+.profile-skeleton .profile-skeleton-calendar-icon,
 .profile-skeleton .profile-skeleton-stat-heading,
 .profile-skeleton .profile-skeleton-stat-heading-icon,
 .profile-skeleton .profile-skeleton-stat-value,
@@ -1004,20 +1010,6 @@
 
 .profile-skeleton .profile-content {
     align-self: stretch;
-    padding-top: 8px;
-}
-
-.profile-skeleton .profile-skeleton-heading {
-    width: 180px;
-    height: 1.25em;
-    margin: 0;
-}
-
-.profile-skeleton .profile-skeleton-subheading {
-    width: 260px;
-    max-width: 100%;
-    height: 1em;
-    margin: 8px 0 0;
 }
 
 .profile-skeleton .profile-hero {
@@ -1028,8 +1020,7 @@
 }
 
 .profile-skeleton .profile-skeleton-avatar {
-    background: linear-gradient(90deg, rgba(255, 255, 255, .28) 20%, rgba(255, 255, 255, .56) 50%, rgba(255, 255, 255, .28) 80%);
-    background-size: 200% 100%;
+    background: var(--border-main);
 }
 
 .profile-skeleton .profile-skeleton-name {
@@ -1054,6 +1045,12 @@
     height: .8em;
     background: linear-gradient(90deg, rgba(255, 255, 255, .2) 20%, rgba(255, 255, 255, .48) 50%, rgba(255, 255, 255, .2) 80%);
     background-size: 200% 100%;
+}
+
+.profile-skeleton .profile-skeleton-calendar-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
 }
 
 .profile-skeleton .profile-skeleton-stat-heading-icon {
@@ -1190,15 +1187,7 @@
     }
 
     .profile-skeleton .profile-content {
-        padding: 24px 12px !important;
-    }
-
-    .profile-skeleton .profile-hero {
-        min-height: 120px;
-    }
-
-    .profile-skeleton .profile-statistics {
-        margin-top: 28px;
+        padding: 16px 12px !important;
     }
 
     .profile-skeleton .profile-skeleton-avatar {
@@ -1209,11 +1198,5 @@
         flex-basis: 64px;
         width: 64px;
         height: 76px;
-    }
-}
-
-@media (min-width: 381px) and (max-width: 768px) {
-    .profile-skeleton .profile-stat-card {
-        min-height: 144px;
     }
 }
