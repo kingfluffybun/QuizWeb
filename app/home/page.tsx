@@ -85,31 +85,17 @@ export default async function DashboardPage() {
                         <a href="#leaderboard" className="dashboard-jump-pill">Leaderboard</a>
                     </nav>
                     <div className="dashboard">
-                        <div className="card">
-                            <div className="card-title">
-                                <h2>Continue Where You Left Off</h2>
-                                <a href={resumeHref}><h2 className="quick-action">{quickActionLabel}</h2></a>
+                        {lastActiveProgress?.resume_type === "in_progress" && (
+                            <div className="card">
+                                <div className="card-title">
+                                    <h2>Continue Where You Left Off</h2>
+                                    <a href={resumeHref}><h2 className="quick-action">{quickActionLabel}</h2></a>
+                                </div>
+                                <p>
+                                    Continue <strong>{lastActiveProgress.unit_title}</strong> ({lastActiveProgress.cat_name} Section {lastActiveProgress.sec_num}, Slide {lastActiveProgress.current_slide_order} of {lastActiveProgress.total_slides}).
+                                </p>
                             </div>
-                            <p>
-                                {lastActiveProgress ? (
-                                    lastActiveProgress.resume_type === "up_next" && lastActiveProgress.next_unit_title ? (
-                                        <>
-                                            Up next: <strong>{lastActiveProgress.next_unit_title}</strong> ({lastActiveProgress.next_cat_name} Section {lastActiveProgress.next_sec_num}) — Continue your progression.
-                                        </>
-                                    ) : lastActiveProgress.resume_type === "completed_all" ? (
-                                        <>
-                                            You&apos;ve completed all available curriculum units! You can review or practice again anytime.
-                                        </>
-                                    ) : (
-                                        <>
-                                            Continue <strong>{lastActiveProgress.unit_title}</strong> ({lastActiveProgress.cat_name} Section {lastActiveProgress.sec_num}, Slide {lastActiveProgress.current_slide_order} of {lastActiveProgress.total_slides}).
-                                        </>
-                                    )
-                                ) : (
-                                    "Pick up right where you left off in the interactive curriculum to maintain your streak."
-                                )}
-                            </p>
-                        </div>
+                        )}
                         <div className="two-col-card" id="dashboard-progress">
                             <div className="card">
                                 <div className="card-title">
@@ -124,7 +110,7 @@ export default async function DashboardPage() {
                                                     {getCategoryIcon(sectionProgress.section.cat_name)}
                                                 </div>
                                                 <div>
-                                                    <h2>{sectionProgress.section.cat_name} Section {sectionProgress.section.sec_num}</h2>
+                                                    <h2>{sectionProgress.section.sec_title || `${sectionProgress.section.cat_name} Section ${sectionProgress.section.sec_num}`}</h2>
                                                     <p>{sectionProgress.completedUnits} of {sectionProgress.totalUnits} Units Completed</p>
                                                 </div>
                                             </div>

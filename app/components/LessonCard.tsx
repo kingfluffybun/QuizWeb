@@ -220,6 +220,7 @@ export function LessonCodeFrame({
             scrollBeyondLastLine: false,
             wordWrap: "off",
             renderLineHighlight: 'none',
+            showDeprecated: false,
           }}
         />
       ) : (

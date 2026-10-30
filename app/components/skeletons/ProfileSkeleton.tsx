@@ -41,10 +41,12 @@ export default function ProfileSkeleton() {
             <div className="profile-stats">
               {profileStats.map((stat) => (
                 <article className="profile-stat-card" key={stat}>
-                  <span className="skeleton-shimmer profile-stat-icon profile-skeleton-stat-icon" />
-                  <div>
-                    <span className="skeleton-shimmer profile-skeleton-stat-value" />
-                    <span className="skeleton-shimmer profile-skeleton-stat-label" />
+                  <div className="profile-stat-main">
+                    <span className="skeleton-shimmer profile-stat-icon profile-skeleton-stat-icon" />
+                    <div>
+                      <span className="skeleton-shimmer profile-skeleton-stat-value" />
+                      <span className="skeleton-shimmer profile-skeleton-stat-label" />
+                    </div>
                   </div>
                   <span className="skeleton-shimmer profile-skeleton-stat-note" />
                 </article>

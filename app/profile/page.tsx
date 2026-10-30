@@ -37,6 +37,13 @@ function ProfileIcon({ name }: { name: ProfileIconName }) {
 }
 
 const weeklyGoal = 7;
+const learningGoalOptions = [
+    {label: "Basic", value: 50},
+    {label: "Casual", value: 100},
+    {label: "Regular", value: 200},
+    {label: "Serious", value: 300},
+    {label: "Intense", value: 500},
+];
 
 export default function ProfilePage() {
     const [isProfileLoaded, setIsProfileLoaded] = useState(false);
@@ -222,11 +229,11 @@ export default function ProfilePage() {
                         <div className="profile-avatar" style={{backgroundColor: avaColor}} aria-label={`${username} avatar`}>{initials}</div>
                         <div className="profile-identity">
                             <div className="profile-name-line">
-                                <h2>{username}</h2>
+                                <h1>{username}</h1>
                             </div>
                             <p>@{email || username?.toLowerCase().replace(/\s+/g, "")}</p>
                             <div className="profile-meta">
-                                <span><ProfileIcon name="calendar" />Joined {formatDate}</span>
+                                <small><ProfileIcon name="calendar" />Joined {formatDate}</small>
                             </div>
                         </div>
                     </section>
@@ -235,23 +242,31 @@ export default function ProfilePage() {
                         <h2 id="statistics-title" className="profile-statistics-title"><ProfileIcon name="award" />Statistics</h2>
                         <div className="profile-stats" aria-label="Learning statistics">
                             <article className="profile-stat-card">
-                                <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="code" /></span>
-                                <div><strong>{profileStatistics?.lessonsCompleted.toLocaleString() ?? "—"}</strong><span>Lessons completed</span></div>
+                                <div className="profile-stat-main">
+                                    <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="code" /></span>
+                                    <div><strong>{profileStatistics?.lessonsCompleted.toLocaleString() ?? "—"}</strong><span>Lessons completed</span></div>
+                                </div>
                                 <small>+{profileStatistics?.lessonsCompletedThisWeek.toLocaleString() ?? "—"} this week</small>
                             </article>
                             <article className="profile-stat-card">
-                                <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
-                                <div><strong>{currentStreakDays} days</strong><span>Current streak</span></div>
+                                <div className="profile-stat-main">
+                                    <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
+                                    <div><strong>{currentStreakDays} days</strong><span>Current streak</span></div>
+                                </div>
                                 <small>Personal best: {longestStreakDays} days</small>
                             </article>
                             <article className="profile-stat-card">
-                                <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
-                                <div><strong>{streakData?.totalActiveDays.toLocaleString() ?? "—"}</strong><span>Learning days</span></div>
+                                <div className="profile-stat-main">
+                                    <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
+                                    <div><strong>{streakData?.totalActiveDays.toLocaleString() ?? "—"}</strong><span>Learning days</span></div>
+                                </div>
                                 <small>All-time active days</small>
                             </article>
                             <article className="profile-stat-card">
-                                <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="award" /></span>
-                                <div><strong>{profileStatistics?.totalXp.toLocaleString() ?? "—"} XP</strong><span>Total experience</span></div>
+                                <div className="profile-stat-main">
+                                    <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="award" /></span>
+                                    <div><strong>{profileStatistics?.totalXp.toLocaleString() ?? "—"} XP</strong><span>Total experience</span></div>
+                                </div>
                                 <small>+{profileStatistics?.xpEarnedThisWeek.toLocaleString() ?? "—"} this week</small>
                             </article>
                         </div>
@@ -306,7 +321,6 @@ export default function ProfilePage() {
                                 <div className="activity-goal-track" role="progressbar" aria-label="Weekly learning days goal" aria-valuemin={0} aria-valuemax={weeklyGoal} aria-valuenow={completedActivityDays}>
                                     <span style={{ width: `${Math.min((completedActivityDays / weeklyGoal) * 100, 100)}%` }} />
                                 </div>
-                                <p>{completedActivityDays} active {completedActivityDays === 1 ? "day" : "days"} · Goal: 7 days per week</p>
                             </div>
                         </section>
 
@@ -349,20 +363,19 @@ export default function ProfilePage() {
                                     </label>
                                     <label className="profile-details-input-group">
                                         <span className="profile-details-field-icon" aria-hidden="true"><ProfileIcon name="target" /></span>
-                                        <input 
-                                            id="learning-goal" 
-                                            type="number" 
-                                            min="10"
-                                            max="1000"
-                                            step="10"
-                                            placeholder="Daily XP Goal (e.g. 50)" 
-                                            defaultValue={draft?.learningGoal ?? learningGoal ?? 50}
-                                            onChange={(e) => {
-                                                const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
-                                                setDraft({ ...draft, learningGoal: val });
-                                            }}
-                                        />
-                                        <span className="profile-details-floating-label">Learning goal</span>
+                                        <select
+                                            id="learning-goal"
+                                            value={learningGoalOptions.some(({value}) => value === (draft?.learningGoal ?? learningGoal))
+                                                ? draft?.learningGoal ?? learningGoal ?? 50
+                                                : 50}
+                                            aria-label="Learning goal"
+                                            onChange={(e) => setDraft({ ...draft, learningGoal: Number(e.target.value) })}
+                                        >
+                                            {learningGoalOptions.map(({label, value}) => (
+                                                <option key={value} value={value}>{label} - {value} XP per day</option>
+                                            ))}
+                                        </select>
+                                        <span className="profile-details-floating-label profile-details-floating-label--select">Learning goal</span>
                                     </label>
                                     <div className="profile-form-actions">
                                         <button 

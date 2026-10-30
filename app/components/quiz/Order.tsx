@@ -93,11 +93,6 @@ export default function Order ({ quiz, value, onChange, disabled = false }: Ques
 
     return (
         <div className={`options-container row${disabled ? " is-locked" : ""}`} id="order">
-            <div className="order-number col">
-                {items.map((_, i) => (
-                    <div className="col" key={i}><h2>{i + 1}.</h2></div>
-                ))}
-            </div>
             <div className={`order-options col ${draggedIdx !== null ? "is-dragging" : ""}`}>
                 {items.map((item, index) => {
                     const isMoved = swapAnimation?.to === index;
@@ -111,49 +106,51 @@ export default function Order ({ quiz, value, onChange, disabled = false }: Ques
                         : undefined;
 
                     return (
-                        <div
-                            key={`order-${item}-${index}`}
-                            data-order-index={index}
-                            style={swapStyle}
-                            className={`options draggable-item ${draggedIdx === index ? "is-dragging" : ""} ${dragOverIdx === index ? "is-over" : ""} ${swapAnimation?.phase === "start" ? "swap-animation-start" : ""} ${swapAnimation?.phase === "settle" ? "swap-animation-settle" : ""} ${isMoved ? `swap-moved-${swapAnimation.direction}` : ""} ${isShifted ? `swap-shifted-${swapAnimation.direction}` : ""}`}
-                            draggable={!disabled}
-                            onDragStart={() => handleDragStart(index)}
-                            onDragOver={handleDragOver}
-                            onDragEnter={() => setDragOverIdx(index)}
-                            onDragLeave={() => setDragOverIdx(null)}
-                            onDrop={() => handleDrop(index)}
-                            onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
-                        >
-                            <span
-                                className="order-grip"
-                                onPointerDown={(event) => handleGripPointerDown(event, index)}
-                                onPointerMove={handleGripPointerMove}
-                                onPointerUp={handleGripPointerEnd}
-                                onPointerCancel={handleGripPointerEnd}
+                        <div className="order-slot" key={index}>
+                            <span className="order-slot-number">{index + 1}.</span>
+                            <div
+                                data-order-index={index}
+                                style={swapStyle}
+                                className={`options draggable-item ${draggedIdx === index ? "is-dragging" : ""} ${dragOverIdx === index ? "is-over" : ""} ${swapAnimation?.phase === "start" ? "swap-animation-start" : ""} ${swapAnimation?.phase === "settle" ? "swap-animation-settle" : ""} ${isMoved ? `swap-moved-${swapAnimation.direction}` : ""} ${isShifted ? `swap-shifted-${swapAnimation.direction}` : ""}`}
+                                draggable={!disabled}
+                                onDragStart={() => handleDragStart(index)}
+                                onDragOver={handleDragOver}
+                                onDragEnter={() => setDragOverIdx(index)}
+                                onDragLeave={() => setDragOverIdx(null)}
+                                onDrop={() => handleDrop(index)}
+                                onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-                            </span>
-                            <p>{item}</p>
-                            <span className="order-move-btns">
-                                <button
-                                    type="button"
-                                    className="order-move-btn"
-                                    aria-label={`Move "${item}" up`}
-                                    disabled={disabled || index === 0}
-                                    onClick={() => moveItem(index, index - 1)}
+                                <span
+                                    className="order-grip"
+                                    onPointerDown={(event) => handleGripPointerDown(event, index)}
+                                    onPointerMove={handleGripPointerMove}
+                                    onPointerUp={handleGripPointerEnd}
+                                    onPointerCancel={handleGripPointerEnd}
                                 >
-                                    ↑
-                                </button>
-                                <button
-                                    type="button"
-                                    className="order-move-btn"
-                                    aria-label={`Move "${item}" down`}
-                                    disabled={disabled || index === items.length - 1}
-                                    onClick={() => moveItem(index, index + 1)}
-                                >
-                                    ↓
-                                </button>
-                            </span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                                </span>
+                                <p>{item}</p>
+                                <span className="order-move-btns">
+                                    <button
+                                        type="button"
+                                        className="order-move-btn"
+                                        aria-label={`Move "${item}" up`}
+                                        disabled={disabled || index === 0}
+                                        onClick={() => moveItem(index, index - 1)}
+                                    >
+                                        ↑
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="order-move-btn"
+                                        aria-label={`Move "${item}" down`}
+                                        disabled={disabled || index === items.length - 1}
+                                        onClick={() => moveItem(index, index + 1)}
+                                    >
+                                        ↓
+                                    </button>
+                                </span>
+                            </div>
                         </div>
                     );
                 })}
