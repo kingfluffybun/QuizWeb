@@ -242,7 +242,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        p {text-align: center;}
+        p {text-align: center; line-height: 1.5}
 
     }
 }
@@ -280,12 +280,10 @@
         flex-direction: column;
         align-items: center;
         flex: 1;
-        padding: 16px;
         border-radius: 16px;
-        background-color: var(--bg-card);
-        border: 2px solid var(--border-main);
         gap: 4px;
-        p {font-weight: 400; font-size: clamp(.5rem, 1.5vw, 1rem);}
+        p {font-weight: 400; font-size: clamp(.75rem, 1.75vw, 1.25rem);}
+        h2 {font-size: clamp(1rem, 2.25vw, 1.5rem)}
         div {
             display: flex; align-items: center;
             svg.lucide-timer {padding-bottom: 2px;}
@@ -295,22 +293,16 @@
 }
 
 .stats-card div#xp {
-    border: 2px solid color-mix(in srgb, var(--selected-color) 30%, transparent);
     h2, svg {color: var(--selected-color);}
     svg {fill: var(--selected-color);}
-    background-color: color-mix(in srgb, var(--selected-color) 10%, transparent);
 }
 
 .stats-card div#accuracy {
-    border: 2px solid #22C55E4d;
     h2, svg {color: #22C55E;}
-    background-color: #22C55E1A;
 }
 
 .stats-card div#time {
-    border: 2px solid #38BDF84d;
     h2, svg {color: #38BDF8;}
-    background-color: #38BDF81A;
 }
 
 .daily-goal-stats {
@@ -754,7 +746,20 @@
     align-items: start;
     gap: 24px;
     min-width: 0;
-    height: 100%
+    height: 100%;
+    overflow: hidden;
+}
+
+@media (min-width: 769px) {
+    .quiz-container.has-code-block > .quiz-question-prompt {
+        flex: 0 0 auto;
+    }
+
+    .quiz-question-layout {
+        min-height: 0;
+        height: auto;
+        flex: 1 1 0;
+    }
 }
 
 .quiz-question-code-column,
@@ -1151,22 +1156,40 @@
     flex: 1;
 }
 
-.order-number, .order-options {justify-content: flex-start;}
-
-.order-number {
-    height: 100%;
-    > div {
-        max-height: 96px;
-        flex: 1;
-        min-height: 0;
-        > h2 {padding: 0 20px;}
-    }
+.order-options {justify-content: flex-start;}
+.order-options {
+    --order-item-gap: 12px;
+    height: auto;
+    flex: 1;
+    > .order-slot {width: 100%;}
+    > .order-slot > .options {border-radius: 16px;}
 }
 
-.order-options {
-    height: 100%;
+.order-slot {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    min-height: 0;
+}
+
+.order-slot-number {
+    display: flex;
+    flex: 0 0 48px;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    font-family: var(--font-poppins), 'Poppins', sans-serif;
+    font-size: clamp(0.75rem, 2vw, 1.25rem);
+    font-weight: 600;
+    line-height: 1;
+}
+
+.order-options > .order-slot {gap: 12px;}
+.order-options > .order-slot > .options {
+    width: auto;
+    height: 96px;
     flex: 1;
-    > .options {border-radius: 16px;}
+    min-width: 0;
 }
 
 .draggable-item {
@@ -1198,10 +1221,10 @@
     transform: translateY(0);
     transition: transform 220ms ease-in-out;
 }
-.draggable-item.swap-animation-start.swap-moved-down { transform: translateY(calc((100% + 12px) * var(--swap-distance) * -1)); }
-.draggable-item.swap-animation-start.swap-moved-up { transform: translateY(calc((100% + 12px) * var(--swap-distance))); }
-.draggable-item.swap-animation-start.swap-shifted-down { transform: translateY(calc(100% + 12px)); }
-.draggable-item.swap-animation-start.swap-shifted-up { transform: translateY(calc(-100% - 12px)); }
+.draggable-item.swap-animation-start.swap-moved-down { transform: translateY(calc((100% + var(--order-item-gap)) * var(--swap-distance) * -1)); }
+.draggable-item.swap-animation-start.swap-moved-up { transform: translateY(calc((100% + var(--order-item-gap)) * var(--swap-distance))); }
+.draggable-item.swap-animation-start.swap-shifted-down { transform: translateY(calc(100% + var(--order-item-gap))); }
+.draggable-item.swap-animation-start.swap-shifted-up { transform: translateY(calc(-100% - var(--order-item-gap))); }
 
 /* =========================== End of Reorder =========================== */
 
@@ -1884,7 +1907,7 @@ footer.incorrect {
     }
 
     .quiz-page main {
-        padding: 24px 24px 0 !important;
+        padding: 24px 24px !important;
         width: 100% !important;
         min-width: 0 !important;
         max-width: 100% !important;
@@ -2133,47 +2156,33 @@ footer.incorrect {
 
     .options-container#order {
         width: 100% !important;
-        gap: 0 !important;
-    }
-
-    .order-number {
-        position: absolute !important;
-        width: 1px !important;
-        height: 1px !important;
-        overflow: hidden !important;
-        clip: rect(0, 0, 0, 0) !important;
-        white-space: nowrap !important;
+        gap: 10px !important;
     }
 
     .order-options {
+        --order-item-gap: 6px;
         gap: 6px !important;
         min-width: 0 !important;
-        margin-left: 56px !important;
-        counter-reset: order-option;
+        margin-left: 0 !important;
     }
 
-    .order-options > .options {
+    .order-options > .order-slot {
+        align-items: stretch;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .order-slot-number {
+        flex: 0 0 32px;
+    }
+
+    .order-options > .order-slot > .options {
         min-height: 48px !important;
         max-height: none !important;
         height: auto !important;
-        position: relative;
-        counter-increment: order-option;
-    }
-
-    .order-options > .options::before {
-        content: counter(order-option) ".";
-        position: absolute;
-        top: 50%;
-        right: calc(100% + 18px);
-        width: 32px;
-        transform: translateY(-50%);
-        color: var(--text-main);
-        font-family: var(--font-poppins), 'Poppins', sans-serif;
-        font-size: clamp(0.75rem, 2vw, 1.25rem);
-        font-weight: 600;
-        line-height: 1;
-        text-align: center;
-        pointer-events: none;
+        width: auto !important;
+        flex: 1;
+        min-width: 0;
     }
 
     .options-container#ftb {
