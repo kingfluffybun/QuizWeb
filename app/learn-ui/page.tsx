@@ -11,6 +11,21 @@ import "#css/sidebar.css";
 import "#css/learn.css";
 import Link from "next/link";
 
+type RoadlineStartSide = "left" | "right";
+type RoadlineSegment = "to-top" | "to-side";
+
+function getRoadlinePath(startSide: RoadlineStartSide, segment: RoadlineSegment) {
+    if (segment === "to-top") {
+        return startSide === "left"
+            ? "M 101 38 H 138 Q 168 38 168 68 V 113"
+            : "M 123 38 H 86 Q 56 38 56 68 V 113";
+    }
+
+    return startSide === "left"
+        ? "M 56 77 V 121 Q 56 151 86 151 H 123"
+        : "M 168 77 V 121 Q 168 151 138 151 H 101";
+}
+
 export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) {
     const [showLessonDetail, setShowLessonDetail] = useState(false);
 
@@ -84,7 +99,32 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                         {/* Section Title */}
                         <h2>Getting Started</h2>
                     </div>
-                    <div className="level-row">
+                    <div className="level-path">
+                    <div className="level-row path-left">
+                        <div className="level-content">
+                            <div className="level">
+                                <div className="level-btn complete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check preview-icon"><path d="M20 6 9 17l-5-5"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                        <svg className="roadline roadline-to-right" viewBox="0 0 168 113" aria-hidden="true">
+                            <path d={getRoadlinePath("left", "to-top")} />
+                        </svg>
+                    </div>
+                    <div className="level-row path-right">
+                        <div className="level-content">
+                            <div className="level">
+                                <div className="level-btn complete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check preview-icon"><path d="M20 6 9 17l-5-5"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                        <svg className="roadline roadline-to-left" viewBox="0 0 168 189" aria-hidden="true">
+                            <path d={getRoadlinePath("right", "to-side")} />
+                        </svg>
+                    </div>
+                    <div className="level-row path-left">
                         <div className="level-content">
                             <div className="level">
                                 <div className="level-btn complete">
@@ -93,23 +133,6 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                             </div>
                         </div>
                     </div>
-                    <div className="level-row">
-                        <div className="level-content">
-                            <div className="level">
-                                <div className="level-btn complete">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check preview-icon"><path d="M20 6 9 17l-5-5"/></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="level-row">
-                        <div className="level-content">
-                            <div className="level">
-                                <div className="level-btn complete">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check preview-icon"><path d="M20 6 9 17l-5-5"/></svg>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     <div className="level-row-divider">
                         <hr></hr>
@@ -117,8 +140,9 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                         <p>Text Content</p>
                         <hr></hr>
                     </div>
+                    <div className="level-path">
                     {/* Lesson, Current Level */} 
-                    <div className="level-row">
+                    <div className="level-row path-right">
                         <div className="level-content">
                             <div className="level">
                                 <div className="level-btn">
@@ -126,9 +150,12 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                 </div>
                             </div>
                         </div>
+                        <svg className="roadline roadline-to-left" viewBox="0 0 168 189" aria-hidden="true">
+                            <path d={getRoadlinePath("right", "to-top")} />
+                        </svg>
                     </div>
                     {/* Quiz */}
-                    <div className="level-row">
+                    <div className="level-row path-left">
                         <div className="level-content">
                             <div className="level">
                                 <div className="level-btn disabled">
@@ -136,15 +163,19 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                 </div>
                             </div>
                         </div>
+                        <svg className="roadline roadline-to-right" viewBox="0 0 168 113" aria-hidden="true">
+                            <path d={getRoadlinePath("left", "to-side")} />
+                        </svg>
                     </div>
                     {/* Code Problem */}
-                    <div className="level-row">
+                    <div className="level-row path-right">
                         <div className="level-content">
                             <div className="level">
                                 <div className="level-btn disabled">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-code preview-icon"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
 
@@ -153,7 +184,8 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                         <h2>Linking Your World</h2>
                     </div>
 
-                    <div className="level-row">
+                    <div className="level-path">
+                    <div className="level-row path-left">
                         <div className="level-content">
                             {/* Skip Section */}
                             <div className="level">
@@ -161,6 +193,7 @@ export default function LearnUnitsClient({ units }: { units: AvailableUnit[] }) 
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M14 20L21 12.5L14 5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"/> <path d="M5 20L12 12.5L5 5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"/> </svg>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </div>
