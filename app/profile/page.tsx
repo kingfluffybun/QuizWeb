@@ -206,22 +206,19 @@ export default function ProfilePage() {
             <Sidebar />
             <main>
                 <div className="profile-content">
-                    <header className="profile-page-heading">
-                        <div>
-                            <h1>My profile</h1>
-                            <p className="profile-heading-copy">Your learning journey, all in one place.</p>
+                    <section className="profile-header" aria-label="Profile summary">
+                        <div className="profile-hero">
+                            <div className="profile-avatar" style={{backgroundColor: avaColor}} aria-label={`${username} avatar`}>{initials}</div>
                         </div>
-                    </header>
-
-                    <section className="profile-hero" aria-label="Profile summary">
-                        <div className="profile-avatar" style={{backgroundColor: avaColor}} aria-label={`${username} avatar`}>{initials}</div>
-                        <div className="profile-identity">
-                            <div className="profile-name-line">
-                                <h1>{username}</h1>
-                            </div>
-                            <p>@{email || username?.toLowerCase().replace(/\s+/g, "")}</p>
-                            <div className="profile-meta">
-                                <small><ProfileIcon name="calendar" />Joined {formatDate}</small>
+                        <div className="profile-details">
+                            <div className="profile-identity">
+                                <div className="profile-name-line">
+                                    <h1>{username}</h1>
+                                </div>
+                                <p>@{email || username?.toLowerCase().replace(/\s+/g, "")}</p>
+                                <div className="profile-meta">
+                                    <small><ProfileIcon name="calendar" />Joined {formatDate}</small>
+                                </div>
                             </div>
                         </div>
                     </section>

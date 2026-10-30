@@ -588,7 +588,8 @@ button.quick-action-btn:hover {
         min-width: 40px;
         box-sizing: border-box;
         margin: 0;
-        padding: 4px 4px 4px 0;
+        padding: 4px 0;
+        padding-right: 8px;
         text-align: right;
         font-size: clamp(.25rem, 1.25vw, 0.75rem);
     }

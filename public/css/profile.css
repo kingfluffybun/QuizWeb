@@ -3,11 +3,11 @@
     grid-template-areas: "sidebar main";
     grid-template-columns: 240px minmax(0, 1fr);
     transition: grid-template-columns 0.2s ease;
-    grid-template-rows: minmax(0, 1fr);
-    height: 100vh;
-    height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
+    grid-template-rows: auto;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
 }
 
 .profile-page > .sidebar {
@@ -31,24 +31,20 @@
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    overscroll-behavior: contain;
+    overflow: visible;
     padding: 24px;
 }
 
 .profile-content {
     box-sizing: border-box;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     width: 100%;
     margin-inline:auto;
     min-width: 0;
-    min-height: 0;
+    min-height: auto;
     max-width: 1440px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
+    overflow: visible;
+    scrollbar-gutter: auto;
 }
 
 .profile-page p {
@@ -104,49 +100,82 @@
     transform: scale(.97);
 }
 
+.profile-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
 .profile-hero {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 24px;
-    min-height: 152px;
-    padding: 24px;
-    overflow: hidden;
+    height: 160px;
+    padding: 16px;
+    overflow: visible;
     border: 0;
-    border-radius: 12px;
     background: var(--primary-color);
     box-shadow: 0 4px 8px rgba(0, 0, 0, .08), 0 12px 24px rgba(0, 0, 0, .1);
+    border-radius: 12px 12px 0 0;
 }
 
+.profile-details {
+    position: relative;
+    z-index: 1;
+    background-color: var(--bg-card);
+    padding-top: 56px; padding-bottom: 28px;
+    border: 2px solid var(--border-main);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+}
+
+.profile-hero::before,
 .profile-hero::after {
     position: absolute;
-    right: -8px;
-    bottom: -40px;
-    width: 180px;
-    height: 180px;
-    background: url("/assets/landing-page/Clouds-right.svg") center / contain no-repeat;
+    z-index: 0;
+    width: 300px;
+    height: 150px;
     content: "";
     pointer-events: none;
 }
 
+.profile-hero::before {
+    left: 0px;
+    background: url("/assets/landing-page/Clouds-left.svg") left bottom / contain no-repeat;
+}
+
+.profile-hero::after {
+    right: 0px;
+    background: url("/assets/landing-page/Clouds-right.svg") right bottom / contain no-repeat;
+}
+
 .profile-avatar {
-    z-index: 1;
+    position: absolute;
+    bottom: -56px;
+    z-index: 2;
     display: grid;
     flex: 0 0 96px;
     place-items: center;
-    width: 96px;
-    height: 96px;
+    width: 120px;
+    height: 120px;
     /* border: 4px solid var(--bg-card); */
     border-radius: 1000px;
     /* background: linear-gradient(145deg, #b794ff, #7743e6); */
-    box-shadow: 0 8px 24px rgba(94, 53, 177, .2);
     color: #1f2937;
     font: 700 2.5rem var(--font-poppins), sans-serif;
+    border: 4px solid var(--bg-card);
 }
 
 .profile-identity {
     z-index: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .profile-name-line {
@@ -399,7 +428,7 @@
 .activity-streak-copy strong {
     margin: 0;
     color: #ff7504;
-    font: 800 clamp(3.5rem, 5vw, 4.25rem)/1 var(--font-poppins), sans-serif;
+    font: 800 clamp(4rem, 6vw, 4.75rem)/1 var(--font-poppins), sans-serif;
 }
 
 .activity-streak-copy > span {
@@ -795,7 +824,7 @@
 
     .profile-content {
         flex: 0 0 auto !important;
-        margin-right: 0 !important;
+        margin-inline: auto !important;
         padding: 16px 12px !important;
         overflow: visible !important;
         scrollbar-gutter: auto;
@@ -807,8 +836,8 @@
     }
 
     .profile-hero {
+        height: 120px;
         gap: 16px;
-        min-height: 0;
         padding: 20px 16px;
     }
 
@@ -816,14 +845,23 @@
         flex-basis: 72px;
         width: 72px;
         height: 72px;
-        border-radius: 24px;
         font-size: 1.35rem;
+        bottom:-36px;
     }
 
+    .profile-hero::before,
     .profile-hero::after {
-        width: 120px;
-        height: 120px;
-        opacity: .5;
+        bottom: 0;
+        width: 180px;
+        height: 104px;
+    }
+
+    .profile-hero:before {
+        left: -80px;
+    }
+
+    .profile-hero:after {
+        right: -80px;
     }
 
     .profile-stats {
@@ -906,6 +944,10 @@
         flex-basis: 64px;
         width: 64px;
         height: 76px;
+    }
+
+    .activity-streak-copy strong {
+        font-size: 3rem;
     }
 }
 
