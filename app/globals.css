@@ -169,6 +169,10 @@ code {
     color: var(--primary-color);
 }
 
+[data-theme="dark"] code {
+    background-color: #090918;
+}
+
 .col {
     display: flex;
     flex-direction: column;
@@ -308,7 +312,7 @@ textarea {
         color: var(--selected-color);
     }
 
-    .order-options > .options > p,
+    .order-options > .order-slot > .options > p,
     .options.draggable-item > p {
         flex: 1;
         min-width: 0;
