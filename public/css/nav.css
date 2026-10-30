@@ -87,9 +87,9 @@
     
     div:last-child {
         > a p {
-            background-color: var(--bg-card);
+            background-color: var(--primary-color);
             border-radius: 8px;
-            color: var(--primary-color); 
+            color: var(--text-main); 
             padding: 0.5rem 0.75rem;
         }
         > a p.profile {

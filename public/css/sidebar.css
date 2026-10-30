@@ -237,8 +237,8 @@
                 padding: 0;
                 transition: 200ms all ease;
                 &:hover {
-                    background-color: var(--bg-main);
-                    color: var(--text-main);
+                    background-color: var(--border-main);
+                    svg {color: var(--text-main);}
                 }
                 &:focus-visible {
                     outline: 2px solid var(--primary-color);
