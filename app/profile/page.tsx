@@ -46,6 +46,12 @@ export default function ProfilePage() {
     const [avaColor, setAvaColor] = useState<string | undefined>();
     const [learningGoal, setLearningGoal] = useState<number | undefined>();
     const [createdDate, setCreatedDate] = useState<string>();
+    const [profileStatistics, setProfileStatistics] = useState<{
+        lessonsCompleted: number;
+        lessonsCompletedThisWeek: number;
+        totalXp: number;
+        xpEarnedThisWeek: number;
+    } | null>(null);
 
     const [draft, setDraft] = useState<{ username?: string; email?: string; learningGoal?: number }>({
         username: undefined,
@@ -73,6 +79,12 @@ export default function ProfilePage() {
                 setAvaColor(userData?.avatar_color);
                 setCreatedDate(userData?.created_at);
                 setLearningGoal(numericGoal);
+                setProfileStatistics({
+                    lessonsCompleted: Number(userData?.lessons_completed ?? 0),
+                    lessonsCompletedThisWeek: Number(userData?.lessons_completed_this_week ?? 0),
+                    totalXp: Number(userData?.xp ?? 0),
+                    xpEarnedThisWeek: Number(userData?.xp_earned_this_week ?? 0),
+                });
                 setDraft({
                     username: userData?.username,
                     learningGoal: numericGoal
@@ -224,8 +236,8 @@ export default function ProfilePage() {
                         <div className="profile-stats" aria-label="Learning statistics">
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="code" /></span>
-                                <div><strong>24</strong><span>Lesson completed</span></div>
-                                <small>+4 this week</small>
+                                <div><strong>{profileStatistics?.lessonsCompleted.toLocaleString() ?? "—"}</strong><span>Lessons completed</span></div>
+                                <small>+{profileStatistics?.lessonsCompletedThisWeek.toLocaleString() ?? "—"} this week</small>
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
@@ -234,13 +246,13 @@ export default function ProfilePage() {
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-green"><ProfileIcon name="check" /></span>
-                                <div><strong>86%</strong><span>Average accuracy</span></div>
-                                <small>Looking sharp!</small>
+                                <div><strong>{streakData?.totalActiveDays.toLocaleString() ?? "—"}</strong><span>Learning days</span></div>
+                                <small>All-time active days</small>
                             </article>
                             <article className="profile-stat-card">
                                 <span className="profile-stat-icon profile-stat-icon-purple"><ProfileIcon name="award" /></span>
-                                <div><strong>1,240 XP</strong><span>Total experience</span></div>
-                                <small>+120 this week</small>
+                                <div><strong>{profileStatistics?.totalXp.toLocaleString() ?? "—"} XP</strong><span>Total experience</span></div>
+                                <small>+{profileStatistics?.xpEarnedThisWeek.toLocaleString() ?? "—"} this week</small>
                             </article>
                         </div>
                     </section>
