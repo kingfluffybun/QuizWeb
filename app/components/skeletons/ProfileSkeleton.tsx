@@ -5,7 +5,7 @@ import "#css/nav.css";
 import "#css/sidebar.css";
 import "#css/profile.css";
 
-const profileStats = [1, 2, 3, 4];
+const profileStats = [1, 2, 3];
 const profileDetails = [1, 2, 3];
 const activityDays = [1, 2, 3, 4, 5, 6, 7];
 
@@ -41,10 +41,12 @@ export default function ProfileSkeleton() {
             <div className="profile-stats">
               {profileStats.map((stat) => (
                 <article className="profile-stat-card" key={stat}>
-                  <span className="skeleton-shimmer profile-stat-icon profile-skeleton-stat-icon" />
-                  <div>
-                    <span className="skeleton-shimmer profile-skeleton-stat-value" />
-                    <span className="skeleton-shimmer profile-skeleton-stat-label" />
+                  <div className="profile-stat-main">
+                    <span className="skeleton-shimmer profile-stat-icon profile-skeleton-stat-icon" />
+                    <div>
+                      <span className="skeleton-shimmer profile-skeleton-stat-value" />
+                      <span className="skeleton-shimmer profile-skeleton-stat-label" />
+                    </div>
                   </div>
                   <span className="skeleton-shimmer profile-skeleton-stat-note" />
                 </article>
