@@ -140,9 +140,49 @@ main {
 .level-row {
     display: flex;
     justify-content: center;
+    position: relative;
     width: 100%;
-    transform: translateX(calc(var(--wave-factor, 0) * var(--roadmap-wave-amplitude, 52px)));
-    transition: transform 0.25s ease;
+}
+
+.level-path {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    width: 100%;
+}
+
+.roadline {
+    position: absolute;
+    top: 0;
+    left: calc(50% - 112px);
+    z-index: 0;
+    width: 168px;
+    height: 113px;
+    overflow: visible;
+    color: var(--roadline-color, var(--border-main));
+    pointer-events: none;
+    path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 8px;
+        stroke-linecap: round;
+    }
+}
+
+.roadline-to-left {
+    height: 189px;
+}
+
+.level-row:not(:has(.level-btn.disabled)) {
+    --roadline-color: var(--primary-color);
+}
+
+.level-row.path-left .level {
+    transform: translateX(-56px);
+}
+
+.level-row.path-right .level {
+    transform: translateX(56px);
 }
 
 .level-content {
@@ -160,6 +200,7 @@ main {
 
 .level {
     position: relative;
+    z-index: 1;
     height: 77px; width: 90px;
     --level-color: var(--primary-color);
     &:has(.level-btn.disabled) {

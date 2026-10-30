@@ -46,6 +46,11 @@ tests/*
 !tests/test-cp-engine.ts
 !tests/test-curriculum-roadmap-integration.ts
 !tests/test-session-latency-optimization.ts
+!tests/test-leaderboard-period.ts
+!tests/test-section-skip.ts
+!tests/test-guest-learn-ui.ts
+!tests/test-unit-pass-completion.ts
+!tests/env-loader.ts
 
 # debug
 npm-debug.log*
@@ -69,4 +74,3 @@ WEBSITE_ARCHITECTURE_GUIDE.md
 
 # Database exports
 /exports/*.json
-

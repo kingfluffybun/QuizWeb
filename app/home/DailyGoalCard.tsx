@@ -69,7 +69,14 @@ export default function DailyGoalCard({
     );
     const goal = goalData.dailyGoal;
     const todayProgress = Math.min(todayXp / goal, 1) * 100;
-    const chartTicks = [0, ...DAILY_XP_GOAL_THRESHOLDS].reverse();
+    const highestWeekXp = Math.max(0, ...previewWeekXp);
+    const chartMaximumXp = Math.max(
+        MAX_CHART_XP,
+        Math.ceil(highestWeekXp / MAX_CHART_XP) * MAX_CHART_XP,
+    );
+    const chartTicks = [0, ...DAILY_XP_GOAL_THRESHOLDS]
+        .map((value) => Math.round((value / MAX_CHART_XP) * chartMaximumXp))
+        .reverse();
 
     const updatePreviewDay = (index: number, value: number) => {
         const currentPreview = previewData ?? {
@@ -144,7 +151,7 @@ export default function DailyGoalCard({
                                             className={`graph-y-bar${hasActivity ? "" : " graph-y-bar-empty"}`}
                                             style={{
                                                 height: hasActivity
-                                                    ? `${getBarHeight(xp, MAX_CHART_XP)}px`
+                                                    ? `${getBarHeight(xp, chartMaximumXp)}px`
                                                     : "2px",
                                             }}
                                             title={`${xp} XP on ${goalData.weekDates[index]}`}

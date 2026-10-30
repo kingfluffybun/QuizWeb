@@ -230,13 +230,24 @@ export async function getUserStreakData(
         const todayCompleted = activeDateSet.has(todayDate);
         const yesterdayCompleted = activeDateSet.has(getAdjacentDate(todayDate, -1));
 
-        // Streak is only alive if today or yesterday had activity
-        let currentStreak = 0;
-        if (todayCompleted || yesterdayCompleted) {
-            currentStreak = Math.max(computed.currentStreak, playerCurrentStreak);
-        }
-
+        // Streak is only alive if today or yesterday had activity (computed from true activity dates)
+        const currentStreak = (todayCompleted || yesterdayCompleted) ? computed.currentStreak : 0;
         const longestStreak = Math.max(playerMaxStreak, computed.longestStreak, currentStreak);
+
+        // Keep player_tbl synchronized with true activity-based streak
+        if (playerCurrentStreak !== currentStreak || playerMaxStreak < longestStreak) {
+            try {
+                await db.query<ResultSetHeader>(
+                    `UPDATE player_tbl
+                     SET current_streak = ?,
+                         max_streak = GREATEST(COALESCE(max_streak, 0), ?)
+                     WHERE user_id = ?`,
+                    [currentStreak, longestStreak, userId],
+                );
+            } catch (err) {
+                console.error("Failed to sync player streak in getUserStreakData:", err);
+            }
+        }
 
         // Find active days in the target year & month
         const monthPrefix = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-`;
@@ -401,31 +412,8 @@ export async function updatePlayerQuizStreak(
     currentStreak: number,
     bestStreak: number,
 ): Promise<{ success: boolean; error?: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: "Authentication required to save quiz streak" };
-    }
-
-    const userId = Number(session.user.id);
-    if (!Number.isSafeInteger(userId) || userId <= 0) {
-        return { success: false, error: "Invalid user session" };
-    }
-    if (!isValidQuizStreak(currentStreak, bestStreak)) {
-        return { success: false, error: "Invalid quiz streak values" };
-    }
-
-    try {
-        await db.query<ResultSetHeader>(
-            `UPDATE player_tbl
-             SET current_streak = ?, max_streak = GREATEST(max_streak, ?)
-             WHERE user_id = ?`,
-            [currentStreak, bestStreak, userId],
-        );
-        return { success: true };
-    } catch (err) {
-        console.error("Failed to update player quiz streak:", err);
-        return { success: false, error: "Failed to save quiz streak" };
-    }
+    // In-quiz question streak is local to the active quiz session and does not overwrite player_tbl.current_streak (which tracks daily activity streak).
+    return { success: true };
 }
 
 export async function recordQuizCompletion(options: {
@@ -468,14 +456,26 @@ export async function recordQuizCompletion(options: {
         await connection.query<ResultSetHeader>(
             `UPDATE player_tbl
              SET xp = COALESCE(xp, 0) + ?,
-                 current_streak = ?,
-                 max_streak = GREATEST(COALESCE(max_streak, 0), ?),
                  last_quiz_date = ?
              WHERE user_id = ?`,
-            [validatedXp, options.currentStreak, options.bestStreak, activityDate, userId],
+            [validatedXp, activityDate, userId],
         );
         await connection.commit();
         await invalidateLeaderboardCache();
+
+        // Calculate and sync the true daily streak from activity history
+        const streakData = await getUserStreakData(undefined, undefined, activityDate);
+        try {
+            await db.query<ResultSetHeader>(
+                `UPDATE player_tbl
+                 SET current_streak = ?,
+                     max_streak = GREATEST(COALESCE(max_streak, 0), ?)
+                 WHERE user_id = ?`,
+                [streakData.currentStreak, streakData.longestStreak, userId],
+            );
+        } catch (err) {
+            console.error("Failed to sync player streak in recordQuizCompletion:", err);
+        }
         return { success: true };
     } catch (err) {
         await connection.rollback();

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { auth, invalidateUserAuthCache } from "@/auth";
+import { getAppLocalDate } from "@/lib/timezone";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_.\- ]{3,30}$/;
 
@@ -15,6 +16,9 @@ export interface UserInfoResponse {
     xp?: number;
     current_streak?: number;
     max_streak?: number;
+    lessons_completed?: number;
+    lessons_completed_this_week?: number;
+    xp_earned_this_week?: number;
     created_at?: string;
     completed_lessons?: number;
 }
@@ -26,6 +30,11 @@ export const GET = async (): Promise<Response> => {
         if (!session?.user?.email) {
             return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        const todayDate = getAppLocalDate();
+        const weekStartDate = new Date(`${todayDate}T00:00:00Z`);
+        weekStartDate.setUTCDate(weekStartDate.getUTCDate() - weekStartDate.getUTCDay());
+        const weekStart = weekStartDate.toISOString().slice(0, 10);
 
         const [rows] = await db.execute<RowDataPacket[]>(
             `SELECT 
@@ -40,12 +49,29 @@ export const GET = async (): Promise<Response> => {
                 p.xp,
                 p.current_streak,
                 p.max_streak,
-                (SELECT COUNT(*) FROM user_lesson_progress_tbl WHERE user_id = u.user_id AND is_completed = 1) AS completed_lessons
+                (
+                    SELECT COUNT(*)
+                    FROM user_lesson_progress_tbl lp
+                    WHERE lp.user_id = u.user_id AND lp.is_completed = 1
+                ) AS lessons_completed,
+                (
+                    SELECT COUNT(*)
+                    FROM user_lesson_progress_tbl lp
+                    WHERE lp.user_id = u.user_id
+                      AND lp.is_completed = 1
+                      AND DATE(lp.completed_at) BETWEEN ? AND ?
+                ) AS lessons_completed_this_week,
+                (
+                    SELECT COALESCE(SUM(a.xp_earned), 0)
+                    FROM user_activity_tbl a
+                    WHERE a.user_id = u.user_id
+                      AND a.activity_date BETWEEN ? AND ?
+                ) AS xp_earned_this_week
             FROM user_auth_tbl u
             LEFT JOIN player_tbl p ON u.user_id = p.user_id
             WHERE u.email = ?
             LIMIT 1`,
-            [session.user.email]
+            [weekStart, todayDate, weekStart, todayDate, session.user.email]
         );
 
         const user = rows[0];
@@ -56,7 +82,11 @@ export const GET = async (): Promise<Response> => {
                 ...user,
                 daily_xp_goal: dailyGoal,
                 learning_goal: dailyGoal,
-                completed_lessons: Number(user.completed_lessons ?? 0),
+                completed_lessons: Number(user.lessons_completed ?? 0),
+                lessons_completed: Number(user.lessons_completed ?? 0),
+                lessons_completed_this_week: Number(user.lessons_completed_this_week ?? 0),
+                xp: Number(user.xp ?? 0),
+                xp_earned_this_week: Number(user.xp_earned_this_week ?? 0),
                 created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
             });
         }

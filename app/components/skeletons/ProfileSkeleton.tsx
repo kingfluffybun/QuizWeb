@@ -15,20 +15,22 @@ export default function ProfileSkeleton() {
       <SkeletonSidebar />
       <main>
         <div className="profile-content">
-          <header className="profile-page-heading">
-            <div>
-              <h1 className="skeleton-shimmer profile-skeleton-heading" />
-              <p className="skeleton-shimmer profile-skeleton-subheading" />
+          <section className="profile-header" aria-hidden="true">
+            <div className="profile-hero">
+              <div className="profile-avatar skeleton-shimmer profile-skeleton-avatar" />
             </div>
-          </header>
-
-          <section className="profile-hero" aria-hidden="true">
-            <div className="profile-avatar skeleton-shimmer profile-skeleton-avatar" />
-            <div className="profile-identity">
-              <div className="skeleton-shimmer profile-skeleton-name" />
-              <div className="skeleton-shimmer profile-skeleton-handle" />
-              <div className="profile-meta">
-                <span className="skeleton-shimmer profile-skeleton-joined" />
+            <div className="profile-details">
+              <div className="profile-identity">
+                <div className="profile-name-line">
+                  <h1 className="skeleton-shimmer profile-skeleton-name" />
+                </div>
+                <p className="skeleton-shimmer profile-skeleton-handle" />
+                <div className="profile-meta">
+                  <small>
+                    <span className="skeleton-shimmer profile-skeleton-calendar-icon" />
+                    <span className="skeleton-shimmer profile-skeleton-joined" />
+                  </small>
+                </div>
               </div>
             </div>
           </section>
@@ -41,10 +43,12 @@ export default function ProfileSkeleton() {
             <div className="profile-stats">
               {profileStats.map((stat) => (
                 <article className="profile-stat-card" key={stat}>
-                  <span className="skeleton-shimmer profile-stat-icon profile-skeleton-stat-icon" />
-                  <div>
-                    <span className="skeleton-shimmer profile-skeleton-stat-value" />
-                    <span className="skeleton-shimmer profile-skeleton-stat-label" />
+                  <div className="profile-stat-main">
+                    <span className="skeleton-shimmer profile-stat-icon profile-skeleton-stat-icon" />
+                    <div>
+                      <span className="skeleton-shimmer profile-skeleton-stat-value" />
+                      <span className="skeleton-shimmer profile-skeleton-stat-label" />
+                    </div>
                   </div>
                   <span className="skeleton-shimmer profile-skeleton-stat-note" />
                 </article>

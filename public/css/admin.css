@@ -196,15 +196,6 @@ html[data-motion="reduce"] .admin-main *::after {
   transition: background-color 0.3s ease;
 }
 
-.admin-app-layout > .sidebar {
-  grid-area: sidebar;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100dvh;
-  overflow-y: auto;
-}
-
 .admin-app-layout > .admin-main {
   grid-area: main;
   width: 100%;
@@ -214,6 +205,7 @@ html[data-motion="reduce"] .admin-main *::after {
   overflow-y: auto;
   font-family: 'Montserrat', sans-serif;
   color: var(--admin-text-main);
+  background-color: var(--bg-main);
 }
 
 .admin-app-layout.sidebar-collapsed {
@@ -259,7 +251,7 @@ html[data-motion="reduce"] .admin-main *::after {
   justify-content: flex-start;
   min-height: 0;
   margin-bottom: 4px;
-  padding: 16px;
+  padding: 24px;
   overflow: hidden;
   color: var(--admin-text-inverse);
   background: var(--admin-primary);

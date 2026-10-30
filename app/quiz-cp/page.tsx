@@ -21,6 +21,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  useMemo,
 } from "react";
 import {
   getPublicCodeProblem,
@@ -32,6 +33,7 @@ import {
   type SequentialSkipQueuePayload,
 } from "@/app/actions/section-skip";
 import { recordUserActivity } from "@/app/actions/streak";
+import { getNextCurriculumUnit } from "@/app/actions/progress";
 import { getClientLocalDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
@@ -39,6 +41,22 @@ import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import type { CPFileBuffers, PublicCodeProblem } from "@/lib/cp-schema";
 import "#css/quiz.css";
 import "#css/sidebar.css";
+
+
+const accuracyMessages = {
+  perfect: [
+    "Perfect score! You completed every single step correctly, so keep that momentum going.",
+    "Flawless run! You didn’t miss a single step, and that’s exactly how mastery is built.",
+  ],
+  good: [
+    "Nice work! You’re getting the hang of this, and a little more practice will get you to a perfect score.",
+    "Almost there! You got most of the steps right, so review the ones you missed and try for 100%.",
+  ],
+  low: [
+    "Keep practicing! Every mistake is a chance to learn, so review your code and give it another try.",
+    "Don’t give up! You’re still building your skills, and each attempt gets you closer to mastering this lesson.",
+  ],
+};
 
 const defaultFiles: CPFileBuffers = {
   html: "",
@@ -218,6 +236,18 @@ export function CodeProblemRunner({
 
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+  const [nextUnit, setNextUnit] = useState<{
+    unit_id: number;
+    unit_title: string;
+    sec_id: number;
+    sec_num: number;
+    cat_name: string;
+  } | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [missedStepIndexes, setMissedStepIndexes] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   const openAccessibility = () => {
     setAccessibilityClosing(false);
@@ -230,6 +260,25 @@ export function CodeProblemRunner({
     setAccessibilityOpen(false);
     setAccessibilityClosing(false);
   };
+
+  useEffect(() => {
+    if (isLoading || status !== "active") {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+    timerRef.current = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isLoading, status]);
 
   // Track the *visual* viewport so the action bar stays above the iOS Safari
   // soft keyboard / bottom URL bar instead of hiding behind them.
@@ -332,6 +381,13 @@ export function CodeProblemRunner({
         }
 
         setProblem(loadedProblem);
+        getNextCurriculumUnit(loadedProblem.unit_id)
+          .then((next) => {
+            if (isActive) setNextUnit(next);
+          })
+          .catch((err) => {
+            console.error("Failed to load next unit:", err);
+          });
         const firstStepStarter = loadedProblem.steps[0]?.starterCode ?? defaultFiles;
 
         // Restore in-progress session from sessionStorage if present
@@ -601,6 +657,8 @@ export function CodeProblemRunner({
     setStatus("active");
     setStepFeedback(null);
     setConsoleMessages([]);
+    setMissedStepIndexes(new Set());
+    setElapsedSeconds(0);
   };
 
   // Submit current step for server-side structural & wildcard validation
@@ -695,6 +753,7 @@ export function CodeProblemRunner({
         }
       } else {
         playQuizSound("wrong-answer");
+        setMissedStepIndexes((prev) => new Set(prev).add(currentStepIndex));
         const nextLives = Math.max(0, lives - 1);
         setLives(nextLives);
         setStepFeedback({
@@ -731,82 +790,216 @@ export function CodeProblemRunner({
     submitStepRef.current = handleSubmitStep;
   });
 
+  const isSkipMode = Boolean(requestedSkipTargetSecId && skipPayload);
+  const totalSteps = problem?.steps.length ?? 0;
+  const firstTryPassedSteps = status === "completed"
+    ? Math.max(0, totalSteps - missedStepIndexes.size)
+    : Array.from({ length: currentStepIndex }).filter((_, idx) => !missedStepIndexes.has(idx)).length;
+  const accuracy = totalSteps > 0 ? Math.round((firstTryPassedSteps / totalSteps) * 100) : 0;
+  const totalCpXp = status === "completed"
+    ? (isSkipMode ? ((skipPayload?.totalCodingProblems ?? 0) * 50 + 50) : 50)
+    : 0;
+
+  const completionSubmessage = useMemo(() => {
+    if (status !== "completed" && status !== "gameover") return "";
+    if (isSkipMode) {
+      if (status === "gameover") {
+        return "You ran out of hearts during the skip challenge. Don't worry, your existing roadmap progress is completely preserved!";
+      }
+      return (skipPayload?.totalCodingProblems ?? 0) > 0
+        ? `Outstanding achievement! You mastered all ${skipPayload?.totalCodingProblems} coding challenges within the time limit. Section ${skipPayload?.targetSectionNum} is now unlocked on your roadmap!`
+        : `All preceding units are completed! Section ${skipPayload?.targetSectionNum} is unlocked on your roadmap!`;
+    }
+    if (status === "gameover") {
+      return (
+        stepFeedback?.message ||
+        "You ran out of hearts. Review the step instructions and try again!"
+      );
+    }
+    const options =
+      accuracy === 100
+        ? accuracyMessages.perfect
+        : accuracy >= 70
+          ? accuracyMessages.good
+          : accuracyMessages.low;
+    const messageIndex = (accuracy + elapsedSeconds) % options.length;
+    return options[messageIndex];
+  }, [status, isSkipMode, skipPayload, accuracy, elapsedSeconds, stepFeedback?.message]);
+
+  const [animatedStats, setAnimatedStats] = useState({
+    xp: 0,
+    accuracy: 0,
+    seconds: 0,
+  });
+
+  useEffect(() => {
+    if (status !== "completed" && status !== "gameover") return;
+
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const rafId = requestAnimationFrame(() => {
+        setAnimatedStats({
+          xp: totalCpXp,
+          accuracy,
+          seconds: elapsedSeconds,
+        });
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+
+    const duration = 1000;
+    const delay = 150;
+    const startTime = performance.now();
+    let animationFrameId: number;
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      if (elapsed < delay) {
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      const progress = Math.min(1, (elapsed - delay) / duration);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+
+      setAnimatedStats({
+        xp: Math.round(totalCpXp * easeOut),
+        accuracy: Math.round(accuracy * easeOut),
+        seconds: Math.round(elapsedSeconds * easeOut),
+      });
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [status, totalCpXp, accuracy, elapsedSeconds]);
+
   if (status === "completed" || status === "gameover") {
     const isVictory = status === "completed";
-    const isSkipMode = Boolean(requestedSkipTargetSecId && skipPayload);
 
     return (
       <div className="quiz-page quiz-no-footer-page">
         <Sidebar />
         <main className="quiz-completion-main">
-          <div className="quiz-complete-card">
-            <h1>
-              {isVictory
-                ? isSkipMode
-                  ? "🎉 Section Skip Complete!"
-                  : "Assessment Complete!"
-                : isSkipMode
-                  ? "💔 Skip Challenge Failed"
-                  : "Game Over"}
-            </h1>
-            <h2>
-              {isVictory
-                ? isSkipMode
-                  ? `Unlocked Section ${skipPayload?.targetSectionNum}: ${skipPayload?.targetSectionTitle} (+${(skipPayload?.totalCodingProblems ?? 0) * 50 + 50} XP)`
-                  : `${problem?.steps.length ?? 0} / ${problem?.steps.length ?? 0} Steps Passed (+50 XP)`
-                : isSkipMode
-                  ? `Out of hearts on Problem ${queueIndex + 1} of ${skipPayload?.totalCodingProblems ?? 1}`
-                  : `Step ${currentStepIndex + 1} of ${problem?.steps.length ?? 1}`}
-            </h2>
-            <p className="quiz-completion-message">
-              {isVictory
-                ? isSkipMode
-                  ? (skipPayload?.totalCodingProblems ?? 0) > 0
-                    ? `Outstanding achievement! You mastered all ${skipPayload?.totalCodingProblems} coding challenges within the time limit. Section ${skipPayload?.targetSectionNum} is now unlocked on your roadmap!`
-                    : `All preceding units are completed! Section ${skipPayload?.targetSectionNum} is unlocked on your roadmap!`
-                  : problem?.expected_outcome ||
-                    "Outstanding work! You built and verified every step of the coding assessment."
-                : isSkipMode
-                  ? "You ran out of hearts during the skip challenge. Don't worry, your existing roadmap progress is completely preserved!"
-                  : stepFeedback?.message ||
-                    "You ran out of hearts. Review the step instructions and try again!"}
-            </p>
-            {isVictory && isSkipMode ? (
-              <Link href="/learn-ui" className="options" id="submit">
-                Continue to Roadmap
-              </Link>
-            ) : (
-              <button
-                className="options"
-                id="submit"
-                type="button"
-                onClick={handleRestartAssessment}
-              >
+          <div className="completion-content">
+            <div className="quiz-complete-message">
+              {isVictory ? (
+                <div className="complete-check">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" > <path d="M20 6 9 17l-5-5" /> </svg>
+                </div>
+              ) : (
+                <div className="complete-check" style={{ backgroundColor: "#EF4444", borderBottomColor: "#DC2626" }} >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" > <path d="M18 6 6 18" /> <path d="m6 6 12 12" /> </svg>
+                </div>
+              )}
+              <h1>
                 {isVictory
-                  ? "Practice Again"
+                  ? isSkipMode
+                    ? "🎉 Section Skip Complete!"
+                    : "Assessment Complete!"
                   : isSkipMode
-                    ? "Retry Skip Challenge"
-                    : "Try Again"}
-              </button>
+                    ? "💔 Skip Challenge Failed"
+                    : "Game Over"}
+              </h1>
+              <div className="quiz-complete-submessage">
+                <p>{completionSubmessage}</p>
+              </div>
+            </div>
+            <div className="quiz-summary-stats">
+              <div className="stats-card">
+                <div id="xp">
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zap preview-icon" > <path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" /> </svg>
+                    <h2>{animatedStats.xp}</h2>
+                  </div>
+                  <p>XP Gained</p>
+                </div>
+                <div id="accuracy">
+                  <div>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" > <path d="M11 12C11 12.2652 11.1054 12.5196 11.2929 12.7071C11.4804 12.8946 11.7348 13 12 13C12.2652 13 12.5196 12.8946 12.7071 12.7071C12.8946 12.5196 13 12.2652 13 12C13 11.7348 12.8946 11.4804 12.7071 11.2929C12.5196 11.1054 12.2652 11 12 11C11.7348 11 11.4804 11.1054 11.2929 11.2929C11.1054 11.4804 11 11.7348 11 12Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> <path d="M12 7C11.0111 7 10.0444 7.29324 9.22215 7.84265C8.39991 8.39206 7.75904 9.17295 7.3806 10.0866C7.00217 11.0002 6.90315 12.0055 7.09608 12.9755C7.289 13.9454 7.76521 14.8363 8.46447 15.5355C9.16373 16.2348 10.0546 16.711 11.0246 16.9039C11.9945 17.0969 12.9998 16.9978 13.9134 16.6194C14.827 16.241 15.6079 15.6001 16.1574 14.7779C16.7068 13.9556 17 12.9889 17 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> <path d="M13 3.05514C11.1461 2.84715 9.2733 3.22042 7.64079 4.12331C6.00827 5.0262 4.69667 6.41409 3.88743 8.095C3.07818 9.77591 2.81128 11.6667 3.12365 13.506C3.43601 15.3452 4.31221 17.0419 5.63103 18.3614C6.94985 19.6809 8.64611 20.5579 10.4852 20.8712C12.3242 21.1845 14.2152 20.9186 15.8965 20.1102C17.5779 19.3018 18.9664 17.9909 19.8701 16.3588C20.7738 14.7267 21.148 12.8542 20.941 11.0001" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> <path d="M15 6V9H18L21 6H18V3L15 6Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> <path d="M15 9L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> </svg>
+                    <h2>{animatedStats.accuracy}%</h2>
+                  </div>
+                  <p>Accuracy</p>
+                </div>
+                <div id="time">
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-timer preview-icon" > <line x1="10" x2="14" y1="2" y2="2" /> <line x1="12" x2="15" y1="14" y2="11" /> <circle cx="12" cy="14" r="8" /> </svg>
+                    <h2>{`${Math.floor(animatedStats.seconds / 60)}:${String(animatedStats.seconds % 60).padStart(2, "0")}`}</h2>
+                  </div>
+                  <p>Time Spent</p>
+                </div>
+              </div>
+              <div className="daily-goal-stats">
+                <div className="daily-goal-progress-bar">
+                  <span className="daily-goal-progress-bar-fill" style={{ width: `${Math.min(100, (animatedStats.xp / 200) * 100)}%` }} ></span>
+                </div>
+                <div className="daily-goal-progress-bar-label">
+                  <p>Daily Goal</p>
+                  <p>{animatedStats.xp}/200 XP</p>
+                </div>
+              </div>
+            </div>
+            {isVictory && !isSkipMode && nextUnit && (
+              <div className="next-level-container">
+                <Link href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`} className="next-level-card" style={{ textDecoration: "none" }} >
+                  <div className="next-level-content">
+                    <div className="next-level-type">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open preview-icon" > <path d="M12 5v16" /> <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /> </svg>
+                    </div>
+                    <div className="next-level-title">
+                      <p>
+                        {nextUnit.sec_num != null
+                          ? `Section ${nextUnit.sec_num}`
+                          : nextUnit.cat_name ?? "Next"}
+                      </p>
+                      <h2>{nextUnit.unit_title}</h2>
+                    </div>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right preview-icon" > <path d="m9 18 6-6-6-6" /> </svg>
+                </Link>
+              </div>
             )}
-            <Link
-              href={isSkipMode ? "/learn-ui" : "/learn"}
-              className="options back-to-input-btn"
-            >
-              {isSkipMode ? "Back to Roadmap" : "Back to Curriculum"}
-            </Link>
-            {!isSkipMode && (
-              <Link href="/home" className="options back-to-input-btn">
-                Back to Home
-              </Link>
-            )}
+            <div className="completion-action">
+              {isVictory ? (
+                isSkipMode ? (
+                  <Link href="/learn-ui" className="options" id="submit">
+                    <p>Continue to Roadmap</p>
+                  </Link>
+                ) : (
+                  <button className="options" id="submit" type="button" onClick={() => router.push("/learn")} >
+                    <p>Continue</p>
+                  </button>
+                )
+              ) : (
+                <button className="options" id="submit" type="button" onClick={handleRestartAssessment} >
+                  <p>{isSkipMode ? "Retry Skip Challenge" : "Try Again"}</p>
+                </button>
+              )}
+              {isSkipMode ? (
+                <Link href="/learn-ui" className="options" id="back">
+                  <p>Back to Roadmap</p>
+                </Link>
+              ) : (
+                <button className="options" id="back" type="button" onClick={() => router.push("/home")} >
+                  <p>Back to Home</p>
+                </button>
+              )}
+            </div>
           </div>
         </main>
       </div>
     );
   }
-
-  const totalSteps = problem?.steps.length ?? 1;
 
   return (
     <div className="quiz-page" id="code-problem">
@@ -1654,7 +1847,9 @@ export function CodeProblemRunner({
             </div>
           </div>
 
-          <div className="cp-mobile-actionbar">
+          <div
+            className={`cp-mobile-actionbar${activeFile === "js" ? "" : " no-run"}`}
+          >
             <button
               type="button"
               className="cp-mobile-action-btn"

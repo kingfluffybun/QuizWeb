@@ -166,6 +166,11 @@ code {
     padding: 0 8px;
     font-family: var(--font-jetbrains-mono), monospace;
     border-radius: 4px;
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] code {
+    background-color: #090918;
 }
 
 .col {
@@ -307,7 +312,7 @@ textarea {
         color: var(--selected-color);
     }
 
-    .order-options > .options > p,
+    .order-options > .order-slot > .options > p,
     .options.draggable-item > p {
         flex: 1;
         min-width: 0;

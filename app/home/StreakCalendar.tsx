@@ -121,15 +121,15 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
 
     return (
         <div className="card" id="streak-calendar">
-            <div className="card-title">
-                <h2>Streak Calendar</h2>
-                <button type="button" className="quick-action quick-action-btn" aria-label="View streak details">
-                    <h2 className="quick-action">View Details</h2>
-                </button>
-            </div>
             <div className="calendar-container">
                 {/* Left column: streak summary & current week */}
                 <div className="streak">
+                    <div className="card-title">
+                        <h2>Streak Calendar</h2>
+                        {/* <button type="button" className="quick-action quick-action-btn" aria-label="View streak details">
+                            <h2 className="quick-action">View Details</h2>
+                        </button> */}
+                    </div>
                     <div className="streak-status row">
                         <div
                             className={`streak-progress-bar col ${isFlameActive ? "active" : "inactive"}`}

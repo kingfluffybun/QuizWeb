@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
 import { getQuizOrUnitById, getUnitById } from "@/app/actions/quiz";
 import { getNextCurriculumUnit, isUnitUnlockedForUser } from "@/app/actions/progress";
+import type { DailyGoalData } from "@/lib/daily-goal";
 import type { QuizData } from "@/app/quiz/types";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
 import QuizLandingClient from "./QuizLandingClient";
@@ -76,15 +78,18 @@ export default async function QuizPage({
 
     const selectedUnitId = unitId ? Number(unitId) : null;
     const selectedQuizId = quizId ? Number(quizId) : null;
+    const session = await auth();
 
     if (selectedUnitId) {
-        const session = await auth();
         const userId = session?.user?.id ? Number(session.user.id) : undefined;
         const isUnlocked = await isUnitUnlockedForUser(selectedUnitId, userId);
         if (!isUnlocked) {
             redirect("/learn");
         }
     }
+    const dailyGoalData: DailyGoalData | null = session?.user?.id
+        ? await getDailyGoalData()
+        : null;
     const initialSlideOrder = slide ? Math.max(1, parseInt(slide, 10)) : undefined;
     const selectedUnit = selectedUnitId
         ? await getUnitById(selectedUnitId)
@@ -137,6 +142,7 @@ export default async function QuizPage({
                 unitId={selectedUnitId ?? selectedQuizId ?? undefined}
                 initialSlideOrder={initialSlideOrder}
                 nextUnit={nextCurriculumUnit}
+                dailyGoalData={dailyGoalData}
             />
         );
     }

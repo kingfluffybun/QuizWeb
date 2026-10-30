@@ -33,15 +33,19 @@ interface LearnRoadmapClientProps {
   username?: string;
 }
 
-/**
- * Calculates a sinusoidal displacement factor for roadmap nodes, forming
- * repeating wave patterns calculated to be exactly multiple waves end to end.
- */
-function getWaveFactor(nodeIndex: number, totalNodes: number): number {
-  if (totalNodes <= 1) return 0;
-  const waves = Math.max(1, Math.round(totalNodes / 6));
-  const angle = ((nodeIndex + 1) / (totalNodes + 1)) * Math.PI * 2 * waves;
-  return Number(Math.sin(angle).toFixed(3));
+type RoadlineStartSide = "left" | "right";
+type RoadlineSegment = "to-top" | "to-side";
+
+function getRoadlinePath(startSide: RoadlineStartSide, segment: RoadlineSegment) {
+  if (segment === "to-top") {
+    return startSide === "left"
+      ? "M 101 38 H 138 Q 168 38 168 68 V 113"
+      : "M 123 38 H 86 Q 56 38 56 68 V 113";
+  }
+
+  return startSide === "left"
+    ? "M 56 77 V 121 Q 56 151 86 151 H 123"
+    : "M 168 77 V 121 Q 168 151 138 151 H 101";
 }
 
 export default function LearnRoadmapClient({
@@ -730,15 +734,6 @@ export default function LearnRoadmapClient({
             {/* Sections & Interactive Nodes */}
             {roadmapData.sections.map((section) => {
               const hasUnits = section.units.length > 0;
-              const totalSectionNodes = section.units.reduce(
-                (count, u) =>
-                  count +
-                  1 +
-                  (u.quiz_count > 0 ? 1 : 0) +
-                  (u.has_coding_assessment ? 1 : 0),
-                0,
-              );
-              let sectionNodeIndex = 0;
 
               return (
                 <section
@@ -774,44 +769,43 @@ export default function LearnRoadmapClient({
 
                   {/* If section is locked and has units, display the Skip / Jump checkpoint row for Section 3+ (Authenticated only) */}
                   {!isGuest && section.sec_id >= 3 && section.is_locked && hasUnits && (
-                    <div
-                      className="level-row"
-                      style={{ "--wave-factor": 0 } as React.CSSProperties}
-                    >
-                      <div className="level-content">
-                        {/* Skip Section */}
-                        <div className="level">
-                          <button
-                            type="button"
-                            className="level-btn checkpoint"
-                            onClick={() => handleSelectCheckpoint(section)}
-                            aria-label={`Skip Section Checkpoint for ${section.sec_title}`}
-                            title={`Skip ahead to ${section.sec_title}`}
-                          >
-                            <svg
-                              width="28"
-                              height="28"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
+                    <div className="level-path">
+                      <div className="level-row path-left">
+                        <div className="level-content">
+                          {/* Skip Section */}
+                          <div className="level">
+                            <button
+                              type="button"
+                              className="level-btn checkpoint"
+                              onClick={() => handleSelectCheckpoint(section)}
+                              aria-label={`Skip Section Checkpoint for ${section.sec_title}`}
+                              title={`Skip ahead to ${section.sec_title}`}
                             >
-                              <path
-                                d="M14 20L21 12.5L14 5"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                stroke="currentColor"
-                              />
-                              <path
-                                d="M5 20L12 12.5L5 5"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                stroke="currentColor"
-                              />
-                            </svg>
-                          </button>
+                              <svg
+                                width="28"
+                                height="28"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M14 20L21 12.5L14 5"
+                                  strokeWidth="4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  stroke="currentColor"
+                                />
+                                <path
+                                  d="M5 20L12 12.5L5 5"
+                                  strokeWidth="4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  stroke="currentColor"
+                                />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -820,18 +814,14 @@ export default function LearnRoadmapClient({
                   {/* Section Units */}
                   {hasUnits ? (
                     section.units.map((unit, unitIndex) => {
-                      const lessonWave = getWaveFactor(
-                        sectionNodeIndex++,
-                        totalSectionNodes,
-                      );
-                      const quizWave =
-                        unit.quiz_count > 0
-                          ? getWaveFactor(sectionNodeIndex++, totalSectionNodes)
-                          : 0;
-                      const cpWave =
-                        unit.has_coding_assessment
-                          ? getWaveFactor(sectionNodeIndex++, totalSectionNodes)
-                          : 0;
+                      const startSide: RoadlineStartSide = unitIndex % 2 === 0 ? "left" : "right";
+                      const hasQuiz = unit.quiz_count > 0;
+                      const hasCp = unit.has_coding_assessment;
+                      const lessonSide: RoadlineStartSide = startSide;
+                      const quizSide: RoadlineStartSide = lessonSide === "left" ? "right" : "left";
+                      const cpSide: RoadlineStartSide = hasQuiz
+                        ? (quizSide === "left" ? "right" : "left")
+                        : (lessonSide === "left" ? "right" : "left");
 
                       // Accurate per-node status determination:
                       const isGuestUnitLocked = isGuest && unit.unit_id !== firstUnitId;
@@ -886,6 +876,9 @@ export default function LearnRoadmapClient({
                             ? "Complete Quiz first"
                             : undefined;
 
+                      const hasNextAfterLesson = hasQuiz || hasCp;
+                      const hasNextAfterQuiz = hasCp;
+
                       return (
                         <div key={unit.unit_id} className="curriculum-unit-group">
                           {/* Unit Title Divider between units */}
@@ -898,294 +891,292 @@ export default function LearnRoadmapClient({
                             </div>
                           )}
 
-                          {/* Lesson Node */}
-                          <div
-                            className="level-row"
-                            style={
-                              {
-                                "--wave-factor": lessonWave,
-                              } as React.CSSProperties
-                            }
-                          >
-                            <div className="level-content">
-                              <div className="level">
-                                <button
-                                  type="button"
-                                  className={`level-btn${
-                                    isLessonCompleted
-                                      ? " complete"
-                                      : isLessonLocked
-                                        ? " disabled"
-                                        : ""
-                                  }`}
-                                  onClick={() =>
-                                    handleSelectNode(
-                                      unit,
-                                      section,
-                                      "lesson",
-                                      isLessonCompleted,
-                                      isLessonLocked,
-                                      lessonLockReason,
-                                    )
-                                  }
-                                  aria-label={`Lesson for ${unit.unit_title}${
-                                    isLessonCompleted
-                                      ? " (Completed)"
-                                      : isLessonLocked
-                                        ? " (Locked)"
-                                        : " (Current Level)"
-                                  }`}
+                          <div className="level-path">
+                            {/* Lesson Node */}
+                            <div className={`level-row path-${lessonSide}`}>
+                              <div className="level-content">
+                                <div className="level">
+                                  <button
+                                    type="button"
+                                    className={`level-btn${
+                                      isLessonCompleted
+                                        ? " complete"
+                                        : isLessonLocked
+                                          ? " disabled"
+                                          : ""
+                                    }`}
+                                    onClick={() =>
+                                      handleSelectNode(
+                                        unit,
+                                        section,
+                                        "lesson",
+                                        isLessonCompleted,
+                                        isLessonLocked,
+                                        lessonLockReason,
+                                      )
+                                    }
+                                    aria-label={`Lesson for ${unit.unit_title}${
+                                      isLessonCompleted
+                                        ? " (Completed)"
+                                        : isLessonLocked
+                                          ? " (Locked)"
+                                          : " (Current Level)"
+                                    }`}
+                                  >
+                                    {isLessonCompleted ? (
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="28"
+                                        height="28"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="lucide lucide-check preview-icon"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M20 6 9 17l-5-5" />
+                                      </svg>
+                                    ) : (
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="28"
+                                        height="28"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="lucide lucide-book-open preview-icon"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M12 5v16" />
+                                        <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              {hasNextAfterLesson && (
+                                <svg
+                                  className={`roadline ${lessonSide === "left" ? "roadline-to-right" : "roadline-to-left"}`}
+                                  viewBox={lessonSide === "left" ? "0 0 168 113" : "0 0 168 189"}
+                                  aria-hidden="true"
                                 >
-                                  {isLessonCompleted ? (
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="28"
-                                      height="28"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="lucide lucide-check preview-icon"
-                                      aria-hidden="true"
-                                    >
-                                      <path d="M20 6 9 17l-5-5" />
-                                    </svg>
-                                  ) : (
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="28"
-                                      height="28"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="lucide lucide-book-open preview-icon"
-                                      aria-hidden="true"
-                                    >
-                                      <path d="M12 5v16" />
-                                      <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />
-                                    </svg>
-                                  )}
-                                </button>
-                              </div>
+                                  <path d={getRoadlinePath(lessonSide, "to-top")} />
+                                </svg>
+                              )}
                             </div>
+
+                            {/* Quiz Node */}
+                            {unit.quiz_count > 0 && (
+                              <div className={`level-row path-${quizSide}`}>
+                                <div className="level-content">
+                                  <div className="level">
+                                    <button
+                                      type="button"
+                                      className={`level-btn${
+                                        isQuizCompleted
+                                          ? " complete"
+                                          : isQuizLocked
+                                            ? " disabled"
+                                            : ""
+                                      }`}
+                                      onClick={() =>
+                                        handleSelectNode(
+                                          unit,
+                                          section,
+                                          "quiz",
+                                          isQuizCompleted,
+                                          isQuizLocked,
+                                          quizLockReason,
+                                        )
+                                      }
+                                      aria-label={`Quiz for ${unit.unit_title}${
+                                        isQuizCompleted
+                                          ? " (Completed)"
+                                          : isQuizLocked
+                                            ? " (Locked)"
+                                            : ""
+                                      }`}
+                                    >
+                                      {isQuizCompleted ? (
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="28"
+                                          height="28"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="lucide lucide-check preview-icon"
+                                          aria-hidden="true"
+                                        >
+                                          <path d="M20 6 9 17l-5-5" />
+                                        </svg>
+                                      ) : (
+                                        <svg
+                                          width="28"
+                                          height="28"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          aria-hidden="true"
+                                        >
+                                          <path
+                                            d="M8 8.00447C8.36294 7.00272 9.07931 6.15801 10.0222 5.61995C10.9651 5.08189 12.0738 4.88521 13.1517 5.06473C14.2297 5.24426 15.2074 5.78841 15.9118 6.60081C16.6161 7.41321 17.0016 8.44143 17 9.50335C17 12.5011 12 14.5 12 14.5"
+                                            strokeWidth="4"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            stroke="currentColor"
+                                          />
+                                          <path
+                                            d="M12 20H12.01"
+                                            strokeWidth="4"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            stroke="currentColor"
+                                          />
+                                        </svg>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                                {hasNextAfterQuiz && (
+                                  <svg
+                                    className={`roadline ${quizSide === "left" ? "roadline-to-right" : "roadline-to-left"}`}
+                                    viewBox={quizSide === "left" ? "0 0 168 113" : "0 0 168 189"}
+                                    aria-hidden="true"
+                                  >
+                                    <path d={getRoadlinePath(quizSide, "to-side")} />
+                                  </svg>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Code Problem Node */}
+                            {unit.has_coding_assessment && (
+                              <div className={`level-row path-${cpSide}`}>
+                                <div className="level-content">
+                                  <div className="level">
+                                    <button
+                                      type="button"
+                                      className={`level-btn${
+                                        isCpCompleted
+                                          ? " complete"
+                                          : isCpLocked
+                                            ? " disabled"
+                                            : ""
+                                      }`}
+                                      onClick={() =>
+                                        handleSelectNode(
+                                          unit,
+                                          section,
+                                          "code_problem",
+                                          isCpCompleted,
+                                          isCpLocked,
+                                          cpLockReason,
+                                        )
+                                      }
+                                      aria-label={`Code Problem for ${unit.unit_title}${
+                                        isCpCompleted
+                                          ? " (Completed)"
+                                          : isCpLocked
+                                            ? " (Locked)"
+                                            : ""
+                                      }`}
+                                    >
+                                      {isCpCompleted ? (
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="28"
+                                          height="28"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="lucide lucide-check preview-icon"
+                                          aria-hidden="true"
+                                        >
+                                          <path d="M20 6 9 17l-5-5" />
+                                        </svg>
+                                      ) : (
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="28"
+                                          height="28"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="lucide lucide-code preview-icon"
+                                          aria-hidden="true"
+                                        >
+                                          <path d="m16 18 6-6-6-6" />
+                                          <path d="m8 6-6 6 6 6" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-
-                          {/* Quiz Node */}
-                          {unit.quiz_count > 0 && (
-                            <div
-                              className="level-row"
-                              style={
-                                {
-                                  "--wave-factor": quizWave,
-                                } as React.CSSProperties
-                              }
-                            >
-                              <div className="level-content">
-                                <div className="level">
-                                  <button
-                                    type="button"
-                                    className={`level-btn${
-                                      isQuizCompleted
-                                        ? " complete"
-                                        : isQuizLocked
-                                          ? " disabled"
-                                          : ""
-                                    }`}
-                                    onClick={() =>
-                                      handleSelectNode(
-                                        unit,
-                                        section,
-                                        "quiz",
-                                        isQuizCompleted,
-                                        isQuizLocked,
-                                        quizLockReason,
-                                      )
-                                    }
-                                    aria-label={`Quiz for ${unit.unit_title}${
-                                      isQuizCompleted
-                                        ? " (Completed)"
-                                        : isQuizLocked
-                                          ? " (Locked)"
-                                          : ""
-                                    }`}
-                                  >
-                                    {isQuizCompleted ? (
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="28"
-                                        height="28"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="lucide lucide-check preview-icon"
-                                        aria-hidden="true"
-                                      >
-                                        <path d="M20 6 9 17l-5-5" />
-                                      </svg>
-                                    ) : (
-                                      <svg
-                                        width="28"
-                                        height="28"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        aria-hidden="true"
-                                      >
-                                        <path
-                                          d="M8 8.00447C8.36294 7.00272 9.07931 6.15801 10.0222 5.61995C10.9651 5.08189 12.0738 4.88521 13.1517 5.06473C14.2297 5.24426 15.2074 5.78841 15.9118 6.60081C16.6161 7.41321 17.0016 8.44143 17 9.50335C17 12.5011 12 14.5 12 14.5"
-                                          strokeWidth="4"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          stroke="currentColor"
-                                        />
-                                        <path
-                                          d="M12 20H12.01"
-                                          strokeWidth="4"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          stroke="currentColor"
-                                        />
-                                      </svg>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Code Problem Node */}
-                          {unit.has_coding_assessment && (
-                            <div
-                              className="level-row"
-                              style={
-                                {
-                                  "--wave-factor": cpWave,
-                                } as React.CSSProperties
-                              }
-                            >
-                              <div className="level-content">
-                                <div className="level">
-                                  <button
-                                    type="button"
-                                    className={`level-btn${
-                                      isCpCompleted
-                                        ? " complete"
-                                        : isCpLocked
-                                          ? " disabled"
-                                          : ""
-                                    }`}
-                                    onClick={() =>
-                                      handleSelectNode(
-                                        unit,
-                                        section,
-                                        "code_problem",
-                                        isCpCompleted,
-                                        isCpLocked,
-                                        cpLockReason,
-                                      )
-                                    }
-                                    aria-label={`Code Problem for ${unit.unit_title}${
-                                      isCpCompleted
-                                        ? " (Completed)"
-                                        : isCpLocked
-                                          ? " (Locked)"
-                                          : ""
-                                    }`}
-                                  >
-                                    {isCpCompleted ? (
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="28"
-                                        height="28"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="lucide lucide-check preview-icon"
-                                        aria-hidden="true"
-                                      >
-                                        <path d="M20 6 9 17l-5-5" />
-                                      </svg>
-                                    ) : (
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="28"
-                                        height="28"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="lucide lucide-code preview-icon"
-                                        aria-hidden="true"
-                                      >
-                                        <path d="m16 18 6-6-6-6" />
-                                        <path d="m8 6-6 6 6 6" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })
                   ) : (
                     /* Empty Section Placeholder: Units coming soon */
-                    <div
-                      className="level-row"
-                      style={{ "--wave-factor": 0 } as React.CSSProperties}
-                    >
-                      <div className="level-content">
-                        {/* Skip Section / Coming soon */}
-                        <div className="level">
-                          <button
-                            type="button"
-                            className="level-btn disabled"
-                            onClick={() => handleSelectComingSoon(section)}
-                            aria-label={`Units coming soon for ${section.sec_title}`}
-                            title={`Units coming soon for ${section.sec_title}`}
-                          >
-                            <svg
-                              width="28"
-                              height="28"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
+                    <div className="level-path">
+                      <div className="level-row path-left">
+                        <div className="level-content">
+                          {/* Skip Section / Coming soon */}
+                          <div className="level">
+                            <button
+                              type="button"
+                              className="level-btn disabled"
+                              onClick={() => handleSelectComingSoon(section)}
+                              aria-label={`Units coming soon for ${section.sec_title}`}
+                              title={`Units coming soon for ${section.sec_title}`}
                             >
-                              <path
-                                d="M14 20L21 12.5L14 5"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                stroke="currentColor"
-                              />
-                              <path
-                                d="M5 20L12 12.5L5 5"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                stroke="currentColor"
-                              />
-                            </svg>
-                          </button>
+                              <svg
+                                width="28"
+                                height="28"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M14 20L21 12.5L14 5"
+                                  strokeWidth="4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  stroke="currentColor"
+                                />
+                                <path
+                                  d="M5 20L12 12.5L5 5"
+                                  strokeWidth="4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  stroke="currentColor"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                          <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
+                            Units coming soon
+                          </p>
                         </div>
-                        <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
-                          Units coming soon
-                        </p>
                       </div>
                     </div>
                   )}

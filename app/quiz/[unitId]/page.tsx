@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
+import type { DailyGoalData } from "@/lib/daily-goal";
 import { getUnitById } from "@/app/actions/quiz";
 import { getNextCurriculumUnit, isUnitUnlockedForUser } from "@/app/actions/progress";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
@@ -33,6 +35,9 @@ export default async function UnitQuizPage({
     redirect("/learn");
   }
 
+  const dailyGoalData: DailyGoalData | null = session?.user?.id
+    ? await getDailyGoalData()
+    : null;
   const initialSlideOrder = slide ? Math.max(1, parseInt(slide, 10)) : undefined;
   const selectedUnit = await getUnitById(selectedUnitId);
   const quizzesToDisplay = selectedUnit
@@ -76,6 +81,7 @@ export default async function UnitQuizPage({
       unitId={selectedUnitId}
       initialSlideOrder={initialSlideOrder}
       nextUnit={nextCurriculumUnit}
+      dailyGoalData={dailyGoalData}
     />
   );
 }
