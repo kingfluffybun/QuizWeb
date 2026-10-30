@@ -113,6 +113,7 @@ export default function ProfilePage() {
     }, []);
 
     const currentStreakDays = streakData?.currentStreak ?? 0;
+    const longestStreakDays = streakData?.longestStreak ?? 0;
     const completedActivityDays =
         streakData?.weekDays.filter(({ isActive }) => isActive).length ?? 0;
     const streakMessage = streakData?.todayCompleted
@@ -220,7 +221,7 @@ export default function ProfilePage() {
                             </div>
                             <p>@{email || username?.toLowerCase().replace(/\s+/g, "")}</p>
                             <div className="profile-meta">
-                                <span><ProfileIcon name="calendar" />Joined {formatDate}</span>
+                                <small><ProfileIcon name="calendar" />Joined {formatDate}</small>
                             </div>
                         </div>
                     </section>
@@ -234,6 +235,13 @@ export default function ProfilePage() {
                                     <div><strong>24</strong><span>Lesson completed</span></div>
                                 </div>
                                 <small>+4 this week</small>
+                            </article>
+                            <article className="profile-stat-card">
+                                <div className="profile-stat-main">
+                                    <span className="profile-stat-icon profile-stat-icon-orange"><ProfileIcon name="flame" /></span>
+                                    <div><strong>{currentStreakDays} days</strong><span>Current streak</span></div>
+                                </div>
+                                <small>Personal best: {longestStreakDays} days</small>
                             </article>
                             <article className="profile-stat-card">
                                 <div className="profile-stat-main">

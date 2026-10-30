@@ -5,7 +5,7 @@ import "#css/nav.css";
 import "#css/sidebar.css";
 import "#css/profile.css";
 
-const profileStats = [1, 2, 3];
+const profileStats = [1, 2, 3, 4];
 const profileDetails = [1, 2, 3];
 const activityDays = [1, 2, 3, 4, 5, 6, 7];
 
