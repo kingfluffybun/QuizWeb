@@ -20,10 +20,12 @@ import {
     recordQuizCompletion,
     updatePlayerQuizStreak,
 } from "@/app/actions/streak";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
 import { recordLessonSlideProgress } from "@/app/actions/progress";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
 import { getClientLocalDate } from "@/lib/timezone";
+import type { DailyGoalData } from "@/lib/daily-goal";
 
 type AnswerResult = {
     correct: boolean;
@@ -282,11 +284,13 @@ export default function QuizLandingClient({
     unitId,
     initialSlideOrder,
     nextUnit,
+    dailyGoalData,
 }: {
     initialQuizzes?: QuizData[];
     completionDestination?: "home" | "input";
     unitId?: number;
     initialSlideOrder?: number;
+    dailyGoalData?: DailyGoalData | null;
     nextUnit?: {
         unit_id: number;
         unit_title: string;
@@ -309,6 +313,7 @@ export default function QuizLandingClient({
     const [baseXp, setBaseXp] = useState(0);
     const [currentStreak, setCurrentStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
+    const [dailyGoalStats, setDailyGoalStats] = useState(dailyGoalData);
     const [isFinished, setIsFinished] = useState(false);
     const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(() =>
@@ -489,6 +494,9 @@ export default function QuizLandingClient({
                 console.error("Failed to record quiz completion:", response.error);
                 return;
             }
+            void getDailyGoalData().then(setDailyGoalStats).catch((error) => {
+                console.error("Failed to refresh daily XP progress after quiz completion:", error);
+            });
         }).catch((error) => {
             console.error("Failed to record quiz completion:", error);
         });
@@ -917,15 +925,25 @@ export default function QuizLandingClient({
                                     <p>Time Spent</p>
                                 </div>
                             </div>
-                            <div className="daily-goal-stats">
-                                <div className="daily-goal-progress-bar">
-                                    <span className="daily-goal-progress-bar-fill" style={{ width: `${Math.min(100, (animatedStats.xp / 200) * 100)}%` }}></span>
+                            {dailyGoalStats && (
+                                <div className="daily-goal-stats">
+                                    <div className="daily-goal-progress-bar">
+                                        <span
+                                            className="daily-goal-progress-bar-fill"
+                                            style={{
+                                                width: `${Math.min(
+                                                    100,
+                                                    (dailyGoalStats.todayXp / dailyGoalStats.dailyGoal) * 100,
+                                                )}%`,
+                                            }}
+                                        ></span>
+                                    </div>
+                                    <div className="daily-goal-progress-bar-label">
+                                        <p>Daily Goal</p>
+                                        <p>{dailyGoalStats.todayXp}/{dailyGoalStats.dailyGoal} XP</p>
+                                    </div>
                                 </div>
-                                <div className="daily-goal-progress-bar-label">
-                                    <p>Daily Goal</p>
-                                    <p>{animatedStats.xp}/200 XP</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                         {isPassed && (hasCodingAssessment || nextUnit) && (
                             <div className="next-level-container">
