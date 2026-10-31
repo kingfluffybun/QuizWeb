@@ -34,6 +34,8 @@ import {
   type SequentialSkipQueuePayload,
 } from "@/app/actions/section-skip";
 import { recordUserActivity } from "@/app/actions/streak";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
+import type { DailyGoalData } from "@/lib/daily-goal";
 import { getNextCurriculumUnit } from "@/app/actions/progress";
 import { getClientLocalDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
@@ -248,6 +250,16 @@ export function CodeProblemRunner({
   const [missedStepIndexes, setMissedStepIndexes] = useState<Set<number>>(
     () => new Set(),
   );
+  const [dailyGoalStats, setDailyGoalStats] = useState<DailyGoalData | null>(null);
+
+  const refreshDailyGoalStats = async () => {
+    try {
+      const data = await getDailyGoalData(getClientLocalDate());
+      setDailyGoalStats(data);
+    } catch (error) {
+      console.error("Failed to refresh daily XP progress after coding assessment:", error);
+    }
+  };
 
   const openAccessibility = () => {
     setAccessibilityClosing(false);
@@ -260,6 +272,21 @@ export function CodeProblemRunner({
     setAccessibilityOpen(false);
     setAccessibilityClosing(false);
   };
+
+  useEffect(() => {
+    let isActive = true;
+    getDailyGoalData(getClientLocalDate())
+      .then((data) => {
+        if (isActive) setDailyGoalStats(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load daily XP progress for coding assessment:", error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoading || status !== "active") {
@@ -335,6 +362,12 @@ export function CodeProblemRunner({
             setStatus("completed");
             completeSequentialSkip({
               targetSectionId: requestedSkipTargetSecId,
+            }).then(async (response) => {
+              if (!response.success) {
+                console.error("Failed to complete sequential skip:", response.error);
+                return;
+              }
+              await refreshDailyGoalStats();
             }).catch((err) => {
               console.error("Failed to complete sequential skip:", err);
             });
@@ -715,6 +748,12 @@ export function CodeProblemRunner({
 
             completeSequentialSkip({
               targetSectionId: requestedSkipTargetSecId,
+            }).then(async (response) => {
+              if (!response.success) {
+                console.error("Failed to complete sequential skip:", response.error);
+                return;
+              }
+              await refreshDailyGoalStats();
             }).catch((err) => {
               console.error("Failed to complete sequential skip:", err);
             });
@@ -732,6 +771,12 @@ export function CodeProblemRunner({
             type: "quiz",
             xp: 50,
             date: getClientLocalDate(),
+          }).then(async (response) => {
+            if (!response.success) {
+              console.error("Failed to record CP assessment XP:", response.error);
+              return;
+            }
+            await refreshDailyGoalStats();
           }).catch((err) => {
             console.error("Failed to record CP assessment XP:", err);
           });
@@ -938,15 +983,25 @@ export function CodeProblemRunner({
                   <p>Time Spent</p>
                 </div>
               </div>
-              <div className="daily-goal-stats">
-                <div className="daily-goal-progress-bar">
-                  <span className="daily-goal-progress-bar-fill" style={{ width: `${Math.min(100, (animatedStats.xp / 200) * 100)}%` }} ></span>
+              {dailyGoalStats && (
+                <div className="daily-goal-stats">
+                  <div className="daily-goal-progress-bar">
+                    <span
+                      className="daily-goal-progress-bar-fill"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (dailyGoalStats.todayXp / dailyGoalStats.dailyGoal) * 100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="daily-goal-progress-bar-label">
+                    <p>Daily Goal</p>
+                    <p>{dailyGoalStats.todayXp}/{dailyGoalStats.dailyGoal} XP</p>
+                  </div>
                 </div>
-                <div className="daily-goal-progress-bar-label">
-                  <p>Daily Goal</p>
-                  <p>{animatedStats.xp}/200 XP</p>
-                </div>
-              </div>
+              )}
             </div>
             {isVictory && !isSkipMode && nextUnit && (
               <div className="next-level-container">

@@ -498,13 +498,29 @@ export default function QuizLandingClient({
 
         if (quizXpRecorded.current) return;
         quizXpRecorded.current = true;
+        const previousDailyGoalStats = dailyGoalStats;
+        const clientToday = getClientLocalDate();
+        setDailyGoalStats((current) => {
+            if (!current) return current;
+
+            const todayIndex = current.weekDates.indexOf(clientToday);
+            return {
+                ...current,
+                todayXp: current.todayXp + totalQuizXp,
+                weekXp: current.weekXp.map((xp, index) =>
+                    index === todayIndex ? xp + totalQuizXp : xp,
+                ),
+            };
+        });
+
         recordQuizCompletion({
             xpEarned: totalQuizXp,
             currentStreak,
             bestStreak,
-            date: getClientLocalDate(),
+            date: clientToday,
         }).then((response) => {
             if (!response.success) {
+                setDailyGoalStats(previousDailyGoalStats);
                 console.error("Failed to record quiz completion:", response.error);
                 return;
             }
@@ -512,9 +528,10 @@ export default function QuizLandingClient({
                 console.error("Failed to refresh daily XP progress after quiz completion:", error);
             });
         }).catch((error) => {
+            setDailyGoalStats(previousDailyGoalStats);
             console.error("Failed to record quiz completion:", error);
         });
-    }, [isFinished, totalQuizXp, currentStreak, bestStreak]);
+    }, [isFinished, totalQuizXp, currentStreak, bestStreak, dailyGoalStats]);
 
     useEffect(() => {
         if (!isFinished) return;
