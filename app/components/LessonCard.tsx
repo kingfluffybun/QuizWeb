@@ -213,6 +213,7 @@ export function LessonCodeFrame({
           }}
           options={{
             readOnly: true,
+            domReadOnly: true,
             fontSize: editorFontSize,
             padding: { top: 24, bottom: 24 },
             minimap: { enabled: false },

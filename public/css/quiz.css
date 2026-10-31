@@ -1503,6 +1503,13 @@
     height: 100% !important;
 }
 
+.lesson-code-preview .monaco-editor .view-lines,
+.lesson-code-preview .monaco-editor .view-lines *,
+.lesson-code-preview .monaco-editor textarea.inputarea {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
 [data-theme="dark"] {
     --cp-editor-background: #1e1e1e;
     --cp-editor-text: #d4d4d4;
@@ -2716,47 +2723,18 @@ footer.incorrect {
         display: flex;
         flex: 1 1 auto;
         min-height: 0;
+        overflow: hidden;
         background: var(--cp-editor-background, #f3f4f6);
     }
 
-    .cp-mobile-gutter,
-    .cp-mobile-textarea {
-        margin: 0;
-        padding: 12px 0;
-        font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
-        font-size: 16px;
-        font-weight: 500;
-        line-height: 24px;
-        letter-spacing: 0;
-    }
-
-    .cp-mobile-gutter {
-        min-width: 42px;
-        padding-right: 8px;
-        padding-left: 10px;
-        overflow: hidden;
-        background: var(--cp-editor-gutter, #e5e7eb);
-        color: var(--cp-editor-gutter-text, #9ca3af);
-        text-align: right;
-        user-select: none;
-        white-space: pre;
-    }
-
-    .cp-mobile-textarea {
-        flex: 1;
+    .cp-mobile-monaco-editor,
+    .cp-mobile-monaco-editor > .monaco-editor,
+    .cp-mobile-monaco-editor > .monaco-editor > .overflow-guard {
+        flex: 1 1 auto;
         min-width: 0;
-        padding-left: 12px;
-        padding-right: 12px;
-        padding-bottom: 48px;
-        border: 0;
-        outline: none;
-        background: transparent;
-        color: var(--cp-editor-text, #111827);
-        overflow: auto;
-        resize: none;
-        tab-size: 4;
-        white-space: pre;
-        -webkit-overflow-scrolling: touch;
+        min-height: 0;
+        height: 100% !important;
+        width: 100% !important;
     }
 
     .cp-quick-symbols {

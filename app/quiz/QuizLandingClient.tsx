@@ -1021,7 +1021,7 @@ export default function QuizLandingClient({
                                 </Link>
                             </div>
                         )}
-                        {isPassed && resolvedUnitId && (
+                        {/* {isPassed && resolvedUnitId && (
                             lessonProgressState === "saving" || isLessonProgressPending
                         ) && (
                             <p role="status">Saving lesson progress...</p>
@@ -1041,7 +1041,7 @@ export default function QuizLandingClient({
                                     Retry saving progress
                                 </button>
                             </div>
-                        )}
+                        )} */}
                         <div className="completion-action">
                             {isPassed ? (
                                 <button

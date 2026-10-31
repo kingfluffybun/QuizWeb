@@ -23,6 +23,7 @@ import {
   useSyncExternalStore,
   useMemo,
 } from "react";
+import type { editor as MonacoEditor } from "monaco-editor";
 import {
   getPublicCodeProblem,
   verifyCodeProblemStep,
@@ -226,8 +227,7 @@ export function CodeProblemRunner({
   );
   const [mobileTab, setMobileTab] = useState<MobileTab>("task");
   const [isTyping, setIsTyping] = useState(false);
-  const editorRef = useRef<HTMLTextAreaElement>(null);
-  const gutterRef = useRef<HTMLPreElement>(null);
+  const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
@@ -587,25 +587,24 @@ export function CodeProblemRunner({
       previewDocument.body.appendChild(script);
     }
     if (isMobileViewport) {
-      editorRef.current?.blur();
+      editorRef.current?.getDomNode()?.querySelector("textarea")?.blur();
       setMobileTab("preview");
     }
   };
 
-  // Insert text at the caret of the mobile editor (quick-symbol bar / Tab key)
+  // Insert text at the caret of the mobile editor's quick-symbol toolbar.
   const insertAtCursor = (token: string) => {
-    const element = editorRef.current;
-    const current = code[activeFile];
-    const start = element?.selectionStart ?? current.length;
-    const end = element?.selectionEnd ?? start;
-    const next = current.slice(0, start) + token + current.slice(end);
-    setCode((previous) => ({ ...previous, [activeFile]: next }));
-    const caret = start + token.length;
-    requestAnimationFrame(() => {
-      if (!element) return;
-      element.focus();
-      element.setSelectionRange(caret, caret);
-    });
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    if (!editor || !model) return;
+
+    const selection = editor.getSelection() ?? model.getFullModelRange();
+    const startOffset = model.getOffsetAt(selection.getStartPosition());
+    editor.executeEdits("cp-quick-symbol", [
+      { range: selection, text: token, forceMoveMarkers: true },
+    ]);
+    editor.setPosition(model.getPositionAt(startOffset + token.length));
+    editor.focus();
   };
 
   // Reset current step back to its starting snapshot
@@ -1234,7 +1233,7 @@ export function CodeProblemRunner({
                 aria-selected={mobileTab === tabKey}
                 className={`cp-mobile-tab${mobileTab === tabKey ? " active" : ""}`}
                 onClick={() => {
-                  editorRef.current?.blur();
+                  editorRef.current?.getDomNode()?.querySelector("textarea")?.blur();
                   setMobileTab(tabKey);
                 }}
               >
@@ -1528,50 +1527,48 @@ export function CodeProblemRunner({
                 {isMobileViewport ? (
                   <div className="cp-mobile-editor">
                     <div className="cp-mobile-editor-area">
-                      <pre className="cp-mobile-gutter" ref={gutterRef} aria-hidden="true">
-                        {Array.from(
-                          { length: Math.max(1, code[activeFile].split("\n").length) },
-                          (_, lineIndex) => lineIndex + 1,
-                        ).join("\n")}
-                      </pre>
-                      <textarea
-                        ref={editorRef}
-                        className="cp-mobile-textarea"
-                        aria-label={`Edit ${fileMeta[activeFile].label}`}
+                      <Editor
+                        className="monaco-code-editor cp-mobile-monaco-editor"
+                        height="100%"
+                        width="100%"
+                        language={fileMeta[activeFile].language}
+                        theme={editorTheme}
                         value={code[activeFile]}
-                        wrap="off"
-                        autoCapitalize="off"
-                        autoCorrect="off"
-                        autoComplete="off"
-                        spellCheck={false}
-                        data-gramm="false"
-                        onChange={(event) => {
-                          const nextValue = event.target.value;
+                        onChange={(value) => {
+                          const nextValue = value ?? "";
                           setCode((previous) => ({
                             ...previous,
                             [activeFile]: nextValue,
                           }));
                         }}
-                        onScroll={(event) => {
-                          if (gutterRef.current) {
-                            gutterRef.current.scrollTop = event.currentTarget.scrollTop;
-                          }
+                        onMount={(editor, monaco) => {
+                          editorRef.current = editor;
+                          editor.onDidFocusEditorText(() => setIsTyping(true));
+                          editor.onDidBlurEditorText(() => setIsTyping(false));
+                          editor.addCommand(
+                            monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+                            () => {
+                              void submitStepRef.current();
+                            },
+                          );
                         }}
-                        onFocus={() => setIsTyping(true)}
-                        onBlur={() => setIsTyping(false)}
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === "Enter" &&
-                            (event.ctrlKey || event.metaKey)
-                          ) {
-                            event.preventDefault();
-                            void submitStepRef.current();
-                            return;
-                          }
-                          if (event.key === "Tab") {
-                            event.preventDefault();
-                            insertAtCursor(TAB_INDENT);
-                          }
+                        options={{
+                          automaticLayout: true,
+                          contextmenu: false,
+                          fontFamily: "JetBrains Mono, 'Fira Code', monospace",
+                          fontSize: 16,
+                          lineHeight: 24,
+                          lineNumbers: "on",
+                          lineNumbersMinChars: 2,
+                          glyphMargin: false,
+                          minimap: { enabled: false },
+                          padding: { top: 12, bottom: 48 },
+                          renderLineHighlight: "all",
+                          roundedSelection: false,
+                          scrollBeyondLastLine: false,
+                          smoothScrolling: true,
+                          tabSize: 4,
+                          wordWrap: "off",
                         }}
                       />
                     </div>

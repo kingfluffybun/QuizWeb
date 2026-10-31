@@ -115,6 +115,9 @@ export interface UnitProgressItem {
   is_completed: boolean;
   is_locked: boolean;
   percentage: number;
+  activity_count: number;
+  completed_activity_count: number;
+  activity_percentage: number;
   unit_order?: number;
 }
 
@@ -133,6 +136,8 @@ export interface UserSectionProgress {
   overallPercentage: number;
   totalUnits: number;
   completedUnits: number;
+  totalActivities: number;
+  completedActivities: number;
 }
 
 /**
@@ -469,6 +474,8 @@ export async function getUserSectionProgress(
     overallPercentage: 0,
     totalUnits: 0,
     completedUnits: 0,
+    totalActivities: 0,
+    completedActivities: 0,
   };
 
   try {
@@ -557,12 +564,17 @@ export async function getUserSectionProgress(
     const [unitRows] = await db.query<RowDataPacket[]>(
       `SELECT u.unit_id, u.unit_title, u.unit_order,
               COALESCE(sc.slide_count, 1) AS total_slides,
+              COALESCE(qc.quiz_count, 0) AS quiz_count,
+              EXISTS(SELECT 1 FROM unit_assessment_tbl ua WHERE ua.unit_id = u.unit_id) AS has_coding_assessment,
               COALESCE(p.current_slide_order, 0) AS current_slide_order,
               COALESCE(p.is_completed, 0) AS is_completed
        FROM unit_tbl u
        LEFT JOIN (
          SELECT unit_id, COUNT(*) AS slide_count FROM lesson_slide_tbl GROUP BY unit_id
        ) sc ON u.unit_id = sc.unit_id
+       LEFT JOIN (
+         SELECT unit_id, COUNT(*) AS quiz_count FROM quiz_tbl GROUP BY unit_id
+       ) qc ON u.unit_id = qc.unit_id
        LEFT JOIN user_lesson_progress_tbl p ON u.unit_id = p.unit_id AND p.user_id = ?
        WHERE u.sec_id = ? AND u.status = 'approved'
        ORDER BY u.unit_order ASC, u.unit_id ASC`,
@@ -578,6 +590,22 @@ export async function getUserSectionProgress(
       const percentage = isCompleted
         ? 100
         : Math.min(99, Math.round((currentSlide / totalSlides) * 100));
+      const hasQuiz = Number(r.quiz_count) > 0;
+      const hasCodingAssessment = Boolean(r.has_coding_assessment);
+      const lessonCompleted = isCompleted || currentSlide >= totalSlides;
+      const lessonProgress = isCompleted
+        ? 1
+        : Math.min(1, Math.max(0, currentSlide / totalSlides));
+      const activityCount =
+        1 + Number(hasQuiz) + Number(hasCodingAssessment);
+      const completedActivityCount =
+        Number(lessonCompleted) +
+        Number(hasQuiz && isCompleted) +
+        Number(hasCodingAssessment && isCompleted);
+      const activityProgress =
+        lessonProgress +
+        Number(hasQuiz && isCompleted) +
+        Number(hasCodingAssessment && isCompleted);
 
       return {
         unit_id: uId,
@@ -587,17 +615,32 @@ export async function getUserSectionProgress(
         is_completed: isCompleted,
         is_locked: isLocked,
         percentage,
+        activity_count: activityCount,
+        completed_activity_count: completedActivityCount,
+        activity_percentage: Math.round(
+          (activityProgress / activityCount) * 100,
+        ),
         unit_order: r.unit_order != null ? Number(r.unit_order) : 1,
       };
     });
 
     const completedUnits = units.filter((u) => u.is_completed).length;
-    const overallPercentage =
-      units.length > 0
-        ? Math.round(
-            units.reduce((acc, u) => acc + u.percentage, 0) / units.length,
-          )
-        : 0;
+    const totalActivities = units.reduce(
+      (total, unit) => total + unit.activity_count,
+      0,
+    );
+    const completedActivities = units.reduce(
+      (total, unit) => total + unit.completed_activity_count,
+      0,
+    );
+    const activityProgressPoints = units.reduce(
+      (total, unit) =>
+        total + (unit.activity_percentage / 100) * unit.activity_count,
+      0,
+    );
+    const overallPercentage = totalActivities
+      ? Math.round((activityProgressPoints / totalActivities) * 100)
+      : 0;
 
     return {
       section: sectionMeta,
@@ -605,6 +648,8 @@ export async function getUserSectionProgress(
       overallPercentage,
       totalUnits: units.length,
       completedUnits,
+      totalActivities,
+      completedActivities,
     };
   } catch (error) {
     console.error("Failed to get user section progress:", error);

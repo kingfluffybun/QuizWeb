@@ -111,7 +111,7 @@ export default async function DashboardPage() {
                                                 </div>
                                                 <div>
                                                     <h2>{sectionProgress.section.sec_title || `${sectionProgress.section.cat_name} Section ${sectionProgress.section.sec_num}`}</h2>
-                                                    <p>{sectionProgress.completedUnits} of {sectionProgress.totalUnits} Units Completed</p>
+                                                    <p>{sectionProgress.completedActivities} of {sectionProgress.totalActivities} Levels Complete</p>
                                                 </div>
                                             </div>
                                             <div className="row"><h1>{sectionProgress.overallPercentage}%</h1></div>
@@ -123,11 +123,36 @@ export default async function DashboardPage() {
                                     <hr></hr>
                                     <div className="unit-list-dashboard">
                                         {(() => {
-                                            const visibleUnits = sectionProgress.units.filter((unit) => !unit.is_locked);
-                                            return visibleUnits.length > 0 ? (
-                                                visibleUnits.map((unit, index) => {
-                                                    const isCompleted = Boolean(unit.is_completed);
-                                                    return (
+                                            return sectionProgress.units.length > 0 ? (
+                                                sectionProgress.units.map((unit, index) => {
+                                                    const content = (
+                                                        <>
+                                                            <div className="unit-no row">
+                                                                <p>{index + 1}</p>
+                                                            </div>
+                                                            <div className="unit-info">
+                                                                <div className="unit-description">
+                                                                    <p id="unit-title">{unit.unit_title}</p>
+                                                                    <p>{unit.activity_percentage}%</p>
+                                                                </div>
+                                                                <div className="unit-progress-bar">
+                                                                    <div className="progress-bar-fill" style={{ width: `${unit.activity_percentage}%` }}></div>
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    );
+
+                                                    return unit.is_locked ? (
+                                                        <div
+                                                            key={unit.unit_id}
+                                                            className="unit row"
+                                                            aria-disabled="true"
+                                                            style={{ color: "inherit", cursor: "not-allowed", opacity: 0.6 }}
+                                                            title={`${unit.unit_title} is locked. Complete the previous lesson to unlock it.`}
+                                                        >
+                                                            {content}
+                                                        </div>
+                                                    ) : (
                                                         <Link
                                                             key={unit.unit_id}
                                                             prefetch={true}
@@ -136,22 +161,7 @@ export default async function DashboardPage() {
                                                             style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
                                                             title={`Open ${unit.unit_title}`}
                                                         >
-                                                            <div className="unit-no row">
-                                                                <p>{index + 1}</p>
-                                                            </div>
-                                                            <div className="unit-info">
-                                                                <div className="unit-description">
-                                                                    <p id="unit-title">{unit.unit_title}</p>
-                                                                    <p>
-                                                                        {isCompleted
-                                                                            ? `${unit.total_slides}/${unit.total_slides}`
-                                                                            : `${unit.current_slide_order}/${unit.total_slides}`}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="unit-progress-bar">
-                                                                    <div className="progress-bar-fill" style={{ width: `${unit.percentage}%` }}></div>
-                                                                </div>
-                                                            </div>
+                                                            {content}
                                                         </Link>
                                                     );
                                                 })
