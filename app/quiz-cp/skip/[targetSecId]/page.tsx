@@ -11,7 +11,7 @@ interface SkipQuizCPPageProps {
 export default async function SkipQuizCPPage({ params }: SkipQuizCPPageProps) {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login?callbackUrl=/learn-ui");
+    redirect("/login?callbackUrl=/learn");
   }
 
   const { targetSecId } = await params;
@@ -19,7 +19,7 @@ export default async function SkipQuizCPPage({ params }: SkipQuizCPPageProps) {
 
   // Section 1 is the starting level and cannot be skipped; minimum skip target is Section 3
   if (!Number.isFinite(parsedTargetSecId) || parsedTargetSecId <= 2) {
-    redirect("/learn-ui");
+    redirect("/learn");
   }
 
   return (

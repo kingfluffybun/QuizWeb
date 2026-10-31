@@ -111,20 +111,27 @@ async function runTestSuite() {
     assert(fs.existsSync(skipRoutePath), "Dedicated skip route app/quiz-cp/skip/[targetSecId]/page.tsx exists");
     const skipRouteCode = fs.readFileSync(skipRoutePath, "utf-8");
     assert(skipRouteCode.includes("auth()"), "Dedicated skip route checks session with auth()");
-    assert(skipRouteCode.includes("callbackUrl=/learn-ui"), "Dedicated skip route redirects unauthenticated users to login");
+    assert(skipRouteCode.includes("callbackUrl=/learn"), "Dedicated skip route redirects unauthenticated users to login");
     assert(skipRouteCode.includes("parsedTargetSecId <= 2"), "Dedicated skip route protects starting level (targetSecId <= 2 redirected)");
 
-    const learnUiClientPath = path.resolve(process.cwd(), "app/learn-ui/LearnRoadmapClient.tsx");
-    const learnUiClientCode = fs.readFileSync(learnUiClientPath, "utf-8");
-    assert(learnUiClientCode.includes("guest-rail-notice-box"), "LearnRoadmapClient includes guest preview notice box");
-    assert(learnUiClientCode.includes("guest-unit-lock-modal"), "LearnRoadmapClient includes guest unit lock modal");
-    assert(learnUiClientCode.includes("activeSection.sec_id > 1"), "LearnRoadmapClient prevents skip rail box on Section 1");
-    assert(learnUiClientCode.includes("!isGuest && section.sec_id >= 3"), "LearnRoadmapClient restricts checkpoints to Section 3+ and authenticated users");
+    const learnClientPath = path.resolve(process.cwd(), "app/learn/LearnRoadmapClient.tsx");
+    const learnClientCode = fs.readFileSync(learnClientPath, "utf-8");
+    assert(learnClientCode.includes("guest-rail-notice-box"), "LearnRoadmapClient includes guest preview notice box");
+    assert(learnClientCode.includes("guest-unit-lock-modal"), "LearnRoadmapClient includes guest unit lock modal");
+    assert(learnClientCode.includes("section.sec_id >= 3"), "LearnRoadmapClient only shows skip checkpoints from Section 3");
+    assert(learnClientCode.includes("!isGuest && section.sec_id >= 3"), "LearnRoadmapClient restricts checkpoints to Section 3+ and authenticated users");
 
-    // Strictly verify /learn/page.tsx is untouched
+    // Verify the canonical and legacy Learn routes.
     const learnPagePath = path.resolve(process.cwd(), "app/learn/page.tsx");
     const learnPageCode = fs.readFileSync(learnPagePath, "utf-8");
-    assert(!learnPageCode.includes("quiz-cp/skip"), "/learn/page.tsx was NOT modified for skip function (as explicitly instructed)");
+    assert(learnPageCode.includes("getCurriculumRoadmapData"), "/learn serves the curriculum roadmap");
+    assert(!learnPageCode.includes("quiz-cp/skip"), "/learn/page.tsx does not implement the skip route");
+    const learnOldPagePath = path.resolve(process.cwd(), "app/learn-old/page.tsx");
+    const learnOldPageCode = fs.readFileSync(learnOldPagePath, "utf-8");
+    assert(learnOldPageCode.includes("getAvailableUnitsForUser"), "/learn-old serves the previous unit list");
+    const learnUiPagePath = path.resolve(process.cwd(), "app/learn-ui/page.tsx");
+    const learnUiPageCode = fs.readFileSync(learnUiPagePath, "utf-8");
+    assert(learnUiPageCode.includes('redirect("/learn")'), "/learn-ui redirects to the canonical Learn route");
   }
 
   console.log(`\n=== RESULTS: ${passedCount} PASSED, ${failedCount} FAILED ===`);

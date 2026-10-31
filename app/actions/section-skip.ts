@@ -290,7 +290,8 @@ export async function completeSequentialSkip(input: {
 
     // Revalidate paths for instant client-side update
     try {
-      revalidatePath("/learn-ui");
+      revalidatePath("/learn");
+      revalidatePath("/learn-old");
       revalidatePath("/home");
       revalidatePath("/quiz");
     } catch {

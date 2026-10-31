@@ -1,10 +1,19 @@
 import { auth } from "@/auth";
-import { getAvailableUnitsForUser } from "@/app/actions/progress";
-import LearnUnitsClient from "./LearnUnitsClient";
+import { getCurriculumRoadmapData } from "@/app/actions/curriculum-roadmap";
+import LearnRoadmapClient from "./LearnRoadmapClient";
+
+export const dynamic = "force-dynamic";
 
 export default async function LearnPage() {
     const session = await auth();
     const userId = session?.user?.id ? Number(session.user.id) : undefined;
-    const units = await getAvailableUnitsForUser(userId);
-    return <LearnUnitsClient units={units} />;
+    const roadmapData = await getCurriculumRoadmapData(userId);
+
+    return (
+        <LearnRoadmapClient
+            roadmapData={roadmapData}
+            userRole={session?.user?.role}
+            username={session?.user?.name ?? undefined}
+        />
+    );
 }

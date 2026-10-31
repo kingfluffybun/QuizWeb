@@ -293,7 +293,7 @@ async function runTests() {
 
     // Contract verification
     const learnUiSource = fs.readFileSync(
-      path.resolve(process.cwd(), "app/learn-ui/LearnRoadmapClient.tsx"),
+      path.resolve(process.cwd(), "app/learn/LearnRoadmapClient.tsx"),
       "utf8",
     );
     assert(
@@ -317,8 +317,8 @@ async function runTests() {
       "utf8",
     );
     assert(
-      progressSource.includes('revalidatePath("/learn-ui")'),
-      "app/actions/progress.ts revalidates /learn-ui path on progress update",
+      progressSource.includes('revalidatePath("/learn")'),
+      "app/actions/progress.ts revalidates /learn path on progress update",
     );
 
     const quizSource = fs.readFileSync(
@@ -326,17 +326,17 @@ async function runTests() {
       "utf8",
     );
     assert(
-      quizSource.includes('revalidatePath("/learn-ui")'),
-      "app/actions/quiz.ts revalidates /learn-ui path in revalidateQuizPaths",
+      quizSource.includes('revalidatePath("/learn")'),
+      "app/actions/quiz.ts revalidates /learn path in revalidateQuizPaths",
     );
 
     const pageSource = fs.readFileSync(
-      path.resolve(process.cwd(), "app/learn-ui/page.tsx"),
+      path.resolve(process.cwd(), "app/learn/page.tsx"),
       "utf8",
     );
     assert(
       pageSource.includes('export const dynamic = "force-dynamic"'),
-      "app/learn-ui/page.tsx is force-dynamic for real-time user progress",
+      "app/learn/page.tsx is force-dynamic for real-time user progress",
     );
 
     // Functional sub-node state test

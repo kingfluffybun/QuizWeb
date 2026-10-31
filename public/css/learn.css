@@ -1,22 +1,19 @@
-:root {
+.learn-page {
     --roadmap-wave-amplitude: 52px;
+    --learn-sidebar-width: 240px;
 }
 
 @media (max-width: 600px) {
-    :root {
+    .learn-page {
         --roadmap-wave-amplitude: 36px;
     }
-}
-
-.learn-page {
-    --learn-sidebar-width: 240px;
 }
 
 .quiz-page.sidebar-collapsed.learn-page {
     --learn-sidebar-width: 80px;
 }
 
-main {
+.learn-page > main {
     --learn-main-padding: 48px;
     padding: var(--learn-main-padding) !important;
 }
@@ -49,6 +46,7 @@ main {
     .section-stats {
         display: flex;
         gap: 12px;
+        flex-wrap: wrap;
         .icon-label {
             display: flex;
             gap: 8px;
@@ -59,7 +57,7 @@ main {
     }
 }
 
-.section-detail-content {
+.section-detail-content--animated {
     animation: learn-section-slide-in 320ms ease-out both;
 }
 
@@ -80,10 +78,12 @@ main {
     top: var(--learn-main-padding);
     left: calc(var(--learn-sidebar-width) + var(--learn-main-padding));
     right: var(--learn-main-padding);
+    transition: left 0.2s ease;
     width: min(1080px, calc(100vw - var(--learn-sidebar-width) - var(--learn-main-padding) - var(--learn-main-padding)));
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 48px;
+    column-gap: 48px;
+    row-gap: 24px;
     width: auto;
     max-width: 1080px;
     margin-inline: auto;
@@ -92,6 +92,90 @@ main {
 
 .section-detail-rail .section-detail {
     pointer-events: auto;
+}
+
+.section-progress-card {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 24px;
+    border: 2px solid var(--border-main);
+    border-radius: 20px;
+    background-color: var(--bg-card);
+    pointer-events: auto;
+
+    .section-progress-summary {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+    }
+}
+
+.section-progress-track {
+    height: 10px;
+    border-radius: 999px;
+    background-color: var(--border-main);
+}
+
+.section-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--primary-color);
+    transition: width 0.25s ease;
+}
+
+.section-progress-up-next {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    p {
+        margin: 4px 0 0;
+        color: var(--text-main);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+}
+
+.section-progress-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.section-progress-continue {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 56px;
+    padding: 16px 0;
+    border-radius: 16px;
+    background-color: var(--primary-color);
+    color: var(--text-inverse);
+    box-shadow:
+        0 6px 0 rgb(0 0 0 / 20%),
+        0 6px 0 var(--primary-color);
+    text-decoration: none;
+
+    p {
+        margin: 0;
+        color: var(--text-inverse);
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    &:active {
+        box-shadow:
+            0 4px 0 rgb(0 0 0 / 20%),
+            0 4px 0 var(--primary-color);
+        transform: translateY(4px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 3px;
+    }
 }
 
 .roadmap {
@@ -129,7 +213,7 @@ main {
         0 8px 0 rgb(0 0 0 / 20%),
         0 8px 0 var(--primary-color);
     border-radius: 24px;
-    margin-bottom: 32px;
+    margin-bottom: 48px;
     &::before {
         content: "";
         position: absolute;
@@ -259,7 +343,7 @@ main {
         }
         z-index: 1;
         &:hover:not(.disabled) {cursor: pointer;}
-        &:active:not(.disabled) {
+        &:active {
             box-shadow:
             0 4px 0 rgb(0 0 0 / 20%),
             0 4px 0 var(--level-color);
@@ -278,7 +362,6 @@ main {
 
 .level-row-divider {
     width: 100%;
-    max-width: 360px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -351,8 +434,8 @@ main {
         padding: 16px 0;
         border-radius: 16px;
         box-shadow:
-            0 8px 0 rgb(0 0 0 / 20%),
-            0 8px 0 var(--primary-color);
+            0 6px 0 rgb(0 0 0 / 20%),
+            0 6px 0 var(--primary-color);
         text-decoration: none;
         p {
             color: var(--text-inverse);
@@ -375,13 +458,29 @@ main {
     }
 }
 
+.lesson-detail-container.is-closing {
+    pointer-events: none;
+    animation: lesson-detail-fade-out 180ms ease-in forwards;
+}
+
+@keyframes lesson-detail-fade-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+}
+
 .curriculum-section,
 .section-header {
     scroll-margin-top: calc(var(--learn-main-padding) + 16px);
 }
 
 @media (max-width: 900px) {
-    main {
+    .learn-page > main {
         --learn-main-padding: 16px;
         padding: 16px !important;
     }
@@ -416,17 +515,26 @@ main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .section-detail-content,
-    .lesson-detail-container {
+    .section-detail-rail,
+    .section-detail-content--animated,
+    .lesson-detail-container,
+    .lesson-detail-container.is-closing,
+    .section-progress-fill,
+    .section-progress-continue {
         animation: none !important;
+        transition: none !important;
     }
     .level-row {
         transition: none !important;
     }
 }
 
-html[data-motion="reduce"] .section-detail-content,
+html[data-motion="reduce"] .section-detail-rail,
+html[data-motion="reduce"] .section-detail-content--animated,
 html[data-motion="reduce"] .lesson-detail-container,
+html[data-motion="reduce"] .lesson-detail-container.is-closing,
+html[data-motion="reduce"] .section-progress-fill,
+html[data-motion="reduce"] .section-progress-continue,
 html[data-motion="reduce"] .level-row {
     animation: none !important;
     transition: none !important;

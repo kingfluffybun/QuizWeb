@@ -972,7 +972,7 @@ export function CodeProblemRunner({
             <div className="completion-action">
               {isVictory ? (
                 isSkipMode ? (
-                  <Link href="/learn-ui" className="options" id="submit">
+                  <Link href="/learn" className="options" id="submit">
                     <p>Continue to Roadmap</p>
                   </Link>
                 ) : (
@@ -986,7 +986,7 @@ export function CodeProblemRunner({
                 </button>
               )}
               {isSkipMode ? (
-                <Link href="/learn-ui" className="options" id="back">
+                <Link href="/learn" className="options" id="back">
                   <p>Back to Roadmap</p>
                 </Link>
               ) : (
@@ -1041,7 +1041,7 @@ export function CodeProblemRunner({
               className="quiz-close-button"
               aria-label="Exit coding assessment"
               onClick={() =>
-                router.push(requestedSkipTargetSecId ? "/learn-ui" : "/learn")
+                router.push("/learn")
               }
             >
               <svg

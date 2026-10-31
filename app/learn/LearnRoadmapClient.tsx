@@ -48,6 +48,37 @@ function getRoadlinePath(startSide: RoadlineStartSide, segment: RoadlineSegment)
     : "M 168 77 V 121 Q 168 151 138 151 H 101";
 }
 
+function isRoadmapLessonComplete(unit: RoadmapUnitNode) {
+  return (
+    unit.is_completed ||
+    (unit.slide_count > 0 && unit.current_slide_order >= unit.slide_count)
+  );
+}
+
+function alignSectionHeaderWithDetail(sectionId: number, smooth = false) {
+  const scrollContainer = document.querySelector<HTMLElement>(
+    ".learn-page > main",
+  );
+  const sectionHeader = document.querySelector<HTMLElement>(
+    `.section-header[data-section-id="${sectionId}"]`,
+  );
+  const sectionDetailRail = document.querySelector<HTMLElement>(
+    ".section-detail-rail",
+  );
+  if (!scrollContainer || !sectionHeader || !sectionDetailRail) return;
+
+  const scrollDelta =
+    sectionHeader.getBoundingClientRect().top -
+    sectionDetailRail.getBoundingClientRect().top;
+  const scrollTop = scrollContainer.scrollTop + scrollDelta;
+
+  if (smooth) {
+    scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
+  } else {
+    scrollContainer.scrollTop = scrollTop;
+  }
+}
+
 export default function LearnRoadmapClient({
   roadmapData,
   userRole,
@@ -60,25 +91,140 @@ export default function LearnRoadmapClient({
       1
     );
   });
+  const initialSectionIdRef = useRef(activeSectionId);
 
   const [selectedNode, setSelectedNode] = useState<SelectedRoadmapNode | null>(
     null,
   );
+  const [isDetailClosing, setIsDetailClosing] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const detailCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const isJumpingRef = useRef(false);
+  const activeSectionIdRef = useRef(activeSectionId);
+  const hasUserNavigatedSectionsRef = useRef(false);
+  const [animateSectionDetail, setAnimateSectionDetail] = useState(false);
+
+  const closeDetail = useCallback(() => {
+    if (!selectedNode || isDetailClosing) return;
+    setIsDetailClosing(true);
+    detailCloseTimeoutRef.current = setTimeout(() => {
+      setSelectedNode(null);
+      setIsDetailClosing(false);
+      detailCloseTimeoutRef.current = null;
+    }, 180);
+  }, [isDetailClosing, selectedNode]);
+
+  const showDetail = useCallback((node: SelectedRoadmapNode) => {
+    if (detailCloseTimeoutRef.current) {
+      clearTimeout(detailCloseTimeoutRef.current);
+      detailCloseTimeoutRef.current = null;
+    }
+    setIsDetailClosing(false);
+    setSelectedNode(node);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (detailCloseTimeoutRef.current) {
+        clearTimeout(detailCloseTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const activeSection =
     roadmapData.sections.find((s) => s.sec_id === activeSectionId) ??
     roadmapData.sections[0];
-
   const isStaffUser = Boolean(
     roadmapData.userProgression.isStaff ||
       userRole === "admin" ||
       userRole === "maintainer",
   );
-
   const isGuest = !roadmapData.userProgression.userId && !username;
   const firstUnitId = roadmapData.sections[0]?.units[0]?.unit_id ?? 98;
+  const activeSectionIndex = roadmapData.sections.findIndex(
+    (section) => section.sec_id === activeSection?.sec_id,
+  );
+  const progressUnits = activeSection?.units ?? [];
+  const totalLevels = progressUnits.reduce(
+    (total, unit) =>
+      total + 1 + Number(unit.quiz_count > 0) + Number(unit.has_coding_assessment),
+    0,
+  );
+  const completedLevels = progressUnits.reduce((total, unit) => {
+    return (
+      total +
+      Number(isRoadmapLessonComplete(unit)) +
+      Number(unit.quiz_count > 0 && unit.is_completed) +
+      Number(unit.has_coding_assessment && unit.is_completed)
+    );
+  }, 0);
+  const sectionProgressPoints = progressUnits.reduce((total, unit) => {
+    const lessonProgress = unit.is_completed
+      ? 1
+      : unit.slide_count > 0
+        ? Math.min(1, Math.max(0, unit.current_slide_order / unit.slide_count))
+        : 0;
+    return (
+      total +
+      lessonProgress +
+      Number(unit.quiz_count > 0 && unit.is_completed) +
+      Number(unit.has_coding_assessment && unit.is_completed)
+    );
+  }, 0);
+  const sectionProgress = totalLevels
+    ? Math.round((sectionProgressPoints / totalLevels) * 100)
+    : 0;
+  const upNextUnit = roadmapData.sections
+    .slice(Math.max(0, activeSectionIndex))
+    .flatMap((section) => section.units)
+    .find(
+      (unit) =>
+        !unit.is_completed &&
+        (isStaffUser || (!unit.is_locked && (!isGuest || unit.unit_id === firstUnitId))) &&
+        (unit.slide_count > 0 && unit.current_slide_order < unit.slide_count ||
+          unit.quiz_count > 0 ||
+          unit.has_coding_assessment),
+    );
+  const upNextActivity = upNextUnit
+    ? isRoadmapLessonComplete(upNextUnit)
+      ? upNextUnit.quiz_count > 0
+        ? {
+            label: "Quiz",
+            href: `/quiz/${upNextUnit.unit_id}?start=quiz`,
+          }
+        : {
+            label: "Code",
+            href: `/quiz-cp/${upNextUnit.unit_id}`,
+          }
+      : {
+          label: "Learn",
+          href: `/quiz/${upNextUnit.unit_id}`,
+        }
+    : null;
+
+  const updateActiveSection = useCallback(
+    (secId: number, animate = hasUserNavigatedSectionsRef.current) => {
+      if (activeSectionIdRef.current === secId) return;
+      activeSectionIdRef.current = secId;
+      if (animate) setAnimateSectionDetail(true);
+      setActiveSectionId(secId);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    isJumpingRef.current = true;
+    alignSectionHeaderWithDetail(initialSectionIdRef.current);
+
+    const timeoutId = window.setTimeout(() => {
+      isJumpingRef.current = false;
+    }, 100);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   // Auto-sync active section in left rail as the learner scrolls
   useEffect(() => {
@@ -114,7 +260,7 @@ export default function LearnRoadmapClient({
       }
 
       if (matchedSecId !== null) {
-        setActiveSectionId((prev) => (prev === matchedSecId ? prev : matchedSecId));
+        updateActiveSection(matchedSecId);
       }
     };
 
@@ -131,7 +277,7 @@ export default function LearnRoadmapClient({
           if (entry.isIntersecting) {
             const secId = Number(entry.target.getAttribute("data-section-id"));
             if (Number.isFinite(secId) && secId > 0) {
-              setActiveSectionId((prev) => (prev === secId ? prev : secId));
+              updateActiveSection(secId);
             }
           }
         }
@@ -148,13 +294,31 @@ export default function LearnRoadmapClient({
     headers.forEach((h) => observer.observe(h));
 
     window.addEventListener("scroll", handleScroll, { passive: true });
+    const markSectionNavigationIntent = () => {
+      hasUserNavigatedSectionsRef.current = true;
+    };
+    const markKeyboardNavigationIntent = (event: KeyboardEvent) => {
+      if (
+        ["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(
+          event.key,
+        )
+      ) {
+        markSectionNavigationIntent();
+      }
+    };
+    window.addEventListener("wheel", markSectionNavigationIntent, { passive: true });
+    window.addEventListener("touchmove", markSectionNavigationIntent, { passive: true });
+    window.addEventListener("keydown", markKeyboardNavigationIntent);
 
     return () => {
       observer.disconnect();
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("wheel", markSectionNavigationIntent);
+      window.removeEventListener("touchmove", markSectionNavigationIntent);
+      window.removeEventListener("keydown", markKeyboardNavigationIntent);
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [roadmapData.sections]);
+  }, [roadmapData.sections, updateActiveSection]);
 
   // Handle outside click and Escape key dismissal of popup
   useEffect(() => {
@@ -165,13 +329,13 @@ export default function LearnRoadmapClient({
         !modalRef.current.contains(target) &&
         !target.closest(".level-btn")
       ) {
-        setSelectedNode(null);
+        closeDetail();
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedNode(null);
+        closeDetail();
       }
     };
 
@@ -181,7 +345,29 @@ export default function LearnRoadmapClient({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [closeDetail]);
+
+  useEffect(() => {
+    if (!selectedNode) return;
+
+    const scrollContainer = document.querySelector<HTMLElement>(
+      ".learn-page > main",
+    );
+    if (!scrollContainer) return;
+
+    const openedAtScrollTop = scrollContainer.scrollTop;
+    const closeAfterScrollDown = () => {
+      if (scrollContainer.scrollTop - openedAtScrollTop >= 80) {
+        closeDetail();
+      }
+    };
+
+    scrollContainer.addEventListener("scroll", closeAfterScrollDown, {
+      passive: true,
+    });
+    return () =>
+      scrollContainer.removeEventListener("scroll", closeAfterScrollDown);
+  }, [closeDetail, selectedNode]);
 
   const handleSelectNode = useCallback(
     (
@@ -193,15 +379,15 @@ export default function LearnRoadmapClient({
       lockReason?: string,
     ) => {
       // Toggle closed if clicking currently selected node
-      setSelectedNode((prev) => {
-        if (
-          prev &&
-          prev.unitId === unit.unit_id &&
-          prev.nodeType === nodeType
-        ) {
-          return null;
-        }
-        return {
+      if (
+        selectedNode &&
+        selectedNode.unitId === unit.unit_id &&
+        selectedNode.nodeType === nodeType
+      ) {
+        closeDetail();
+        return;
+      }
+      showDetail({
           unitId: unit.unit_id,
           unitTitle: unit.unit_title,
           secId: section.sec_id,
@@ -213,23 +399,22 @@ export default function LearnRoadmapClient({
           lockReason,
           slideCount: unit.slide_count,
           quizCount: unit.quiz_count,
-        };
       });
     },
-    [],
+    [closeDetail, selectedNode, showDetail],
   );
 
   const handleSelectCheckpoint = useCallback(
     (section: RoadmapSection) => {
-      setSelectedNode((prev) => {
-        if (
-          prev &&
-          prev.secId === section.sec_id &&
-          prev.nodeType === "checkpoint"
-        ) {
-          return null;
-        }
-        return {
+      if (
+        selectedNode &&
+        selectedNode.secId === section.sec_id &&
+        selectedNode.nodeType === "checkpoint"
+      ) {
+        closeDetail();
+        return;
+      }
+      showDetail({
           unitTitle: `${section.cat_name}, Section ${section.sec_num}: ${section.sec_title}`,
           secId: section.sec_id,
           secNum: section.sec_num,
@@ -240,23 +425,22 @@ export default function LearnRoadmapClient({
           lockReason: section.is_locked
             ? "Complete earlier sections to unlock"
             : undefined,
-        };
       });
     },
-    [],
+    [closeDetail, selectedNode, showDetail],
   );
 
   const handleSelectComingSoon = useCallback(
     (section: RoadmapSection) => {
-      setSelectedNode((prev) => {
-        if (
-          prev &&
-          prev.secId === section.sec_id &&
-          prev.nodeType === "coming_soon"
-        ) {
-          return null;
-        }
-        return {
+      if (
+        selectedNode &&
+        selectedNode.secId === section.sec_id &&
+        selectedNode.nodeType === "coming_soon"
+      ) {
+        closeDetail();
+        return;
+      }
+      showDetail({
           unitTitle: `${section.sec_title}`,
           secId: section.sec_id,
           secNum: section.sec_num,
@@ -265,23 +449,20 @@ export default function LearnRoadmapClient({
           isCompleted: false,
           isLocked: true,
           lockReason: "Units under development",
-        };
       });
     },
-    [],
+    [closeDetail, selectedNode, showDetail],
   );
 
   const handleCloseDetail = () => {
-    setSelectedNode(null);
+    closeDetail();
   };
 
   const handleJumpToSection = (secId: number) => {
-    setActiveSectionId(secId);
+    hasUserNavigatedSectionsRef.current = true;
+    updateActiveSection(secId, true);
     isJumpingRef.current = true;
-    const element = document.getElementById(`section-${secId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    alignSectionHeaderWithDetail(secId, true);
     setTimeout(() => {
       isJumpingRef.current = false;
     }, 700);
@@ -297,7 +478,7 @@ export default function LearnRoadmapClient({
             <div className="section-detail">
               <div
                 key={activeSection?.sec_id ?? "overview"}
-                className="section-detail-content"
+                className={`section-detail-content${animateSectionDetail ? " section-detail-content--animated" : ""}`}
               >
               <h1>{activeSection?.sec_title ?? "Curriculum Roadmap"}</h1>
               {/* For description, chat niyo ako -clarence */}
@@ -390,7 +571,7 @@ export default function LearnRoadmapClient({
                   </p>
                 </div>
               </div>
-
+              
               {/* Guest Preview Notice in Left Rail */}
               {isGuest && (
                 <div className="guest-rail-notice-box">
@@ -422,6 +603,41 @@ export default function LearnRoadmapClient({
 
               </div>
             </div>
+            <section className="section-progress-card" aria-labelledby="section-progress-title">
+              <h2 id="section-progress-title">Section Progress</h2>
+              <p className="section-progress-summary">
+                {sectionProgress}% complete · {completedLevels} of {totalLevels} levels finished
+              </p>
+              <div
+                className="section-progress-track"
+                role="progressbar"
+                aria-label={`${activeSection?.sec_title ?? "Section"} progress`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={sectionProgress}
+                aria-valuetext={`${sectionProgress}% complete`}
+              >
+                <div
+                  className="section-progress-fill"
+                  style={{ width: `${sectionProgress}%` }}
+                />
+              </div>
+              <div className="section-progress-up-next">
+                <div>
+                  <span className="section-progress-eyebrow">Up next</span>
+                  <p>{upNextUnit?.unit_title ?? "No available lessons in this or later sections yet."}</p>
+                </div>
+                {upNextUnit && upNextActivity && (
+                  <Link
+                    href={upNextActivity.href}
+                    className="lesson-link section-progress-continue"
+                    aria-label={`Continue to ${upNextUnit.unit_title}`}
+                  >
+                    <p>Continue</p>
+                  </Link>
+                )}
+              </div>
+            </section>
           </aside>
 
           {/* Right Roadmap: Linear Level Tree */}
@@ -430,7 +646,7 @@ export default function LearnRoadmapClient({
             {selectedNode && (
               <div
                 ref={modalRef}
-                className="lesson-detail-container"
+                className={`lesson-detail-container${isDetailClosing ? " is-closing" : ""}`}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="modal-node-title"
@@ -837,15 +1053,11 @@ export default function LearnRoadmapClient({
 
                       return (
                         <div key={unit.unit_id} className="curriculum-unit-group">
-                          {/* Unit Title Divider between units */}
-                          {unitIndex > 0 && (
-                            <div className="level-row-divider">
-                              <hr />
-                              {/* Unit Title */}
-                              <p>{unit.unit_title}</p>
-                              <hr />
-                            </div>
-                          )}
+                          <div className="level-row-divider">
+                            <hr />
+                            <p>{unit.unit_title}</p>
+                            <hr />
+                          </div>
 
                           <div className="level-path">
                             {/* Lesson Node */}
