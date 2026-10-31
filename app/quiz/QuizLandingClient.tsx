@@ -311,11 +311,16 @@ export default function QuizLandingClient({
 }) {
     const router = useRouter();
     const playQuizSound = useQuizSounds();
-    const { quizzes: allQuizzes } = useQuizData();
+    const { quizzes: allQuizzes } = useQuizData(!initialQuizzes?.length);
     const cachedUnit = unitId != null ? getCachedUnit(unitId) : null;
-    const cachedQuizzes = cachedUnit
-        ? toQuizLandingQuizzes(cachedUnit).map(shuffleQuizOptions)
-        : undefined;
+    const cachedQuizzes = useMemo(
+        () => initialQuizzes?.length || !cachedUnit
+            ? undefined
+            : toQuizLandingQuizzes(cachedUnit).map((quiz, index) =>
+                shuffleQuizOptions(quiz, index !== 0),
+            ),
+        [initialQuizzes, cachedUnit],
+    );
     const quizzes =
         initialQuizzes && initialQuizzes.length > 0
             ? initialQuizzes
@@ -356,6 +361,7 @@ export default function QuizLandingClient({
     const [lessonProgressError, setLessonProgressError] = useState<string | null>(null);
     const [completionRetryCount, setCompletionRetryCount] = useState(0);
     const completionRecorded = useRef(false);
+    const quizXpRecorded = useRef(false);
     const firstTryCorrectCount = quizzes.filter(
         (_, index) => !missedQuestionIndexes.has(index) && questionProgress[index]?.result?.correct,
     ).length;
@@ -490,6 +496,29 @@ export default function QuizLandingClient({
     useEffect(() => {
         if (!isFinished) return;
 
+        if (quizXpRecorded.current) return;
+        quizXpRecorded.current = true;
+        recordQuizCompletion({
+            xpEarned: totalQuizXp,
+            currentStreak,
+            bestStreak,
+            date: getClientLocalDate(),
+        }).then((response) => {
+            if (!response.success) {
+                console.error("Failed to record quiz completion:", response.error);
+                return;
+            }
+            void getDailyGoalData().then(setDailyGoalStats).catch((error) => {
+                console.error("Failed to refresh daily XP progress after quiz completion:", error);
+            });
+        }).catch((error) => {
+            console.error("Failed to record quiz completion:", error);
+        });
+    }, [isFinished, totalQuizXp, currentStreak, bestStreak]);
+
+    useEffect(() => {
+        if (!isFinished) return;
+
         const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);
         if (!isPassed) return;
 
@@ -529,23 +558,7 @@ export default function QuizLandingClient({
             setLessonProgressError("Lesson progress could not be saved. Please retry.");
             console.error("Failed to record lesson completion progress:", err);
         });
-        recordQuizCompletion({
-            xpEarned: totalQuizXp,
-            currentStreak,
-            bestStreak,
-            date: getClientLocalDate(),
-        }).then((response) => {
-            if (!response.success) {
-                console.error("Failed to record quiz completion:", response.error);
-                return;
-            }
-            void getDailyGoalData().then(setDailyGoalStats).catch((error) => {
-                console.error("Failed to refresh daily XP progress after quiz completion:", error);
-            });
-        }).catch((error) => {
-            console.error("Failed to record quiz completion:", error);
-        });
-    }, [isFinished, lives, score, quizzes.length, totalQuizXp, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount, resolvedNextUnit, selectedQuiz]);
+    }, [isFinished, lives, score, quizzes.length, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount, resolvedNextUnit, selectedQuiz]);
 
 
     useEffect(() => {
@@ -1279,6 +1292,7 @@ export default function QuizLandingClient({
                                                 value={value}
                                                 onChange={handleAnswerChange}
                                                 disabled={areChoicesLocked}
+                                                shuffleChoices={activeQuizIndex !== 0}
                                                 onPairMatched={() => playQuizSound("correct-answer1")}
                                                 onIncorrectPair={handleIncorrectPair}
                                             />
@@ -1291,6 +1305,7 @@ export default function QuizLandingClient({
                                     value={value}
                                     onChange={handleAnswerChange}
                                     disabled={areChoicesLocked}
+                                    shuffleChoices={activeQuizIndex !== 0}
                                     onPairMatched={() => playQuizSound("correct-answer1")}
                                     onIncorrectPair={handleIncorrectPair}
                                 />

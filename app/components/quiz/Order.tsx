@@ -12,14 +12,26 @@ type SwapAnimation = {
     phase: "start" | "settle";
 } | null;
 
-export default function Order ({ quiz, value, onChange, disabled = false }: QuestionProps) {
+export default function Order ({
+    quiz,
+    value,
+    onChange,
+    disabled = false,
+    shuffleChoices = true,
+}: QuestionProps) {
     const correct = quiz.quiz_payload.items ?? [];
-    const [initialItems] = useState(() => shuffleItems(correct));
+    const [initialItems] = useState(() => shuffleChoices ? shuffleItems(correct) : correct);
     const items: string[] = Array.isArray(value) ? value : initialItems;
 
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
     const [swapAnimation, setSwapAnimation] = useState<SwapAnimation>(null);
+    const itemOccurrences = new Map<string, number>();
+    const keyedItems = items.map((item) => {
+        const occurrence = itemOccurrences.get(item) ?? 0;
+        itemOccurrences.set(item, occurrence + 1);
+        return { item, key: `${item}-${occurrence}` };
+    });
 
     const moveItem = (fromIndex: number, toIndex: number) => {
         if (disabled || fromIndex === toIndex) return;
@@ -69,6 +81,7 @@ export default function Order ({ quiz, value, onChange, disabled = false }: Ques
     // grip handle drives a pointer-based drag. Mouse input keeps native DnD.
     const handleGripPointerDown = (event: React.PointerEvent<HTMLSpanElement>, index: number) => {
         if (disabled || event.pointerType === "mouse") return;
+        event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
         setDraggedIdx(index);
         setDragOverIdx(index);
@@ -94,7 +107,7 @@ export default function Order ({ quiz, value, onChange, disabled = false }: Ques
     return (
         <div className={`options-container row${disabled ? " is-locked" : ""}`} id="order">
             <div className={`order-options col ${draggedIdx !== null ? "is-dragging" : ""}`}>
-                {items.map((item, index) => {
+                {keyedItems.map(({ item, key }, index) => {
                     const isMoved = swapAnimation?.to === index;
                     const isShifted = swapAnimation && (
                         swapAnimation.direction === "down"
@@ -106,7 +119,7 @@ export default function Order ({ quiz, value, onChange, disabled = false }: Ques
                         : undefined;
 
                     return (
-                        <div className="order-slot" key={index}>
+                        <div className="order-slot" key={key}>
                             <span className="order-slot-number">{index + 1}.</span>
                             <div
                                 data-order-index={index}
@@ -127,7 +140,7 @@ export default function Order ({ quiz, value, onChange, disabled = false }: Ques
                                     onPointerUp={handleGripPointerEnd}
                                     onPointerCancel={handleGripPointerEnd}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical" onDragStart={(event) => event.preventDefault()}><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
                                 </span>
                                 <p>{item}</p>
                                 <span className="order-move-btns">

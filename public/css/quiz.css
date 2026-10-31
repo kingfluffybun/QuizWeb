@@ -1160,7 +1160,7 @@
 .order-options {justify-content: flex-start;}
 .order-options {
     --order-item-gap: 12px;
-    height: auto;
+    height: 100%;
     flex: 1;
     > .order-slot {width: 100%;}
     > .order-slot > .options {border-radius: 16px;}
@@ -1168,9 +1168,10 @@
 
 .order-slot {
     display: flex;
-    flex: 0 0 auto;
+    flex: 1 1 0;
     align-items: stretch;
-    min-height: 0;
+    min-height: 40px;
+    max-height: 96px;
 }
 
 .order-slot-number {
@@ -1188,7 +1189,6 @@
 .order-options > .order-slot {gap: 12px;}
 .order-options > .order-slot > .options {
     width: auto;
-    height: 96px;
     flex: 1;
     min-width: 0;
 }
@@ -1776,7 +1776,7 @@
 
         > button.options#submit:not(:disabled):hover::after {background-color: rgba(255, 255, 255, 0.1);}
         > button.options#skip {color: var(--border-main); background-color: var(--bg-card);}
-        > button.options#skip:hover {filter:brightness(1.2); border-color: var(--border-main);}
+        > button.options#skip:hover {filter:brightness(0.9); border-color: var(--border-main);}
         > button.options#skip:active {border-bottom-width: 3px;}
         > button.options#submit:active {border-bottom-width: 0;}
     }
@@ -2158,10 +2158,13 @@ footer.incorrect {
     .options-container#order {
         width: 100% !important;
         gap: 10px !important;
+        flex: 0 0 auto !important;
     }
 
     .order-options {
         --order-item-gap: 6px;
+        height: auto !important;
+        flex: 0 0 auto !important;
         gap: 6px !important;
         min-width: 0 !important;
         margin-left: 0 !important;
@@ -2170,7 +2173,10 @@ footer.incorrect {
     .order-options > .order-slot {
         align-items: stretch;
         gap: 10px;
+        flex: 0 0 auto;
         width: 100%;
+        min-height: 48px;
+        max-height: none;
     }
 
     .order-slot-number {

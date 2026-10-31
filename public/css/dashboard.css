@@ -1565,7 +1565,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
         font-weight: 500;
         border-radius: 999px;
         font-size: 0.8rem;
-        color: var(--text-muted);
+        color: var(--text-main);
         text-decoration: none;
         background-color: rgba(124, 58, 237, 0.08);
         transition: background-color 0.15s ease, color 0.15s ease;

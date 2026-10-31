@@ -863,14 +863,6 @@ export default function LearnRoadmapClient({
                         >
                           <p>{selectedNode.lockReason ?? "Locked"}</p>
                         </button>
-                        {selectedNode.secId >= 3 && (
-                          <Link
-                            href={`/quiz-cp/skip/${selectedNode.secId}`}
-                            className="skip-secondary-link"
-                          >
-                            ⚡ Skip ahead to Section {selectedNode.secNum}
-                          </Link>
-                        )}
                       </>
                     )}
                   </div>

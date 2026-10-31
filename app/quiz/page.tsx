@@ -99,7 +99,9 @@ export default async function QuizPage({
         : null;
     const selectedPayload = selectedUnit ?? selectedQuiz;
     const quizzesToDisplay = selectedPayload
-        ? unwrapUnitQuizzes([selectedPayload]).map(shuffleQuizOptions)
+        ? unwrapUnitQuizzes([selectedPayload]).map((quiz, index) =>
+            shuffleQuizOptions(quiz, index !== 0),
+        )
         : [];
     const nextCurriculumUnit = selectedUnitId
         ? await getNextCurriculumUnit(selectedUnitId)

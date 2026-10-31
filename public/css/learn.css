@@ -213,7 +213,7 @@
         0 8px 0 rgb(0 0 0 / 20%),
         0 8px 0 var(--primary-color);
     border-radius: 24px;
-    margin-bottom: 48px;
+    margin-bottom: 24px;
     &::before {
         content: "";
         position: absolute;
@@ -249,7 +249,8 @@
     flex-direction: column;
     gap: 36px;
     width: 100%;
-    padding: 36px 0;
+    padding: 48px 0;
+    padding-top: 24px;
 }
 
 .roadline {
@@ -490,25 +491,21 @@
         gap: 24px;
     }
     .section-detail-rail {
-        position: sticky;
-        top: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        display: block;
-        z-index: 5;
-        margin-bottom: 8px;
-        pointer-events: auto;
+        display: none;
     }
     .roadmap {
         grid-column: 1;
         width: 100%;
+        row-gap: 24px;
         padding-bottom: 96px;
+    }
+    .level-path {
+        padding: 48px 0;
     }
     .lesson-detail-container {
         left: 16px;
         right: 16px;
-        bottom: 16px;
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
         width: auto;
         max-width: 100%;
     }

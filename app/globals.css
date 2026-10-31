@@ -167,6 +167,7 @@ code {
     font-family: var(--font-jetbrains-mono), monospace;
     border-radius: 4px;
     color: var(--primary-color);
+    white-space: nowrap;
 }
 
 [data-theme="dark"] code {
@@ -270,6 +271,13 @@ textarea {
     justify-content: center;
     touch-action: none;
     cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.order-grip > svg {
+    pointer-events: none;
+    -webkit-user-drag: none;
 }
 
 .order-move-btns {

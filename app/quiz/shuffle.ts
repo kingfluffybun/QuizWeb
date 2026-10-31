@@ -18,10 +18,10 @@ export function shuffleItems<T>(items: T[]): T[] {
     return shuffled.map(({ value }) => value);
 }
 
-export function shuffleQuizOptions(quiz: QuizData): QuizData {
+export function shuffleQuizOptions(quiz: QuizData, shouldShuffle = true): QuizData {
     const { options, correct_index: correctIndex } = quiz.quiz_payload;
 
-    if (quiz.type_name !== "MCQ" || !options || options.length < 2) {
+    if (!shouldShuffle || quiz.type_name !== "MCQ" || !options || options.length < 2) {
         return quiz;
     }
 

@@ -8,6 +8,7 @@ export default function PairQuestion({
     quiz,
     onChange,
     disabled = false,
+    shuffleChoices = true,
     onPairMatched,
     onIncorrectPair,
 }: QuestionProps & {
@@ -15,8 +16,14 @@ export default function PairQuestion({
     onIncorrectPair?: () => void;
 }) {
     const pairs = quiz.quiz_payload.pairs ?? [];
-    const [leftItems] = useState(() => shuffleItems(pairs.map((p) => p.left)));
-    const [rightItems] = useState(() => shuffleItems(pairs.map((p) => p.right)));
+    const [leftItems] = useState(() => {
+        const items = pairs.map((pair) => pair.left);
+        return shuffleChoices ? shuffleItems(items) : items;
+    });
+    const [rightItems] = useState(() => {
+        const items = pairs.map((pair) => pair.right);
+        return shuffleChoices ? shuffleItems(items) : items;
+    });
     const correctPairs: Record<string, string> = Object.fromEntries(
         pairs.map((p) => [p.left, p.right])
     );

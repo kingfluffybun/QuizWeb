@@ -41,7 +41,9 @@ export default async function UnitQuizPage({
   const initialSlideOrder = slide ? Math.max(1, parseInt(slide, 10)) : undefined;
   const selectedUnit = await getUnitById(selectedUnitId);
   const quizzesToDisplay = selectedUnit
-    ? unwrapUnitQuizzes([selectedUnit]).map(shuffleQuizOptions)
+    ? unwrapUnitQuizzes([selectedUnit]).map((quiz, index) =>
+        shuffleQuizOptions(quiz, index !== 0),
+      )
     : [];
   const nextCurriculumUnit = await getNextCurriculumUnit(selectedUnitId);
 

@@ -64,4 +64,5 @@ export interface QuestionProps {
     value: AnswerValue;
     onChange: (value: AnswerValue) => void;
     disabled?: boolean;
+    shuffleChoices?: boolean;
 }
