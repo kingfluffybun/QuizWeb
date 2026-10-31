@@ -89,7 +89,7 @@
         > a p {
             background-color: var(--primary-color);
             border-radius: 8px;
-            color: var(--text-main); 
+            color: var(--text-inverse); 
             padding: 0.5rem 0.75rem;
         }
         > a p.profile {

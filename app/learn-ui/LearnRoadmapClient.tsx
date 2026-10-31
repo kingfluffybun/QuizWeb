@@ -71,15 +71,6 @@ export default function LearnRoadmapClient({
     roadmapData.sections.find((s) => s.sec_id === activeSectionId) ??
     roadmapData.sections[0];
 
-  const activeSectionIndex = roadmapData.sections.findIndex(
-    (s) => s.sec_id === activeSection?.sec_id,
-  );
-  const nextSection =
-    activeSectionIndex >= 0 &&
-    activeSectionIndex < roadmapData.sections.length - 1
-      ? roadmapData.sections[activeSectionIndex + 1]
-      : null;
-
   const isStaffUser = Boolean(
     roadmapData.userProgression.isStaff ||
       userRole === "admin" ||
@@ -304,6 +295,10 @@ export default function LearnRoadmapClient({
           {/* Left Sticky Rail: Live Section Detail & Statistics */}
           <aside className="section-detail-rail" aria-label="Current section details">
             <div className="section-detail">
+              <div
+                key={activeSection?.sec_id ?? "overview"}
+                className="section-detail-content"
+              >
               <h1>{activeSection?.sec_title ?? "Curriculum Roadmap"}</h1>
               {/* For description, chat niyo ako -clarence */}
               <p id="section-description">
@@ -425,48 +420,7 @@ export default function LearnRoadmapClient({
                 </div>
               )}
 
-              {/* Section Skip Challenge Quick Action: Authenticated learners only, and NOT on Section 1 */}
-              {!isGuest &&
-                activeSection &&
-                activeSection.sec_id > 1 &&
-                nextSection &&
-                (nextSection.is_locked || !activeSection?.is_completed) && (
-                  <div className="section-skip-rail-box">
-                    <div className="section-skip-rail-header">
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                      </svg>
-                      <span>Skip to Next Section</span>
-                    </div>
-                    <p className="section-skip-rail-desc">
-                      Ready to advance? Pass all remaining coding problems to jump straight to{" "}
-                      <strong>
-                        {nextSection.cat_name}, Sec {nextSection.sec_num}: {nextSection.sec_title}
-                      </strong>
-                      .
-                    </p>
-                    <div className="section-skip-badges">
-                      <span className="section-skip-chip">⏱️ 5 min / problem</span>
-                      <span className="section-skip-chip">❤️ 5 hearts total</span>
-                    </div>
-                    <Link
-                      href={`/quiz-cp/skip/${nextSection.sec_id}`}
-                      className="section-skip-rail-btn"
-                    >
-                      Take Skip Challenge
-                    </Link>
-                  </div>
-                )}
+              </div>
             </div>
           </aside>
 
@@ -709,7 +663,9 @@ export default function LearnRoadmapClient({
                     href={
                       selectedNode.nodeType === "code_problem"
                         ? `/quiz-cp/${selectedNode.unitId}`
-                        : `/quiz/${selectedNode.unitId}`
+                        : selectedNode.nodeType === "quiz"
+                          ? `/quiz/${selectedNode.unitId}?start=quiz`
+                          : `/quiz/${selectedNode.unitId}`
                     }
                     className="lesson-link"
                   >

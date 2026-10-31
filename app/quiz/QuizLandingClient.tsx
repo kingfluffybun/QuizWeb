@@ -291,6 +291,7 @@ export default function QuizLandingClient({
     completionDestination = "input",
     unitId,
     initialSlideOrder,
+    startAtQuiz = false,
     nextUnit,
     dailyGoalData,
 }: {
@@ -298,6 +299,7 @@ export default function QuizLandingClient({
     completionDestination?: "home" | "input";
     unitId?: number;
     initialSlideOrder?: number;
+    startAtQuiz?: boolean;
     dailyGoalData?: DailyGoalData | null;
     nextUnit?: {
         unit_id: number;
@@ -331,7 +333,9 @@ export default function QuizLandingClient({
     const [bestStreak, setBestStreak] = useState(0);
     const [dailyGoalStats, setDailyGoalStats] = useState(dailyGoalData);
     const [isFinished, setIsFinished] = useState(false);
-    const [hasStartedQuiz, setHasStartedQuiz] = useState(initialQuizzes === undefined);
+    const [hasStartedQuiz, setHasStartedQuiz] = useState(
+        initialQuizzes === undefined || startAtQuiz,
+    );
     const [prevInitialSlideOrder, setPrevInitialSlideOrder] = useState(initialSlideOrder);
     const [lessonSlideIndex, setLessonSlideIndex] = useState(() =>
         typeof initialSlideOrder === "number" && initialSlideOrder > 0

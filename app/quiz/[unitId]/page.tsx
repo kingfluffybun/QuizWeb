@@ -13,7 +13,7 @@ export const revalidate = 3600;
 
 interface UnitQuizPageProps {
   params: Promise<{ unitId: string }>;
-  searchParams: Promise<{ slide?: string; source?: string }>;
+  searchParams: Promise<{ slide?: string; source?: string; start?: string }>;
 }
 
 export default async function UnitQuizPage({
@@ -21,7 +21,7 @@ export default async function UnitQuizPage({
   searchParams,
 }: UnitQuizPageProps) {
   const { unitId } = await params;
-  const { slide, source } = await searchParams;
+  const { slide, source, start } = await searchParams;
 
   const selectedUnitId = Number(unitId);
   if (!Number.isFinite(selectedUnitId) || selectedUnitId <= 0) {
@@ -80,6 +80,7 @@ export default async function UnitQuizPage({
       completionDestination={source === "quiz" || source === "home" ? "home" : "input"}
       unitId={selectedUnitId}
       initialSlideOrder={initialSlideOrder}
+      startAtQuiz={start === "quiz"}
       nextUnit={nextCurriculumUnit}
       dailyGoalData={dailyGoalData}
     />

@@ -123,6 +123,10 @@
     }
 }
 
+#streak-calendar {
+    height:fit-content;
+}
+
 .quick-action {
     font-size: clamp(0.5rem, 1.75vw, 1rem);
     color: var(--primary-color) !important;
@@ -180,6 +184,7 @@
 
 .current-lesson {
     display: flex;
+    align-items: center;
     flex: 1 1 auto;
     min-width: 0;
     gap: 12px;
@@ -1371,13 +1376,22 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
 
     .daily-prograss-graph {
         width: 100% !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
+        grid-template-columns: 32px minmax(0, 1fr);
+        overflow-x: hidden;
+    }
+
+    .graph-x-axis p {
+        flex-basis: 32px !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        padding-right: 4px !important;
+        font-size: 0.5rem !important;
+        font-weight: inherit;
     }
 
     .graph-y-axis div {
         padding: 4px !important;
-        min-width: 28px !important;
+        min-width: 0 !important;
     }
 
     .graph-y-axis div p {
@@ -1454,7 +1468,6 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     .day p {
         padding: 4px !important;
         font-size: 0.72rem !important;
-        font-weight: 600 !important;
         height: 100%;
         display: flex;
         align-items: center;
@@ -1505,7 +1518,7 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
     }
 
     .podium-place-container .player-icon {
-        width: 44px !important;
+        width: 52px !important;
         margin-bottom: 10px !important;
     }
 
@@ -1549,10 +1562,10 @@ html[data-theme="dark"] .dashboard-page .podium-place#third-place {
         justify-content: center;
         min-height: 36px;
         padding: 6px 10px;
+        font-weight: 500;
         border-radius: 999px;
         font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--text-main);
+        color: var(--text-muted);
         text-decoration: none;
         background-color: rgba(124, 58, 237, 0.08);
         transition: background-color 0.15s ease, color 0.15s ease;

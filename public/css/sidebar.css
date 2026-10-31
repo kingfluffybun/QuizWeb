@@ -446,5 +446,6 @@
         flex: 1 !important;
         overflow-y: visible !important;
         border-top: none !important;
+        padding: 12px;
     }
 }

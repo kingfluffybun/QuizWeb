@@ -256,7 +256,7 @@
     background-color: #22c55e;
     border-bottom: 8px solid #1FB255;
     animation: answer-message-pop 300ms ease-out both;
-    svg {height: 100px; width: 100px; stroke-width: 4; margin-top: 8px;}
+    svg {height: 100px; width: 100px; stroke-width: 4; margin-top: 8px; color: var(--text-inverse);}
 }
 
 @keyframes answer-message-pop {
@@ -313,13 +313,14 @@
         width: 100%;
         height: 12px;
         border-radius: 999px;
-        background-color: var(--bg-card);
+        background-color: var(--border-main);
         .daily-goal-progress-bar-fill {
             display: block;
             width: 50%;
             height: 12px;
             border-radius: 999px;
             background-color: var(--primary-color);
+            transition: width 900ms ease-out;
         }
     }
     .daily-goal-progress-bar-label {
@@ -2918,4 +2919,3 @@ footer.incorrect {
     border-radius: 12px;
     animation: quiz-elevate-in 200ms ease-out both;
 }
-
