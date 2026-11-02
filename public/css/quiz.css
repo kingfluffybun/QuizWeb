@@ -1428,6 +1428,10 @@
     }
 }
 
+.instruction p {
+    font-size: clamp(0.75rem, 1.75vw, 1rem);
+}
+
 .instruction.correct {
     background-color: rgba(34, 197, 94, 0.15);
     border: none;
@@ -1652,7 +1656,14 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 
-    code {font: inherit;}
+    .console-output & code {
+        background: transparent;
+        padding: 0;
+        font: inherit;
+        border-radius: 0;
+        color: inherit;
+        white-space: inherit;
+    }
 }
 
 .console-level {

@@ -1421,7 +1421,6 @@ export function CodeProblemRunner({
                               <p
                                 style={{
                                   margin: 0,
-                                  fontSize: "0.9rem",
                                   lineHeight: 1.5,
                                   whiteSpace: "pre-wrap",
                                 }}
