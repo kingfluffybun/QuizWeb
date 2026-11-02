@@ -45,7 +45,7 @@
     #clouds-right { right: 0; bottom: 0;  width: 56vh; }
     #hotair-baloon{ left: 20vh; top: 20vh; z-index: 5;}
     #plane-banner { right: 20vh; top: 80vh; z-index: 5;}
-    #sun-cloud{align-self:center; bottom: 50vh; z-index: 5;}
+    #sun-cloud{align-self:center; bottom: 40vh; z-index: 5;}
 
     > .about-hero {
         position: sticky;
@@ -107,25 +107,44 @@
 
         > .values-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            justify-items: center;
+        }
+
+        > .values-grid--top {
+            grid-template-columns: repeat(5, minmax(180px, 1fr));
+        }
+
+        > .values-grid--bottom {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
             gap: 1.5rem;
             width: 100%;
         }
 
         .value-card {
-            /* Fixed: Restored translucent white overlay */
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             height: 20vh;
+            min-height: 180px;
+            width: min(100%, 220px);
             padding: 1rem;
             text-align: center;
             align-items: center;
             display: flex;
+            justify-content: center;
 
             > p {
                 align-self: center;
+                margin: 0;
             }
+        }
+
+        .value-card--bottom {
+            width: min(100%, 220px);
         }
     }
 
@@ -134,86 +153,32 @@
         z-index: 20;
         margin-top: 3.75rem;
         min-height: 80vh;
-        padding: 7.5rem 20%;
+        padding: 0 5% 7.5rem;
         width: 100%;
         align-self: center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 3.75rem;
+        gap: 2rem;
 
-        > .team-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.5rem;
-            width: 100%;
-            align-items: stretch;
+        > h1 {
+            margin: 0;
         }
 
-        .team-member {
-            /* Fixed: Restored translucent white overlay */
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            max-width: 200px;
-            padding: 1rem;
-            height: 200px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
+        > .team-description {
+            max-width: 700px;
+            margin: 0;
             text-align: center;
-            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-
-            &:hover {
-                transform: translateY(-5px);
-                background: rgba(255, 255, 255, 0.2);
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-            }
-
-            > .avatar-placeholder {
-                width: 80px;
-                height: 80px;
-                border-radius: 24%;
-                background: var(--primary-color);
-                margin-bottom: 0.5rem;
-                border: 2px solid var(--background-color);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-
-            > small {
-                font-size: 0.85rem;
-                font-weight: 500;
-            }
-
-            > p {
-                font-size: clamp(0.75rem, 1.2vw, 1rem);
-                font-weight: 600;
-            }
+            line-height: 1.5;
         }
 
-        .team-leader-card {
-            width: 100%;
-            max-width: 200px;
-            height: 200px; 
-            /* Fixed: Restored translucent white overlay */
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            
-            > .avatar-placeholder {
-                width: 100px;
-                height: 100px;
-                margin-bottom: 0.75rem;
-            }
-
-            > small {
-                font-size: 1.1rem;
-            }
-
-            > p {
-                font-size: 1rem;
-            }
+        > .team-photo {
+            width: min(100%, 1400px);
+            height: auto;
+            display: block;
+            border-radius: 18px;
+            object-fit: cover;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
         }
     }
 

@@ -120,11 +120,11 @@ export default function About() {
             <div className="about-description scroll-section" ref={addToRefs}>
                 <div className="column">
                     <h1>Our Mission</h1>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                    <p>QuizWeb empowers learners, educators, and contributors to build a smarter, more engaging, and more accessible learning experience through interactive quizzes, structured learning paths, and collaborative knowledge growth. We aim to make education practical, motivating, and measurable by turning everyday study into an experience that is clear, rewarding, and effective.</p>
                 </div>
                 <div className="column">
                     <h1>Our Vision</h1>
-                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    <p>To become a trusted platform where quality learning is personalized, inclusive, and scalable—helping people unlock their potential through meaningful assessment, continuous improvement, and community-driven education.</p>
                 </div>
             </div>
 
@@ -134,21 +134,30 @@ export default function About() {
 
             <div className="about-values">
                 <h1>Our Core Values</h1>
-                <div className="values-grid">
+                <div className="values-grid values-grid--top">
                     <article className="value-card">
-                        <p>Ethics and Integrity</p>
+                        <p>Learner-Centered Growth</p>
                     </article>
                     <article className="value-card">
-                        <p>Quality and Excellence</p>
+                        <p>Accessibility and Inclusion</p>
                     </article>
                     <article className="value-card">
-                        <p>Unity and Collaboration</p>
+                        <p>Quality and Integrity</p>
                     </article>
                     <article className="value-card">
-                        <p>Achievement and Passion</p>
+                        <p>Continuous Improvement</p>
                     </article>
                     <article className="value-card">
-                        <p>Leadership and Innovation</p>
+                        <p>Collaboration and Community</p>
+                    </article>
+                </div>
+
+                <div className="values-grid values-grid--bottom">
+                    <article className="value-card value-card--bottom">
+                        <p>Empowerment Through Knowledge</p>
+                    </article>
+                    <article className="value-card value-card--bottom">
+                        <p>Accountability and Respect</p>
                     </article>
                 </div>
             </div>
@@ -157,21 +166,18 @@ export default function About() {
 
             <div className="about-team scroll-section" ref={addToRefs}>
                 <h1>Meet the Team</h1>
-                <article className="team-member team-leader-card">
-                    <div className="avatar-placeholder"></div>
-                    <small>{teamLeader.name}</small>
-                    <p>{teamLeader.role}</p>
-                </article>
-
-                <div className="team-grid">
-                    {teamMembers.map((member) => (
-                        <article key={member.name} className="team-member">
-                            <div className="avatar-placeholder"></div>
-                            <small>{member.name}</small>
-                            <p>{member.role}</p>
-                        </article>
-                    ))}
-                </div>
+                <p className="team-description">
+                    Together, we strive to deliver the best solutions for our clients,
+                    while also supporting each other&apos;s growth and development.
+                </p>
+                <Image
+                    src="/assets/about/Team.jpg"
+                    alt="QuizWeb team photo"
+                    width={1200}
+                    height={760}
+                    className="team-photo"
+                    priority
+                />
             </div>
 
             <div className="spacer"></div>
