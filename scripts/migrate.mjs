@@ -55,7 +55,7 @@ async function runMigrations() {
             const sql = fs.readFileSync(filePath, "utf8");
 
             await connection.query(sql);
-            await connection.query("INSERT INTO _migrations (name) VALUES (?)", [file]);
+            await connection.query("INSERT IGNORE INTO _migrations (name) VALUES (?)", [file]);
             console.log(`[SUCCESS] Applied ${file}`);
         }
 

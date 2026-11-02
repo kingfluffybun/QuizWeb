@@ -18,6 +18,9 @@ export interface RoadmapUnitNode {
   has_coding_assessment: boolean;
   is_locked: boolean;
   is_completed: boolean;
+  is_lesson_completed: boolean;
+  is_quiz_completed: boolean;
+  is_cp_completed: boolean;
   current_slide_order: number;
 }
 
@@ -144,6 +147,9 @@ export async function getCurriculumRoadmapData(
          COALESCE(qc.quiz_count, 0) AS quiz_count,
          EXISTS(SELECT 1 FROM unit_assessment_tbl ua WHERE ua.unit_id = u.unit_id) AS has_coding_assessment,
          COALESCE(p.current_slide_order, 0) AS current_slide_order,
+         COALESCE(p.is_lesson_completed, 0) AS is_lesson_completed,
+         COALESCE(p.is_quiz_completed, 0) AS is_quiz_completed,
+         COALESCE(p.is_cp_completed, 0) AS is_cp_completed,
          COALESCE(p.is_completed, 0) AS user_completed
        FROM unit_tbl u
        JOIN sec_tbl s ON u.sec_id = s.sec_id
@@ -167,18 +173,30 @@ export async function getCurriculumRoadmapData(
       const isCompleted =
         Boolean(row.user_completed) || unlockState.completedUnitIds.has(unitId);
       const isLocked = isStaffUser ? false : !unlockState.unlockedUnitIds.has(unitId);
+      const slideCount = Number(row.slide_count ?? 0);
+      const currentSlideOrder = Number(row.current_slide_order ?? 0);
+
+      const isLessonCompleted =
+        isCompleted ||
+        Boolean(row.is_lesson_completed) ||
+        (slideCount > 0 && currentSlideOrder >= slideCount);
+      const isQuizCompleted = isCompleted || Boolean(row.is_quiz_completed);
+      const isCpCompleted = isCompleted || Boolean(row.is_cp_completed);
 
       const node: RoadmapUnitNode = {
         unit_id: unitId,
         unit_title: String(row.unit_title),
         unit_order: Number(row.unit_order ?? 1),
         sec_id: secId,
-        slide_count: Number(row.slide_count ?? 0),
+        slide_count: slideCount,
         quiz_count: Number(row.quiz_count ?? 0),
         has_coding_assessment: Boolean(row.has_coding_assessment),
         is_locked: isLocked,
         is_completed: isCompleted,
-        current_slide_order: Number(row.current_slide_order ?? 0),
+        is_lesson_completed: isLessonCompleted,
+        is_quiz_completed: isQuizCompleted,
+        is_cp_completed: isCpCompleted,
+        current_slide_order: currentSlideOrder,
       };
 
       const list = unitsBySection.get(secId) ?? [];

@@ -36,7 +36,10 @@ import {
 import { recordUserActivity } from "@/app/actions/streak";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import type { DailyGoalData } from "@/lib/daily-goal";
-import { getNextCurriculumUnit } from "@/app/actions/progress";
+import {
+  getNextCurriculumUnit,
+  recordCodeProblemCompletionProgress,
+} from "@/app/actions/progress";
 import { getClientLocalDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
@@ -767,6 +770,13 @@ export function CodeProblemRunner({
             );
           }
           setStatus("completed");
+          recordCodeProblemCompletionProgress(problem.unit_id).then((cpRes) => {
+            if (cpRes.success && cpRes.nextUnit) {
+              setNextUnit(cpRes.nextUnit);
+            }
+          }).catch((err) => {
+            console.error("Failed to record CP completion progress:", err);
+          });
           recordUserActivity({
             type: "quiz",
             xp: 50,
@@ -1005,7 +1015,7 @@ export function CodeProblemRunner({
             </div>
             {isVictory && !isSkipMode && nextUnit && (
               <div className="next-level-container">
-                <Link href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`} className="next-level-card" style={{ textDecoration: "none" }} >
+                <Link href={`/quiz/${nextUnit.unit_id}`} className="next-level-card" style={{ textDecoration: "none" }} >
                   <div className="next-level-content">
                     <div className="next-level-type">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open preview-icon" > <path d="M12 5v16" /> <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /> </svg>

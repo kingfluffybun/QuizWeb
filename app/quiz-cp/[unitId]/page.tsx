@@ -1,5 +1,8 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import Sidebar from "@/app/components/Sidebar";
+import { isCodeProblemUnlockedForUser } from "@/app/actions/progress";
 import { CodeProblemRunner } from "../page";
 
 interface UnitQuizCPPageProps {
@@ -9,6 +12,17 @@ interface UnitQuizCPPageProps {
 export default async function UnitQuizCPPage({ params }: UnitQuizCPPageProps) {
   const { unitId } = await params;
   const parsedUnitId = Number(unitId);
+
+  if (!Number.isFinite(parsedUnitId) || parsedUnitId <= 0) {
+    redirect("/learn");
+  }
+
+  const session = await auth();
+  const userId = session?.user?.id ? Number(session.user.id) : undefined;
+  const isUnlocked = await isCodeProblemUnlockedForUser(parsedUnitId, userId);
+  if (!isUnlocked) {
+    redirect(`/quiz/${parsedUnitId}?start=quiz`);
+  }
 
   return (
     <Suspense
@@ -21,7 +35,7 @@ export default async function UnitQuizCPPage({ params }: UnitQuizCPPageProps) {
         </div>
       }
     >
-      <CodeProblemRunner unitId={Number.isFinite(parsedUnitId) ? parsedUnitId : undefined} />
+      <CodeProblemRunner unitId={parsedUnitId} />
     </Suspense>
   );
 }

@@ -567,6 +567,9 @@ export async function getUserSectionProgress(
               COALESCE(qc.quiz_count, 0) AS quiz_count,
               EXISTS(SELECT 1 FROM unit_assessment_tbl ua WHERE ua.unit_id = u.unit_id) AS has_coding_assessment,
               COALESCE(p.current_slide_order, 0) AS current_slide_order,
+              COALESCE(p.is_lesson_completed, 0) AS is_lesson_completed,
+              COALESCE(p.is_quiz_completed, 0) AS is_quiz_completed,
+              COALESCE(p.is_cp_completed, 0) AS is_cp_completed,
               COALESCE(p.is_completed, 0) AS is_completed
        FROM unit_tbl u
        LEFT JOIN (
@@ -592,20 +595,22 @@ export async function getUserSectionProgress(
         : Math.min(99, Math.round((currentSlide / totalSlides) * 100));
       const hasQuiz = Number(r.quiz_count) > 0;
       const hasCodingAssessment = Boolean(r.has_coding_assessment);
-      const lessonCompleted = isCompleted || currentSlide >= totalSlides;
-      const lessonProgress = isCompleted
+      const lessonCompleted = isCompleted || Boolean(r.is_lesson_completed) || currentSlide >= totalSlides;
+      const quizCompleted = isCompleted || Boolean(r.is_quiz_completed);
+      const cpCompleted = isCompleted || Boolean(r.is_cp_completed);
+      const lessonProgress = isCompleted || lessonCompleted
         ? 1
         : Math.min(1, Math.max(0, currentSlide / totalSlides));
       const activityCount =
         1 + Number(hasQuiz) + Number(hasCodingAssessment);
       const completedActivityCount =
         Number(lessonCompleted) +
-        Number(hasQuiz && isCompleted) +
-        Number(hasCodingAssessment && isCompleted);
+        Number(hasQuiz && quizCompleted) +
+        Number(hasCodingAssessment && cpCompleted);
       const activityProgress =
         lessonProgress +
-        Number(hasQuiz && isCompleted) +
-        Number(hasCodingAssessment && isCompleted);
+        Number(hasQuiz && quizCompleted) +
+        Number(hasCodingAssessment && cpCompleted);
 
       return {
         unit_id: uId,
@@ -661,6 +666,65 @@ export async function getUserSectionProgress(
  * Records or updates the user's current slide progress in a lesson unit.
  * Automatically advances player_tbl.current_section when all units in a section are completed.
  */
+async function checkAndAdvanceSection(userId: number, unitId: number): Promise<number | null> {
+  const [unitSecRows] = await db.query<RowDataPacket[]>(
+    "SELECT sec_id FROM unit_tbl WHERE unit_id = ? LIMIT 1",
+    [unitId],
+  );
+  const currentSectionId = Number(unitSecRows[0]?.sec_id);
+  if (!Number.isInteger(currentSectionId) || currentSectionId <= 0) return null;
+
+  const [completionCheckRows] = await db.query<RowDataPacket[]>(
+    `SELECT 
+       COUNT(u.unit_id) AS total_units,
+       COUNT(p.unit_id) AS completed_units
+     FROM unit_tbl u
+     LEFT JOIN user_lesson_progress_tbl p 
+       ON u.unit_id = p.unit_id AND p.user_id = ? AND p.is_completed = 1
+     WHERE u.sec_id = ? AND u.status = 'approved'`,
+    [userId, currentSectionId],
+  );
+
+  const totalUnits = Number(completionCheckRows[0]?.total_units ?? 0);
+  const completedUnits = Number(completionCheckRows[0]?.completed_units ?? 0);
+
+  if (totalUnits > 0 && completedUnits >= totalUnits) {
+    const [availableSecRows] = await db.query<RowDataPacket[]>(
+      "SELECT DISTINCT sec_id FROM unit_tbl WHERE status = 'approved'",
+    );
+    const availableSectionIds = new Set<number>(
+      availableSecRows.map((r) => Number(r.sec_id)),
+    );
+    const nextSectionId = getNextAvailableSectionId(
+      currentSectionId,
+      availableSectionIds,
+    );
+    if (nextSectionId !== null) {
+      const [playerRows] = await db.query<RowDataPacket[]>(
+        "SELECT current_section FROM player_tbl WHERE user_id = ? LIMIT 1",
+        [userId],
+      );
+      const playerCurrentSec = Number(playerRows[0]?.current_section || 1);
+      if (playerCurrentSec <= currentSectionId) {
+        const [updateResult] = await db.query<ResultSetHeader>(
+          "UPDATE player_tbl SET current_section = ? WHERE user_id = ?",
+          [nextSectionId, userId],
+        );
+        if (updateResult.affectedRows === 0) {
+          await db.query<ResultSetHeader>(
+            `INSERT INTO player_tbl (user_id, username, current_section)
+             SELECT user_id, COALESCE(SUBSTRING_INDEX(email, '@', 1), 'User'), ? FROM user_auth_tbl WHERE user_id = ?
+             ON DUPLICATE KEY UPDATE current_section = VALUES(current_section)`,
+            [nextSectionId, userId],
+          );
+        }
+        return nextSectionId;
+      }
+    }
+  }
+  return null;
+}
+
 export async function recordLessonSlideProgress(
   unitId: number,
   slideOrder: number,
@@ -668,6 +732,7 @@ export async function recordLessonSlideProgress(
   isCompleted = false,
   explicitUserId?: number,
   skipUnlockCheck = false,
+  isLessonDone = false,
 ) {
   try {
     let userId = explicitUserId;
@@ -709,86 +774,68 @@ export async function recordLessonSlideProgress(
     }
 
     const safeSlideOrder = Math.min(resolvedTotal, Math.max(1, slideOrder));
-    const completedFlag = isCompleted ? 1 : 0;
+    const lessonCompletedFlag =
+      isCompleted || isLessonDone || safeSlideOrder >= resolvedTotal ? 1 : 0;
+
+    let quizCompletedFlag = 0;
+    let cpCompletedFlag = 0;
+    let unitCompletedFlag = 0;
+
+    if (isCompleted) {
+      // Force completion / test compatibility
+      quizCompletedFlag = 1;
+      cpCompletedFlag = 1;
+      unitCompletedFlag = 1;
+    } else {
+      // Normal slide progression: only mark the whole unit complete if unit has neither quiz nor code problem
+      const [actRows] = await db.query<RowDataPacket[]>(
+        `SELECT 
+           (SELECT COUNT(*) FROM quiz_tbl WHERE unit_id = ?) AS quiz_count,
+           (SELECT COUNT(*) FROM unit_assessment_tbl WHERE unit_id = ?) AS cp_count`,
+        [unitId, unitId],
+      );
+      const hasQuiz = Number(actRows[0]?.quiz_count ?? 0) > 0;
+      const hasCp = Number(actRows[0]?.cp_count ?? 0) > 0;
+      const isLessonOnly = !hasQuiz && !hasCp;
+      unitCompletedFlag = isLessonOnly && lessonCompletedFlag === 1 ? 1 : 0;
+    }
 
     await db.query<ResultSetHeader>(
       `INSERT INTO user_lesson_progress_tbl
-         (user_id, unit_id, current_slide_order, total_slides, is_completed, completed_at, last_accessed_at)
-       VALUES (?, ?, ?, ?, ?, IF(? = 1, CURRENT_TIMESTAMP, NULL), CURRENT_TIMESTAMP)
+         (user_id, unit_id, current_slide_order, total_slides, is_lesson_completed, is_quiz_completed, is_cp_completed, is_completed, completed_at, last_accessed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, IF(? = 1, CURRENT_TIMESTAMP, NULL), CURRENT_TIMESTAMP)
        ON DUPLICATE KEY UPDATE
          current_slide_order = VALUES(current_slide_order),
          total_slides = GREATEST(total_slides, VALUES(total_slides)),
+         is_lesson_completed = IF(VALUES(is_lesson_completed) = 1, 1, is_lesson_completed),
+         is_quiz_completed = IF(VALUES(is_quiz_completed) = 1, 1, is_quiz_completed),
+         is_cp_completed = IF(VALUES(is_cp_completed) = 1, 1, is_cp_completed),
          is_completed = IF(VALUES(is_completed) = 1, 1, is_completed),
          completed_at = IF(VALUES(is_completed) = 1, COALESCE(completed_at, CURRENT_TIMESTAMP), completed_at),
          last_accessed_at = CURRENT_TIMESTAMP`,
-      [userId, unitId, safeSlideOrder, resolvedTotal, completedFlag, completedFlag],
+      [
+        userId,
+        unitId,
+        safeSlideOrder,
+        resolvedTotal,
+        lessonCompletedFlag,
+        quizCompletedFlag,
+        cpCompletedFlag,
+        unitCompletedFlag,
+        unitCompletedFlag,
+      ],
     );
 
     const [statusRows] = await db.query<RowDataPacket[]>(
-      "SELECT is_completed FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
+      "SELECT is_lesson_completed, is_completed FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
       [userId, unitId],
     );
+    const dbIsLessonCompleted = Boolean(statusRows[0]?.is_lesson_completed);
     const dbIsCompleted = Boolean(statusRows[0]?.is_completed);
 
-    // Auto-advance player_tbl.current_section if all approved units in this unit's section are now completed
     let advancedSectionId: number | null = null;
     if (dbIsCompleted) {
-      const [unitSecRows] = await db.query<RowDataPacket[]>(
-        "SELECT sec_id FROM unit_tbl WHERE unit_id = ? LIMIT 1",
-        [unitId],
-      );
-      const currentSectionId = Number(unitSecRows[0]?.sec_id);
-
-      if (Number.isInteger(currentSectionId) && currentSectionId > 0) {
-        const [completionCheckRows] = await db.query<RowDataPacket[]>(
-          `SELECT 
-             COUNT(u.unit_id) AS total_units,
-             COUNT(p.unit_id) AS completed_units
-           FROM unit_tbl u
-           LEFT JOIN user_lesson_progress_tbl p 
-             ON u.unit_id = p.unit_id AND p.user_id = ? AND p.is_completed = 1
-           WHERE u.sec_id = ? AND u.status = 'approved'`,
-          [userId, currentSectionId],
-        );
-
-        const totalUnits = Number(completionCheckRows[0]?.total_units ?? 0);
-        const completedUnits = Number(completionCheckRows[0]?.completed_units ?? 0);
-
-        if (totalUnits > 0 && completedUnits >= totalUnits) {
-          const [availableSecRows] = await db.query<RowDataPacket[]>(
-            "SELECT DISTINCT sec_id FROM unit_tbl WHERE status = 'approved'",
-          );
-          const availableSectionIds = new Set<number>(
-            availableSecRows.map((r) => Number(r.sec_id)),
-          );
-          const nextSectionId = getNextAvailableSectionId(
-            currentSectionId,
-            availableSectionIds,
-          );
-          if (nextSectionId !== null) {
-            const [playerRows] = await db.query<RowDataPacket[]>(
-              "SELECT current_section FROM player_tbl WHERE user_id = ? LIMIT 1",
-              [userId],
-            );
-            const playerCurrentSec = Number(playerRows[0]?.current_section || 1);
-            if (playerCurrentSec <= currentSectionId) {
-              const [updateResult] = await db.query<ResultSetHeader>(
-                "UPDATE player_tbl SET current_section = ? WHERE user_id = ?",
-                [nextSectionId, userId],
-              );
-              if (updateResult.affectedRows === 0) {
-                await db.query<ResultSetHeader>(
-                  `INSERT INTO player_tbl (user_id, username, current_section)
-                   SELECT user_id, COALESCE(SUBSTRING_INDEX(email, '@', 1), 'User'), ? FROM user_auth_tbl WHERE user_id = ?
-                   ON DUPLICATE KEY UPDATE current_section = VALUES(current_section)`,
-                  [nextSectionId, userId],
-                );
-              }
-              advancedSectionId = nextSectionId;
-            }
-          }
-        }
-      }
+      advancedSectionId = await checkAndAdvanceSection(userId, unitId);
     }
 
     try {
@@ -798,17 +845,307 @@ export async function recordLessonSlideProgress(
     } catch {
       // Safely ignore revalidation outside Next.js request context (e.g. tests)
     }
+
     return {
       success: true,
       unitId,
       currentSlideOrder: safeSlideOrder,
       totalSlides: resolvedTotal,
+      isLessonCompleted: dbIsLessonCompleted,
       isCompleted: dbIsCompleted,
       advancedSectionId,
     };
   } catch (error) {
     console.error("Failed to record lesson slide progress:", error);
     return { success: false, error: "Failed to record slide progress" };
+  }
+}
+
+/**
+ * Checks whether the lesson slides are completed for a given unit.
+ * Maintainers and admins are exempt and return true.
+ */
+export async function isLessonCompletedForUser(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<boolean> {
+  const role = await getUserRole(explicitUserId);
+  if (isStaff(role)) return true;
+  let userId = explicitUserId;
+  if (!userId) {
+    try {
+      const session = await auth();
+      if (session?.user?.id) userId = Number(session.user.id);
+    } catch {}
+  }
+  if (!userId) return false;
+
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT is_lesson_completed, is_completed, current_slide_order, total_slides 
+     FROM user_lesson_progress_tbl 
+     WHERE user_id = ? AND unit_id = ? LIMIT 1`,
+    [userId, unitId],
+  );
+  if (rows.length === 0) {
+    const [slideRows] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS total FROM lesson_slide_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    return Number(slideRows[0]?.total ?? 0) === 0;
+  }
+  const r = rows[0];
+  return (
+    Boolean(r.is_lesson_completed) ||
+    Boolean(r.is_completed) ||
+    (Number(r.total_slides) > 0 && Number(r.current_slide_order) >= Number(r.total_slides))
+  );
+}
+
+/**
+ * Checks whether the quiz has been passed/completed for a given unit.
+ * Maintainers and admins are exempt and return true.
+ */
+export async function isQuizCompletedForUser(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<boolean> {
+  const role = await getUserRole(explicitUserId);
+  if (isStaff(role)) return true;
+  let userId = explicitUserId;
+  if (!userId) {
+    try {
+      const session = await auth();
+      if (session?.user?.id) userId = Number(session.user.id);
+    } catch {}
+  }
+  if (!userId) return false;
+
+  const [rows] = await db.query<RowDataPacket[]>(
+    "SELECT is_quiz_completed, is_completed FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ? LIMIT 1",
+    [userId, unitId],
+  );
+  if (rows.length === 0) {
+    const [quizRows] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS total FROM quiz_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    return Number(quizRows[0]?.total ?? 0) === 0;
+  }
+  return Boolean(rows[0].is_quiz_completed) || Boolean(rows[0].is_completed);
+}
+
+/**
+ * Checks whether the code problem for a unit is unlocked for a user.
+ * Requirement: Unit must be unlocked and Quiz must be completed (or unit has no quiz).
+ */
+export async function isCodeProblemUnlockedForUser(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<boolean> {
+  const role = await getUserRole(explicitUserId);
+  if (isStaff(role)) return true;
+  const isUnitUnlocked = await isUnitUnlockedForUser(unitId, explicitUserId);
+  if (!isUnitUnlocked) return false;
+  return isQuizCompletedForUser(unitId, explicitUserId);
+}
+
+/**
+ * Records that a quiz was successfully passed for a unit.
+ * Unlocks the code problem for that unit.
+ * If the unit has no coding assessment, completes the whole unit and unlocks the next unit!
+ */
+export async function recordQuizCompletionProgress(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<{
+  success: boolean;
+  error?: string;
+  isQuizCompleted?: boolean;
+  isUnitCompleted?: boolean;
+  hasCodingAssessment?: boolean;
+  codingAssessmentHref?: string;
+  advancedSectionId?: number | null;
+}> {
+  try {
+    let userId = explicitUserId;
+    if (!userId) {
+      try {
+        const session = await auth();
+        if (session?.user?.id) userId = Number(session.user.id);
+      } catch {
+        return { success: false, error: "Unauthorized" };
+      }
+      if (!userId) return { success: false, error: "Unauthorized" };
+    }
+
+    const userRole = await getUserRole(userId);
+    const isStaffUser = isStaff(userRole);
+
+    if (!isStaffUser) {
+      const isUnitUnlocked = await isUnitUnlockedForUser(unitId, userId);
+      if (!isUnitUnlocked) {
+        return { success: false, error: "Unit is locked in curriculum" };
+      }
+      const isLessonDone = await isLessonCompletedForUser(unitId, userId);
+      if (!isLessonDone) {
+        return { success: false, error: "Complete Lesson first" };
+      }
+    }
+
+    const [cpRows] = await db.query<RowDataPacket[]>(
+      "SELECT 1 FROM unit_assessment_tbl WHERE unit_id = ? LIMIT 1",
+      [unitId],
+    );
+    const hasCodingAssessment = cpRows.length > 0;
+    const unitCompletedFlag = hasCodingAssessment ? 0 : 1;
+
+    // Fetch total slides for slide count preservation
+    const [slideRows] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS total FROM lesson_slide_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    const totalSlides = Math.max(1, Number(slideRows[0]?.total ?? 1));
+
+    await db.query<ResultSetHeader>(
+      `INSERT INTO user_lesson_progress_tbl
+         (user_id, unit_id, current_slide_order, total_slides, is_lesson_completed, is_quiz_completed, is_cp_completed, is_completed, completed_at, last_accessed_at)
+       VALUES (?, ?, ?, ?, 1, 1, 0, ?, IF(? = 1, CURRENT_TIMESTAMP, NULL), CURRENT_TIMESTAMP)
+       ON DUPLICATE KEY UPDATE
+         current_slide_order = GREATEST(current_slide_order, VALUES(current_slide_order)),
+         total_slides = GREATEST(total_slides, VALUES(total_slides)),
+         is_lesson_completed = 1,
+         is_quiz_completed = 1,
+         is_completed = IF(VALUES(is_completed) = 1, 1, is_completed),
+         completed_at = IF(VALUES(is_completed) = 1, COALESCE(completed_at, CURRENT_TIMESTAMP), completed_at),
+         last_accessed_at = CURRENT_TIMESTAMP`,
+      [userId, unitId, totalSlides, totalSlides, unitCompletedFlag, unitCompletedFlag],
+    );
+
+    const [statusRows] = await db.query<RowDataPacket[]>(
+      "SELECT is_completed FROM user_lesson_progress_tbl WHERE user_id = ? AND unit_id = ?",
+      [userId, unitId],
+    );
+    const dbIsCompleted = Boolean(statusRows[0]?.is_completed);
+
+    let advancedSectionId: number | null = null;
+    if (dbIsCompleted) {
+      advancedSectionId = await checkAndAdvanceSection(userId, unitId);
+    }
+
+    try {
+      revalidatePath("/home");
+      revalidatePath("/learn");
+      revalidatePath("/quiz");
+      revalidatePath(`/quiz/${unitId}`);
+    } catch {
+      // Ignore outside request context
+    }
+
+    return {
+      success: true,
+      isQuizCompleted: true,
+      isUnitCompleted: dbIsCompleted,
+      hasCodingAssessment,
+      codingAssessmentHref: hasCodingAssessment ? `/quiz-cp/${unitId}` : undefined,
+      advancedSectionId,
+    };
+  } catch (error) {
+    console.error("Failed to record quiz completion progress:", error);
+    return { success: false, error: "Failed to record quiz progress" };
+  }
+}
+
+/**
+ * Records that a code problem was successfully completed for a unit.
+ * Completes the unit and unlocks the next unit's lesson!
+ */
+export async function recordCodeProblemCompletionProgress(
+  unitId: number,
+  explicitUserId?: number,
+): Promise<{
+  success: boolean;
+  error?: string;
+  isUnitCompleted?: boolean;
+  advancedSectionId?: number | null;
+  nextUnit?: {
+    unit_id: number;
+    unit_title: string;
+    sec_id: number;
+    sec_num: number;
+    cat_name: string;
+  } | null;
+}> {
+  try {
+    let userId = explicitUserId;
+    if (!userId) {
+      try {
+        const session = await auth();
+        if (session?.user?.id) userId = Number(session.user.id);
+      } catch {
+        return { success: false, error: "Unauthorized" };
+      }
+      if (!userId) return { success: false, error: "Unauthorized" };
+    }
+
+    const userRole = await getUserRole(userId);
+    const isStaffUser = isStaff(userRole);
+
+    if (!isStaffUser) {
+      const isUnitUnlocked = await isUnitUnlockedForUser(unitId, userId);
+      if (!isUnitUnlocked) {
+        return { success: false, error: "Unit is locked in curriculum" };
+      }
+      const isQuizDone = await isQuizCompletedForUser(unitId, userId);
+      if (!isQuizDone) {
+        return { success: false, error: "Complete Quiz first" };
+      }
+    }
+
+    // Fetch total slides for slide count preservation
+    const [slideRows] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS total FROM lesson_slide_tbl WHERE unit_id = ?",
+      [unitId],
+    );
+    const totalSlides = Math.max(1, Number(slideRows[0]?.total ?? 1));
+
+    await db.query<ResultSetHeader>(
+      `INSERT INTO user_lesson_progress_tbl
+         (user_id, unit_id, current_slide_order, total_slides, is_lesson_completed, is_quiz_completed, is_cp_completed, is_completed, completed_at, last_accessed_at)
+       VALUES (?, ?, ?, ?, 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON DUPLICATE KEY UPDATE
+         current_slide_order = GREATEST(current_slide_order, VALUES(current_slide_order)),
+         total_slides = GREATEST(total_slides, VALUES(total_slides)),
+         is_lesson_completed = 1,
+         is_quiz_completed = 1,
+         is_cp_completed = 1,
+         is_completed = 1,
+         completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP),
+         last_accessed_at = CURRENT_TIMESTAMP`,
+      [userId, unitId, totalSlides, totalSlides],
+    );
+
+    const advancedSectionId = await checkAndAdvanceSection(userId, unitId);
+    const nextUnit = await getNextCurriculumUnit(unitId);
+
+    try {
+      revalidatePath("/home");
+      revalidatePath("/learn");
+      revalidatePath("/quiz");
+      revalidatePath("/quiz-cp");
+      revalidatePath(`/quiz-cp/${unitId}`);
+    } catch {
+      // Ignore outside request context
+    }
+
+    return {
+      success: true,
+      isUnitCompleted: true,
+      advancedSectionId,
+      nextUnit,
+    };
+  } catch (error) {
+    console.error("Failed to record code problem completion progress:", error);
+    return { success: false, error: "Failed to record code problem progress" };
   }
 }
 

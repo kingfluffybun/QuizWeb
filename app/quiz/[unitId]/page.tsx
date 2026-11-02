@@ -4,7 +4,11 @@ import { auth } from "@/auth";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import type { DailyGoalData } from "@/lib/daily-goal";
 import { getUnitById } from "@/app/actions/quiz";
-import { getNextCurriculumUnit, isUnitUnlockedForUser } from "@/app/actions/progress";
+import {
+  getNextCurriculumUnit,
+  isUnitUnlockedForUser,
+  isLessonCompletedForUser,
+} from "@/app/actions/progress";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
 import QuizLandingClient from "../QuizLandingClient";
 import { unwrapUnitQuizzes } from "../page";
@@ -75,6 +79,9 @@ export default async function UnitQuizPage({
     );
   }
 
+  const isLessonDone = await isLessonCompletedForUser(selectedUnitId, userId);
+  const shouldStartAtQuiz = start === "quiz" && isLessonDone;
+
   return (
     <QuizLandingClient
       key={unitId}
@@ -82,7 +89,7 @@ export default async function UnitQuizPage({
       completionDestination={source === "quiz" || source === "home" ? "home" : "input"}
       unitId={selectedUnitId}
       initialSlideOrder={initialSlideOrder}
-      startAtQuiz={start === "quiz"}
+      startAtQuiz={shouldStartAtQuiz}
       nextUnit={nextCurriculumUnit}
       dailyGoalData={dailyGoalData}
     />

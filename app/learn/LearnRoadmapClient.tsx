@@ -51,8 +51,17 @@ function getRoadlinePath(startSide: RoadlineStartSide, segment: RoadlineSegment)
 function isRoadmapLessonComplete(unit: RoadmapUnitNode) {
   return (
     unit.is_completed ||
+    Boolean(unit.is_lesson_completed) ||
     (unit.slide_count > 0 && unit.current_slide_order >= unit.slide_count)
   );
+}
+
+function isRoadmapQuizComplete(unit: RoadmapUnitNode) {
+  return unit.is_completed || Boolean(unit.is_quiz_completed);
+}
+
+function isRoadmapCpComplete(unit: RoadmapUnitNode) {
+  return unit.is_completed || Boolean(unit.is_cp_completed);
 }
 
 function alignSectionHeaderWithDetail(sectionId: number, smooth = false) {
@@ -157,12 +166,13 @@ export default function LearnRoadmapClient({
     return (
       total +
       Number(isRoadmapLessonComplete(unit)) +
-      Number(unit.quiz_count > 0 && unit.is_completed) +
-      Number(unit.has_coding_assessment && unit.is_completed)
+      Number(unit.quiz_count > 0 && isRoadmapQuizComplete(unit)) +
+      Number(unit.has_coding_assessment && isRoadmapCpComplete(unit))
     );
   }, 0);
   const sectionProgressPoints = progressUnits.reduce((total, unit) => {
-    const lessonProgress = unit.is_completed
+    const lessonDone = isRoadmapLessonComplete(unit);
+    const lessonProgress = unit.is_completed || lessonDone
       ? 1
       : unit.slide_count > 0
         ? Math.min(1, Math.max(0, unit.current_slide_order / unit.slide_count))
@@ -170,8 +180,8 @@ export default function LearnRoadmapClient({
     return (
       total +
       lessonProgress +
-      Number(unit.quiz_count > 0 && unit.is_completed) +
-      Number(unit.has_coding_assessment && unit.is_completed)
+      Number(unit.quiz_count > 0 && isRoadmapQuizComplete(unit)) +
+      Number(unit.has_coding_assessment && isRoadmapCpComplete(unit))
     );
   }, 0);
   const sectionProgress = totalLevels
@@ -189,20 +199,25 @@ export default function LearnRoadmapClient({
           unit.has_coding_assessment),
     );
   const upNextActivity = upNextUnit
-    ? isRoadmapLessonComplete(upNextUnit)
-      ? upNextUnit.quiz_count > 0
+    ? !isRoadmapLessonComplete(upNextUnit)
+      ? {
+          label: "Learn",
+          href: `/quiz/${upNextUnit.unit_id}`,
+        }
+      : upNextUnit.quiz_count > 0 && !isRoadmapQuizComplete(upNextUnit)
         ? {
             label: "Quiz",
             href: `/quiz/${upNextUnit.unit_id}?start=quiz`,
           }
-        : {
-            label: "Code",
-            href: `/quiz-cp/${upNextUnit.unit_id}`,
-          }
-      : {
-          label: "Learn",
-          href: `/quiz/${upNextUnit.unit_id}`,
-        }
+        : upNextUnit.has_coding_assessment && !isRoadmapCpComplete(upNextUnit)
+          ? {
+              label: "Code",
+              href: `/quiz-cp/${upNextUnit.unit_id}`,
+            }
+          : {
+              label: "Review",
+              href: `/quiz/${upNextUnit.unit_id}`,
+            }
     : null;
 
   const updateActiveSection = useCallback(
@@ -991,10 +1006,7 @@ export default function LearnRoadmapClient({
                       const isGuestUnitLocked = isGuest && unit.unit_id !== firstUnitId;
 
                       // 1. Lesson:
-                      const isLessonCompleted =
-                        unit.is_completed ||
-                        (unit.slide_count > 0 &&
-                          unit.current_slide_order >= unit.slide_count);
+                      const isLessonCompleted = isRoadmapLessonComplete(unit);
                       const isLessonLocked = isStaffUser
                         ? false
                         : isGuestUnitLocked
@@ -1007,38 +1019,37 @@ export default function LearnRoadmapClient({
                           : undefined;
 
                       // 2. Quiz:
-                      const isLessonDoneForQuiz =
-                        unit.slide_count === 0 ||
-                        unit.current_slide_order >= unit.slide_count ||
-                        unit.is_completed;
-                      const isQuizCompleted = unit.is_completed;
+                      const isQuizCompleted = isRoadmapQuizComplete(unit);
                       const isQuizLocked = isStaffUser
                         ? false
                         : isGuestUnitLocked
                           ? true
-                          : unit.is_locked || (!isLessonDoneForQuiz && !unit.is_completed);
+                          : unit.is_locked || (!isLessonCompleted && unit.slide_count > 0);
                       const quizLockReason = isGuestUnitLocked
                         ? "Sign in to unlock"
                         : unit.is_locked
                           ? "Locked"
-                          : !isLessonDoneForQuiz
+                          : !isLessonCompleted && unit.slide_count > 0
                             ? "Complete Lesson first"
                             : undefined;
 
                       // 3. Code Problem:
-                      const isCpCompleted = unit.is_completed;
+                      const isCpCompleted = isRoadmapCpComplete(unit);
+                      const isCpPrerequisiteMet = hasQuiz ? isQuizCompleted : isLessonCompleted;
                       const isCpLocked = isStaffUser
                         ? false
                         : isGuestUnitLocked
                           ? true
-                          : unit.is_locked || !unit.is_completed;
+                          : unit.is_locked || !isCpPrerequisiteMet;
                       const cpLockReason = isGuestUnitLocked
                         ? "Sign in to unlock"
                         : unit.is_locked
                           ? "Locked"
-                          : !unit.is_completed
+                          : hasQuiz && !isQuizCompleted
                             ? "Complete Quiz first"
-                            : undefined;
+                            : !isLessonCompleted
+                              ? "Complete Lesson first"
+                              : undefined;
 
                       const hasNextAfterLesson = hasQuiz || hasCp;
                       const hasNextAfterQuiz = hasCp;
