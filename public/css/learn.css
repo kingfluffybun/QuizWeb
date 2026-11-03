@@ -275,7 +275,7 @@
     height: 189px;
 }
 
-.level-row:not(:has(.level-btn.disabled)) {
+.level-row:has(.level-btn.complete) {
     --roadline-color: var(--primary-color);
 }
 
