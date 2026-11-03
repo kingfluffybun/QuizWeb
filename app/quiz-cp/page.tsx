@@ -34,7 +34,12 @@ import {
   type SequentialSkipQueuePayload,
 } from "@/app/actions/section-skip";
 import { recordUserActivity } from "@/app/actions/streak";
-import { getNextCurriculumUnit } from "@/app/actions/progress";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
+import type { DailyGoalData } from "@/lib/daily-goal";
+import {
+  getNextCurriculumUnit,
+  recordCodeProblemCompletionProgress,
+} from "@/app/actions/progress";
 import { getClientLocalDate } from "@/lib/timezone";
 import Sidebar from "@/app/components/Sidebar";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
@@ -248,6 +253,16 @@ export function CodeProblemRunner({
   const [missedStepIndexes, setMissedStepIndexes] = useState<Set<number>>(
     () => new Set(),
   );
+  const [dailyGoalStats, setDailyGoalStats] = useState<DailyGoalData | null>(null);
+
+  const refreshDailyGoalStats = async () => {
+    try {
+      const data = await getDailyGoalData(getClientLocalDate());
+      setDailyGoalStats(data);
+    } catch (error) {
+      console.error("Failed to refresh daily XP progress after coding assessment:", error);
+    }
+  };
 
   const openAccessibility = () => {
     setAccessibilityClosing(false);
@@ -260,6 +275,21 @@ export function CodeProblemRunner({
     setAccessibilityOpen(false);
     setAccessibilityClosing(false);
   };
+
+  useEffect(() => {
+    let isActive = true;
+    getDailyGoalData(getClientLocalDate())
+      .then((data) => {
+        if (isActive) setDailyGoalStats(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load daily XP progress for coding assessment:", error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoading || status !== "active") {
@@ -335,6 +365,12 @@ export function CodeProblemRunner({
             setStatus("completed");
             completeSequentialSkip({
               targetSectionId: requestedSkipTargetSecId,
+            }).then(async (response) => {
+              if (!response.success) {
+                console.error("Failed to complete sequential skip:", response.error);
+                return;
+              }
+              await refreshDailyGoalStats();
             }).catch((err) => {
               console.error("Failed to complete sequential skip:", err);
             });
@@ -715,6 +751,12 @@ export function CodeProblemRunner({
 
             completeSequentialSkip({
               targetSectionId: requestedSkipTargetSecId,
+            }).then(async (response) => {
+              if (!response.success) {
+                console.error("Failed to complete sequential skip:", response.error);
+                return;
+              }
+              await refreshDailyGoalStats();
             }).catch((err) => {
               console.error("Failed to complete sequential skip:", err);
             });
@@ -728,10 +770,23 @@ export function CodeProblemRunner({
             );
           }
           setStatus("completed");
+          recordCodeProblemCompletionProgress(problem.unit_id).then((cpRes) => {
+            if (cpRes.success && cpRes.nextUnit) {
+              setNextUnit(cpRes.nextUnit);
+            }
+          }).catch((err) => {
+            console.error("Failed to record CP completion progress:", err);
+          });
           recordUserActivity({
             type: "quiz",
             xp: 50,
             date: getClientLocalDate(),
+          }).then(async (response) => {
+            if (!response.success) {
+              console.error("Failed to record CP assessment XP:", response.error);
+              return;
+            }
+            await refreshDailyGoalStats();
           }).catch((err) => {
             console.error("Failed to record CP assessment XP:", err);
           });
@@ -938,19 +993,29 @@ export function CodeProblemRunner({
                   <p>Time Spent</p>
                 </div>
               </div>
-              <div className="daily-goal-stats">
-                <div className="daily-goal-progress-bar">
-                  <span className="daily-goal-progress-bar-fill" style={{ width: `${Math.min(100, (animatedStats.xp / 200) * 100)}%` }} ></span>
+              {dailyGoalStats && (
+                <div className="daily-goal-stats">
+                  <div className="daily-goal-progress-bar">
+                    <span
+                      className="daily-goal-progress-bar-fill"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (dailyGoalStats.todayXp / dailyGoalStats.dailyGoal) * 100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="daily-goal-progress-bar-label">
+                    <p>Daily Goal</p>
+                    <p>{dailyGoalStats.todayXp}/{dailyGoalStats.dailyGoal} XP</p>
+                  </div>
                 </div>
-                <div className="daily-goal-progress-bar-label">
-                  <p>Daily Goal</p>
-                  <p>{animatedStats.xp}/200 XP</p>
-                </div>
-              </div>
+              )}
             </div>
             {isVictory && !isSkipMode && nextUnit && (
               <div className="next-level-container">
-                <Link href={`/quiz?unitId=${nextUnit.unit_id}&source=quiz`} className="next-level-card" style={{ textDecoration: "none" }} >
+                <Link href={`/quiz/${nextUnit.unit_id}`} className="next-level-card" style={{ textDecoration: "none" }} >
                   <div className="next-level-content">
                     <div className="next-level-type">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open preview-icon" > <path d="M12 5v16" /> <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /> </svg>
@@ -1555,8 +1620,8 @@ export function CodeProblemRunner({
                           automaticLayout: true,
                           contextmenu: false,
                           fontFamily: "JetBrains Mono, 'Fira Code', monospace",
-                          fontSize: 16,
-                          lineHeight: 24,
+                          fontSize: 14,
+                          lineHeight: 21,
                           lineNumbers: "on",
                           lineNumbersMinChars: 2,
                           glyphMargin: false,

@@ -255,11 +255,14 @@ export async function completeSequentialSkip(input: {
 
         await db.query<ResultSetHeader>(
           `INSERT INTO user_lesson_progress_tbl
-             (user_id, unit_id, current_slide_order, total_slides, is_completed, completed_at, last_accessed_at)
-           VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+             (user_id, unit_id, current_slide_order, total_slides, is_lesson_completed, is_quiz_completed, is_cp_completed, is_completed, completed_at, last_accessed_at)
+           VALUES (?, ?, ?, ?, 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
            ON DUPLICATE KEY UPDATE
              current_slide_order = VALUES(total_slides),
              total_slides = GREATEST(total_slides, VALUES(total_slides)),
+             is_lesson_completed = 1,
+             is_quiz_completed = 1,
+             is_cp_completed = 1,
              is_completed = 1,
              completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP),
              last_accessed_at = CURRENT_TIMESTAMP`,

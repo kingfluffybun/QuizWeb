@@ -21,7 +21,10 @@ import {
     updatePlayerQuizStreak,
 } from "@/app/actions/streak";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
-import { recordLessonSlideProgress } from "@/app/actions/progress";
+import {
+    recordLessonSlideProgress,
+    recordQuizCompletionProgress,
+} from "@/app/actions/progress";
 import { unwrapCodeProblemAssessment } from "@/lib/cp-schema";
 import { calculateEarnedXp, calculateQuizXp } from "@/lib/xp-calculation";
 import { getClientLocalDate } from "@/lib/timezone";
@@ -498,13 +501,29 @@ export default function QuizLandingClient({
 
         if (quizXpRecorded.current) return;
         quizXpRecorded.current = true;
+        const previousDailyGoalStats = dailyGoalStats;
+        const clientToday = getClientLocalDate();
+        setDailyGoalStats((current) => {
+            if (!current) return current;
+
+            const todayIndex = current.weekDates.indexOf(clientToday);
+            return {
+                ...current,
+                todayXp: current.todayXp + totalQuizXp,
+                weekXp: current.weekXp.map((xp, index) =>
+                    index === todayIndex ? xp + totalQuizXp : xp,
+                ),
+            };
+        });
+
         recordQuizCompletion({
             xpEarned: totalQuizXp,
             currentStreak,
             bestStreak,
-            date: getClientLocalDate(),
+            date: clientToday,
         }).then((response) => {
             if (!response.success) {
+                setDailyGoalStats(previousDailyGoalStats);
                 console.error("Failed to record quiz completion:", response.error);
                 return;
             }
@@ -512,9 +531,10 @@ export default function QuizLandingClient({
                 console.error("Failed to refresh daily XP progress after quiz completion:", error);
             });
         }).catch((error) => {
+            setDailyGoalStats(previousDailyGoalStats);
             console.error("Failed to record quiz completion:", error);
         });
-    }, [isFinished, totalQuizXp, currentStreak, bestStreak]);
+    }, [isFinished, totalQuizXp, currentStreak, bestStreak, dailyGoalStats]);
 
     useEffect(() => {
         if (!isFinished) return;
@@ -526,14 +546,11 @@ export default function QuizLandingClient({
         if (!resolvedUnitId) return;
         completionRecorded.current = true;
 
-        recordLessonSlideProgress(
-            resolvedUnitId,
-            Math.max(1, lessonSlides.length),
-            Math.max(1, lessonSlides.length),
-            true,
-        ).then((response) => {
-            if (response.success && response.isCompleted) {
-                markUnitCompletedLocally(resolvedUnitId);
+        recordQuizCompletionProgress(resolvedUnitId).then((response) => {
+            if (response.success && response.isQuizCompleted) {
+                if (response.isUnitCompleted) {
+                    markUnitCompletedLocally(resolvedUnitId);
+                }
                 setLessonProgressState("saved");
                 // If advancing into a new section, preload that section + its successor
                 if (
@@ -549,14 +566,14 @@ export default function QuizLandingClient({
             setLessonProgressState("failed");
             setLessonProgressError(
                 response.success
-                    ? "The server did not confirm lesson completion. Please retry."
-                    : response.error ?? "Lesson progress could not be saved.",
+                    ? "The server did not confirm quiz completion. Please retry."
+                    : response.error ?? "Quiz progress could not be saved.",
             );
         }).catch((err) => {
             completionRecorded.current = false;
             setLessonProgressState("failed");
-            setLessonProgressError("Lesson progress could not be saved. Please retry.");
-            console.error("Failed to record lesson completion progress:", err);
+            setLessonProgressError("Quiz progress could not be saved. Please retry.");
+            console.error("Failed to record quiz completion progress:", err);
         });
     }, [isFinished, lives, score, quizzes.length, bestStreak, currentStreak, resolvedUnitId, lessonSlides.length, completionRetryCount, resolvedNextUnit, selectedQuiz]);
 
@@ -565,8 +582,9 @@ export default function QuizLandingClient({
         if (!resolvedUnitId || !hasLesson || isFinished) return;
         const currentOrder = lessonSlideIndex + 1;
         const total = Math.max(1, lessonSlides.length);
+        const isLessonDone = currentOrder >= total;
         updateUnitSlideProgressLocally(resolvedUnitId, currentOrder);
-        recordLessonSlideProgress(resolvedUnitId, currentOrder, total, false).then((response) => {
+        recordLessonSlideProgress(resolvedUnitId, currentOrder, total, false, undefined, false, isLessonDone).then((response) => {
             if (!response.success) {
                 console.error("Failed to record slide progress:", response.error);
             }
@@ -1121,30 +1139,18 @@ export default function QuizLandingClient({
                                 Code Problem
                             </Link>
                         )}
-                        {isPassed && resolvedNextUnit && (
+                        {isPassed && !hasCodingAssessment && resolvedNextUnit && (
                             <Link
                                 prefetch={true}
                                 href={`/quiz/${resolvedNextUnit.unit_id}`}
                                 className="options"
-                                id={hasCodingAssessment ? undefined : "submit"}
+                                id="submit"
                                 aria-disabled={!isLessonProgressSaved}
                                 onClick={(event) => {
                                     if (!isLessonProgressSaved) event.preventDefault();
                                 }}
                                 style={{
                                     textDecoration: "none",
-                                    ...(hasCodingAssessment
-                                        ? {
-                                              display: "flex",
-                                              alignItems: "center",
-                                              justifyContent: "center",
-                                              margin: "14px auto 0",
-                                              minHeight: "54px",
-                                              width: "240px",
-                                              borderRadius: "16px",
-                                              fontSize: "1.1rem",
-                                          }
-                                        : {}),
                                 }}
                             >
                                 Next Unit: {resolvedNextUnit.unit_title}
@@ -1340,9 +1346,24 @@ export default function QuizLandingClient({
                                     type="button"
                                     className="options"
                                     id="submit"
-                                    onClick={() => isLessonOnlyUnit
-                                        ? void finishLessonOnlyUnit()
-                                        : setHasStartedQuiz(true)}
+                                    onClick={() => {
+                                        if (isLessonOnlyUnit) {
+                                            void finishLessonOnlyUnit();
+                                        } else {
+                                            if (resolvedUnitId) {
+                                                void recordLessonSlideProgress(
+                                                    resolvedUnitId,
+                                                    Math.max(1, lessonSlides.length),
+                                                    Math.max(1, lessonSlides.length),
+                                                    false,
+                                                    undefined,
+                                                    false,
+                                                    true,
+                                                );
+                                            }
+                                            setHasStartedQuiz(true);
+                                        }
+                                    }}
                                     disabled={isLessonOnlyUnit && lessonProgressState === "saving"}
                                 >
                                     {isLessonOnlyUnit && lessonProgressState === "saving"

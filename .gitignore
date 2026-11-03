@@ -50,6 +50,7 @@ tests/*
 !tests/test-section-skip.ts
 !tests/test-guest-learn-ui.ts
 !tests/test-unit-pass-completion.ts
+!tests/test-lesson-quiz-cp-progression.ts
 !tests/env-loader.ts
 
 # debug

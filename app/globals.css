@@ -166,12 +166,7 @@ code {
     padding: 0 8px;
     font-family: var(--font-jetbrains-mono), monospace;
     border-radius: 4px;
-    color: var(--primary-color);
     white-space: nowrap;
-}
-
-[data-theme="dark"] code {
-    background-color: #090918;
 }
 
 .col {
@@ -209,6 +204,15 @@ body {background-color: var(--bg-main);}
 
 @keyframes root-route-loading-spin {
     to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .root-route-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        min-height: 100dvh;
+    }
 }
 
 input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]):not(.tracker-search-input),

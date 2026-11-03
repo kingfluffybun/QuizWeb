@@ -1507,9 +1507,10 @@
     height: 100% !important;
 }
 
-.lesson-code-preview .monaco-editor .view-lines,
-.lesson-code-preview .monaco-editor .view-lines *,
-.lesson-code-preview .monaco-editor textarea.inputarea {
+.lesson-code-preview,
+.lesson-code-preview *,
+.lesson-code-preview *::selection {
+    -webkit-touch-callout: none !important;
     -webkit-user-select: none !important;
     user-select: none !important;
 }
@@ -2186,6 +2187,7 @@ footer.incorrect {
         gap: 6px !important;
         min-width: 0 !important;
         margin-left: 0 !important;
+        width: 100%;
     }
 
     .order-options > .order-slot {
@@ -2522,6 +2524,10 @@ footer.incorrect {
 }
 
 @media (max-width: 768px) {
+    .lesson-code-preview.lesson-code-editor {
+        touch-action: pan-x pan-y;
+    }
+
     #code-problem,
     #code-problem.quiz-page {
         display: flex !important;
