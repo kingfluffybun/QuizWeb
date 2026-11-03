@@ -316,6 +316,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Unit Quiz</span>
             </Link>
+            {/* Practice route intentionally hidden from the mobile navigation drawer
             <Link href="/quiz" className={`mobile-drawer-link${isActiveRoute(pathname, "/quiz") ? " active" : ""}`}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
@@ -326,6 +327,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
               </svg>
               <span>Practice Arena</span>
             </Link>
+            */}
             <Link href="/leaderboard" className={`mobile-drawer-link${isActiveRoute(pathname, "/leaderboard") ? " active" : ""}`}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2" />
