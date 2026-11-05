@@ -229,7 +229,7 @@ export async function getAdminUsers(
   query?: string,
   roleFilter?: string,
   passwordFilter?: string
-): Promise<{ users: AdminUserRecord[] }> {
+): Promise<{ users: AdminUserRecord[]; adminCount: number }> {
   const caller = await requireAdmin();
   if (!caller) {
     throw new Error("Unauthorized: Administrator privileges required.");
@@ -276,6 +276,11 @@ export async function getAdminUsers(
   `;
 
   const [rows] = await db.query<RowDataPacket[]>(sql, params);
+  const [adminCountRows] = await db.query<RowDataPacket[]>(`
+    SELECT COUNT(*) AS adminCount
+    FROM user_auth_tbl
+    WHERE user_role = 'admin'
+  `);
 
   const users: AdminUserRecord[] = (rows as RowDataPacket[]).map((r) => ({
     user_id: Number(r.user_id),
@@ -286,7 +291,10 @@ export async function getAdminUsers(
     is_email_verified: Boolean(r.is_email_verified),
   }));
 
-  return { users };
+  return {
+    users,
+    adminCount: Number(adminCountRows[0]?.adminCount ?? 0),
+  };
 }
 
 /**

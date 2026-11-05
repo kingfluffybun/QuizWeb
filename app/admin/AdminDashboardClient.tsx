@@ -24,6 +24,7 @@ export interface AdminDashboardClientProps {
   currentAdminId: number;
   currentAdminEmail: string;
   initialUsers: AdminUserRecord[];
+  initialAdminCount: number;
   initialAnalytics: PlatformAnalytics;
   initialReviewQueue: PendingReviewItem[];
 }
@@ -39,6 +40,7 @@ export default function AdminDashboardClient({
   currentAdminId,
   currentAdminEmail,
   initialUsers,
+  initialAdminCount,
   initialAnalytics,
   initialReviewQueue,
 }: AdminDashboardClientProps) {
@@ -49,6 +51,7 @@ export default function AdminDashboardClient({
 
   // Data Stores
   const [users, setUsers] = useState<AdminUserRecord[]>(initialUsers);
+  const [adminCount, setAdminCount] = useState(initialAdminCount);
   const [analytics, setAnalytics] = useState<PlatformAnalytics>(initialAnalytics);
   const [reviewQueue, setReviewQueue] = useState<PendingReviewItem[]>(initialReviewQueue);
 
@@ -61,6 +64,7 @@ export default function AdminDashboardClient({
     try {
       const res = await getAdminUsers(query, roleFilter, pwdFilter);
       setUsers(res.users);
+      setAdminCount(res.adminCount);
     } catch (err: unknown) {
       console.error("Failed to refresh users:", err);
     }
@@ -215,7 +219,7 @@ export default function AdminDashboardClient({
         totalQuizzes={analytics.totalQuizzes}
         pendingCount={reviewQueue.length}
         totalUsers={users.length}
-        totalContributors={analytics.contributors.length}
+        totalContributors={adminCount}
       />
 
       {/* 3. Interactive Tab Navigation */}

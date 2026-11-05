@@ -31,6 +31,7 @@ export default async function AdminPage() {
 
   // 2. Parallel Data Loading with Graceful Fallbacks
   let initialUsers: Awaited<ReturnType<typeof getAdminUsers>>["users"] = [];
+  let initialAdminCount = 0;
   let initialAnalytics: Awaited<ReturnType<typeof getAdminAnalytics>> = {
     totalQuizzes: 0,
     categories: [],
@@ -73,6 +74,7 @@ export default async function AdminPage() {
       getPendingQuizzes("all"),
     ]);
     initialUsers = usersResult.users;
+    initialAdminCount = usersResult.adminCount;
     initialAnalytics = analyticsResult;
     initialReviewQueue = queueResult;
     workspaceMetadata = metadata;
@@ -104,6 +106,7 @@ export default async function AdminPage() {
             currentAdminId={Number(admin.id)}
             currentAdminEmail={admin.email || ""}
             initialUsers={initialUsers}
+            initialAdminCount={initialAdminCount}
             initialAnalytics={initialAnalytics}
             initialReviewQueue={initialReviewQueue}
           />
