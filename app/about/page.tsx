@@ -145,19 +145,10 @@ export default function About() {
                         <p>Quality and Integrity</p>
                     </article>
                     <article className="value-card">
-                        <p>Continuous Improvement</p>
-                    </article>
-                    <article className="value-card">
                         <p>Collaboration and Community</p>
                     </article>
-                </div>
-
-                <div className="values-grid values-grid--bottom">
-                    <article className="value-card value-card--bottom">
+                    <article className="value-card">
                         <p>Empowerment Through Knowledge</p>
-                    </article>
-                    <article className="value-card value-card--bottom">
-                        <p>Accountability and Respect</p>
                     </article>
                 </div>
             </div>
