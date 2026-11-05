@@ -45,7 +45,7 @@
     #clouds-right { right: 0; bottom: 0;  width: 56vh; }
     #hotair-baloon{ left: 20vh; top: 20vh; z-index: 5;}
     #plane-banner { right: 20vh; top: 80vh; z-index: 5;}
-    #sun-cloud{align-self:center; bottom: 40vh; z-index: 5;}
+    #sun-cloud{align-self:center; bottom: 48vh; z-index: 5;}
 
     > .about-hero {
         position: sticky;
