@@ -1,19 +1,26 @@
 import Link from "next/link";
-import {
-  getPaginatedRecentUnits,
-  getQuizMetadata,
-  getQuizMetrics,
-} from "@/app/actions/quiz";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { requireStaff } from "@/lib/rbac";
+import { getPaginatedRecentUnits, getQuizMetadata } from "@/app/actions/quiz";
 import QuizInputForm from "./QuizInputForm";
 import "#css/input.css";
 
 export const dynamic = "force-dynamic";
 
 export default async function InputPage() {
-  const [metadata, recentUnitPage, metrics] = await Promise.all([
+  const staff = await requireStaff();
+  if (!staff) {
+    const session = await auth();
+    if (!session?.user) {
+      redirect("/login?callbackUrl=/input");
+    }
+    redirect("/home");
+  }
+
+  const [metadata, recentUnitPage] = await Promise.all([
     getQuizMetadata(),
     getPaginatedRecentUnits(),
-    getQuizMetrics(),
   ]);
 
   return (
@@ -22,7 +29,10 @@ export default async function InputPage() {
         <div>
           <h1>QuizWeb Unit &amp; Assessment Studio</h1>
         </div>
-        <div className="admin-header-links" style={{ display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
+        <div
+          className="admin-header-links"
+          style={{ display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}
+        >
           <Link href="/maintainer" className="header-link">
             &larr; Maintainer Studio
           </Link>
@@ -45,7 +55,6 @@ export default async function InputPage() {
           initialPage={recentUnitPage.currentPage}
           initialTotalPages={recentUnitPage.totalPages}
           initialTotalCount={recentUnitPage.totalCount}
-          initialMetrics={metrics}
         />
       </main>
     </div>

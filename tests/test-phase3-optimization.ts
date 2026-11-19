@@ -13,22 +13,22 @@ const repoRoot = path.resolve(__dirname, "..");
 // -----------------------------------------------------------------------------
 console.log("\n[Test 1] Verifying Dynamic Monaco Editor Imports in quiz-cp and input...");
 
-const quizCpPath = path.join(repoRoot, "app", "quiz-cp", "page.tsx");
-assert(fs.existsSync(quizCpPath), "app/quiz-cp/page.tsx must exist");
+const quizCpPath = path.join(repoRoot, "app", "quiz-cp", "components", "CpEditorPane.tsx");
+assert(fs.existsSync(quizCpPath), "app/quiz-cp/components/CpEditorPane.tsx must exist");
 const quizCpContent = fs.readFileSync(quizCpPath, "utf-8");
 
 assert(
     !quizCpContent.includes('import Editor from "@monaco-editor/react"'),
-    "app/quiz-cp/page.tsx must NOT statically import @monaco-editor/react"
+    "app/quiz-cp/components/CpEditorPane.tsx must NOT statically import @monaco-editor/react"
 );
 assert(
     quizCpContent.includes('dynamic(() => import("@monaco-editor/react")') ||
     quizCpContent.includes("dynamic(() => import('@monaco-editor/react')"),
-    "app/quiz-cp/page.tsx must dynamically import @monaco-editor/react"
+    "app/quiz-cp/components/CpEditorPane.tsx must dynamically import @monaco-editor/react"
 );
-assert(quizCpContent.includes("ssr: false"), "app/quiz-cp/page.tsx dynamic import must specify ssr: false");
+assert(quizCpContent.includes("ssr: false"), "app/quiz-cp/components/CpEditorPane.tsx dynamic import must specify ssr: false");
 
-console.log("  ✔ app/quiz-cp/page.tsx dynamically code-splits Monaco Editor (ssr: false).");
+console.log("  ✔ app/quiz-cp/components/CpEditorPane.tsx dynamically code-splits Monaco Editor (ssr: false).");
 
 const inputFormPath = path.join(repoRoot, "app", "input", "QuizInputForm.tsx");
 assert(fs.existsSync(inputFormPath), "app/input/QuizInputForm.tsx must exist");

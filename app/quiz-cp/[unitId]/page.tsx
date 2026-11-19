@@ -1,9 +1,14 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import Sidebar from "@/app/components/Sidebar";
-import { isCodeProblemUnlockedForUser } from "@/app/actions/progress";
-import { CodeProblemRunner } from "../page";
+import { getPublicCodeProblem } from "@/app/actions/cp-engine";
+import { getDailyGoalData } from "@/app/actions/daily-goal";
+import {
+  getNextCurriculumUnit,
+  isCodeProblemUnlockedForUser,
+} from "@/app/actions/progress";
+import { CodeProblemRunner } from "../CodeProblemRunner";
+import CpSuspenseShell from "../components/CpSuspenseShell";
 
 interface UnitQuizCPPageProps {
   params: Promise<{ unitId: string }>;
@@ -24,18 +29,21 @@ export default async function UnitQuizCPPage({ params }: UnitQuizCPPageProps) {
     redirect(`/quiz/${parsedUnitId}?start=quiz`);
   }
 
+  // Parallel server prefetch eliminates client mount waterfall for /quiz-cp/[unitId]
+  const [initialProblem, initialDailyGoal, initialNextUnit] = await Promise.all([
+    getPublicCodeProblem(parsedUnitId),
+    getDailyGoalData().catch(() => null),
+    getNextCurriculumUnit(parsedUnitId).catch(() => null),
+  ]);
+
   return (
-    <Suspense
-      fallback={
-        <div className="quiz-page" id="code-problem">
-          <Sidebar />
-          <main style={{ justifyContent: "center", alignItems: "center" }}>
-            <p>Loading coding assessment...</p>
-          </main>
-        </div>
-      }
-    >
-      <CodeProblemRunner unitId={parsedUnitId} />
+    <Suspense fallback={<CpSuspenseShell />}>
+      <CodeProblemRunner
+        unitId={parsedUnitId}
+        initialProblem={initialProblem}
+        initialDailyGoal={initialDailyGoal}
+        initialNextUnit={initialNextUnit}
+      />
     </Suspense>
   );
 }

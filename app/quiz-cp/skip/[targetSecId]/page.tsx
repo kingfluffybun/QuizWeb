@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import Sidebar from "@/app/components/Sidebar";
-import { CodeProblemRunner } from "../../page";
+import { CodeProblemRunner } from "../../CodeProblemRunner";
+import CpSuspenseShell from "../../components/CpSuspenseShell";
 
 interface SkipQuizCPPageProps {
   params: Promise<{ targetSecId: string }>;
@@ -23,16 +23,7 @@ export default async function SkipQuizCPPage({ params }: SkipQuizCPPageProps) {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="quiz-page" id="code-problem">
-          <Sidebar />
-          <main style={{ justifyContent: "center", alignItems: "center" }}>
-            <p>Loading Section Skip Challenge...</p>
-          </main>
-        </div>
-      }
-    >
+    <Suspense fallback={<CpSuspenseShell label="Loading Section Skip Challenge..." />}>
       <CodeProblemRunner skipTargetSecId={parsedTargetSecId} />
     </Suspense>
   );

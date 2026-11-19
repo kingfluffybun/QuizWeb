@@ -7,21 +7,26 @@ import FITB from "./FITB";
 import Order from "./Order";
 import Pair from "./Pair";
 
-const questionComponents: Record<string, ComponentType<QuestionProps>> = {
-    MCQ: MCQ,
-    FITB: FITB,
-    Order: Order,
-    Pair: Pair,
+type QuizRendererProps = QuestionProps & {
+  onPairMatched?: () => void;
+  onIncorrectPair?: () => void;
 };
 
-export default function QuizRender(props: QuestionProps & {
+const questionComponents: Record<string, ComponentType<QuizRendererProps>> = {
+  MCQ,
+  FITB,
+  Order,
+  Pair,
+};
+
+export default function QuizRender(
+  props: QuizRendererProps & {
     quiz: QuizData;
-    onPairMatched?: () => void;
-    onIncorrectPair?: () => void;
-}) {
-    const Component = questionComponents[props.quiz.type_name];
+  },
+) {
+  const Component = questionComponents[props.quiz.type_name];
 
-    if (!Component) return <p>Unknown quiz type: {props.quiz.type_name}</p>;
+  if (!Component) return <p>Unknown quiz type: {props.quiz.type_name}</p>;
 
-    return <Component {...props} />;
+  return <Component {...props} />;
 }
