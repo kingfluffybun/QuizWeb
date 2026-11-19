@@ -17,7 +17,6 @@ async function runTests() {
     isQuizCompletedForUser,
     isCodeProblemUnlockedForUser,
     getUserCurriculumUnlockState,
-    getUserSectionProgress,
   } = await import("../app/actions/progress");
   const { getCurriculumRoadmapData } = await import("../app/actions/curriculum-roadmap");
 

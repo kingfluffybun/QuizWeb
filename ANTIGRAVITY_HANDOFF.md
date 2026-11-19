@@ -10,9 +10,9 @@ used for project status.
 ## Active agent
 
 - **Agent:** Antigravity Coding Assistant
-- **Session:** `79761089-f1a9-4d19-941b-c2281d635b25`
+- **Session:** `03a509ef-87f8-4422-b6a2-f061caf6bffd`
 - **Status:** Ready
-- **Last update:** 2026-10-27
+- **Last update:** 2026-11-20
 
 ## Coordination protocol
 
@@ -25,27 +25,26 @@ used for project status.
 
 ## Current work
 
-Completed. Implemented Serverless-First 3-Tier Preload & Caching Architecture for current and next learn sections on user sign-in.
+Completed. Comprehensive optimization, refactoring, and modularization across the full repository on branch `preview-2.0` (Phases 0–5).
 
 Completed changes:
-- `app/actions/quiz.ts`: Parallelized quiz modality queries in `populateQuizPayloads` and parallelized slide, quiz, and assessment queries in `fetchUnitByIdInternal`. Added `getSectionUnitsBundle(secId)` wrapped in `createSafeCache` (`unstable_cache` with `"curriculum"` tag) to batch-fetch and pre-warm unit payloads per section across Vercel Serverless instances.
-- `app/actions/progress.ts`: Added `getCanonicalCurriculumUnitSequence()` cache, `getPreloadLearnSectionData()`, and optimized `getNextCurriculumUnit` & `getUserCurriculumUnlockState` to eliminate repetitive table scans.
-- `app/api/learn/preload/route.ts`: Created `GET /api/learn/preload` route handler returning the user's active section and next available section units with `Cache-Control: private, max-age=120, stale-while-revalidate=600`.
-- `lib/learn-cache.ts`: Created client-side persistent unit cache engine (`sessionStorage` + in-memory store, request deduplication, O(1) unit lookup, optimistic slide & completion updates, `toQuizLandingQuizzes` converter, and cache purge on sign-out).
-- `app/login/page.tsx`: Triggered `preloadLearnSections(undefined, true)` immediately upon successful `signIn`.
-- `app/components/LearnPreloadSync.tsx` & `app/components/SessionWrapper.tsx`: Added background preload synchronization for authenticated / OAuth sessions and automatic cleanup on user switch / sign-out.
-- `app/components/Sidebar.tsx` & `app/components/MobileShell.tsx`: Wired `clearLearnCache()` on sign-out form submission.
-- `app/quiz/QuizLandingClient.tsx`, `app/home/page.tsx`, & `app/learn/LearnUnitsClient.tsx`: Hydrated from client cache, marked units completed locally, background-preloaded subsequent sections on section boundary completion, and enabled route `prefetch={true}`.
-- `tests/test-learn-preload.ts`: Created comprehensive 49-assertion verification suite.
+- **Core, Auth, Utilities & API (`a0beca1`)**: Consolidated caching/session/crypto/email/assessment helpers under `lib/server/{cache,crypto,email-templates,session,cp-assessment}.ts`, `lib/{auth-cache,auth-oauth,user-info-client,cp-constants}.ts`, `auth.ts`, `proxy.ts`, `app/api/db/user-info/route.ts`, `app/api/learn/preload/route.ts`, and `app/quiz/unwrap.ts`; removed unused `app/api/recaptcha/route.ts`.
+- **Server Actions & Queries (`6bbd9c2`)**: Modularized `app/actions/{quiz,progress,auth}.ts` into `lib/types/{quiz,progress}.ts` and `lib/server/{quiz,progress,auth}/*`; optimized `cp-engine.ts`, `streak.ts`, `section-skip.ts`, `daily-goal.ts`, `admin.ts`, `credentials.ts`, `curriculum-roadmap.ts`, `maintainer.ts`, and `leaderboard.ts` to eliminate N+1 queries and redundant DB round-trips.
+- **Authoring & Assessment UI (`46935eb`)**: Modularized `app/input/`, `app/components/quiz/`, `app/quiz-cp/`, and `app/quiz/`; enforced `requireStaff()` in `app/input/page.tsx`; sandboxed preview iframes; eliminated 1Hz timer re-renders; unified desktop/mobile Monaco editors in `app/quiz-cp/`.
+- **App Shell, Pages, Animations & Stylesheets (`55f3a36`)**: Extracted `lib/accessibility-store.ts`, `lib/navigation.ts`, `lib/roadmap-progress.ts`, `lib/cheat-sheet-data.ts`, and shared `app/components/icons/NavIcons.tsx`; added `viewport` export in `app/layout.tsx` and moved `@/public/css/accessibility-dialog.css`; lazily loaded `animejs` in `app/components/animations/` with reduced-motion support; converted `app/page.tsx`, `app/about/page.tsx`, and `app/cheat-sheet/page.tsx` to static RSCs (replacing 37 simultaneous Monaco instances on `/cheat-sheet` with `StaticCodeBlock`); modularized `app/login/`, `app/learn/`, `app/settings/`, `app/maintainer/`; enforced `requireAdmin()` in `app/pending/page.tsx`; pruned duplicate/dead styles in `public/css/` and unused CSS imports.
+- **Test Lint Cleanup & Handoff**: Removed unused `getUserSectionProgress` import in `tests/test-lesson-quiz-cp-progression.ts`.
 
 Validation completed:
-- `npx tsx tests/test-learn-preload.ts` (49/49 tests passing)
-- `npx tsx tests/test-curriculum-roadmap-integration.ts` (61/61 tests passing)
-- `npx tsx tests/test-phase3-optimization.ts` (All tests passing)
-- `npx tsx tests/test-rbac-e2e.ts` (137/137 tests passing)
-- `npx tsc --noEmit` (0 errors)
-- `npx eslint` on all modified files (0 errors, 0 warnings)
-- `npm run build` (Clean production build; `/api/learn/preload` compiled and verified)
+- `npx.cmd tsc --noEmit` (0 errors)
+- `npm.cmd run lint` (0 errors, 0 warnings)
+- `npm.cmd run build` (clean production build; Next.js 16.4.2 Turbopack)
+- `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing)
+- `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0)
+- `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing)
+- `npx.cmd tsx tests/test-phase2-rendering.ts` (All Phase 2 rendering & static acceleration assertions passing)
+- `npx.cmd tsx tests/test-phase3-optimization.ts` (All Phase 3 client bundle & asset optimization assertions passing)
+- Static source contract checks (22/22 assertions from `tests/test-unit-pass-completion.ts`, `tests/test-curriculum-roadmap-integration.ts`, and `tests/test-section-skip.ts` passing)
+- Note: Live MySQL-backed test suites were not executed in this workspace because no `.env`/`.env.local` database configuration is present locally.
 
 Before starting work, an agent should replace this section with the files it
 intends to change and a short description. After finishing, it should replace
@@ -53,6 +52,8 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-11-20: Completed repository-wide optimization, refactoring, and modularization across Phases 0–5 on `preview-2.0` (`a0beca1`, `6bbd9c2`, `46935eb`, `55f3a36`, plus final test lint cleanup & handoff update). Passed TypeScript (0 errors), ESLint (0 errors, 0 warnings), Next.js production build, `test-cp-engine.ts` (15/15), `test-assessment-json-import.ts`, `test-leaderboard-period.ts` (5/5), `test-phase2-rendering.ts`, `test-phase3-optimization.ts`, and 22 static file-contract assertions (live MySQL tests skipped locally due to missing `.env`/`.env.local`).
 
 - 2026-10-27: Implemented Serverless-First 3-Tier Preload & Caching Architecture (`GET /api/learn/preload`, `lib/learn-cache.ts`, `getSectionUnitsBundle`, `getPreloadLearnSectionData`, `LearnPreloadSync`) to preload the user's current and next learn sections on sign-in and eliminate on-demand unit serving across Vercel Serverless functions and browser runtime. Verified with 49/49 preload tests, 61/61 roadmap integration tests, 137/137 RBAC E2E tests, ESLint (0 warnings), TypeScript (0 errors), and Next.js production build.
 
