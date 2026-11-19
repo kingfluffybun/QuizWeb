@@ -1,11 +1,12 @@
 "use server";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { CANONICAL_SECTIONS, type CanonicalSection } from "@/lib/curriculum";
-import { getUserCurriculumUnlockState } from "@/app/actions/progress";
 import { getSectionDescription } from "@/lib/curriculum-descriptions";
 import { isStaff } from "@/lib/rbac";
+import { getCachedApprovedUnitCatalog } from "@/lib/server/progress/catalog";
+import { getUserCurriculumUnlockStateImpl } from "@/lib/server/progress/unlock";
+import { resolveUserId, resolveUserRole } from "@/lib/server/session";
 import type { RowDataPacket } from "mysql2/promise";
 
 export interface RoadmapUnitNode {
@@ -55,142 +56,82 @@ export interface CurriculumRoadmapData {
   };
 }
 
-/**
- * Resolves user role from test session, auth session, or database lookup.
- */
-async function resolveUserRole(explicitUserId?: number): Promise<string | null> {
-  const testSession = (
-    globalThis as unknown as {
-      __TEST_AUTH_SESSION__?: {
-        user?: { id?: string | number; role?: string; user_role?: string };
-      } | null;
-    }
-  ).__TEST_AUTH_SESSION__;
-
-  if (testSession?.user) {
-    const sessionUserId = testSession.user.id ? Number(testSession.user.id) : undefined;
-    const sessionRole = testSession.user.role || testSession.user.user_role;
-    if (sessionRole && (!explicitUserId || explicitUserId === sessionUserId)) {
-      return String(sessionRole);
-    }
-  }
-
-  let sessionUserRole: string | undefined;
-  let sessionUserId: number | undefined;
-  try {
-    const session = await auth();
-    if (session?.user) {
-      sessionUserId = session.user.id ? Number(session.user.id) : undefined;
-      sessionUserRole = (session.user.role as string) || (session.user.user_role as string);
-    }
-  } catch {
-    // Outside Next.js request context
-  }
-
-  const targetUserId = explicitUserId ?? sessionUserId;
-  if (sessionUserRole && (!explicitUserId || explicitUserId === sessionUserId)) {
-    return sessionUserRole;
-  }
-
-  if (targetUserId && Number.isInteger(targetUserId) && targetUserId > 0) {
-    try {
-      const [rows] = await db.query<RowDataPacket[]>(
-        "SELECT user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
-        [targetUserId],
-      );
-      if (rows.length > 0 && rows[0]?.user_role) {
-        return String(rows[0].user_role);
-      }
-    } catch {
-      // Graceful fallback
-    }
-  }
-
-  return null;
+interface UnitProgressRow extends RowDataPacket {
+  unit_id: number;
+  current_slide_order: number | null;
+  is_lesson_completed: number | null;
+  is_quiz_completed: number | null;
+  is_cp_completed: number | null;
+  is_completed: number | null;
 }
 
 /**
- * Server action to query the complete curriculum roadmap data:
- * - 16 canonical sections with rich educational descriptions
- * - Approved units grouped by section with lesson slide counts, quiz counts, and coding assessments
+ * Queries the complete curriculum roadmap data:
+ * - 16 canonical sections with descriptions
+ * - Cached approved unit catalog joined in-memory with per-user lesson progress
  * - Strict per-user unlock and completion status
- * - Aggregated section statistics (total units, slides, questions)
  */
 export async function getCurriculumRoadmapData(
   explicitUserId?: number,
 ): Promise<CurriculumRoadmapData> {
   try {
-    let userId = explicitUserId;
-    if (!userId) {
-      try {
-        const session = await auth();
-        if (session?.user?.id) userId = Number(session.user.id);
-      } catch {
-        // Outside Next.js request context
-      }
-    }
-
-    const [userRole, unlockState] = await Promise.all([
-      resolveUserRole(userId),
-      getUserCurriculumUnlockState(userId),
-    ]);
-
+    const resolvedUserId = await resolveUserId(explicitUserId);
+    const userId = resolvedUserId ?? undefined;
+    const userRole = await resolveUserRole(userId);
     const isStaffUser = isStaff(userRole);
 
-    const [unitRows] = await db.query<RowDataPacket[]>(
-      `SELECT 
-         u.unit_id,
-         u.unit_title,
-         u.unit_order,
-         u.sec_id,
-         COALESCE(sc.slide_count, 0) AS slide_count,
-         COALESCE(qc.quiz_count, 0) AS quiz_count,
-         EXISTS(SELECT 1 FROM unit_assessment_tbl ua WHERE ua.unit_id = u.unit_id) AS has_coding_assessment,
-         COALESCE(p.current_slide_order, 0) AS current_slide_order,
-         COALESCE(p.is_lesson_completed, 0) AS is_lesson_completed,
-         COALESCE(p.is_quiz_completed, 0) AS is_quiz_completed,
-         COALESCE(p.is_cp_completed, 0) AS is_cp_completed,
-         COALESCE(p.is_completed, 0) AS user_completed
-       FROM unit_tbl u
-       JOIN sec_tbl s ON u.sec_id = s.sec_id
-       LEFT JOIN (
-         SELECT unit_id, COUNT(*) AS slide_count FROM lesson_slide_tbl GROUP BY unit_id
-       ) sc ON u.unit_id = sc.unit_id
-       LEFT JOIN (
-         SELECT unit_id, COUNT(*) AS quiz_count FROM quiz_tbl GROUP BY unit_id
-       ) qc ON u.unit_id = qc.unit_id
-       LEFT JOIN user_lesson_progress_tbl p ON u.unit_id = p.unit_id AND p.user_id = ?
-       WHERE u.status = 'approved'
-       ORDER BY FIELD(s.sec_id, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16), u.unit_order ASC, u.unit_id ASC`,
-      [userId || 0],
-    );
+    const [catalog, unlockState, progressRows] = await Promise.all([
+      getCachedApprovedUnitCatalog(),
+      getUserCurriculumUnlockStateImpl(userId, userRole),
+      userId
+        ? db
+            .query<UnitProgressRow[]>(
+              `SELECT
+                 unit_id,
+                 current_slide_order,
+                 is_lesson_completed,
+                 is_quiz_completed,
+                 is_cp_completed,
+                 is_completed
+               FROM user_lesson_progress_tbl
+               WHERE user_id = ?`,
+              [userId],
+            )
+            .then(([rows]) => rows)
+        : Promise.resolve<UnitProgressRow[]>([]),
+    ]);
 
-    // Group units by section ID
+    const progressByUnitId = new Map<number, UnitProgressRow>();
+    for (const row of progressRows) {
+      progressByUnitId.set(Number(row.unit_id), row);
+    }
+
     const unitsBySection = new Map<number, RoadmapUnitNode[]>();
-    for (const row of unitRows) {
-      const secId = Number(row.sec_id);
-      const unitId = Number(row.unit_id);
+    for (const unit of catalog) {
+      const progress = progressByUnitId.get(unit.unit_id);
       const isCompleted =
-        Boolean(row.user_completed) || unlockState.completedUnitIds.has(unitId);
-      const isLocked = isStaffUser ? false : !unlockState.unlockedUnitIds.has(unitId);
-      const slideCount = Number(row.slide_count ?? 0);
-      const currentSlideOrder = Number(row.current_slide_order ?? 0);
+        Boolean(progress?.is_completed) ||
+        unlockState.completedUnitIds.has(unit.unit_id);
+      const isLocked = isStaffUser
+        ? false
+        : !unlockState.unlockedUnitIds.has(unit.unit_id);
+      const currentSlideOrder = Number(progress?.current_slide_order ?? 0);
 
       const isLessonCompleted =
         isCompleted ||
-        Boolean(row.is_lesson_completed) ||
-        (slideCount > 0 && currentSlideOrder >= slideCount);
-      const isQuizCompleted = isCompleted || Boolean(row.is_quiz_completed);
-      const isCpCompleted = isCompleted || Boolean(row.is_cp_completed);
+        Boolean(progress?.is_lesson_completed) ||
+        (unit.slide_count > 0 && currentSlideOrder >= unit.slide_count);
+      const isQuizCompleted = isCompleted || Boolean(progress?.is_quiz_completed);
+      const isCpCompleted = isCompleted || Boolean(progress?.is_cp_completed);
 
       const node: RoadmapUnitNode = {
-        unit_id: unitId,
-        unit_title: String(row.unit_title),
-        unit_order: Number(row.unit_order ?? 1),
-        sec_id: secId,
-        slide_count: slideCount,
-        quiz_count: Number(row.quiz_count ?? 0),
-        has_coding_assessment: Boolean(row.has_coding_assessment),
+        unit_id: unit.unit_id,
+        unit_title: unit.unit_title,
+        unit_order: unit.unit_order,
+        sec_id: unit.sec_id,
+        slide_count: unit.slide_count,
+        quiz_count: unit.quiz_count,
+        has_coding_assessment: unit.has_coding_assessment,
         is_locked: isLocked,
         is_completed: isCompleted,
         is_lesson_completed: isLessonCompleted,
@@ -199,12 +140,11 @@ export async function getCurriculumRoadmapData(
         current_slide_order: currentSlideOrder,
       };
 
-      const list = unitsBySection.get(secId) ?? [];
+      const list = unitsBySection.get(unit.sec_id) ?? [];
       list.push(node);
-      unitsBySection.set(secId, list);
+      unitsBySection.set(unit.sec_id, list);
     }
 
-    // Build the 16 canonical sections
     const sections: RoadmapSection[] = CANONICAL_SECTIONS.map((sec: CanonicalSection) => {
       const secUnits = unitsBySection.get(sec.sec_id) ?? [];
       const totalUnits = secUnits.length;
@@ -238,7 +178,8 @@ export async function getCurriculumRoadmapData(
       userProgression: {
         userId,
         activeSectionId: unlockState.activeSectionId ?? 1,
-        activeUnitId: unlockState.activeUnitId ?? (unitRows[0]?.unit_id ? Number(unitRows[0].unit_id) : null),
+        activeUnitId:
+          unlockState.activeUnitId ?? (catalog[0]?.unit_id ?? null),
         unlockedSectionIds: Array.from(unlockState.unlockedSectionIds),
         unlockedUnitIds: Array.from(unlockState.unlockedUnitIds),
         completedSectionIds: Array.from(unlockState.completedSectionIds),
@@ -249,7 +190,6 @@ export async function getCurriculumRoadmapData(
   } catch (error) {
     console.error("Failed to get curriculum roadmap data:", error);
 
-    // Resilient fallback returning canonical sections with zero counters
     const fallbackSections: RoadmapSection[] = CANONICAL_SECTIONS.map((sec) => ({
       sec_id: sec.sec_id,
       cat_id: sec.cat_id,

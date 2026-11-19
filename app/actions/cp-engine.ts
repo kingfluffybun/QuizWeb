@@ -1,11 +1,8 @@
 "use server";
 
-import { db } from "@/lib/db";
-import type { RowDataPacket } from "mysql2";
 import {
   CPFileBuffersSchema,
   toPublicCodeProblem,
-  type CodeProblemAssessment,
   type CPFileBuffers,
   type PublicCodeProblem,
 } from "@/lib/cp-schema";
@@ -13,92 +10,8 @@ import {
   validateCodeProblemStep,
   type StepValidationResult,
 } from "@/lib/cp-validator";
-
-/**
- * Resolves the authoritative `CodeProblemAssessment` from `unit_assessment_tbl` and `assessment_step_tbl`.
- */
-export async function resolveAuthoritativeAssessment(unitId?: number): Promise<{
-  resolvedUnitId: number;
-  unitTitle: string;
-  assessment: CodeProblemAssessment;
-} | null> {
-  try {
-    let assessmentRow: RowDataPacket | undefined;
-
-    if (unitId && Number.isInteger(unitId) && unitId > 0) {
-      const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
-         FROM unit_assessment_tbl ua
-         JOIN unit_tbl u ON ua.unit_id = u.unit_id
-         WHERE ua.unit_id = ?
-         LIMIT 1`,
-        [unitId],
-      );
-      assessmentRow = rows[0];
-    } else {
-      // No unitId specified: find newest approved unit with an assessment
-      const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
-         FROM unit_assessment_tbl ua
-         JOIN unit_tbl u ON ua.unit_id = u.unit_id
-         WHERE u.status = 'approved'
-         ORDER BY u.unit_id DESC
-         LIMIT 1`,
-      );
-      assessmentRow = rows[0];
-    }
-
-    if (!assessmentRow) {
-      return null;
-    }
-
-    const [steps] = await db.query<RowDataPacket[]>(
-      `SELECT step_number, instruction, inherit_previous_code,
-              starter_html, starter_css, starter_js,
-              expected_html, expected_css, expected_js
-       FROM assessment_step_tbl
-       WHERE assessment_id = ?
-       ORDER BY step_number ASC`,
-      [assessmentRow.assessment_id],
-    );
-
-    if (!Array.isArray(steps) || steps.length === 0) {
-      return null;
-    }
-
-    const unitTitle = String(assessmentRow.unit_title ?? assessmentRow.title ?? "Coding Assessment");
-    const assessment: CodeProblemAssessment = {
-      schemaVersion: 2,
-      title: String(assessmentRow.title ?? unitTitle),
-      description: String(assessmentRow.description ?? ""),
-      expected_outcome: String(assessmentRow.expected_outcome ?? ""),
-      steps: steps.map((s) => ({
-        stepNumber: Number(s.step_number),
-        instruction: String(s.instruction ?? ""),
-        starterCode: {
-          html: String(s.starter_html ?? ""),
-          css: String(s.starter_css ?? ""),
-          js: String(s.starter_js ?? ""),
-        },
-        expectedTemplate: {
-          html: String(s.expected_html ?? ""),
-          css: String(s.expected_css ?? ""),
-          js: String(s.expected_js ?? ""),
-        },
-        inheritPreviousCode: Boolean(s.inherit_previous_code),
-      })),
-    };
-
-    return {
-      resolvedUnitId: Number(assessmentRow.unit_id),
-      unitTitle,
-      assessment,
-    };
-  } catch (error) {
-    console.error("Failed to resolve authoritative coding assessment:", error);
-    return null;
-  }
-}
+import { resolveAuthoritativeAssessment } from "@/lib/server/cp-assessment";
+import { isUnitUnlockedForUserImpl } from "@/lib/server/progress/unlock";
 
 /**
  * Fetches the public Code Problem definition for `/quiz-cp`, stripping all `expectedTemplate` fields
@@ -108,8 +21,7 @@ export async function getPublicCodeProblem(
   unitId?: number,
 ): Promise<PublicCodeProblem | null> {
   if (unitId && Number.isInteger(unitId) && unitId > 0) {
-    const { isUnitUnlockedForUser } = await import("@/app/actions/progress");
-    const isUnlocked = await isUnitUnlockedForUser(unitId);
+    const isUnlocked = await isUnitUnlockedForUserImpl(unitId);
     if (!isUnlocked) {
       return null;
     }

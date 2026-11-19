@@ -24,7 +24,8 @@ async function runLiveConformanceTests() {
     getCodeProblems,
     getUnits,
   } = await import("../app/actions/quiz");
-  const { resolveAuthoritativeAssessment, getPublicCodeProblem } = await import("../app/actions/cp-engine");
+  const { resolveAuthoritativeAssessment } = await import("../lib/server/cp-assessment");
+  const { getPublicCodeProblem } = await import("../app/actions/cp-engine");
   const { getAdminAnalytics, getAdminReviewQueue } = await import("../app/actions/admin");
   const { getMaintainerStats, getMaintainerSubmissions } = await import("../app/actions/maintainer");
   const { db } = await import("../lib/db");

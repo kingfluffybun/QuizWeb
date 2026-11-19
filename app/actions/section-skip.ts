@@ -1,16 +1,13 @@
 "use server";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { CANONICAL_SECTIONS } from "@/lib/curriculum";
-import { getUserCurriculumUnlockState } from "@/app/actions/progress";
+import { CANONICAL_SECTIONS, getSectionById } from "@/lib/curriculum";
+import { toPublicCodeProblem, type PublicCodeProblem } from "@/lib/cp-schema";
+import { resolveAuthoritativeAssessmentsByUnitIds } from "@/lib/server/cp-assessment";
+import { getUserCurriculumUnlockStateImpl } from "@/lib/server/progress/unlock";
+import { resolveUserId } from "@/lib/server/session";
 import { recordUserActivity } from "@/app/actions/streak";
-import { getClientLocalDate } from "@/lib/timezone";
-import {
-  toPublicCodeProblem,
-  type PublicCodeProblem,
-} from "@/lib/cp-schema";
-import { resolveAuthoritativeAssessment } from "@/app/actions/cp-engine";
+import { getAppLocalDate } from "@/lib/timezone";
 import { revalidatePath } from "next/cache";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
@@ -58,27 +55,16 @@ export async function getSequentialSkipQueue(
       return null;
     }
 
-    let userId = explicitUserId;
+    const userId = await resolveUserId(explicitUserId);
     if (!userId) {
-      try {
-        const session = await auth();
-        if (session?.user?.id) userId = Number(session.user.id);
-      } catch {
-        // Outside Next.js request context
-      }
-    }
-
-    // Guests cannot access skip functions
-    if (!userId || !Number.isInteger(userId) || userId <= 0) {
       return null;
     }
 
-    const targetSection = CANONICAL_SECTIONS.find((s) => s.sec_id === targetId);
+    const targetSection = getSectionById(targetId);
     if (!targetSection) {
       return null;
     }
 
-    // Determine target index in canonical sequence
     const targetIndex = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === targetId);
     const precedingSections = CANONICAL_SECTIONS.slice(0, targetIndex);
     const precedingSectionIds = precedingSections.map((s) => s.sec_id);
@@ -87,55 +73,46 @@ export async function getSequentialSkipQueue(
       return null;
     }
 
-    // Query user's completed units
-    const unlockState = await getUserCurriculumUnlockState(userId);
-    const completedUnitIds = unlockState.completedUnitIds;
+    const [unlockState, [unitRows]] = await Promise.all([
+      getUserCurriculumUnlockStateImpl(userId),
+      db.query<RowDataPacket[]>(
+        `SELECT
+           u.unit_id,
+           u.unit_title,
+           u.unit_order,
+           u.sec_id,
+           s.sec_num,
+           s.sec_title,
+           c.cat_name,
+           COUNT(ua.assessment_id) AS assessment_count
+         FROM unit_tbl u
+         JOIN sec_tbl s ON u.sec_id = s.sec_id
+         JOIN cat_tbl c ON s.cat_id = c.cat_id
+         LEFT JOIN unit_assessment_tbl ua ON u.unit_id = ua.unit_id
+         WHERE u.status = 'approved' AND u.sec_id IN (?)
+         GROUP BY u.unit_id, u.unit_title, u.unit_order, u.sec_id, s.sec_num, s.sec_title, c.cat_name
+         ORDER BY FIELD(u.sec_id, ?), u.unit_order ASC, u.unit_id ASC`,
+        [precedingSectionIds, precedingSectionIds],
+      ),
+    ]);
 
-    // Fetch approved units for preceding sections in canonical order
-    const [unitRows] = await db.query<RowDataPacket[]>(
-      `SELECT 
-         u.unit_id,
-         u.unit_title,
-         u.unit_order,
-         u.sec_id,
-         s.sec_num,
-         s.sec_title,
-         c.cat_name,
-         COUNT(ua.assessment_id) AS assessment_count
-       FROM unit_tbl u
-       JOIN sec_tbl s ON u.sec_id = s.sec_id
-       JOIN cat_tbl c ON s.cat_id = c.cat_id
-       LEFT JOIN unit_assessment_tbl ua ON u.unit_id = ua.unit_id
-       WHERE u.status = 'approved' AND u.sec_id IN (?)
-       GROUP BY u.unit_id, u.unit_title, u.unit_order, u.sec_id, s.sec_num, s.sec_title, c.cat_name
-       ORDER BY FIELD(u.sec_id, ?), u.unit_order ASC, u.unit_id ASC`,
-      [precedingSectionIds, precedingSectionIds],
+    const completedUnitIds = unlockState.completedUnitIds;
+    const candidateRows = unitRows.filter((row) => {
+      const uId = Number(row.unit_id);
+      return !completedUnitIds.has(uId) && Number(row.assessment_count) > 0;
+    });
+
+    const assessmentsByUnitId = await resolveAuthoritativeAssessmentsByUnitIds(
+      candidateRows.map((row) => Number(row.unit_id)),
     );
 
     const unitsQueue: SkipProblemItem[] = [];
-
-    for (const row of unitRows) {
+    for (const row of candidateRows) {
       const uId = Number(row.unit_id);
-      // If user has already completed this unit, skip it
-      if (completedUnitIds.has(uId)) {
-        continue;
-      }
-
-      // Check if unit has a coding assessment
-      if (Number(row.assessment_count) <= 0) {
-        continue;
-      }
-
-      const authoritative = await resolveAuthoritativeAssessment(uId);
+      const authoritative = assessmentsByUnitId.get(uId);
       if (!authoritative || authoritative.assessment.steps.length === 0) {
         continue;
       }
-
-      const publicProblem = toPublicCodeProblem(
-        authoritative.resolvedUnitId,
-        authoritative.unitTitle,
-        authoritative.assessment,
-      );
 
       unitsQueue.push({
         unitId: uId,
@@ -145,7 +122,11 @@ export async function getSequentialSkipQueue(
         secTitle: String(row.sec_title),
         secNum: Number(row.sec_num),
         catName: String(row.cat_name),
-        problem: publicProblem,
+        problem: toPublicCodeProblem(
+          authoritative.resolvedUnitId,
+          authoritative.unitTitle,
+          authoritative.assessment,
+        ),
       });
     }
 
@@ -198,17 +179,8 @@ export async function completeSequentialSkip(input: {
       };
     }
 
-    let userId = input?.explicitUserId;
+    const userId = await resolveUserId(input?.explicitUserId);
     if (!userId) {
-      try {
-        const session = await auth();
-        if (session?.user?.id) userId = Number(session.user.id);
-      } catch {
-        // Handled below if userId is missing
-      }
-    }
-
-    if (!userId || !Number.isInteger(userId) || userId <= 0) {
       return {
         success: false,
         unlockedSectionId: targetSectionId,
@@ -218,9 +190,7 @@ export async function completeSequentialSkip(input: {
       };
     }
 
-    const targetIndex = CANONICAL_SECTIONS.findIndex(
-      (s) => s.sec_id === targetSectionId,
-    );
+    const targetIndex = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === targetSectionId);
     if (targetIndex === -1) {
       return {
         success: false,
@@ -231,32 +201,35 @@ export async function completeSequentialSkip(input: {
       };
     }
 
-    const precedingSections = CANONICAL_SECTIONS.slice(0, targetIndex);
-    const precedingSectionIds = precedingSections.map((s) => s.sec_id);
+    const precedingSectionIds = CANONICAL_SECTIONS.slice(0, targetIndex).map((s) => s.sec_id);
 
-    // Fetch all approved units in preceding sections
+    // Fetch all approved units in preceding sections with slide counts (no full-table derived subquery)
     const [unitRows] = await db.query<RowDataPacket[]>(
-      `SELECT 
+      `SELECT
          u.unit_id,
-         COALESCE(sc.slide_count, 1) AS total_slides
+         GREATEST(1, COUNT(ls.unit_id)) AS total_slides
        FROM unit_tbl u
-       LEFT JOIN (
-         SELECT unit_id, COUNT(*) AS slide_count FROM lesson_slide_tbl GROUP BY unit_id
-       ) sc ON u.unit_id = sc.unit_id
-       WHERE u.status = 'approved' AND u.sec_id IN (?)`,
+       LEFT JOIN lesson_slide_tbl ls ON u.unit_id = ls.unit_id
+       WHERE u.status = 'approved' AND u.sec_id IN (?)
+       GROUP BY u.unit_id`,
       [precedingSectionIds],
     );
 
     if (unitRows.length > 0) {
-      // Mark all intervening units completed in user_lesson_progress_tbl
-      for (const unit of unitRows) {
+      const now = new Date();
+      const bulkValues = unitRows.map((unit) => {
         const uId = Number(unit.unit_id);
         const totalSlides = Math.max(1, Number(unit.total_slides));
+        return [userId, uId, totalSlides, totalSlides, 1, 1, 1, 1, now, now];
+      });
 
-        await db.query<ResultSetHeader>(
+      const connection = await db.getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.query<ResultSetHeader>(
           `INSERT INTO user_lesson_progress_tbl
              (user_id, unit_id, current_slide_order, total_slides, is_lesson_completed, is_quiz_completed, is_cp_completed, is_completed, completed_at, last_accessed_at)
-           VALUES (?, ?, ?, ?, 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           VALUES ?
            ON DUPLICATE KEY UPDATE
              current_slide_order = VALUES(total_slides),
              total_slides = GREATEST(total_slides, VALUES(total_slides)),
@@ -266,17 +239,21 @@ export async function completeSequentialSkip(input: {
              is_completed = 1,
              completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP),
              last_accessed_at = CURRENT_TIMESTAMP`,
-          [userId, uId, totalSlides, totalSlides],
+          [bulkValues],
         );
+        await connection.query(
+          `UPDATE player_tbl
+           SET current_section = GREATEST(COALESCE(current_section, 1), ?)
+           WHERE user_id = ?`,
+          [targetSectionId, userId],
+        );
+        await connection.commit();
+      } catch (err) {
+        await connection.rollback();
+        throw err;
+      } finally {
+        connection.release();
       }
-
-      // Update player_tbl.current_section if needed
-      await db.query(
-        `UPDATE player_tbl 
-         SET current_section = GREATEST(COALESCE(current_section, 1), ?) 
-         WHERE user_id = ?`,
-        [targetSectionId, userId],
-      );
     }
 
     // Award XP (50 XP per skipped unit + 50 XP Skip Mastery bonus)
@@ -285,13 +262,13 @@ export async function completeSequentialSkip(input: {
       await recordUserActivity({
         type: "quiz",
         xp: awardedXp,
-        date: getClientLocalDate(),
+        date: getAppLocalDate(),
+        userId,
       });
     } catch (err) {
       console.error("Failed to record skip activity XP:", err);
     }
 
-    // Revalidate paths for instant client-side update
     try {
       revalidatePath("/learn");
       revalidatePath("/learn-old");

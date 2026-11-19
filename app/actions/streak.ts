@@ -1,10 +1,13 @@
 "use server";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { invalidateLeaderboardCache } from "@/app/actions/leaderboard";
-import { getAppLocalDate } from "@/lib/timezone";
+import { resolveUserId } from "@/lib/server/session";
+import { getAdjacentDate, getAppLocalDate, getSundayWeekDates } from "@/lib/timezone";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+
+const WEEK_LETTERS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+const WEEK_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 export interface WeekDayStatus {
     date: string; // YYYY-MM-DD
@@ -26,12 +29,6 @@ export interface StreakData {
     targetMonth: number; // 1..12
     targetYear: number;
     todayDate: string; // YYYY-MM-DD
-}
-
-function getAdjacentDate(dateStr: string, dayOffset: number): string {
-    const d = new Date(dateStr + "T00:00:00Z");
-    d.setUTCDate(d.getUTCDate() + dayOffset);
-    return d.toISOString().slice(0, 10);
 }
 
 function getDaysBetween(d1Str: string, d2Str: string): number {
@@ -94,13 +91,27 @@ function computeStreaks(sortedDatesAsc: string[], todayStr: string): { currentSt
     return { currentStreak, longestStreak };
 }
 
+function buildWeekDays(
+    sundayWeekDates: string[],
+    todayDate: string,
+    activeDateSet?: Set<string>,
+): WeekDayStatus[] {
+    return sundayWeekDates.map((date, i) => ({
+        date,
+        dayOfWeek: i,
+        dayLetter: WEEK_LETTERS[i],
+        dayName: WEEK_NAMES[i],
+        isActive: activeDateSet ? activeDateSet.has(date) : false,
+        isToday: date === todayDate,
+    }));
+}
+
 export async function getUserStreakData(
     targetYear?: number,
     targetMonth?: number,
-    clientToday?: string
+    clientToday?: string,
+    explicitUserId?: number,
 ): Promise<StreakData> {
-    const session = await auth();
-
     // Use clientToday if valid YYYY-MM-DD, otherwise default to application local date (Asia/Manila)
     const todayDate = (clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday))
         ? clientToday
@@ -109,26 +120,7 @@ export async function getUserStreakData(
     const [todayYearStr, todayMonthStr] = todayDate.split("-");
     const resolvedYear = targetYear ?? Number(todayYearStr);
     const resolvedMonth = targetMonth ?? Number(todayMonthStr);
-
-    const emptyWeekDays: WeekDayStatus[] = (() => {
-        const d = new Date(todayDate + "T00:00:00Z");
-        const dayOfWeek = d.getUTCDay();
-        const sundayStr = getAdjacentDate(todayDate, -dayOfWeek);
-        const letters = ["S", "M", "T", "W", "T", "F", "S"];
-        const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-        return Array.from({ length: 7 }, (_, i) => {
-            const date = getAdjacentDate(sundayStr, i);
-            return {
-                date,
-                dayOfWeek: i,
-                dayLetter: letters[i],
-                dayName: names[i],
-                isActive: false,
-                isToday: date === todayDate,
-            };
-        });
-    })();
+    const sundayWeekDates = getSundayWeekDates(todayDate);
 
     const emptyResult: StreakData = {
         currentStreak: 0,
@@ -137,26 +129,18 @@ export async function getUserStreakData(
         todayCompleted: false,
         activeDatesInMonth: [],
         allActiveDates: [],
-        weekDays: emptyWeekDays,
+        weekDays: buildWeekDays(sundayWeekDates, todayDate),
         targetMonth: resolvedMonth,
         targetYear: resolvedYear,
         todayDate,
     };
 
-    if (!session?.user?.id) {
-        return emptyResult;
-    }
-
-    const userId = Number(session.user.id);
-    if (!Number.isFinite(userId) || userId <= 0) {
+    const userId = await resolveUserId(explicitUserId);
+    if (!userId) {
         return emptyResult;
     }
 
     try {
-        const d = new Date(todayDate + "T00:00:00Z");
-        const dayOfWeek = d.getUTCDay();
-        const sundayStr = getAdjacentDate(todayDate, -dayOfWeek);
-
         const targetDaysInMonth = new Date(Date.UTC(resolvedYear, resolvedMonth, 0)).getUTCDate();
         const targetMonthStart = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-01`;
         const targetMonthEnd = `${resolvedYear}-${String(resolvedMonth).padStart(2, "0")}-${String(targetDaysInMonth).padStart(2, "0")}`;
@@ -261,21 +245,7 @@ export async function getUserStreakData(
             }
         }
 
-        // Build week days status
-        const letters = ["S", "M", "T", "W", "T", "F", "S"];
-        const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-        const weekDays: WeekDayStatus[] = Array.from({ length: 7 }, (_, i) => {
-            const date = getAdjacentDate(sundayStr, i);
-            return {
-                date,
-                dayOfWeek: i,
-                dayLetter: letters[i],
-                dayName: names[i],
-                isActive: activeDateSet.has(date),
-                isToday: date === todayDate,
-            };
-        });
+        const weekDays = buildWeekDays(sundayWeekDates, todayDate, activeDateSet);
 
         return {
             currentStreak,
@@ -295,51 +265,15 @@ export async function getUserStreakData(
     }
 }
 
-export async function getMonthActivity(
-    year: number,
-    month: number
-): Promise<{ success: boolean; activeDays: number[]; error?: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, activeDays: [], error: "Unauthorized" };
-    }
-
-    const userId = Number(session.user.id);
-    const monthPrefix = `${year}-${String(month).padStart(2, "0")}-`;
-
-    try {
-        const [rows] = await db.query<RowDataPacket[]>(
-            `SELECT DISTINCT DATE_FORMAT(activity_date, '%Y-%m-%d') as act_date 
-             FROM user_activity_tbl 
-             WHERE user_id = ? AND activity_date >= ? AND activity_date <= LAST_DAY(?)
-             ORDER BY act_date ASC`,
-            [userId, `${monthPrefix}01`, `${monthPrefix}01`]
-        );
-
-        const activeDays = rows
-            .map((r) => Number((r.act_date as string).slice(8, 10)))
-            .filter((n) => !Number.isNaN(n));
-
-        return { success: true, activeDays };
-    } catch (err) {
-        console.error("Failed to query month activity:", err);
-        return { success: false, activeDays: [], error: "Database query failed" };
-    }
-}
-
 export async function recordUserActivity(options?: {
     type?: string;
     xp?: number;
     date?: string;
+    userId?: number;
 }): Promise<{ success: boolean; streak?: number; message?: string; error?: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await resolveUserId(options?.userId);
+    if (!userId) {
         return { success: false, error: "Authentication required to log activity" };
-    }
-
-    const userId = Number(session.user.id);
-    if (!Number.isFinite(userId) || userId <= 0) {
-        return { success: false, error: "Invalid user session" };
     }
 
     const activityType = options?.type ?? "quiz";
@@ -375,20 +309,7 @@ export async function recordUserActivity(options?: {
 
         await invalidateLeaderboardCache();
 
-        const streakData = await getUserStreakData(undefined, undefined, activityDate);
-
-        // Keep player_tbl current_streak and max_streak synchronized
-        try {
-            await db.query<ResultSetHeader>(
-                `UPDATE player_tbl
-                 SET current_streak = ?,
-                     max_streak = GREATEST(COALESCE(max_streak, 0), ?)
-                 WHERE user_id = ?`,
-                [streakData.currentStreak, streakData.longestStreak, userId],
-            );
-        } catch (err) {
-            console.error("Failed to sync player streak in recordUserActivity:", err);
-        }
+        const streakData = await getUserStreakData(undefined, undefined, activityDate, userId);
 
         return {
             success: true,
@@ -401,41 +322,18 @@ export async function recordUserActivity(options?: {
     }
 }
 
-function isValidQuizStreak(currentStreak: number, bestStreak: number): boolean {
-    return Number.isSafeInteger(currentStreak)
-        && Number.isSafeInteger(bestStreak)
-        && currentStreak >= 0
-        && bestStreak >= currentStreak;
-}
-
-export async function updatePlayerQuizStreak(
-    currentStreak: number,
-    bestStreak: number,
-): Promise<{ success: boolean; error?: string }> {
-    // In-quiz question streak is local to the active quiz session and does not overwrite player_tbl.current_streak (which tracks daily activity streak).
-    return { success: true };
-}
-
 export async function recordQuizCompletion(options: {
     xpEarned: number;
-    currentStreak: number;
-    bestStreak: number;
+    currentStreak?: number;
+    bestStreak?: number;
     date?: string;
 }): Promise<{ success: boolean; error?: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await resolveUserId();
+    if (!userId) {
         return { success: false, error: "Authentication required to save quiz results" };
     }
 
-    const userId = Number(session.user.id);
-    if (!Number.isSafeInteger(userId) || userId <= 0) {
-        return { success: false, error: "Invalid user session" };
-    }
-    if (
-        !Number.isSafeInteger(options.xpEarned)
-        || options.xpEarned < 0
-        || !isValidQuizStreak(options.currentStreak, options.bestStreak)
-    ) {
+    if (!Number.isSafeInteger(options.xpEarned) || options.xpEarned < 0) {
         return { success: false, error: "Invalid quiz result values" };
     }
 
@@ -463,19 +361,7 @@ export async function recordQuizCompletion(options: {
         await connection.commit();
         await invalidateLeaderboardCache();
 
-        // Calculate and sync the true daily streak from activity history
-        const streakData = await getUserStreakData(undefined, undefined, activityDate);
-        try {
-            await db.query<ResultSetHeader>(
-                `UPDATE player_tbl
-                 SET current_streak = ?,
-                     max_streak = GREATEST(COALESCE(max_streak, 0), ?)
-                 WHERE user_id = ?`,
-                [streakData.currentStreak, streakData.longestStreak, userId],
-            );
-        } catch (err) {
-            console.error("Failed to sync player streak in recordQuizCompletion:", err);
-        }
+        await getUserStreakData(undefined, undefined, activityDate, userId);
         return { success: true };
     } catch (err) {
         await connection.rollback();

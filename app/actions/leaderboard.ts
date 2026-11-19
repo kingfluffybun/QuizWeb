@@ -1,10 +1,10 @@
 "use server";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getLeaderboardDateRange } from "@/lib/leaderboard-period";
+import { createSafeCache, invalidateCacheTag } from "@/lib/server/cache";
+import { getSessionContext } from "@/lib/server/session";
 import { getAppLocalDate } from "@/lib/timezone";
-import { unstable_cache, updateTag, revalidateTag } from "next/cache";
 import type { RowDataPacket } from "mysql2/promise";
 
 export type LeaderboardPeriod = "daily" | "weekly" | "monthly" | "all-time";
@@ -80,8 +80,8 @@ async function getEntriesForPeriod(
 }
 
 async function requireAuthenticatedUser(): Promise<void> {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const ctx = await getSessionContext();
+    if (!ctx.userId) {
         throw new Error("Authentication required to view the leaderboard");
     }
 }
@@ -92,8 +92,8 @@ const fetchLeaderboardEntriesByPeriod = async (
 ): Promise<LeaderboardEntriesByPeriod> => {
     const [daily, weekly, monthly, allTime] = await Promise.all(
         periods.map((period) =>
-            getEntriesForPeriod(period, asOfDate, includeAll ? null : 10)
-        )
+            getEntriesForPeriod(period, asOfDate, includeAll ? null : 10),
+        ),
     );
 
     return {
@@ -104,25 +104,17 @@ const fetchLeaderboardEntriesByPeriod = async (
     };
 };
 
-const getCachedLeaderboardEntriesByPeriod = unstable_cache(
+const getCachedLeaderboardEntriesByPeriod = createSafeCache(
     fetchLeaderboardEntriesByPeriod,
     ["leaderboard-entries-by-period"],
     {
         revalidate: 60,
         tags: ["leaderboard"],
-    }
+    },
 );
 
 export async function invalidateLeaderboardCache(): Promise<void> {
-    try {
-        updateTag("leaderboard");
-    } catch {
-        try {
-            revalidateTag("leaderboard", { expire: 0 });
-        } catch {
-            // Silently ignore if invoked outside Next.js request/action context (e.g. tests)
-        }
-    }
+    invalidateCacheTag("leaderboard");
 }
 
 export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<LeaderboardEntry[]> {
@@ -131,16 +123,8 @@ export async function getLeaderboardEntries(period: LeaderboardPeriod): Promise<
         throw new Error("Invalid leaderboard period");
     }
     const asOfDate = getAppLocalDate();
-    try {
-        const entries = await getCachedLeaderboardEntriesByPeriod(false, asOfDate);
-        return entries[period];
-    } catch (err: unknown) {
-        if (err instanceof Error && err.message.includes("incrementalCache missing")) {
-            const entries = await fetchLeaderboardEntriesByPeriod(false, asOfDate);
-            return entries[period];
-        }
-        throw err;
-    }
+    const entries = await getCachedLeaderboardEntriesByPeriod(false, asOfDate);
+    return entries[period];
 }
 
 export async function getLeaderboardEntriesByPeriod(
@@ -148,12 +132,5 @@ export async function getLeaderboardEntriesByPeriod(
 ): Promise<LeaderboardEntriesByPeriod> {
     await requireAuthenticatedUser();
     const asOfDate = getAppLocalDate();
-    try {
-        return await getCachedLeaderboardEntriesByPeriod(Boolean(options.includeAll), asOfDate);
-    } catch (err: unknown) {
-        if (err instanceof Error && err.message.includes("incrementalCache missing")) {
-            return fetchLeaderboardEntriesByPeriod(Boolean(options.includeAll), asOfDate);
-        }
-        throw err;
-    }
+    return getCachedLeaderboardEntriesByPeriod(Boolean(options.includeAll), asOfDate);
 }

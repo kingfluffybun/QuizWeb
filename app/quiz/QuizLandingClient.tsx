@@ -16,10 +16,7 @@ import LessonCard, {
 import Sidebar from "@/app/components/Sidebar";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
-import {
-    recordQuizCompletion,
-    updatePlayerQuizStreak,
-} from "@/app/actions/streak";
+import { recordQuizCompletion } from "@/app/actions/streak";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import {
     recordLessonSlideProgress,
@@ -486,17 +483,6 @@ export default function QuizLandingClient({
     const resolvedUnitId = unitId ?? selectedQuiz?.unit_id ?? (quizzes[0] as UnitQuizData)?.unit_id;
 
     useEffect(() => {
-        if (!hasStartedQuiz) return;
-        updatePlayerQuizStreak(0, 0).then((response) => {
-            if (!response.success) {
-                console.error("Failed to reset player quiz streak:", response.error);
-            }
-        }).catch((error) => {
-            console.error("Failed to reset player quiz streak:", error);
-        });
-    }, [hasStartedQuiz]);
-
-    useEffect(() => {
         if (!isFinished) return;
 
         if (quizXpRecorded.current) return;
@@ -612,16 +598,6 @@ export default function QuizLandingClient({
         };
     }, [hasStartedQuiz, isFinished]);
 
-    const persistStreak = (nextCurrentStreak: number, nextBestStreak: number) => {
-        updatePlayerQuizStreak(nextCurrentStreak, nextBestStreak).then((response) => {
-            if (!response.success) {
-                console.error("Failed to save player quiz streak:", response.error);
-            }
-        }).catch((error) => {
-            console.error("Failed to save player quiz streak:", error);
-        });
-    };
-
     const finishLessonOnlyUnit = async () => {
         if (!resolvedUnitId || lessonProgressState === "saving") return;
 
@@ -670,7 +646,6 @@ export default function QuizLandingClient({
         if (lives <= 1) setIsFinished(true);
         setMissedQuestionIndexes((missed) => new Set(missed).add(activeQuizIndex));
         setCurrentStreak(0);
-        persistStreak(0, bestStreak);
     };
 
     const openAccessibility = () => {
@@ -782,7 +757,6 @@ export default function QuizLandingClient({
         setMissedQuestionIndexes((missed) => new Set(missed).add(activeQuizIndex));
         setResult(skippedResult);
         setCurrentStreak(0);
-        persistStreak(0, bestStreak);
         playQuizSound("skipped-answer");
     };
 
@@ -820,7 +794,6 @@ export default function QuizLandingClient({
             const nextBestStreak = Math.max(bestStreak, nextStreak);
             setCurrentStreak(nextStreak);
             setBestStreak(nextBestStreak);
-            persistStreak(nextStreak, nextBestStreak);
         } else {
             setMissedQuestionIndexes((missed) => new Set(missed).add(activeQuizIndex));
             if (!skipped) {
@@ -830,7 +803,6 @@ export default function QuizLandingClient({
                 if (nextLives === 0) setIsFinished(true);
             }
             setCurrentStreak(0);
-            persistStreak(0, bestStreak);
         }
     };
 

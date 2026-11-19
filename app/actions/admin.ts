@@ -2,127 +2,13 @@
 
 import type { RowDataPacket } from "mysql2";
 import { db } from "@/lib/db";
-import { auth, invalidateUserAuthCache } from "@/auth";
-import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
+import { invalidateUserAuthCache } from "@/auth";
 import { verifyAdminSecretKey, requireAdmin } from "@/lib/rbac";
 import { reviewPendingQuiz as reviewPendingQuizAction } from "@/app/actions/quiz";
 
 export interface ActionResult {
   success: boolean;
   error?: string;
-}
-
-interface SessionContextUser {
-  id?: string | number;
-  email?: string;
-  name?: string;
-  role?: string;
-  user_role?: string;
-}
-
-/**
- * Server Action: claimAdminWithSecretKey (PROJECT.md § Server Action Contracts)
- *
- * Security Lifecycle:
- * 1. Resolves caller session context (Next-Auth auth() or test harness override).
- * 2. Pre-checks rate limit for key `admin_elevation:${userId}` (read-only, increment = false).
- * 3. Inspects user account in user_auth_tbl; rejects OAuth-only accounts without password.
- * 4. Validates secretKey using timingSafeEqual via verifyAdminSecretKey() without candidate trimming.
- *    - On failure: increments rate limiter (increment = true) and returns error.
- * 5. On success: clears rate limit and updates user_auth_tbl.user_role = 'admin'.
- *    - Does NOT increment token_version, preserving active session continuity.
- */
-export async function claimAdminWithSecretKey(secretKey: string): Promise<ActionResult> {
-  const testSession = (
-    globalThis as unknown as {
-      __TEST_AUTH_SESSION__?: {
-        user?: SessionContextUser;
-      } | null;
-    }
-  ).__TEST_AUTH_SESSION__;
-
-  let userId: string | number | undefined = testSession?.user?.id;
-
-  if (!userId) {
-    try {
-      const session = await auth();
-      userId = session?.user?.id;
-    } catch {
-      // Outside request context
-    }
-  }
-
-  if (!userId) {
-    return { success: false, error: "Unauthorized: Active session required." };
-  }
-
-  const numericUserId = Number(userId);
-
-  // 1. Rate limit pre-check (read-only, no increment)
-  const rateLimit = await checkRateLimit(`admin_elevation:${userId}`, false);
-  if (!rateLimit.allowed) {
-    return {
-      success: false,
-      error: "Too many failed admin elevation attempts. Account is temporarily locked.",
-    };
-  }
-
-  // 2. Query user account and verify password gating status
-  let userRow: { user_id: number; password_hash: string | null; user_role: string } | undefined;
-  try {
-    const [rows] = await db.query<RowDataPacket[]>(
-      "SELECT user_id, password_hash, user_role FROM user_auth_tbl WHERE user_id = ? LIMIT 1",
-      [numericUserId]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      userRow = rows[0] as { user_id: number; password_hash: string | null; user_role: string };
-    }
-  } catch (err) {
-    console.error("Error querying user for admin elevation:", err);
-  }
-
-  if (!userRow) {
-    return { success: false, error: "User account not found." };
-  }
-
-  // 3. Password Gating Guard: OAuth accounts without passwords cannot claim admin
-  if (userRow.password_hash === null || userRow.password_hash === undefined || userRow.password_hash === "") {
-    return {
-      success: false,
-      error:
-        "Password Required: You must establish an account password before claiming administrative privileges.",
-    };
-  }
-
-  // 4. Secret Key Verification with constant-time SHA-256 comparison
-  if (!secretKey || typeof secretKey !== "string") {
-    await checkRateLimit(`admin_elevation:${userId}`, true);
-    return { success: false, error: "Invalid admin secret key." };
-  }
-
-  const isValid = verifyAdminSecretKey(secretKey);
-  if (!isValid) {
-    await checkRateLimit(`admin_elevation:${userId}`, true);
-    return { success: false, error: "Invalid admin secret key." };
-  }
-
-  // 5. Successful elevation: clear rate limit, update database role
-  await clearRateLimit(`admin_elevation:${userId}`);
-
-  await db.query(
-    "UPDATE user_auth_tbl SET user_role = 'admin' WHERE user_id = ?",
-    [numericUserId]
-  );
-
-  // Sync in-memory test session if active
-  if (testSession?.user) {
-    testSession.user.role = "admin";
-    testSession.user.user_role = "admin";
-  }
-
-  invalidateUserAuthCache(numericUserId);
-
-  return { success: true };
 }
 
 /**
@@ -238,10 +124,10 @@ export async function getAdminUsers(
   const whereClauses: string[] = [];
   const params: (string | number)[] = [];
 
-  // 1. Search Query (case-insensitive substring match on email or username)
+  // 1. Search Query (case-insensitive substring match via utf8mb4_0900_ai_ci collation)
   if (query && query.trim().length > 0) {
     const q = `%${query.trim()}%`;
-    whereClauses.push("(LOWER(u.email) LIKE LOWER(?) OR LOWER(COALESCE(p.username, CONCAT('player_', u.user_id))) LIKE LOWER(?))");
+    whereClauses.push("(u.email LIKE ? OR COALESCE(p.username, CONCAT('player_', u.user_id)) LIKE ?)");
     params.push(q, q);
   }
 
@@ -275,12 +161,14 @@ export async function getAdminUsers(
     ORDER BY u.user_id ASC
   `;
 
-  const [rows] = await db.query<RowDataPacket[]>(sql, params);
-  const [adminCountRows] = await db.query<RowDataPacket[]>(`
-    SELECT COUNT(*) AS adminCount
-    FROM user_auth_tbl
-    WHERE user_role = 'admin'
-  `);
+  const [[rows], [adminCountRows]] = await Promise.all([
+    db.query<RowDataPacket[]>(sql, params),
+    db.query<RowDataPacket[]>(`
+      SELECT COUNT(*) AS adminCount
+      FROM user_auth_tbl
+      WHERE user_role = 'admin'
+    `),
+  ]);
 
   const users: AdminUserRecord[] = (rows as RowDataPacket[]).map((r) => ({
     user_id: Number(r.user_id),
@@ -313,50 +201,50 @@ export async function getAdminAnalytics(): Promise<PlatformAnalytics> {
     throw new Error("Unauthorized: Administrator privileges required.");
   }
 
-  // 1. Total Quizzes Count (from normalized quiz_tbl, fallback to total units)
-  const [totalRows] = await db.query<RowDataPacket[]>(`
-    SELECT COUNT(*) AS totalQuizzes FROM quiz_tbl
-  `);
+  const [[totalRows], [catRows], [diffRows], [contribRows]] = await Promise.all([
+    // 1. Total Quizzes Count (from normalized quiz_tbl, fallback to total units)
+    db.query<RowDataPacket[]>(`
+      SELECT COUNT(*) AS totalQuizzes FROM quiz_tbl
+    `),
+    // 2. Category Distribution (joining cat_tbl -> sec_tbl -> unit_tbl -> quiz_tbl)
+    db.query<RowDataPacket[]>(`
+      SELECT 
+        c.cat_name AS category,
+        COUNT(q.quiz_id) AS count
+      FROM cat_tbl c
+      LEFT JOIN sec_tbl s ON c.cat_id = s.cat_id
+      LEFT JOIN unit_tbl u ON s.sec_id = u.sec_id
+      LEFT JOIN quiz_tbl q ON u.unit_id = q.unit_id
+      GROUP BY c.cat_id, c.cat_name
+      ORDER BY count DESC, c.cat_name ASC
+    `),
+    // 3. Difficulty Distribution (joining difficulty_tbl -> quiz_tbl)
+    db.query<RowDataPacket[]>(`
+      SELECT 
+        LOWER(d.difficulty_name) AS difficulty,
+        COUNT(q.quiz_id) AS count
+      FROM difficulty_tbl d
+      LEFT JOIN quiz_tbl q ON d.difficulty_id = q.difficulty_id
+      GROUP BY d.difficulty_id, d.difficulty_name
+      ORDER BY d.difficulty_id ASC
+    `),
+    // 4. Contributor Submission Metrics (from approved units in unit_tbl)
+    db.query<RowDataPacket[]>(`
+      SELECT 
+        u.author_id AS authorId,
+        COUNT(u.unit_id) AS totalUnits
+      FROM unit_tbl u
+      WHERE u.status = 'approved' AND u.author_id IS NOT NULL
+      GROUP BY u.author_id
+      ORDER BY totalUnits DESC, authorId ASC
+    `),
+  ]);
+
   let totalQuizzes = Number(totalRows[0]?.totalQuizzes ?? 0);
   if (totalQuizzes === 0) {
     const [unitCount] = await db.query<RowDataPacket[]>("SELECT COUNT(*) AS totalUnits FROM unit_tbl");
     totalQuizzes = Number(unitCount[0]?.totalUnits ?? 0);
   }
-
-  // 2. Category Distribution (joining cat_tbl -> sec_tbl -> unit_tbl -> quiz_tbl)
-  const [catRows] = await db.query<RowDataPacket[]>(`
-    SELECT 
-      c.cat_name AS category,
-      COUNT(q.quiz_id) AS count
-    FROM cat_tbl c
-    LEFT JOIN sec_tbl s ON c.cat_id = s.cat_id
-    LEFT JOIN unit_tbl u ON s.sec_id = u.sec_id
-    LEFT JOIN quiz_tbl q ON u.unit_id = q.unit_id
-    GROUP BY c.cat_id, c.cat_name
-    ORDER BY count DESC, c.cat_name ASC
-  `);
-
-  // 3. Difficulty Distribution (joining difficulty_tbl -> quiz_tbl)
-  const [diffRows] = await db.query<RowDataPacket[]>(`
-    SELECT 
-      LOWER(d.difficulty_name) AS difficulty,
-      COUNT(q.quiz_id) AS count
-    FROM difficulty_tbl d
-    LEFT JOIN quiz_tbl q ON d.difficulty_id = q.difficulty_id
-    GROUP BY d.difficulty_id, d.difficulty_name
-    ORDER BY d.difficulty_id ASC
-  `);
-
-  // 4. Contributor Submission Metrics (from approved units in unit_tbl)
-  const [contribRows] = await db.query<RowDataPacket[]>(`
-    SELECT 
-      u.author_id AS authorId,
-      COUNT(u.unit_id) AS totalUnits
-    FROM unit_tbl u
-    WHERE u.status = 'approved' AND u.author_id IS NOT NULL
-    GROUP BY u.author_id
-    ORDER BY totalUnits DESC, authorId ASC
-  `);
 
   return {
     totalQuizzes,
