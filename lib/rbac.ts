@@ -80,12 +80,19 @@ export function hasRole(currentRole: unknown, requiredRole: UserRole): boolean {
   return ROLE_HIERARCHY[currentRole] >= ROLE_HIERARCHY[requiredRole];
 }
 
+function getTestAuthSession(): SessionPayload | null | undefined {
+  if (process.env.NODE_ENV === "production") {
+    return undefined;
+  }
+  return (globalThis as unknown as { __TEST_AUTH_SESSION__?: SessionPayload | null }).__TEST_AUTH_SESSION__;
+}
+
 // -----------------------------------------------------------------------------
 // 4. Session & Database Resolution Helpers (Server-Only, Dynamic Imports)
 // -----------------------------------------------------------------------------
 async function resolveSession(): Promise<SessionPayload | null> {
-  // Test harness session injection override
-  const testSession = (globalThis as unknown as { __TEST_AUTH_SESSION__?: SessionPayload | null }).__TEST_AUTH_SESSION__;
+  // Test harness session injection override (non-production only)
+  const testSession = getTestAuthSession();
   if (testSession !== undefined) {
     return testSession;
   }
@@ -142,7 +149,7 @@ async function fetchAuthoritativeRole(
 // 5. Server Authorization Helpers
 // -----------------------------------------------------------------------------
 export async function requireAuth(): Promise<AuthenticatedUser | false> {
-  const isTestSession = (globalThis as unknown as { __TEST_AUTH_SESSION__?: SessionPayload | null }).__TEST_AUTH_SESSION__ !== undefined;
+  const isTestSession = getTestAuthSession() !== undefined;
   const session = await resolveSession();
   const userId = session?.user?.id;
   if (!userId) return false;

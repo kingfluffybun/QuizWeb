@@ -8,6 +8,22 @@
 
 export const DEFAULT_APP_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Manila";
 
+const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getDateFormatter(timeZone: string): Intl.DateTimeFormat {
+    let formatter = dateFormatterCache.get(timeZone);
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat("en-CA", {
+            timeZone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        });
+        dateFormatterCache.set(timeZone, formatter);
+    }
+    return formatter;
+}
+
 /**
  * Returns the current (or supplied) date formatted as 'YYYY-MM-DD'
  * in the application's target timezone (default: Asia/Manila).
@@ -16,12 +32,7 @@ export function getAppLocalDate(
     date: Date = new Date(),
     timeZone: string = DEFAULT_APP_TIMEZONE,
 ): string {
-    return new Intl.DateTimeFormat("en-CA", {
-        timeZone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).format(date);
+    return getDateFormatter(timeZone).format(date);
 }
 
 /**
@@ -31,6 +42,33 @@ export function getAdjacentDate(dateStr: string, dayOffset: number): string {
     const d = new Date(dateStr + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + dayOffset);
     return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Returns the 7 Sunday-to-Saturday 'YYYY-MM-DD' date strings containing `asOfDate`.
+ */
+export function getSundayWeekDates(asOfDate: string): string[] {
+    const anchor = new Date(`${asOfDate}T00:00:00Z`);
+    const dayOfWeek = anchor.getUTCDay(); // 0 = Sunday .. 6 = Saturday
+    const sunday = new Date(anchor);
+    sunday.setUTCDate(anchor.getUTCDate() - dayOfWeek);
+
+    const dates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(sunday);
+        d.setUTCDate(sunday.getUTCDate() + i);
+        dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+}
+
+/**
+ * Returns the Sunday 'YYYY-MM-DD' start date of the week containing `asOfDate`.
+ */
+export function getSundayWeekStart(asOfDate: string): string {
+    const anchor = new Date(`${asOfDate}T00:00:00Z`);
+    anchor.setUTCDate(anchor.getUTCDate() - anchor.getUTCDay());
+    return anchor.toISOString().slice(0, 10);
 }
 
 /**
@@ -56,12 +94,12 @@ export const subscribeClientDate = (onStoreChange: () => void) => {
     const interval = setInterval(onStoreChange, 60000);
     const handleEvent = () => onStoreChange();
 
-    window.addEventListener("visibilitychange", handleEvent);
+    document.addEventListener("visibilitychange", handleEvent);
     window.addEventListener("focus", handleEvent);
 
     return () => {
         clearInterval(interval);
-        window.removeEventListener("visibilitychange", handleEvent);
+        document.removeEventListener("visibilitychange", handleEvent);
         window.removeEventListener("focus", handleEvent);
     };
 };

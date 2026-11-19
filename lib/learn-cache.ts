@@ -3,31 +3,58 @@ import type {
   PreloadedUnitPayload,
 } from "@/app/actions/progress";
 import type { QuizData } from "@/app/quiz/types";
+import { inferQuizTypeName } from "@/app/quiz/unwrap";
 
 export const LEARN_SECTION_CACHE_KEY = "quizweb_learn_section_cache_v1";
 export const LEARN_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-let inMemoryStore: LearnPreloadResponse | null = null;
-let inFlightPromise: Promise<LearnPreloadResponse | null> | null = null;
-let inFlightSectionKey: string | null = null;
+type StoredLearnPreloadSnapshot = LearnPreloadResponse & {
+  userId?: number;
+};
+
+let inMemoryStore: StoredLearnPreloadSnapshot | null = null;
+let expectedUserId: number | null = null;
+const inFlightRequests = new Map<string, Promise<LearnPreloadResponse | null>>();
+let cacheGeneration = 0;
+let sessionPersistTimer: ReturnType<typeof setTimeout> | null = null;
 
 function isBrowser(): boolean {
-  return typeof window !== "undefined" && typeof window.sessionStorage !== "undefined";
+  return (
+    typeof window !== "undefined" && typeof window.sessionStorage !== "undefined"
+  );
 }
 
-function isCacheFresh(data: LearnPreloadResponse | null): data is LearnPreloadResponse {
+function normalizeUserId(userId?: number | string | null): number | null {
+  if (userId === undefined || userId === null || userId === "") return null;
+  const n = Number(userId);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function isCacheFresh(
+  data: StoredLearnPreloadSnapshot | null,
+  ownerUserId: number | null = expectedUserId,
+): data is StoredLearnPreloadSnapshot {
   if (!data || typeof data !== "object" || !data.units) return false;
+  if (
+    ownerUserId !== null &&
+    data.userId !== undefined &&
+    data.userId !== ownerUserId
+  ) {
+    return false;
+  }
   const age = Date.now() - (Number(data.cachedAt) || 0);
   return age >= 0 && age < LEARN_CACHE_TTL_MS;
 }
 
-function readFromSessionStorage(): LearnPreloadResponse | null {
+function readFromSessionStorage(
+  ownerUserId: number | null = expectedUserId,
+): StoredLearnPreloadSnapshot | null {
   if (!isBrowser()) return null;
   try {
     const raw = window.sessionStorage.getItem(LEARN_SECTION_CACHE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as LearnPreloadResponse;
-    if (!isCacheFresh(parsed)) {
+    const parsed = JSON.parse(raw) as StoredLearnPreloadSnapshot;
+    if (!isCacheFresh(parsed, ownerUserId)) {
       window.sessionStorage.removeItem(LEARN_SECTION_CACHE_KEY);
       return null;
     }
@@ -37,7 +64,7 @@ function readFromSessionStorage(): LearnPreloadResponse | null {
   }
 }
 
-function writeToSessionStorage(data: LearnPreloadResponse): void {
+function writeToSessionStorageImmediate(data: StoredLearnPreloadSnapshot): void {
   if (!isBrowser()) return;
   try {
     window.sessionStorage.setItem(LEARN_SECTION_CACHE_KEY, JSON.stringify(data));
@@ -46,14 +73,45 @@ function writeToSessionStorage(data: LearnPreloadResponse): void {
   }
 }
 
+function scheduleSessionStorageWrite(data: StoredLearnPreloadSnapshot): void {
+  if (!isBrowser()) return;
+  if (sessionPersistTimer) {
+    clearTimeout(sessionPersistTimer);
+  }
+  sessionPersistTimer = setTimeout(() => {
+    sessionPersistTimer = null;
+    if (inMemoryStore === data) {
+      writeToSessionStorageImmediate(data);
+    }
+  }, 250);
+}
+
+export function setLearnCacheExpectedUserId(
+  userId?: number | string | null,
+): void {
+  const normalized = normalizeUserId(userId);
+  if (
+    normalized !== null &&
+    inMemoryStore?.userId !== undefined &&
+    inMemoryStore.userId !== normalized
+  ) {
+    clearLearnCache();
+  }
+  expectedUserId = normalized;
+}
+
 /**
  * Returns the active learn cache snapshot from memory or sessionStorage.
  */
-export function getLearnCacheSnapshot(): LearnPreloadResponse | null {
-  if (isCacheFresh(inMemoryStore)) {
+export function getLearnCacheSnapshot(
+  ownerUserId?: number | string | null,
+): LearnPreloadResponse | null {
+  const resolvedOwner =
+    ownerUserId !== undefined ? normalizeUserId(ownerUserId) : expectedUserId;
+  if (isCacheFresh(inMemoryStore, resolvedOwner)) {
     return inMemoryStore;
   }
-  const restored = readFromSessionStorage();
+  const restored = readFromSessionStorage(resolvedOwner);
   if (restored) {
     inMemoryStore = restored;
     return restored;
@@ -63,25 +121,44 @@ export function getLearnCacheSnapshot(): LearnPreloadResponse | null {
 }
 
 /**
- * Explicitly seeds the client learn cache (used by preload response or tests).
+ * Explicitly seeds the client learn cache using client `Date.now()` to avoid server/client clock skew.
  */
-export function setLearnCacheData(data: LearnPreloadResponse): void {
-  const stamped: LearnPreloadResponse = {
+export function setLearnCacheData(
+  data: LearnPreloadResponse,
+  userId?: number | string | null,
+): void {
+  const resolvedUserId =
+    normalizeUserId(userId) ??
+    normalizeUserId((data as StoredLearnPreloadSnapshot).userId) ??
+    expectedUserId ??
+    undefined;
+  if (resolvedUserId !== undefined) {
+    expectedUserId = resolvedUserId;
+  }
+  const stamped: StoredLearnPreloadSnapshot = {
     ...data,
-    cachedAt: data.cachedAt || Date.now(),
+    ...(resolvedUserId !== undefined ? { userId: resolvedUserId } : {}),
+    cachedAt: Date.now(),
   };
   inMemoryStore = stamped;
-  writeToSessionStorage(stamped);
+  if (sessionPersistTimer) {
+    clearTimeout(sessionPersistTimer);
+    sessionPersistTimer = null;
+  }
+  writeToSessionStorageImmediate(stamped);
 }
 
 /**
  * Checks whether the client learn cache is populated and fresh.
- * If requiredSectionId is provided, verifies that section is covered by the cache.
  */
 export function isLearnCacheWarmed(requiredSectionId?: number): boolean {
   const snapshot = getLearnCacheSnapshot();
   if (!snapshot) return false;
-  if (requiredSectionId != null && Number.isInteger(requiredSectionId) && requiredSectionId > 0) {
+  if (
+    requiredSectionId != null &&
+    Number.isInteger(requiredSectionId) &&
+    requiredSectionId > 0
+  ) {
     return (
       snapshot.activeSectionId === requiredSectionId ||
       snapshot.nextSectionId === requiredSectionId
@@ -101,16 +178,10 @@ export function getCachedUnit(unitId: number): PreloadedUnitPayload | null {
   return snapshot.units[id] ?? null;
 }
 
-/**
- * Checks whether a specific unitId is present in the client cache.
- */
 export function hasCachedUnit(unitId: number): boolean {
   return getCachedUnit(unitId) !== null;
 }
 
-/**
- * Returns all cached units belonging to a specific section ID in canonical order.
- */
 export function getCachedSectionUnits(secId: number): PreloadedUnitPayload[] {
   const snapshot = getLearnCacheSnapshot();
   if (!snapshot) return [];
@@ -120,18 +191,12 @@ export function getCachedSectionUnits(secId: number): PreloadedUnitPayload[] {
     .filter((u): u is PreloadedUnitPayload => Boolean(u) && u.sec_id === targetSec);
 }
 
-/**
- * Returns all cached units for the user's current active section.
- */
 export function getCurrentSectionUnits(): PreloadedUnitPayload[] {
   const snapshot = getLearnCacheSnapshot();
   if (!snapshot) return [];
   return getCachedSectionUnits(snapshot.activeSectionId);
 }
 
-/**
- * Returns all cached units for the user's next canonical section.
- */
 export function getNextSectionUnits(): PreloadedUnitPayload[] {
   const snapshot = getLearnCacheSnapshot();
   if (!snapshot || snapshot.nextSectionId == null) return [];
@@ -139,38 +204,53 @@ export function getNextSectionUnits(): PreloadedUnitPayload[] {
 }
 
 /**
- * Optimistically marks a unit as completed in the local cache and unlocks its successor
- * so transitions to the next unit are immediate without waiting for a server round-trip.
+ * Immutably marks a unit as completed in the local cache and unlocks its successor.
  */
 export function markUnitCompletedLocally(unitId: number): void {
-  const snapshot = getLearnCacheSnapshot();
+  const snapshot = getLearnCacheSnapshot() as StoredLearnPreloadSnapshot | null;
   if (!snapshot) return;
   const id = Number(unitId);
   const unit = snapshot.units[id];
   if (!unit) return;
 
-  unit.is_completed = true;
-  unit.current_slide_order = unit.total_slides;
+  const nextUnits: Record<number, PreloadedUnitPayload> = {
+    ...snapshot.units,
+    [id]: {
+      ...unit,
+      is_completed: true,
+      current_slide_order: unit.total_slides,
+    },
+  };
 
+  let nextActiveUnitId = snapshot.activeUnitId;
   if (unit.nextUnit?.unit_id) {
     const nextUnit = snapshot.units[unit.nextUnit.unit_id];
     if (nextUnit) {
-      nextUnit.is_unlocked = true;
+      nextUnits[unit.nextUnit.unit_id] = {
+        ...nextUnit,
+        is_unlocked: true,
+      };
     }
-    snapshot.activeUnitId = unit.nextUnit.unit_id;
+    nextActiveUnitId = unit.nextUnit.unit_id;
   }
 
-  writeToSessionStorage(snapshot);
+  const updated: StoredLearnPreloadSnapshot = {
+    ...snapshot,
+    activeUnitId: nextActiveUnitId,
+    units: nextUnits,
+  };
+  inMemoryStore = updated;
+  scheduleSessionStorageWrite(updated);
 }
 
 /**
- * Optimistically updates a unit's slide progress in the local cache.
+ * Immutably updates a unit's slide progress in the local cache (debouncing sessionStorage writes).
  */
 export function updateUnitSlideProgressLocally(
   unitId: number,
   slideOrder: number,
 ): void {
-  const snapshot = getLearnCacheSnapshot();
+  const snapshot = getLearnCacheSnapshot() as StoredLearnPreloadSnapshot | null;
   if (!snapshot) return;
   const id = Number(unitId);
   const unit = snapshot.units[id];
@@ -178,8 +258,18 @@ export function updateUnitSlideProgressLocally(
 
   const clamped = Math.min(unit.total_slides, Math.max(0, Number(slideOrder) || 0));
   if (clamped > unit.current_slide_order) {
-    unit.current_slide_order = clamped;
-    writeToSessionStorage(snapshot);
+    const updated: StoredLearnPreloadSnapshot = {
+      ...snapshot,
+      units: {
+        ...snapshot.units,
+        [id]: {
+          ...unit,
+          current_slide_order: clamped,
+        },
+      },
+    };
+    inMemoryStore = updated;
+    scheduleSessionStorageWrite(updated);
   }
 }
 
@@ -187,9 +277,14 @@ export function updateUnitSlideProgressLocally(
  * Clears all preloaded learn section data from memory and sessionStorage (called on sign-out).
  */
 export function clearLearnCache(): void {
+  cacheGeneration += 1;
   inMemoryStore = null;
-  inFlightPromise = null;
-  inFlightSectionKey = null;
+  expectedUserId = null;
+  inFlightRequests.clear();
+  if (sessionPersistTimer) {
+    clearTimeout(sessionPersistTimer);
+    sessionPersistTimer = null;
+  }
   if (isBrowser()) {
     try {
       window.sessionStorage.removeItem(LEARN_SECTION_CACHE_KEY);
@@ -228,19 +323,11 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
 
   return rawQuizzes.map((entry, index) => {
     const entryRecord = entry as Partial<QuizData> & { type?: string };
-    const entryPayload = entryRecord.quiz_payload ?? {};
-    const inferredType =
-      entryRecord.type_name ??
-      entryRecord.type ??
-      (Array.isArray(entryPayload.options)
-        ? "MCQ"
-        : Array.isArray(entryPayload.items)
-          ? "Order"
-          : Array.isArray(entryPayload.pairs)
-            ? "Pair"
-            : entryPayload.answer !== undefined
-              ? "FITB"
-              : "");
+    const entryPayload = (entryRecord.quiz_payload ?? {}) as Record<string, unknown>;
+    const inferredType = inferQuizTypeName(
+      entryRecord.type_name ?? entryRecord.type,
+      entryPayload,
+    );
 
     return {
       ...entryRecord,
@@ -248,8 +335,9 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
       unit_title: unit.unit_title,
       unit_lesson_card: unit.lesson_card,
       unit_assessment: unit.assessment ?? {},
-      quiz_id: entryRecord.quiz_id ?? unit.unit_id ?? index,
-      question_text: entryRecord.question_text ?? unit.unit_title ?? `Question ${index + 1}`,
+      quiz_id: entryRecord.quiz_id ?? -(unit.unit_id * 1000 + index + 1),
+      question_text:
+        entryRecord.question_text ?? unit.unit_title ?? `Question ${index + 1}`,
       cat_id: entryRecord.cat_id ?? unit.cat_id,
       cat_name: entryRecord.cat_name ?? unit.cat_name,
       sec_id: unit.sec_id,
@@ -258,27 +346,32 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
       difficulty_name: entryRecord.difficulty_name ?? unit.difficulty_name,
       quiz_type_id: entryRecord.quiz_type_id ?? 1,
       type_name: inferredType,
-      quiz_payload: entryPayload,
+      quiz_payload: entryPayload as QuizData["quiz_payload"],
     } as QuizData;
   });
 }
 
 /**
  * Triggers a GET request to /api/learn/preload to preload the user's current and next
- * learn sections into browser sessionStorage and memory.
- * Deduplicates concurrent in-flight requests.
+ * learn sections into browser sessionStorage and memory, deduplicated per request key.
  */
 export async function preloadLearnSections(
   sectionId?: number,
   forceRefresh = false,
+  userId?: number | string | null,
 ): Promise<LearnPreloadResponse | null> {
+  if (userId !== undefined) {
+    setLearnCacheExpectedUserId(userId);
+  }
+
   if (!forceRefresh && isLearnCacheWarmed(sectionId)) {
     return getLearnCacheSnapshot();
   }
 
   const reqKey = sectionId != null ? String(sectionId) : "default";
-  if (inFlightPromise && inFlightSectionKey === reqKey) {
-    return inFlightPromise;
+  const existing = inFlightRequests.get(reqKey);
+  if (existing && !forceRefresh) {
+    return existing;
   }
 
   if (typeof fetch === "undefined") {
@@ -289,31 +382,38 @@ export async function preloadLearnSections(
     sectionId != null && Number.isInteger(sectionId) && sectionId > 0
       ? `?sectionId=${encodeURIComponent(String(sectionId))}`
       : "";
+  const requestGen = cacheGeneration;
 
-  inFlightSectionKey = reqKey;
-  inFlightPromise = (async () => {
+  const requestPromise = (async () => {
     try {
       const res = await fetch(`/api/learn/preload${query}`, {
         method: "GET",
         credentials: "include",
+        cache: forceRefresh ? "no-store" : "default",
         headers: {
           Accept: "application/json",
         },
       });
       if (!res.ok) return null;
-      const data = (await res.json()) as LearnPreloadResponse;
+      const data = (await res.json()) as StoredLearnPreloadSnapshot;
+      if (cacheGeneration !== requestGen) {
+        return null;
+      }
       if (data && typeof data === "object" && data.units) {
-        setLearnCacheData(data);
+        setLearnCacheData(data, data.userId);
         return data;
       }
       return null;
     } catch {
       return null;
-    } finally {
-      inFlightPromise = null;
-      inFlightSectionKey = null;
     }
   })();
 
-  return inFlightPromise;
+  inFlightRequests.set(reqKey, requestPromise);
+  void requestPromise.finally(() => {
+    if (inFlightRequests.get(reqKey) === requestPromise) {
+      inFlightRequests.delete(reqKey);
+    }
+  });
+  return requestPromise;
 }

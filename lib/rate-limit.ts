@@ -8,107 +8,27 @@ const BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 interface RateLimitRow extends RowDataPacket {
     attempts: number;
     reset_at: number;
-    blocked: boolean;
+    blocked: boolean | number;
 }
 
-export async function checkRateLimit(key: string, increment: boolean = false) {
+export interface RateLimitCheckResult {
+    allowed: boolean;
+    remaining: number;
+    resetIn: number;
+    message?: string;
+}
+
+export async function checkRateLimit(
+    key: string,
+    increment: boolean = false,
+): Promise<RateLimitCheckResult> {
     const now = Date.now();
     const dbkey = `ratelimit:${key}`;
 
-    // Compatibility bridge: Detect if invoked within the legacy Milestone 4 mock test harness
-    // which intercepted specific legacy query strings before Milestone 5 was specified.
-    const isM4Mock = typeof db.query === "function" && db.query.toString().includes("user_otp_tbl");
-
-    if (isM4Mock) {
-        // Legacy mock sequence for Milestone 4 regression compatibility
-        const [rows] = await db.query<RateLimitRow[]>(
-            "SELECT attempts, reset_at, blocked FROM rate_limit_tbl WHERE limit_key = ?",
-            [dbkey]
-        );
-        let entry: RateLimitRow | undefined = rows[0];
-
-        if (entry && now > entry.reset_at && !entry.blocked) {
-            await db.query("DELETE FROM rate_limit_tbl WHERE limit_key = ?", [dbkey]);
-            entry = undefined;
-        }
-
-        if (entry?.blocked) {
-            const unblockAt = entry.reset_at + BLOCK_DURATION_MS;
-            const waitMs = unblockAt - now;
-            if (waitMs > 0) {
-                return {
-                    allowed: false,
-                    remaining: 0,
-                    resetIn: waitMs,
-                    message: `Too many attempts. Please try again in ${Math.ceil(waitMs / 60000)} minutes.`
-                };
-            }
-            await db.query("DELETE FROM rate_limit_tbl WHERE limit_key = ?", [dbkey]);
-            entry = undefined;
-        }
-
-        if (!entry) {
-            const resetAt = now + WINDOWS_MS;
-            await db.query(
-                "INSERT INTO rate_limit_tbl (limit_key, attempts, reset_at, blocked) VALUES (?, 0, ?, FALSE) ON DUPLICATE KEY UPDATE attempts = 0, reset_at = ?, blocked = FALSE",
-                [dbkey, resetAt, resetAt]
-            );
-        }
-
-        if (!increment) {
-            const [checkRows] = await db.query<RateLimitRow[]>(
-                "SELECT attempts, reset_at, blocked FROM rate_limit_tbl WHERE limit_key = ?",
-                [dbkey]
-            );
-            const checkEntry = checkRows[0];
-            const currentAttempts = checkEntry ? checkEntry.attempts : 0;
-            const currentResetAt = checkEntry ? checkEntry.reset_at : now + WINDOWS_MS;
-            return {
-                allowed: currentAttempts < MAX_ATTEMPTS,
-                remaining: Math.max(0, MAX_ATTEMPTS - currentAttempts),
-                resetIn: Math.max(0, currentResetAt - now),
-            };
-        }
-
-        const [freshRows] = await db.query<RateLimitRow[]>(
-            "SELECT attempts, reset_at, blocked FROM rate_limit_tbl WHERE limit_key = ?",
-            [dbkey]
-        );
-        const fresh = freshRows[0] || { attempts: 0, reset_at: now + WINDOWS_MS, blocked: false };
-
-        if (fresh.attempts + 1 >= MAX_ATTEMPTS) {
-            await db.query(
-                "UPDATE rate_limit_tbl SET attempts = attempts + 1, blocked = TRUE, reset_at = ? WHERE limit_key = ?",
-                [now, dbkey]
-            );
-            return {
-                allowed: false,
-                remaining: 0,
-                resetIn: BLOCK_DURATION_MS,
-                message: `Too many attempts. Account locked ${Math.ceil(BLOCK_DURATION_MS / 60000)} minutes.`
-            };
-        }
-
-        await db.query(
-            "UPDATE rate_limit_tbl SET attempts = attempts + 1 WHERE limit_key = ?",
-            [dbkey]
-        );
-
-        return {
-            allowed: true,
-            remaining: MAX_ATTEMPTS - fresh.attempts - 1,
-            resetIn: fresh.reset_at - now,
-        };
-    }
-
-    // =========================================================================
-    // Milestone 5: SEC-07 Atomic Rate Limiting (Production & Test M5)
-    // =========================================================================
     if (!increment) {
-        // Read-only check: query current state without mutating or acquiring lock
         const [rows] = await db.query<RateLimitRow[]>(
             "SELECT attempts, reset_at, blocked FROM rate_limit_tbl WHERE limit_key = ?",
-            [dbkey]
+            [dbkey],
         );
         const entry = rows[0];
         if (!entry) {
@@ -119,10 +39,8 @@ export async function checkRateLimit(key: string, increment: boolean = false) {
             };
         }
 
-        // If blocked, check if block duration has elapsed
         if (entry.blocked) {
-            const unblockAt = entry.reset_at + BLOCK_DURATION_MS;
-            const waitMs = unblockAt - now;
+            const waitMs = entry.reset_at - now;
             if (waitMs > 0) {
                 return {
                     allowed: false,
@@ -131,7 +49,6 @@ export async function checkRateLimit(key: string, increment: boolean = false) {
                     message: `Too many attempts. Please try again in ${Math.ceil(waitMs / 60000)} minutes.`,
                 };
             }
-            // Block expired
             return {
                 allowed: true,
                 remaining: MAX_ATTEMPTS,
@@ -139,7 +56,6 @@ export async function checkRateLimit(key: string, increment: boolean = false) {
             };
         }
 
-        // If window expired
         if (now > entry.reset_at) {
             return {
                 allowed: true,
@@ -155,32 +71,53 @@ export async function checkRateLimit(key: string, increment: boolean = false) {
         };
     }
 
-    // Atomic increment/upsert (SEC-07):
-    // Single atomic INSERT ... ON DUPLICATE KEY UPDATE query serializes concurrent requests via InnoDB row lock
-    const resetAt = now + WINDOWS_MS;
+    // Atomic increment/upsert:
+    // - If currently blocked and lock hasn't expired: preserve attempts, reset_at, and blocked=1.
+    // - If previous block or attempt window expired: reset attempts=1, reset_at=now+WINDOWS_MS, blocked=0.
+    // - Otherwise increment attempts; when reaching MAX_ATTEMPTS, lock for BLOCK_DURATION_MS from now.
+    const windowResetAt = now + WINDOWS_MS;
+    const blockUntil = now + BLOCK_DURATION_MS;
+
     await db.query(
-        "INSERT INTO rate_limit_tbl (limit_key, attempts, reset_at, blocked) VALUES (?, 1, ?, 0) ON DUPLICATE KEY UPDATE attempts = IF(reset_at < ?, 1, attempts + ?), reset_at = IF(reset_at < ?, ?, reset_at), blocked = IF(attempts >= ?, 1, 0)",
-        [dbkey, resetAt, now, increment ? 1 : 0, now, resetAt, MAX_ATTEMPTS]
+        `INSERT INTO rate_limit_tbl (limit_key, attempts, reset_at, blocked)
+         VALUES (?, 1, ?, 0)
+         ON DUPLICATE KEY UPDATE
+           attempts = IF((blocked = 1 AND reset_at <= ?) OR (blocked = 0 AND reset_at < ?), 1, IF(blocked = 1, attempts, attempts + 1)),
+           reset_at = IF(blocked = 1 AND reset_at > ?, reset_at, IF((blocked = 1 AND reset_at <= ?) OR (blocked = 0 AND reset_at < ?), ?, IF(attempts >= ?, ?, reset_at))),
+           blocked = IF(attempts >= ?, 1, 0)`,
+        [
+            dbkey,
+            windowResetAt,
+            now,
+            now,
+            now,
+            now,
+            now,
+            windowResetAt,
+            MAX_ATTEMPTS,
+            blockUntil,
+            MAX_ATTEMPTS,
+        ],
     );
 
-    // Read the atomic state
     const [rows] = await db.query<RateLimitRow[]>(
         "SELECT attempts, reset_at, blocked FROM rate_limit_tbl WHERE limit_key = ?",
-        [dbkey]
+        [dbkey],
     );
 
     const fresh = rows[0] || {
         attempts: 1,
-        reset_at: resetAt,
+        reset_at: windowResetAt,
         blocked: false,
     };
 
     if (fresh.blocked || fresh.attempts >= MAX_ATTEMPTS) {
+        const waitMs = Math.max(0, fresh.reset_at - now);
         return {
             allowed: false,
             remaining: 0,
-            resetIn: BLOCK_DURATION_MS,
-            message: `Too many attempts. Account locked ${Math.ceil(BLOCK_DURATION_MS / 60000)} minutes.`,
+            resetIn: waitMs || BLOCK_DURATION_MS,
+            message: `Too many attempts. Account locked ${Math.max(1, Math.ceil((waitMs || BLOCK_DURATION_MS) / 60000))} minutes.`,
         };
     }
 
@@ -193,6 +130,6 @@ export async function checkRateLimit(key: string, increment: boolean = false) {
 
 export async function clearRateLimit(key: string) {
     await db.query("DELETE FROM rate_limit_tbl WHERE limit_key = ?", [
-        `ratelimit:${key}`
+        `ratelimit:${key}`,
     ]);
 }

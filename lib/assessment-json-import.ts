@@ -71,34 +71,30 @@ const QuizImportEntryBase = {
   author_id: z.number().int().nullable().optional(),
 };
 
+function tryParseJsonString(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function coerceDigits(obj: Record<string, unknown>, key: string) {
+  const val = obj[key];
+  if (typeof val === "string" && /^\d+$/.test(val.trim())) {
+    obj[key] = Number(val);
+  }
+}
+
 export const QuizImportEntrySchema = z.preprocess((val) => {
   if (!val || typeof val !== "object") return val;
   const obj = { ...(val as Record<string, unknown>) };
-  if (typeof obj.quiz_payload === "string") {
-    try {
-      obj.quiz_payload = JSON.parse(obj.quiz_payload);
-    } catch {
-      // let zod handle
-    }
-  }
-  if (typeof obj.cat_id === "string" && /^\d+$/.test(obj.cat_id.trim())) {
-    obj.cat_id = Number(obj.cat_id);
-  }
-  if (
-    typeof obj.difficulty_id === "string" &&
-    /^\d+$/.test(obj.difficulty_id.trim())
-  ) {
-    obj.difficulty_id = Number(obj.difficulty_id);
-  }
-  if (
-    typeof obj.quiz_type_id === "string" &&
-    /^\d+$/.test(obj.quiz_type_id.trim())
-  ) {
-    obj.quiz_type_id = Number(obj.quiz_type_id);
-  }
-  if (typeof obj.sec_id === "string" && /^\d+$/.test(obj.sec_id.trim())) {
-    obj.sec_id = Number(obj.sec_id);
-  }
+  obj.quiz_payload = tryParseJsonString(obj.quiz_payload);
+  coerceDigits(obj, "cat_id");
+  coerceDigits(obj, "difficulty_id");
+  coerceDigits(obj, "quiz_type_id");
+  coerceDigits(obj, "sec_id");
   delete obj.created_at;
   delete obj.updated_at;
   return obj;
@@ -123,184 +119,11 @@ const AssessmentOnlyImportSchema = z.strictObject({
   unit_assessment_json: CodeProblemAssessmentImportSchema,
 });
 
-export const AssessmentChoiceSchema = z
-  .object({
-    id: z.string().optional(),
-    text: RequiredText,
-    isCorrect: z.boolean().optional(),
-    explanation: z.string().optional(),
-  })
-  .passthrough();
-
-export const AssessmentQuestionSchema = z
-  .object({
-    id: z.string().optional(),
-    prompt: RequiredText,
-    type: z
-      .enum([
-        "multiple_choice",
-        "single_choice",
-        "multiple_select",
-        "true_false",
-        "short_answer",
-        "matching",
-        "ordering",
-        "coding",
-      ])
-      .default("multiple_choice"),
-    choices: z.array(AssessmentChoiceSchema).optional(),
-    correct_index: z.number().int().min(0).optional(),
-    correct_indexes: z.array(z.number().int().min(0)).optional(),
-    correct_answer: z.string().optional(),
-    explanation: z.string().optional(),
-    points: z.number().int().min(1).optional(),
-  })
-  .passthrough()
-  .superRefine((question, ctx) => {
-    const choices = question.choices;
-    const hasChoiceList = Array.isArray(choices);
-    const hasLegacyOptions = typeof question.correct_index === "number";
-
-    if (
-      ["multiple_choice", "single_choice", "true_false"].includes(question.type)
-    ) {
-      if (!hasChoiceList && !hasLegacyOptions) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["choices"],
-          message: "Questions of type multiple_choice/single_choice/true_false require choices.",
-        });
-      }
-
-      if (hasChoiceList && choices.length < 2) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["choices"],
-          message: "Multiple-choice questions require at least 2 choices.",
-        });
-      }
-    }
-
-    if (question.type === "matching" && (!choices || choices.length < 2)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["choices"],
-        message: "Matching questions require at least 2 choice pairs.",
-      });
-    }
-
-    if (question.type === "ordering" && (!choices || choices.length < 2)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["choices"],
-        message: "Ordering questions require at least 2 choices.",
-      });
-    }
-  });
-
-export const UnitLessonCardBlockSchema = z
-  .object({
-    id: z.string().optional(),
-    type: z
-      .enum(["markdown", "html", "image", "list", "quote", "code", "callout"])
-      .default("markdown"),
-    title: z.string().optional(),
-    value: z.string().default(""),
-    items: z.array(z.string()).optional(),
-  })
-  .passthrough();
-
-export const UnitLessonCardSchema = z
-  .object({
-    id: z.string().optional(),
-    title: z.string().optional(),
-    kind: z.enum(["content", "summary", "exercise"]).optional(),
-    blocks: z.array(UnitLessonCardBlockSchema).min(1),
-  })
-  .passthrough();
-
-export const LessonCardBlockSchema = UnitLessonCardBlockSchema;
-export const LessonCardSchema = UnitLessonCardSchema;
-
-export const UnitLessonSchema = z
-  .object({
-    id: z.string().optional(),
-    title: RequiredText,
-    summary: z.string().optional(),
-    cards: z.array(UnitLessonCardSchema).min(1),
-  })
-  .passthrough();
-
-export const UnitMetadataSchema = z
-  .object({
-    id: z.string().or(z.number()).optional(),
-    title: RequiredText,
-    subtitle: z.string().optional(),
-    description: z.string().optional(),
-    section_id: z.number().int().positive().nullable().optional(),
-    sec_id: z.number().int().positive().nullable().optional(),
-    slug: z.string().optional(),
-    status: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-  })
-  .passthrough();
-
-export const UnitAssessmentQuestionSchema = z
-  .object({
-    id: z.string().optional(),
-    prompt: RequiredText,
-    type: z
-      .enum([
-        "multiple_choice",
-        "single_choice",
-        "multiple_select",
-        "true_false",
-        "short_answer",
-        "matching",
-        "ordering",
-        "coding",
-      ])
-      .default("multiple_choice"),
-    choices: z.array(AssessmentChoiceSchema).optional(),
-    correct_index: z.number().int().min(0).optional(),
-    explanation: z.string().optional(),
-    points: z.number().int().min(1).optional(),
-  })
-  .passthrough();
-
-export const UnitAssessmentSchema = z
-  .object({
-    id: z.string().optional(),
-    title: RequiredText,
-    description: z.string().optional(),
-    questions: z.array(UnitAssessmentQuestionSchema).min(1),
-    passing_score: z.number().int().min(0).max(100).optional(),
-    due_in: z.string().optional(),
-  })
-  .passthrough();
-
-export const UnitBulkImportSchema = z
-  .object({
-    unit: UnitMetadataSchema,
-    lessons: z.array(UnitLessonSchema).min(1),
-    assessments: z.array(UnitAssessmentSchema).optional().default([]),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-  })
-  .passthrough();
-
-export const UnitQuestionSchema = UnitAssessmentQuestionSchema;
-export const UnitBulkEntrySchema = UnitBulkImportSchema;
-
 export type QuizImportEntry = z.infer<typeof QuizImportEntrySchema>;
 export type AssessmentBulkImport = z.infer<typeof AssessmentBulkImportSchema>;
 export type AssessmentOnlyImport = z.infer<
   typeof AssessmentOnlyImportSchema
 >["unit_assessment_json"];
-export type UnitLesson = z.infer<typeof UnitLessonSchema>;
-export type UnitMetadata = z.infer<typeof UnitMetadataSchema>;
-export type UnitAssessmentQuestion = z.infer<typeof UnitAssessmentQuestionSchema>;
-export type UnitAssessment = z.infer<typeof UnitAssessmentSchema>;
-export type UnitBulkImport = z.infer<typeof UnitBulkImportSchema>;
 
 export type AssessmentBulkImportResult =
   | { success: true; data: AssessmentBulkImport }
@@ -313,10 +136,6 @@ export type AssessmentOnlyImportResult =
 export type AssessmentImportResult =
   | { success: true; mode: "assessment-only"; data: AssessmentOnlyImport }
   | { success: true; mode: "full"; data: AssessmentBulkImport }
-  | { success: false; errors: string[] };
-
-export type UnitBulkImportResult =
-  | { success: true; data: UnitBulkImport }
   | { success: false; errors: string[] };
 
 export interface ExtractedLessonSlide {
@@ -383,7 +202,7 @@ export function normalizeUnitImportCandidate(candidate: unknown): unknown {
     return candidate;
   }
   if (Array.isArray(candidate)) {
-    if (candidate.length > 0 && typeof candidate[0] === "object") {
+    if (candidate.length > 0 && candidate[0] !== null && typeof candidate[0] === "object") {
       candidate = candidate[0];
     } else {
       return candidate;
@@ -399,10 +218,7 @@ export function normalizeUnitImportCandidate(candidate: unknown): unknown {
   }
 
   const obj = { ...rawObj };
-
-  if (typeof obj.sec_id === "string" && /^\d+$/.test(obj.sec_id.trim())) {
-    obj.sec_id = Number(obj.sec_id);
-  }
+  coerceDigits(obj, "sec_id");
 
   if (!obj.unit_assessment_json) {
     if (obj.assessment && typeof obj.assessment === "object") {
@@ -445,13 +261,7 @@ export function normalizeUnitImportCandidate(candidate: unknown): unknown {
     obj.unit_quiz_json = obj.unit_quiz_json.map((q) => {
       if (!q || typeof q !== "object") return q;
       const quiz = { ...(q as Record<string, unknown>) };
-      if (typeof quiz.quiz_payload === "string") {
-        try {
-          quiz.quiz_payload = JSON.parse(quiz.quiz_payload);
-        } catch {
-          // let zod handle
-        }
-      }
+      quiz.quiz_payload = tryParseJsonString(quiz.quiz_payload);
       return quiz;
     });
   }
@@ -464,28 +274,45 @@ export function normalizeUnitImportCandidate(candidate: unknown): unknown {
   return obj;
 }
 
-export function parseAssessmentBulkImport(
+function parseJsonDocument(
   rawText: string,
-): AssessmentBulkImportResult {
-  let candidate: unknown;
+): { ok: true; value: unknown } | { ok: false; errors: string[] } {
   try {
-    candidate = JSON.parse(rawText);
+    return { ok: true, value: JSON.parse(rawText) };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Invalid JSON document.";
-    return { success: false, errors: [`JSON syntax error: ${message}`] };
+    return { ok: false, errors: [`JSON syntax error: ${message}`] };
   }
+}
 
-  const normalized = normalizeUnitImportCandidate(candidate);
+function formatZodIssues(error: z.ZodError): string[] {
+  return error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+    return `${path}${issue.message}`;
+  });
+}
+
+function wrapAssessmentCandidate(normalized: unknown): unknown {
+  return normalized &&
+    typeof normalized === "object" &&
+    !Array.isArray(normalized) &&
+    !Object.hasOwn(normalized, "unit_assessment_json") &&
+    (Object.hasOwn(normalized, "steps") || Object.hasOwn(normalized, "cp_steps"))
+    ? { unit_assessment_json: normalized }
+    : normalized;
+}
+
+export function parseAssessmentBulkImport(
+  rawText: string,
+): AssessmentBulkImportResult {
+  const parsed = parseJsonDocument(rawText);
+  if (!parsed.ok) return { success: false, errors: parsed.errors };
+
+  const normalized = normalizeUnitImportCandidate(parsed.value);
   const result = AssessmentBulkImportSchema.safeParse(normalized);
   if (!result.success) {
-    return {
-      success: false,
-      errors: result.error.issues.map((issue) => {
-        const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-        return `${path}${issue.message}`;
-      }),
-    };
+    return { success: false, errors: formatZodIssues(result.error) };
   }
 
   return { success: true, data: result.data };
@@ -494,34 +321,15 @@ export function parseAssessmentBulkImport(
 export function parseAssessmentOnlyImport(
   rawText: string,
 ): AssessmentOnlyImportResult {
-  let candidate: unknown;
-  try {
-    candidate = JSON.parse(rawText);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Invalid JSON document.";
-    return { success: false, errors: [`JSON syntax error: ${message}`] };
-  }
+  const parsed = parseJsonDocument(rawText);
+  if (!parsed.ok) return { success: false, errors: parsed.errors };
 
-  const normalized = normalizeUnitImportCandidate(candidate);
-  const assessmentCandidate =
-    normalized &&
-    typeof normalized === "object" &&
-    !Array.isArray(normalized) &&
-    !Object.hasOwn(normalized, "unit_assessment_json") &&
-    (Object.hasOwn(normalized, "steps") || Object.hasOwn(normalized, "cp_steps"))
-      ? { unit_assessment_json: normalized }
-      : normalized;
-
-  const result = AssessmentOnlyImportSchema.safeParse(assessmentCandidate);
+  const normalized = normalizeUnitImportCandidate(parsed.value);
+  const result = AssessmentOnlyImportSchema.safeParse(
+    wrapAssessmentCandidate(normalized),
+  );
   if (!result.success) {
-    return {
-      success: false,
-      errors: result.error.issues.map((issue) => {
-        const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-        return `${path}${issue.message}`;
-      }),
-    };
+    return { success: false, errors: formatZodIssues(result.error) };
   }
 
   return { success: true, data: result.data.unit_assessment_json };
@@ -530,16 +338,10 @@ export function parseAssessmentOnlyImport(
 export function parseAssessmentImport(
   rawText: string,
 ): AssessmentImportResult {
-  let candidate: unknown;
-  try {
-    candidate = JSON.parse(rawText);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Invalid JSON document.";
-    return { success: false, errors: [`JSON syntax error: ${message}`] };
-  }
+  const parsed = parseJsonDocument(rawText);
+  if (!parsed.ok) return { success: false, errors: parsed.errors };
 
-  const normalized = normalizeUnitImportCandidate(candidate);
+  const normalized = normalizeUnitImportCandidate(parsed.value);
 
   if (
     normalized &&
@@ -550,91 +352,19 @@ export function parseAssessmentImport(
     const result = AssessmentBulkImportSchema.safeParse(normalized);
     return result.success
       ? { success: true, mode: "full", data: result.data }
-      : {
-          success: false,
-          errors: result.error.issues.map((issue) => {
-            const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-            return `${path}${issue.message}`;
-          }),
-        };
+      : { success: false, errors: formatZodIssues(result.error) };
   }
 
-  const assessmentCandidate =
-    normalized &&
-    typeof normalized === "object" &&
-    !Array.isArray(normalized) &&
-    !Object.hasOwn(normalized, "unit_assessment_json") &&
-    (Object.hasOwn(normalized, "steps") || Object.hasOwn(normalized, "cp_steps"))
-      ? { unit_assessment_json: normalized }
-      : normalized;
-
-  const result = AssessmentOnlyImportSchema.safeParse(assessmentCandidate);
+  const result = AssessmentOnlyImportSchema.safeParse(
+    wrapAssessmentCandidate(normalized),
+  );
   return result.success
     ? {
         success: true,
         mode: "assessment-only",
         data: result.data.unit_assessment_json,
       }
-    : {
-        success: false,
-        errors: result.error.issues.map((issue) => {
-          const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-          return `${path}${issue.message}`;
-        }),
-      };
-}
-
-export function parseUnitBulkImport(rawText: string): UnitBulkImportResult {
-  let candidate: unknown;
-  try {
-    candidate = JSON.parse(rawText);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Invalid JSON document.";
-    return { success: false, errors: [`JSON syntax error: ${message}`] };
-  }
-
-  const incoming = candidate && typeof candidate === "object" ? candidate : {};
-  const normalizedCandidate = {
-    ...(incoming as Record<string, unknown>),
-    unit:
-      (incoming as Record<string, unknown>).unit ??
-      {
-        title:
-          (incoming as Record<string, unknown>).unit_title ??
-          (incoming as Record<string, unknown>).title ??
-          "",
-        description:
-          (incoming as Record<string, unknown>).description ?? "",
-        sec_id:
-          (incoming as Record<string, unknown>).sec_id ??
-          (incoming as Record<string, unknown>).section_id ??
-          null,
-      },
-    lessons:
-      (incoming as Record<string, unknown>).lessons ??
-      (incoming as Record<string, unknown>).unit_lessons ??
-      (incoming as Record<string, unknown>).lesson_cards ??
-      [],
-    assessments:
-      (incoming as Record<string, unknown>).assessments ??
-      (incoming as Record<string, unknown>).unit_assessments ??
-      (incoming as Record<string, unknown>).assessment ??
-      [],
-  };
-
-  const result = UnitBulkImportSchema.safeParse(normalizedCandidate);
-  if (!result.success) {
-    return {
-      success: false,
-      errors: result.error.issues.map((issue) => {
-        const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-        return `${path}${issue.message}`;
-      }),
-    };
-  }
-
-  return { success: true, data: result.data };
+    : { success: false, errors: formatZodIssues(result.error) };
 }
 
 export function quizPayloadMatchesType(

@@ -3,7 +3,7 @@ import {
   CP_FILE_LABELS,
   type CPFileBuffers,
   type CPFileKey,
-} from "./cp-schema";
+} from "./cp-constants";
 
 export type WildcardContext =
   | "tag_text"
@@ -13,9 +13,9 @@ export type WildcardContext =
   | "general";
 
 export interface WildcardSlotMeta {
-  index: number; // 0-based wildcard index in the tab
+  index: number;
   context: WildcardContext;
-  enclosingTag?: string; // e.g., "TITLE" or "a"
+  enclosingTag?: string;
   lineInTemplate: number;
 }
 
@@ -43,6 +43,16 @@ export interface StepValidationResult {
   failedLine?: number;
   tabResults: Record<CPFileKey, TabValidationResult>;
 }
+
+interface CompiledTemplateEntry {
+  tokens: TemplateToken[];
+  wildcardTokens: TemplateToken[];
+  fullRegex: RegExp;
+}
+
+const MAX_STUDENT_TAB_CHARS = 65_536;
+const TEMPLATE_CACHE_LIMIT = 256;
+const compiledTemplateCache = new Map<string, CompiledTemplateEntry>();
 
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -76,9 +86,6 @@ function getLineNumberAtOffset(text: string, offset: number): number {
   return line;
 }
 
-/**
- * Determines the enclosing context and tag name of a `####` wildcard at `pos` inside `template`.
- */
 function detectWildcardContext(
   template: string,
   pos: number,
@@ -87,8 +94,8 @@ function detectWildcardContext(
   const before = template.slice(0, pos);
   const after = template.slice(pos + 4);
 
-  // Check if inside double or single quotes on the same line
-  const currentLineBefore = before.split("\n").pop() ?? "";
+  const lastNewline = before.lastIndexOf("\n");
+  const currentLineBefore = lastNewline === -1 ? before : before.slice(lastNewline + 1);
   const doubleQuotesBefore = (currentLineBefore.match(/"/g) ?? []).length;
   const singleQuotesBefore = (currentLineBefore.match(/'/g) ?? []).length;
 
@@ -106,7 +113,6 @@ function detectWildcardContext(
     };
   }
 
-  // Check if between `>` and `</Tag>` in HTML
   const openTagMatch = before.match(/<([A-Za-z][A-Za-z0-9-]*)\b[^>]*>\s*$/);
   if (openTagMatch && /^\s*<\//.test(after)) {
     return {
@@ -132,33 +138,18 @@ function detectWildcardContext(
   };
 }
 
-/**
- * Compiles a literal chunk into a regex fragment using language-aware case sensitivity:
- * - html: case-insensitive for HTML tags, doctype, and attribute names
- * - css: case-insensitive for CSS properties and keywords
- * - js: strictly case-sensitive
- */
 function compileLiteralFragment(literal: string, fileKey: CPFileKey): string {
   if (fileKey === "js") {
     return escapeRegExp(literal);
   }
-  // HTML and CSS apply language-aware case-insensitive matching on identifiers/tags
   return toCaseInsensitiveRegex(literal);
 }
 
-/**
- * Splits a non-whitespace literal segment into atomic structural pieces
- * (e.g. `<HTML>`, `</HEAD>`, `<!DOCTYPE`, `HTML`, attributes, punctuation)
- * so prefix diagnostics can pinpoint the exact failing tag or symbol,
- * and inserts optional `\s*` inside tag brackets (e.g. `<HTML >` vs `<HTML>`).
- */
 function splitAtomicLiterals(
   segment: string,
   fileKey: CPFileKey,
 ): { raw: string; regexFragment: string; displayLabel: string }[] {
-  const atoms: { raw: string; regexFragment: string; displayLabel: string }[] =
-    [];
-  // Match HTML tags/closers, words, or individual punctuation characters
+  const atoms: { raw: string; regexFragment: string; displayLabel: string }[] = [];
   const pattern =
     /(<\/?[A-Za-z!][A-Za-z0-9-]*|\/>|>|<|[A-Za-z0-9_$#%-]+|[^A-Za-z0-9_$#%-\s<>]+)/g;
   let match: RegExpExecArray | null;
@@ -176,8 +167,8 @@ function splitAtomicLiterals(
 }
 
 /**
- * Tokenizes `expectedTemplate` into a sequence of structural tokens (`LITERAL`,
- * `REQUIRED_SPACE`, `OPTIONAL_SPACE`, `WILDCARD`).
+ * Tokenizes `expectedTemplate` into structural tokens (`LITERAL`,
+ * `REQUIRED_SPACE`, `OPTIONAL_SPACE`, `WILDCARD`) using sticky regex scanning.
  */
 export function tokenizeTemplate(
   expectedRaw: string,
@@ -187,11 +178,12 @@ export function tokenizeTemplate(
   if (!normalized) return [];
 
   const tokens: TemplateToken[] = [];
+  const stickyWs = /\s+/y;
+  const nextWsPattern = /\s/g;
   let cursor = 0;
   let wildcardCounter = 0;
 
   while (cursor < normalized.length) {
-    // 1. Check for `####` wildcard token
     if (normalized.startsWith("####", cursor)) {
       const { context, enclosingTag } = detectWildcardContext(
         normalized,
@@ -204,7 +196,6 @@ export function tokenizeTemplate(
       let capturePattern: string;
       switch (context) {
         case "tag_text":
-          // Forbids `<` and `>` so wildcard cannot greedily cross tags or allow <script> injection
           capturePattern = `(?<w_${wildcardIndex}>[^<>]*?)`;
           break;
         case "double_quote":
@@ -240,8 +231,8 @@ export function tokenizeTemplate(
       continue;
     }
 
-    // 2. Check for whitespace run
-    const wsMatch = normalized.slice(cursor).match(/^\s+/);
+    stickyWs.lastIndex = cursor;
+    const wsMatch = stickyWs.exec(normalized);
     if (wsMatch) {
       const wsRaw = wsMatch[0];
       const prevChar = cursor > 0 ? normalized[cursor - 1] : undefined;
@@ -250,7 +241,6 @@ export function tokenizeTemplate(
           ? normalized[cursor + wsRaw.length]
           : undefined;
 
-      // Space is REQUIRED when separating two word/identifier tokens (e.g., `<!DOCTYPE HTML>`, `let x`, `<a href`)
       const isRequired = isWordLikeChar(prevChar) && isWordLikeChar(nextChar);
 
       tokens.push({
@@ -263,15 +253,15 @@ export function tokenizeTemplate(
       continue;
     }
 
-    // 3. Consume non-whitespace literal run up to next whitespace or `####`
     let nextBreak = normalized.length;
-    const nextWs = normalized.slice(cursor).search(/\s/);
-    if (nextWs !== -1) {
-      nextBreak = Math.min(nextBreak, cursor + nextWs);
+    nextWsPattern.lastIndex = cursor;
+    const nextWsMatch = nextWsPattern.exec(normalized);
+    if (nextWsMatch && nextWsMatch.index < nextBreak) {
+      nextBreak = nextWsMatch.index;
     }
     const nextWildcard = normalized.indexOf("####", cursor);
-    if (nextWildcard !== -1) {
-      nextBreak = Math.min(nextBreak, nextWildcard);
+    if (nextWildcard !== -1 && nextWildcard < nextBreak) {
+      nextBreak = nextWildcard;
     }
 
     const literalChunk = normalized.slice(cursor, nextBreak);
@@ -286,7 +276,6 @@ export function tokenizeTemplate(
         displayLabel: atom.displayLabel,
       });
 
-      // Allow optional whitespace before closing `>` or `/>` inside HTML tags (e.g. `<HTML >`)
       const nextAtom = atoms[i + 1];
       if (
         nextAtom &&
@@ -310,7 +299,6 @@ export function tokenizeTemplate(
         (atom.raw === ">" || atom.raw === "{" || atom.raw === "}") &&
         nextAtom.raw.startsWith("<")
       ) {
-        // Between `><` on a single line in the template, allow optional indentation/newlines in student code
         tokens.push({
           type: "OPTIONAL_SPACE",
           raw: "",
@@ -323,13 +311,41 @@ export function tokenizeTemplate(
     cursor = nextBreak;
   }
 
-  // Group `<TAG` + `>` display labels when adjacent for cleaner error messages
   return tokens;
 }
 
-/**
- * Formats a clean human-readable tag/token label at `tokenIndex` (e.g. combining `<HEAD` and `>` into `<HEAD>`).
- */
+function getCompiledTemplate(
+  expectedTrimmed: string,
+  fileKey: CPFileKey,
+): CompiledTemplateEntry {
+  const cacheKey = `${fileKey}\0${expectedTrimmed}`;
+  const cached = compiledTemplateCache.get(cacheKey);
+  if (cached) {
+    // Refresh LRU order
+    compiledTemplateCache.delete(cacheKey);
+    compiledTemplateCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  const tokens = tokenizeTemplate(expectedTrimmed, fileKey);
+  const fullPattern =
+    "^\\s*" + tokens.map((t) => t.regexFragment).join("") + "\\s*$";
+  const entry: CompiledTemplateEntry = {
+    tokens,
+    wildcardTokens: tokens.filter((t) => t.type === "WILDCARD"),
+    fullRegex: new RegExp(fullPattern, "s"),
+  };
+
+  if (compiledTemplateCache.size >= TEMPLATE_CACHE_LIMIT) {
+    const oldestKey = compiledTemplateCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      compiledTemplateCache.delete(oldestKey);
+    }
+  }
+  compiledTemplateCache.set(cacheKey, entry);
+  return entry;
+}
+
 function formatExpectedTokenLabel(
   tokens: TemplateToken[],
   tokenIndex: number,
@@ -338,7 +354,6 @@ function formatExpectedTokenLabel(
   if (!token) return "end of code";
 
   if (token.raw.startsWith("<") && !token.raw.endsWith(">")) {
-    // Look ahead for immediate `>`
     for (let i = tokenIndex + 1; i < Math.min(tokens.length, tokenIndex + 4); i++) {
       if (tokens[i].type === "OPTIONAL_SPACE") continue;
       if (tokens[i].raw === ">" || tokens[i].raw === "/>") {
@@ -350,10 +365,6 @@ function formatExpectedTokenLabel(
   return token.displayLabel;
 }
 
-/**
- * Generates an actionable, student-friendly diagnostic message when `studentNormalized`
- * fails to match `tokens`.
- */
 function diagnoseMismatch(
   studentNormalized: string,
   tokens: TemplateToken[],
@@ -361,24 +372,25 @@ function diagnoseMismatch(
 ): { message: string; failedLine: number } {
   const fileLabel = CP_FILE_LABELS[fileKey];
 
-  // Find longest prefix of tokens[0..k] that matches the start of studentNormalized
+  // Binary search for the longest prefix tokens[0..k] matching studentNormalized (O(log N) regexes)
   let lastMatchedTokenIdx = -1;
   let matchedPrefixLength = 0;
+  let lo = 0;
+  let hi = tokens.length - 1;
 
-  for (let k = 0; k < tokens.length; k++) {
-    const prefixPattern =
-      "^\\s*" +
-      tokens
-        .slice(0, k + 1)
-        .map((t) => t.regexFragment)
-        .join("");
-    const regex = new RegExp(prefixPattern, "s");
-    const match = regex.exec(studentNormalized);
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    let prefixPattern = "^\\s*";
+    for (let i = 0; i <= mid; i++) {
+      prefixPattern += tokens[i].regexFragment;
+    }
+    const match = new RegExp(prefixPattern, "s").exec(studentNormalized);
     if (match) {
-      lastMatchedTokenIdx = k;
+      lastMatchedTokenIdx = mid;
       matchedPrefixLength = match[0].length;
+      lo = mid + 1;
     } else {
-      break;
+      hi = mid - 1;
     }
   }
 
@@ -390,11 +402,14 @@ function diagnoseMismatch(
   const nextStudentToken =
     remainingStudent.match(/^(<\/?[A-Za-z!][^>\s]*>?|\S+)/)?.[1] ?? "";
 
-  // Case 1: All template tokens matched as a prefix, but student has unexpected extra code after the end
   if (lastMatchedTokenIdx === tokens.length - 1) {
-    const lastLiteral = [...tokens]
-      .reverse()
-      .find((t) => t.type === "LITERAL");
+    let lastLiteral: TemplateToken | undefined;
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      if (tokens[i].type === "LITERAL") {
+        lastLiteral = tokens[i];
+        break;
+      }
+    }
     const afterLabel = lastLiteral ? lastLiteral.raw : "the expected code";
     return {
       failedLine,
@@ -405,7 +420,6 @@ function diagnoseMismatch(
   const failingIdx = lastMatchedTokenIdx + 1;
   const failingToken = tokens[failingIdx];
 
-  // Case 2: Failed on REQUIRED_SPACE (e.g., `<!DOCTYPEHTML>`)
   if (failingToken.type === "REQUIRED_SPACE") {
     const prevToken = tokens[failingIdx - 1];
     const nextToken = tokens[failingIdx + 1];
@@ -416,12 +430,14 @@ function diagnoseMismatch(
   }
 
   const expectedLabel = formatExpectedTokenLabel(tokens, failingIdx);
-  const prevSignificant = tokens
-    .slice(0, failingIdx)
-    .reverse()
-    .find((t) => t.type === "LITERAL" || t.type === "WILDCARD");
+  let prevSignificant: TemplateToken | undefined;
+  for (let i = failingIdx - 1; i >= 0; i--) {
+    if (tokens[i].type === "LITERAL" || tokens[i].type === "WILDCARD") {
+      prevSignificant = tokens[i];
+      break;
+    }
+  }
 
-  // Case 3: Missing closing tag (e.g., `</HEAD>`, `</HTML>`, `</BODY>`)
   if (expectedLabel.startsWith("</")) {
     if (!remainingStudent) {
       return {
@@ -435,7 +451,6 @@ function diagnoseMismatch(
     };
   }
 
-  // Case 4: Missing opening tag or expected literal token
   if (!remainingStudent) {
     return {
       failedLine,
@@ -464,8 +479,6 @@ export function validateSingleTabTemplate(
   const studentTrimmed = studentNormalized.trim();
   const expectedTrimmed = expectedNormalized.trim();
 
-  // Rule: If the maintainer left this tab's expected template blank,
-  // the student's corresponding editor tab must also be completely empty.
   if (expectedTrimmed.length === 0) {
     if (studentTrimmed.length === 0) {
       return {
@@ -497,10 +510,21 @@ export function validateSingleTabTemplate(
     };
   }
 
-  const tokens = tokenizeTemplate(expectedTrimmed, fileKey);
-  const fullPattern =
-    "^\\s*" + tokens.map((t) => t.regexFragment).join("") + "\\s*$";
-  const fullRegex = new RegExp(fullPattern, "s");
+  if (studentNormalized.length > MAX_STUDENT_TAB_CHARS) {
+    return {
+      passed: false,
+      fileKey,
+      fileLabel,
+      failedLine: 1,
+      message: `${fileLabel} exceeds maximum supported length (${MAX_STUDENT_TAB_CHARS} characters).`,
+      capturedWildcards: [],
+    };
+  }
+
+  const { tokens, wildcardTokens, fullRegex } = getCompiledTemplate(
+    expectedTrimmed,
+    fileKey,
+  );
 
   const match = fullRegex.exec(studentNormalized);
   if (!match) {
@@ -515,8 +539,6 @@ export function validateSingleTabTemplate(
     };
   }
 
-  // Verify all captured `####` wildcards are non-empty and non-whitespace
-  const wildcardTokens = tokens.filter((t) => t.type === "WILDCARD");
   const capturedWildcards: string[] = [];
 
   for (const wToken of wildcardTokens) {
@@ -570,10 +592,9 @@ export function validateCodeProblemStep(
 ): StepValidationResult {
   const tabResults = {} as Record<CPFileKey, TabValidationResult>;
 
-  // First check non-empty expected tabs so primary language errors take priority over stray tab errors
   const orderedKeys: CPFileKey[] = [
-    ...CP_FILE_KEYS.filter((k) => expectedBuffers[k].trim().length > 0),
-    ...CP_FILE_KEYS.filter((k) => expectedBuffers[k].trim().length === 0),
+    ...CP_FILE_KEYS.filter((k) => (expectedBuffers[k] ?? "").trim().length > 0),
+    ...CP_FILE_KEYS.filter((k) => (expectedBuffers[k] ?? "").trim().length === 0),
   ];
 
   for (const key of orderedKeys) {

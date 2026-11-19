@@ -42,12 +42,16 @@ export const GET = async (req: Request): Promise<Response> => {
 
     const payload = await getPreloadLearnSectionData(userId, requestedSectionId);
 
-    return Response.json(payload, {
-      status: 200,
-      headers: {
-        "Cache-Control": "private, max-age=120, stale-while-revalidate=600",
+    return Response.json(
+      { ...payload, userId },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, no-cache",
+          Vary: "Cookie",
+        },
       },
-    });
+    );
   } catch (error) {
     console.error("Error in GET /api/learn/preload:", error);
     return Response.json(

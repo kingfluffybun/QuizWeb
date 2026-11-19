@@ -5,110 +5,98 @@ import { getToken } from "next-auth/jwt";
 const adminRoutes = ["/admin", "/pending"];
 const staffRoutes = ["/maintainer", "/input"];
 
+const SESSION_COOKIE_CANDIDATES = [
+  { name: "__Secure-authjs.session-token", secure: true },
+  { name: "authjs.session-token", secure: false },
+  { name: "__Secure-next-auth.session-token", cookieName: "__Secure-next-auth.session-token" },
+  { name: "next-auth.session-token", cookieName: "next-auth.session-token" },
+] as const;
+
+function hasSessionCookieVariant(req: NextRequest, baseName: string): boolean {
+  return req.cookies.has(baseName) || req.cookies.has(`${baseName}.0`);
+}
+
+function prefersJson(req: NextRequest): boolean {
+  return Boolean(req.headers.get("accept")?.includes("application/json"));
+}
+
 export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
 
-  // 1. Programmatic route categorization (exact boundary matching)
   const isAdminPath = adminRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
+    (route) => pathname === route || pathname.startsWith(route + "/"),
   );
   const isStaffPath = staffRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
+    (route) => pathname === route || pathname.startsWith(route + "/"),
   );
 
-  // Pass through any public routes or static assets
   if (!isAdminPath && !isStaffPath) {
     return NextResponse.next();
   }
 
-  let user: { role?: string; user_role?: string; id?: string } | undefined;
-  let role: string | undefined;
-
-  // Keep the proxy bundle edge-safe: full auth.ts imports Node-only database and Argon2 modules.
   const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-  const cookieHeader = req.headers.get("cookie") || "";
-  const isSecure =
-    req.cookies.has("__Secure-authjs.session-token") ||
-    req.cookies.has("__Secure-authjs.session-token.0") ||
-    req.cookies.has("__Secure-next-auth.session-token") ||
-    req.cookies.has("__Secure-next-auth.session-token.0") ||
-    cookieHeader.includes("__Secure-authjs.session-token") ||
-    cookieHeader.includes("__Secure-next-auth.session-token") ||
-    nextUrl.protocol === "https:" ||
-    req.headers.get("x-forwarded-proto") === "https";
+  const isHttps =
+    nextUrl.protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
 
-  // Multi-tier token resolution: handles HTTP dev, HTTPS production (__Secure- prefix), and legacy cookie names
-  let token = await getToken({ req, secret, secureCookie: isSecure });
-  if (!token) {
-    token = await getToken({ req, secret, secureCookie: !isSecure });
-  }
-  if (!token) {
-    token = await getToken({
-      req,
-      secret,
-      cookieName: isSecure ? "__Secure-next-auth.session-token" : "next-auth.session-token",
-    });
-  }
-  if (!token) {
-    token = await getToken({
-      req,
-      secret,
-      cookieName: !isSecure ? "__Secure-next-auth.session-token" : "next-auth.session-token",
-    });
+  let token = null;
+  if (secret) {
+    for (const candidate of SESSION_COOKIE_CANDIDATES) {
+      if (!hasSessionCookieVariant(req, candidate.name)) continue;
+      // Do not fall back to non-secure cookie names when running over HTTPS in production
+      if (isHttps && process.env.NODE_ENV === "production" && !candidate.name.startsWith("__Secure-")) {
+        continue;
+      }
+      token = await getToken({
+        req,
+        secret,
+        ...("cookieName" in candidate
+          ? { cookieName: candidate.cookieName }
+          : { secureCookie: candidate.secure }),
+      });
+      if (token) break;
+    }
   }
 
-  if (token) {
-    role = (token.role as string) || (token.user_role as string);
-    user = {
-      id: (token.id || token.sub) as string,
-      role,
-      user_role: role,
-    };
-  }
-
-  // 2. Unauthenticated check: redirect to /login preserving full pathname and query params
-  if (!user) {
+  if (!token) {
+    if (prefersJson(req)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Authentication required" },
+        { status: 401 },
+      );
+    }
     const loginUrl = new URL("/login", nextUrl.origin);
     const fullPath = nextUrl.search ? `${pathname}${nextUrl.search}` : pathname;
     loginUrl.searchParams.set("callbackUrl", fullPath);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Multi-Tier Authorization Checks
-  // Tier 1: Admin-only paths (/admin, /pending) strictly require role === 'admin'
-  if (isAdminPath) {
-    if (role !== "admin") {
-      if (req.headers.get("accept")?.includes("application/json")) {
-        return new NextResponse(
-          JSON.stringify({ error: "Forbidden: Admin role required" }),
-          { status: 403, headers: { "content-type": "application/json" } }
-        );
-      }
-      return NextResponse.redirect(new URL("/home", nextUrl.origin));
+  const role = (token.role as string) || (token.user_role as string);
+
+  if (isAdminPath && role !== "admin") {
+    if (prefersJson(req)) {
+      return NextResponse.json(
+        { error: "Forbidden: Admin role required" },
+        { status: 403 },
+      );
     }
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/home", nextUrl.origin));
   }
 
-  // Tier 2: Staff paths (/maintainer, /input) require role === 'admin' || role === 'maintainer'
-  if (isStaffPath) {
-    if (role !== "admin" && role !== "maintainer") {
-      if (req.headers.get("accept")?.includes("application/json")) {
-        return new NextResponse(
-          JSON.stringify({ error: "Forbidden: Maintainer or Admin role required" }),
-          { status: 403, headers: { "content-type": "application/json" } }
-        );
-      }
-      return NextResponse.redirect(new URL("/home", nextUrl.origin));
+  if (isStaffPath && role !== "admin" && role !== "maintainer") {
+    if (prefersJson(req)) {
+      return NextResponse.json(
+        { error: "Forbidden: Maintainer or Admin role required" },
+        { status: 403 },
+      );
     }
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/home", nextUrl.origin));
   }
 
   return NextResponse.next();
 }
 
 export default proxy;
-export { proxy as middleware };
 
 export const config = {
   matcher: [

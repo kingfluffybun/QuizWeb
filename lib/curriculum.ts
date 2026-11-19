@@ -181,6 +181,34 @@ export const CANONICAL_SECTIONS: readonly CanonicalSection[] = [
   },
 ] as const;
 
+const SECTION_BY_ID = new Map<number, CanonicalSection>();
+const SECTION_INDEX_BY_ID = new Map<number, number>();
+CANONICAL_SECTIONS.forEach((section, index) => {
+  SECTION_BY_ID.set(section.sec_id, section);
+  SECTION_INDEX_BY_ID.set(section.sec_id, index);
+});
+
+const CURRICULUM_TIERS: CurriculumTier[] = [
+  {
+    difficulty_id: 1,
+    name: "Beginner",
+    description: "HTML Sections 1–3 & CSS Sections 1–4",
+    sectionIds: [1, 2, 3, 4, 5, 6, 7],
+  },
+  {
+    difficulty_id: 2,
+    name: "Intermediate",
+    description: "JavaScript Sections 1–5",
+    sectionIds: [8, 9, 10, 11, 12],
+  },
+  {
+    difficulty_id: 3,
+    name: "Advanced",
+    description: "CSS Sections 5–6 & JavaScript Sections 6–7",
+    sectionIds: [13, 14, 15, 16],
+  },
+];
+
 /**
  * Returns the next sequential section ID in the curriculum progression path,
  * or null if currentSectionId is the final section or invalid.
@@ -188,8 +216,8 @@ export const CANONICAL_SECTIONS: readonly CanonicalSection[] = [
 export function getNextSectionId(currentSectionId: number | string): number | null {
   const secId = Number(currentSectionId);
   if (!Number.isFinite(secId)) return null;
-  const index = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === secId);
-  if (index === -1 || index >= CANONICAL_SECTIONS.length - 1) {
+  const index = SECTION_INDEX_BY_ID.get(secId);
+  if (index === undefined || index >= CANONICAL_SECTIONS.length - 1) {
     return null;
   }
   return CANONICAL_SECTIONS[index + 1].sec_id;
@@ -206,8 +234,8 @@ export function getNextAvailableSectionId(
 ): number | null {
   const secId = Number(currentSectionId);
   if (!Number.isFinite(secId)) return null;
-  const index = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === secId);
-  if (index === -1) return null;
+  const index = SECTION_INDEX_BY_ID.get(secId);
+  if (index === undefined) return null;
 
   if (!availableSectionIds) {
     return getNextSectionId(currentSectionId);
@@ -241,9 +269,10 @@ export function getCanonicalSortOrder(
   unitOrder: number | string = 1,
 ): number {
   const id = Number(secId);
-  const order = Number(unitOrder) || 1;
-  const index = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === id);
-  const sectionWeight = index !== -1 ? (index + 1) * 1000 : 99000;
+  const parsedOrder = Number(unitOrder);
+  const order = Number.isFinite(parsedOrder) && parsedOrder > 0 ? Math.min(parsedOrder, 999) : 1;
+  const index = SECTION_INDEX_BY_ID.get(id);
+  const sectionWeight = index !== undefined ? (index + 1) * 1000 : 99000;
   return sectionWeight + order;
 }
 
@@ -335,7 +364,9 @@ export function computeCurriculumUnlockState(
   }
 
   if (activeUnitId === null && allUnitsOrdered.length > 0) {
-    activeUnitId = allUnitsOrdered[allUnitsOrdered.length - 1].unit_id;
+    const lastUnit = allUnitsOrdered[allUnitsOrdered.length - 1];
+    activeUnitId = lastUnit.unit_id;
+    activeSectionId = lastUnit.sec_id;
   }
 
   return {
@@ -354,8 +385,8 @@ export function computeCurriculumUnlockState(
 export function getPreviousSectionId(currentSectionId: number | string): number | null {
   const secId = Number(currentSectionId);
   if (!Number.isFinite(secId)) return null;
-  const index = CANONICAL_SECTIONS.findIndex((s) => s.sec_id === secId);
-  if (index <= 0) {
+  const index = SECTION_INDEX_BY_ID.get(secId);
+  if (index === undefined || index <= 0) {
     return null;
   }
   return CANONICAL_SECTIONS[index - 1].sec_id;
@@ -367,36 +398,15 @@ export function getPreviousSectionId(currentSectionId: number | string): number 
 export function getSectionById(sectionId: number | string): CanonicalSection | undefined {
   const secId = Number(sectionId);
   if (!Number.isFinite(secId)) return undefined;
-  return CANONICAL_SECTIONS.find((s) => s.sec_id === secId);
+  return SECTION_BY_ID.get(secId);
 }
 
 /**
  * Returns high-level curriculum metadata structured by progression tiers.
  */
 export function getCurriculumMetadata() {
-  const tiers: CurriculumTier[] = [
-    {
-      difficulty_id: 1,
-      name: "Beginner",
-      description: "HTML Sections 1–3 & CSS Sections 1–4",
-      sectionIds: [1, 2, 3, 4, 5, 6, 7],
-    },
-    {
-      difficulty_id: 2,
-      name: "Intermediate",
-      description: "JavaScript Sections 1–5",
-      sectionIds: [8, 9, 10, 11, 12],
-    },
-    {
-      difficulty_id: 3,
-      name: "Advanced",
-      description: "CSS Sections 5–6 & JavaScript Sections 6–7",
-      sectionIds: [13, 14, 15, 16],
-    },
-  ];
-
   return {
-    tiers,
+    tiers: CURRICULUM_TIERS,
     sections: CANONICAL_SECTIONS,
   };
 }

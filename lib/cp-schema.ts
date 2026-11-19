@@ -1,12 +1,30 @@
 import { z } from "zod";
+import {
+  CP_FILE_KEYS,
+  CP_FILE_LABELS,
+  createEmptyFileBuffers,
+  hasAnyNonEmptyBuffer,
+  createDefaultCPStep,
+  hasCodingAssessmentPayload,
+  type CPFileKey,
+  type CPFileBuffers,
+  type CPStep,
+  type PublicCPStep,
+  type PublicCodeProblem,
+} from "./cp-constants";
 
-export const CP_FILE_KEYS = ["html", "css", "js"] as const;
-export type CPFileKey = (typeof CP_FILE_KEYS)[number];
-
-export const CP_FILE_LABELS: Record<CPFileKey, string> = {
-  html: "index.html",
-  css: "style.css",
-  js: "script.js",
+export {
+  CP_FILE_KEYS,
+  CP_FILE_LABELS,
+  createEmptyFileBuffers,
+  hasAnyNonEmptyBuffer,
+  createDefaultCPStep,
+  hasCodingAssessmentPayload,
+  type CPFileKey,
+  type CPFileBuffers,
+  type CPStep,
+  type PublicCPStep,
+  type PublicCodeProblem,
 };
 
 export const CPFileBuffersSchema = z.object({
@@ -15,18 +33,42 @@ export const CPFileBuffersSchema = z.object({
   js: z.string().default(""),
 });
 
-export type CPFileBuffers = z.infer<typeof CPFileBuffersSchema>;
+function validateCPStepRules(
+  step: { stepNumber: number; expectedTemplate: CPFileBuffers },
+  ctx: z.RefinementCtx,
+) {
+  if (!hasAnyNonEmptyBuffer(step.expectedTemplate)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["expectedTemplate"],
+      message: `Step ${step.stepNumber}: At least one tab (index.html, style.css, or script.js) must have a non-empty expected template.`,
+    });
+  }
 
-export function createEmptyFileBuffers(): CPFileBuffers {
-  return { html: "", css: "", js: "" };
+  for (const key of CP_FILE_KEYS) {
+    if (step.expectedTemplate[key].includes("########")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["expectedTemplate", key],
+        message: `Step ${step.stepNumber} (${CP_FILE_LABELS[key]}): Adjacent '########' wildcards are ambiguous; separate wildcards with literal tokens.`,
+      });
+    }
+  }
 }
 
-export function hasAnyNonEmptyBuffer(buffers: CPFileBuffers): boolean {
-  return (
-    buffers.html.trim().length > 0 ||
-    buffers.css.trim().length > 0 ||
-    buffers.js.trim().length > 0
-  );
+function validateSequentialSteps(
+  assessment: { steps: Array<{ stepNumber: number }> },
+  ctx: z.RefinementCtx,
+) {
+  assessment.steps.forEach((step, index) => {
+    if (step.stepNumber !== index + 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["steps", index, "stepNumber"],
+        message: `Step numbers must be sequential (expected ${index + 1}, got ${step.stepNumber}).`,
+      });
+    }
+  });
 }
 
 export const CPStepSchema = z
@@ -49,27 +91,7 @@ export const CPStepSchema = z
     inheritPreviousCode: z.boolean().default(true),
     hint: z.string().trim().optional(),
   })
-  .superRefine((step, ctx) => {
-    if (!hasAnyNonEmptyBuffer(step.expectedTemplate)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["expectedTemplate"],
-        message: `Step ${step.stepNumber}: At least one tab (index.html, style.css, or script.js) must have a non-empty expected template.`,
-      });
-    }
-
-    for (const key of CP_FILE_KEYS) {
-      if (step.expectedTemplate[key].includes("########")) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["expectedTemplate", key],
-          message: `Step ${step.stepNumber} (${CP_FILE_LABELS[key]}): Adjacent '########' wildcards are ambiguous; separate wildcards with literal tokens.`,
-        });
-      }
-    }
-  });
-
-export type CPStep = z.infer<typeof CPStepSchema>;
+  .superRefine(validateCPStepRules);
 
 export const CodeProblemAssessmentSchema = z
   .object({
@@ -82,17 +104,7 @@ export const CodeProblemAssessmentSchema = z
       .max(20, "A coding assessment can have at most 20 steps."),
     expected_outcome: z.string().trim().default(""),
   })
-  .superRefine((assessment, ctx) => {
-    assessment.steps.forEach((step, index) => {
-      if (step.stepNumber !== index + 1) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["steps", index, "stepNumber"],
-          message: `Step numbers must be sequential (expected ${index + 1}, got ${step.stepNumber}).`,
-        });
-      }
-    });
-  });
+  .superRefine(validateSequentialSteps);
 
 export type CodeProblemAssessment = z.infer<typeof CodeProblemAssessmentSchema>;
 
@@ -163,25 +175,7 @@ export const ImportCPStepSchema = z.preprocess(
       inheritPreviousCode: z.boolean(),
       hint: z.string().optional(),
     })
-    .superRefine((step, ctx) => {
-      if (!hasAnyNonEmptyBuffer(step.expectedTemplate)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["expectedTemplate"],
-          message: `Step ${step.stepNumber}: At least one tab (index.html, style.css, or script.js) must have a non-empty expected template.`,
-        });
-      }
-
-      for (const key of CP_FILE_KEYS) {
-        if (step.expectedTemplate[key].includes("########")) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["expectedTemplate", key],
-            message: `Step ${step.stepNumber} (${CP_FILE_LABELS[key]}): Adjacent '########' wildcards are ambiguous; separate wildcards with literal tokens.`,
-          });
-        }
-      }
-    }),
+    .superRefine(validateCPStepRules),
 );
 
 export const CodeProblemAssessmentImportSchema = z.preprocess(
@@ -239,42 +233,8 @@ export const CodeProblemAssessmentImportSchema = z.preprocess(
       cp_steps: z.array(z.unknown()).optional(),
       assessment: z.string().optional(),
     })
-    .superRefine((assessment, ctx) => {
-      assessment.steps.forEach((step, index) => {
-        if (step.stepNumber !== index + 1) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["steps", index, "stepNumber"],
-            message: `Step numbers must be sequential (expected ${index + 1}, got ${step.stepNumber}).`,
-          });
-        }
-      });
-    }),
+    .superRefine(validateSequentialSteps),
 );
-
-/**
- * Public step payload hydrated to the browser in `/quiz-cp`.
- * Strictly omits `expectedTemplate` so answers are never leaked to the network tab.
- */
-export interface PublicCPStep {
-  stepNumber: number;
-  instruction: string;
-  starterCode: CPFileBuffers;
-  inheritPreviousCode: boolean;
-  hint?: string;
-  /** Indicates which tabs expect non-empty code vs. must remain empty on this step */
-  expectedNonEmptyTabs: Record<CPFileKey, boolean>;
-}
-
-export interface PublicCodeProblem {
-  unit_id: number;
-  unit_title: string;
-  title: string;
-  description: string;
-  expected_outcome: string;
-  steps: PublicCPStep[];
-}
-
 
 /**
  * Safely unwraps raw MySQL JSON (`unit_assessment_json` or `quiz_payload`) into a
@@ -303,7 +263,6 @@ export function unwrapCodeProblemAssessment(
 
   const record = parsed as Record<string, unknown>;
 
-  // 1. Check if v2 structured step objects exist (`cp_steps` or `steps` of objects)
   const rawStepsCandidate = Array.isArray(record.cp_steps)
     ? record.cp_steps
     : Array.isArray(record.steps)
@@ -346,28 +305,26 @@ export function unwrapCodeProblemAssessment(
         idx === rawStepsCandidate.length - 1 ? expectedOutcome : "",
       );
 
-      // Only include step if it has an instruction; if expectedTemplate is completely empty
-      // in a legacy row, fall back to expectedOutcome so old data doesn't crash on read.
       const safeExpected = hasAnyNonEmptyBuffer(expectedTemplate)
         ? expectedTemplate
         : { html: expectedOutcome || instruction, css: "", js: "" };
 
+      const nextStepNumber = normalizedSteps.length + 1;
       normalizedSteps.push({
-        stepNumber: idx + 1,
+        stepNumber: nextStepNumber,
         instruction,
         starterCode,
         expectedTemplate: safeExpected,
         inheritPreviousCode:
           typeof stepObj.inheritPreviousCode === "boolean"
             ? stepObj.inheritPreviousCode
-            : idx > 0,
+            : nextStepNumber > 1,
         ...(typeof stepObj.hint === "string" && stepObj.hint.trim()
           ? { hint: stepObj.hint.trim() }
           : {}),
       });
     });
   } else if (rawStepsCandidate.length > 0) {
-    // 2. Legacy string[] steps format (`{ title, description, steps: string[], expected_outcome }`)
     const stringSteps = rawStepsCandidate
       .filter((s): s is string => typeof s === "string")
       .map((s) => s.trim())
@@ -396,16 +353,14 @@ export function unwrapCodeProblemAssessment(
     return null;
   }
 
+  // Never copy expectedTemplate solution code into expected_outcome when blank,
+  // because expected_outcome is sent to the browser in PublicCodeProblem.
   const candidate: CodeProblemAssessment = {
     schemaVersion: 2,
     title,
     description,
     steps: normalizedSteps,
-    expected_outcome:
-      expectedOutcome ||
-      (normalizedSteps.length > 0
-        ? normalizedSteps[normalizedSteps.length - 1].expectedTemplate.html
-        : ""),
+    expected_outcome: expectedOutcome,
   };
 
   const result = CodeProblemAssessmentSchema.safeParse(candidate);
@@ -422,13 +377,6 @@ export function wrapCodeProblemAssessmentForStorage(
 ) {
   const validated = CodeProblemAssessmentSchema.parse(input);
   const plainInstructions = validated.steps.map((s) => s.instruction);
-  const lastStep = validated.steps[validated.steps.length - 1];
-  const fallbackOutcome =
-    validated.expected_outcome.trim() ||
-    lastStep?.expectedTemplate.html ||
-    lastStep?.expectedTemplate.css ||
-    lastStep?.expectedTemplate.js ||
-    "";
 
   return {
     schemaVersion: 2 as const,
@@ -437,7 +385,7 @@ export function wrapCodeProblemAssessmentForStorage(
     assessment: plainInstructions.join("\n\n"),
     steps: plainInstructions,
     cp_steps: validated.steps,
-    expected_outcome: fallbackOutcome,
+    expected_outcome: validated.expected_outcome.trim(),
   };
 }
 
