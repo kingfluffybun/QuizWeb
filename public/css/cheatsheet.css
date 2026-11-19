@@ -325,14 +325,122 @@
     overflow: hidden;
     border: 1px solid var(--border-main);
     border-radius: 12px;
-    background: var(--bg-card);
+    background: var(--bg-main);
 }
 
-.cheatsheet-code-editor,
-.cheatsheet-code-editor > .monaco-editor,
-.cheatsheet-code-editor > .monaco-editor > .overflow-guard {
-    width: 100% !important;
-    height: 100% !important;
+.cheatsheet-code-block {
+    font-family: var(--font-jetbrains-mono), 'Fira Code', monospace;
+    font-size: 13.5px;
+    line-height: 22px;
+}
+
+.cheatsheet-code-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-main);
+    background: color-mix(in srgb, var(--bg-card) 80%, var(--bg-main));
+}
+
+.cheatsheet-code-lang {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.cheatsheet-copy-btn {
+    border: 1px solid var(--border-main);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    padding: 2px 10px;
+    font-family: var(--font-montserrat), sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+.cheatsheet-copy-btn:hover,
+.cheatsheet-copy-btn:focus-visible {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    outline: none;
+}
+
+.cheatsheet-code-block pre {
+    margin: 0;
+    padding: 12px 14px 12px 8px;
+    overflow-x: auto;
+    color: #24292f;
+}
+
+.cheatsheet-code-block code {
+    display: block;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    white-space: pre !important;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+
+.cheatsheet-code-line {
+    display: flex;
+    align-items: baseline;
+    min-height: 22px;
+}
+
+.cheatsheet-line-no {
+    flex: 0 0 28px;
+    padding-right: 12px;
+    text-align: right;
+    color: var(--text-muted);
+    opacity: 0.55;
+    user-select: none;
+    font-size: 12px;
+}
+
+.cheatsheet-line-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Light theme syntax tokens */
+.tok-comment { color: #6e7781; font-style: italic; }
+.tok-string { color: #0a3069; }
+.tok-keyword { color: #cf222e; }
+.tok-tag { color: #116329; }
+.tok-attr { color: #6f42c1; }
+.tok-property { color: #0550ae; }
+.tok-selector { color: #8250df; }
+.tok-number { color: #0550ae; }
+
+/* Dark theme syntax tokens */
+[data-theme="dark"] .cheatsheet-code-block pre { color: #e2e8f0; }
+[data-theme="dark"] .tok-comment { color: #6a9955; }
+[data-theme="dark"] .tok-string { color: #ce9178; }
+[data-theme="dark"] .tok-keyword { color: #c586c0; }
+[data-theme="dark"] .tok-tag { color: #569cd6; }
+[data-theme="dark"] .tok-attr { color: #9cdcfe; }
+[data-theme="dark"] .tok-property { color: #9cdcfe; }
+[data-theme="dark"] .tok-selector { color: #d7ba7d; }
+[data-theme="dark"] .tok-number { color: #b5cea8; }
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] .cheatsheet-code-block pre { color: #e2e8f0; }
+    [data-theme="system"] .tok-comment { color: #6a9955; }
+    [data-theme="system"] .tok-string { color: #ce9178; }
+    [data-theme="system"] .tok-keyword { color: #c586c0; }
+    [data-theme="system"] .tok-tag { color: #569cd6; }
+    [data-theme="system"] .tok-attr { color: #9cdcfe; }
+    [data-theme="system"] .tok-property { color: #9cdcfe; }
+    [data-theme="system"] .tok-selector { color: #d7ba7d; }
+    [data-theme="system"] .tok-number { color: #b5cea8; }
 }
 
 [data-theme="dark"] .cheatsheet-card:hover {

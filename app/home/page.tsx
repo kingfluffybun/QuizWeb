@@ -11,6 +11,7 @@ import { getUserStreakData } from "@/app/actions/streak";
 import { getLeaderboardEntriesByPeriod } from "@/app/actions/leaderboard";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import {
+    getUserCurriculumUnlockState,
     getUserLastActiveProgress,
     getUserSectionProgress,
 } from "@/app/actions/progress";
@@ -41,17 +42,25 @@ export default async function DashboardPage() {
         redirect("/login");
     }
 
-    const [streakData, leaderboardEntriesByPeriod, dailyGoalData, lastActiveProgress, sectionProgress] = await Promise.all([
-        getUserStreakData(),
+    const userId = session.user.id ? Number(session.user.id) : undefined;
+    const validUserId = userId && Number.isInteger(userId) && userId > 0 ? userId : undefined;
+
+    const [streakData, leaderboardEntriesByPeriod, dailyGoalData, unlockState] = await Promise.all([
+        getUserStreakData(undefined, undefined, undefined, validUserId),
         getLeaderboardEntriesByPeriod(),
-        getDailyGoalData(),
-        getUserLastActiveProgress(),
-        getUserSectionProgress(),
+        getDailyGoalData(undefined, validUserId),
+        getUserCurriculumUnlockState(validUserId),
     ]);
 
+    const [lastActiveProgress, sectionProgress] = await Promise.all([
+        getUserLastActiveProgress(validUserId, unlockState),
+        getUserSectionProgress(validUserId, undefined, unlockState),
+    ]);
+
+    const userRole = session.user.role || session.user.user_role || "user";
     const displayName = session.user.name?.trim() || session.user.email?.split("@")[0] || "User";
     const firstName = displayName.trim().split(/\s+/)[0] || "Profile";
-    const canPreviewDailyGoal = hasAdminRole(session.user.role || session.user.user_role);
+    const canPreviewDailyGoal = hasAdminRole(userRole);
 
     const resumeHref = lastActiveProgress
         ? (lastActiveProgress.resume_type === "up_next" && lastActiveProgress.next_unit_id
@@ -69,7 +78,11 @@ export default async function DashboardPage() {
 
     return (
         <div className="dashboard-page">
-            <Sidebar/>
+            <Sidebar
+                role={userRole}
+                username={displayName}
+                email={session.user.email ?? undefined}
+            />
             <main>
                 <div className="dashboard-content">
                     <div className="welcome-banner">
@@ -89,7 +102,7 @@ export default async function DashboardPage() {
                             <div className="card">
                                 <div className="card-title">
                                     <h2>Continue Where You Left Off</h2>
-                                    <a href={resumeHref}><h2 className="quick-action">{quickActionLabel}</h2></a>
+                                    <Link href={resumeHref}><h2 className="quick-action">{quickActionLabel}</h2></Link>
                                 </div>
                                 <p>
                                     Continue <strong>{lastActiveProgress.unit_title}</strong> ({lastActiveProgress.cat_name} Section {lastActiveProgress.sec_num}, Slide {lastActiveProgress.current_slide_order} of {lastActiveProgress.total_slides}).
@@ -100,7 +113,7 @@ export default async function DashboardPage() {
                             <div className="card">
                                 <div className="card-title">
                                     <h2>Lesson Progress</h2>
-                                    <a href="/learn"><h2 className="quick-action">View All</h2></a>
+                                    <Link href="/learn"><h2 className="quick-action">View All</h2></Link>
                                 </div>
                                 <div className="lesson-progress col">   
                                     <div className="lesson-progress-header">

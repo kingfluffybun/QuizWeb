@@ -11,7 +11,6 @@ import {
 } from "@/lib/server/auth/registration";
 import {
   checkLoginRateLimitImpl,
-  recordFailedLoginImpl,
   signOutActionImpl,
 } from "@/lib/server/auth/session-actions";
 
@@ -41,10 +40,6 @@ export async function resetPass(
 
 export async function checkLoginRateLimit(email: string) {
   return checkLoginRateLimitImpl(email);
-}
-
-export async function recordFailedLogin(email: string) {
-  return recordFailedLoginImpl(email);
 }
 
 export async function signOutAction() {

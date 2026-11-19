@@ -1,122 +1,120 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import "#css/landing-page.css";
 import "#css/nav.css";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import PublicNav from "@/app/components/publicNav";
-import * as Assets from "@/app/actions/animation/svg_assets";
+import HomeAuthRedirect from "@/app/components/HomeAuthRedirect";
+import * as Assets from "@/app/components/animations";
 
 export default function Home() {
-    const [menuOpen] = useState(false);
-    const { status } = useSession();
-    const router = useRouter();
-
-    useEffect(() => {
-        const bodyOverflow = document.body.style.overflow;
-        const rootOverflow = document.documentElement.style.overflow;
-
-        if (menuOpen) {
-            document.body.style.overflow = "hidden";
-            document.documentElement.style.overflow = "hidden";
-        }
-
-        return () => {
-            document.body.style.overflow = bodyOverflow;
-            document.documentElement.style.overflow = rootOverflow;
-        };
-    }, [menuOpen]);
-
-    useEffect(() => {
-        const signedOut = new URLSearchParams(window.location.search).get("signedOut") === "1";
-        if (!signedOut && status === "authenticated") {
-            router.replace("/home");
-        }
-    }, [status, router]);
-
   return (
-        <>
-        <PublicNav />
-        <section className="hero">
-            <div className="overlay"></div>
-            <div className="hero-text">
-                <div className="logo col" id="logo-hero">
-                    <Image src="/assets/QuizWeb-Logo.svg" width={96} height={96} alt=""/>
-                    <h1>QuizWeb</h1>
-                </div>
-                <h1>
-                    <span className="hero-title-line">Writing Code gets</span>{" "}
-                    <span className="hero-title-line">easier, QuizWeb</span>{" "}
-                    <span className="hero-title-line">makes it stick.</span>
-                </h1>
-                <p>Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.</p>
-                <Link href="/home" className="call-to-action row">
-                    <h2>Start Learning</h2>
-                </Link>
-            </div>
-            
-            {/* Light mode */}
-            <div id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsTopLeft /></div>
-            <div id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsTopRight /></div>
-            <div id="bus" className="designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.Bus /></div>
-            <div id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsLeft /></div>
-            <div id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"><Assets.CloudsRight /></div>
+    <>
+      <HomeAuthRedirect />
+      <PublicNav />
+      <section className="hero">
+        <div className="overlay"></div>
+        <div className="hero-text">
+          <div className="logo col" id="logo-hero">
+            <Image src="/assets/QuizWeb-Logo.svg" width={96} height={96} alt="" />
+            <h1>QuizWeb</h1>
+          </div>
+          <h1>
+            <span className="hero-title-line">Writing Code gets</span>{" "}
+            <span className="hero-title-line">easier, QuizWeb</span>{" "}
+            <span className="hero-title-line">makes it stick.</span>
+          </h1>
+          <p>
+            Earn daily streaks, unlock new levels, and learn HTML, CSS, and JavaScript the fun way.
+          </p>
+          <Link href="/home" className="call-to-action row">
+            <h2>Start Learning</h2>
+          </Link>
+        </div>
 
-            {/* <Image src="/assets/landing-page/Clouds-left.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/> */}
-            {/* <Image src="/assets/landing-page/Clouds-right.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark"/> */}
+        {/* Light mode */}
+        <div id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark">
+          <Assets.CloudsTopLeft />
+        </div>
+        <div id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark">
+          <Assets.CloudsTopRight />
+        </div>
+        <div id="bus" className="designs" aria-hidden="true" data-hide-on-theme="dark">
+          <Assets.Bus />
+        </div>
+        <div id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark">
+          <Assets.CloudsLeft />
+        </div>
+        <div id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="dark">
+          <Assets.CloudsRight />
+        </div>
 
-            {/* dark mode */}
-            <div id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsTopLeftDark /></div>
-            <div id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsTopRightDark /></div>
-            <div id="bus" className="designs" aria-hidden="true" data-hide-on-theme="light"><Assets.BusDark /></div>
-            <div id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsLeftDark /></div>
-            <div id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"><Assets.CloudsRightDark /></div>
+        {/* Dark mode */}
+        <div id="clouds-topleft" className="clouds designs" aria-hidden="true" data-hide-on-theme="light">
+          <Assets.CloudsTopLeftDark />
+        </div>
+        <div id="clouds-topright" className="clouds designs" aria-hidden="true" data-hide-on-theme="light">
+          <Assets.CloudsTopRightDark />
+        </div>
+        <div id="bus" className="designs" aria-hidden="true" data-hide-on-theme="light">
+          <Assets.BusDark />
+        </div>
+        <div id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light">
+          <Assets.CloudsLeftDark />
+        </div>
+        <div id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light">
+          <Assets.CloudsRightDark />
+        </div>
 
-            {/* <Image src="/assets/landing-page/Clouds-left-dark.svg" width={100} height={100} alt="" id="clouds-left" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/> */}
-            {/* <Image src="/assets/landing-page/Clouds-right-dark.svg" width={100} height={100} alt="" id="clouds-right" className="clouds designs" aria-hidden="true" data-hide-on-theme="light"/> */}
+        <div id="ground"></div>
+      </section>
 
-            <div id="ground"></div>
+      <section className="section row first-section">
+        <div className="section-container row">
+          <div className="section-content col">
+            <h1>Learn By Doing</h1>
+            <p>
+              Reading about code only gets you so far. QuizWeb puts you straight into the action with
+              bite-sized, interactive quizzes that let you write and test real HTML, CSS, and
+              JavaScript as you go.
+            </p>
+          </div>
+          <div className="section-illustration row">
+            <Image src="/assets/landing-page/Laptop.svg" width={100} height={100} alt="" id="laptop" />
+          </div>
+        </div>
+      </section>
 
-        </section>
-        
-        <section className="section row first-section">
-            <div className="section-container row">
-                <div className="section-content col ">
-                    <h1>Learn By Doing</h1>
-                    <p>Reading about code only gets you so far. QuizWeb puts you straight into the action with bite-sized, interactive quizzes that let you write and test real HTML, CSS, and JavaScript as you go. </p>
-                </div>
-                <div className="section-illustration row">
-                    <Image src="/assets/landing-page/Laptop.svg" width={100} height={100} alt="" id="laptop"/>
-                </div>
-            </div>
-        </section>
+      <section className="section row">
+        <div className="section-container row">
+          <div className="section-illustration row pos-2">
+            <Image src="/assets/landing-page/Calendar.svg" width={100} height={100} alt="" id="calendar" />
+          </div>
+          <div className="section-content col pos-1">
+            <h1>Track your progress</h1>
+            <p>
+              Every quiz you finish adds to your daily streak, keeping you motivated to come back
+              and level up. QuizWeb turns your learning into a game you actually want to keep
+              playing.
+            </p>
+          </div>
+        </div>
+      </section>
 
-        <section className="section row">
-            <div className="section-container row">
-                <div className="section-illustration row pos-2">
-                    <Image src="/assets/landing-page/Calendar.svg" width={100} height={100} alt="" id="calendar"/>
-                </div>
-                <div className="section-content col pos-1">
-                    <h1>Track your progress</h1>
-                    <p>Every quiz you finish adds to your daily streak, keeping you motivated to come back and level up. QuizWeb turns your learning into a game you actually want to keep playing.</p>
-                </div>
-            </div>
-        </section>
-
-        <section className="section row">
-            <div className="section-container row">
-                <div className="section-content col pos-1">
-                    <h1>Built for beginners</h1>
-                    <p>No experience, no jargon, no overwhelming setup — just start from zero and learn HTML, CSS, and JavaScript one small win at a time. All you need is curiosity and a few minutes a day.</p>
-                </div>
-                <div className="section-illustration row pos-2">
-                    <Image src="/assets/landing-page/Books.svg" width={100} height={100} alt="" id="books"/>
-                </div>
-            </div>
-        </section>
-        </>
-    )
+      <section className="section row">
+        <div className="section-container row">
+          <div className="section-content col pos-1">
+            <h1>Built for beginners</h1>
+            <p>
+              No experience, no jargon, no overwhelming setup — just start from zero and learn HTML,
+              CSS, and JavaScript one small win at a time. All you need is curiosity and a few
+              minutes a day.
+            </p>
+          </div>
+          <div className="section-illustration row pos-2">
+            <Image src="/assets/landing-page/Books.svg" width={100} height={100} alt="" id="books" />
+          </div>
+        </div>
+      </section>
+    </>
+  );
 }

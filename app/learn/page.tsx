@@ -14,6 +14,7 @@ export default async function LearnPage() {
             roadmapData={roadmapData}
             userRole={session?.user?.role}
             username={session?.user?.name ?? undefined}
+            email={session?.user?.email ?? undefined}
         />
     );
 }

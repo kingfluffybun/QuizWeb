@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/app/components/Sidebar";
 import type {
@@ -8,90 +8,38 @@ import type {
   RoadmapSection,
   RoadmapUnitNode,
 } from "@/app/actions/curriculum-roadmap";
-import "#css/quiz.css";
-import "#css/nav.css";
 import "#css/sidebar.css";
 import "#css/learn.css";
+import {
+  computeSectionStats,
+  isRoadmapCpComplete,
+  isRoadmapLessonComplete,
+  isRoadmapQuizComplete,
+  type SelectedRoadmapNode,
+} from "@/lib/roadmap-progress";
+import {
+  alignSectionHeaderWithDetail,
+  useRoadmapScrollSync,
+} from "./hooks/useRoadmapScrollSync";
+import SectionDetailRail from "./components/SectionDetailRail";
+import NodeDetailModal from "./components/NodeDetailModal";
+import SectionUnitGroup from "./components/SectionUnitGroup";
+import { FastForwardIcon } from "./components/RoadmapIcons";
 
-export interface SelectedRoadmapNode {
-  unitId?: number;
-  unitTitle: string;
-  secId: number;
-  secNum: number;
-  catName: string;
-  nodeType: "lesson" | "quiz" | "code_problem" | "checkpoint" | "coming_soon";
-  isCompleted: boolean;
-  isLocked: boolean;
-  lockReason?: string;
-  slideCount?: number;
-  quizCount?: number;
-}
+export type { SelectedRoadmapNode };
 
 interface LearnRoadmapClientProps {
   roadmapData: CurriculumRoadmapData;
   userRole?: string;
   username?: string;
-}
-
-type RoadlineStartSide = "left" | "right";
-type RoadlineSegment = "to-top" | "to-side";
-
-function getRoadlinePath(startSide: RoadlineStartSide, segment: RoadlineSegment) {
-  if (segment === "to-top") {
-    return startSide === "left"
-      ? "M 101 38 H 138 Q 168 38 168 68 V 113"
-      : "M 123 38 H 86 Q 56 38 56 68 V 113";
-  }
-
-  return startSide === "left"
-    ? "M 56 77 V 121 Q 56 151 86 151 H 123"
-    : "M 168 77 V 121 Q 168 151 138 151 H 101";
-}
-
-function isRoadmapLessonComplete(unit: RoadmapUnitNode) {
-  return (
-    unit.is_completed ||
-    Boolean(unit.is_lesson_completed) ||
-    (unit.slide_count > 0 && unit.current_slide_order >= unit.slide_count)
-  );
-}
-
-function isRoadmapQuizComplete(unit: RoadmapUnitNode) {
-  return unit.is_completed || Boolean(unit.is_quiz_completed);
-}
-
-function isRoadmapCpComplete(unit: RoadmapUnitNode) {
-  return unit.is_completed || Boolean(unit.is_cp_completed);
-}
-
-function alignSectionHeaderWithDetail(sectionId: number, smooth = false) {
-  const scrollContainer = document.querySelector<HTMLElement>(
-    ".learn-page > main",
-  );
-  const sectionHeader = document.querySelector<HTMLElement>(
-    `.section-header[data-section-id="${sectionId}"]`,
-  );
-  const sectionDetailRail = document.querySelector<HTMLElement>(
-    ".section-detail-rail",
-  );
-  if (!scrollContainer || !sectionHeader || !sectionDetailRail) return;
-
-  const scrollDelta =
-    sectionHeader.getBoundingClientRect().top -
-    sectionDetailRail.getBoundingClientRect().top;
-  const scrollTop = scrollContainer.scrollTop + scrollDelta;
-
-  if (smooth) {
-    scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
-  } else {
-    scrollContainer.scrollTop = scrollTop;
-  }
+  email?: string;
 }
 
 export default function LearnRoadmapClient({
   roadmapData,
   userRole,
   username,
+  email,
 }: LearnRoadmapClientProps) {
   const [activeSectionId, setActiveSectionId] = useState<number>(() => {
     return (
@@ -102,14 +50,10 @@ export default function LearnRoadmapClient({
   });
   const initialSectionIdRef = useRef(activeSectionId);
 
-  const [selectedNode, setSelectedNode] = useState<SelectedRoadmapNode | null>(
-    null,
-  );
+  const [selectedNode, setSelectedNode] = useState<SelectedRoadmapNode | null>(null);
   const [isDetailClosing, setIsDetailClosing] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const detailCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const detailCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isJumpingRef = useRef(false);
   const activeSectionIdRef = useRef(activeSectionId);
   const hasUserNavigatedSectionsRef = useRef(false);
@@ -143,6 +87,58 @@ export default function LearnRoadmapClient({
     [],
   );
 
+  const updateActiveSection = useCallback(
+    (secId: number, animate = hasUserNavigatedSectionsRef.current) => {
+      if (activeSectionIdRef.current === secId) return;
+      activeSectionIdRef.current = secId;
+      if (animate) setAnimateSectionDetail(true);
+      setActiveSectionId(secId);
+    },
+    [],
+  );
+
+  const updateActiveSectionOnScroll = useCallback(
+    (sectionElements: NodeListOf<HTMLElement>) => {
+      if (isJumpingRef.current) return;
+
+      const readingZoneTop = 160;
+      let matchedSecId: number | null = null;
+
+      for (let i = 0; i < sectionElements.length; i++) {
+        const el = sectionElements[i];
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= readingZoneTop && rect.bottom > readingZoneTop) {
+          const id = Number(el.getAttribute("data-section-id"));
+          if (Number.isFinite(id) && id > 0) {
+            matchedSecId = id;
+            break;
+          }
+        }
+      }
+
+      if (matchedSecId === null && window.scrollY < 100) {
+        matchedSecId = roadmapData.sections[0]?.sec_id ?? 1;
+      }
+
+      if (matchedSecId !== null) {
+        updateActiveSection(matchedSecId);
+      }
+    },
+    [roadmapData.sections, updateActiveSection],
+  );
+
+  useRoadmapScrollSync({
+    sections: roadmapData.sections,
+    initialSectionIdRef,
+    isJumpingRef,
+    hasUserNavigatedSectionsRef,
+    modalRef,
+    selectedNode,
+    updateActiveSection,
+    closeDetail,
+    onComputeActiveSectionOnScroll: updateActiveSectionOnScroll,
+  });
+
   const activeSection =
     roadmapData.sections.find((s) => s.sec_id === activeSectionId) ??
     roadmapData.sections[0];
@@ -156,37 +152,10 @@ export default function LearnRoadmapClient({
   const activeSectionIndex = roadmapData.sections.findIndex(
     (section) => section.sec_id === activeSection?.sec_id,
   );
-  const progressUnits = activeSection?.units ?? [];
-  const totalLevels = progressUnits.reduce(
-    (total, unit) =>
-      total + 1 + Number(unit.quiz_count > 0) + Number(unit.has_coding_assessment),
-    0,
+  const { totalLevels, completedLevels, sectionProgress } = computeSectionStats(
+    activeSection?.units ?? [],
   );
-  const completedLevels = progressUnits.reduce((total, unit) => {
-    return (
-      total +
-      Number(isRoadmapLessonComplete(unit)) +
-      Number(unit.quiz_count > 0 && isRoadmapQuizComplete(unit)) +
-      Number(unit.has_coding_assessment && isRoadmapCpComplete(unit))
-    );
-  }, 0);
-  const sectionProgressPoints = progressUnits.reduce((total, unit) => {
-    const lessonDone = isRoadmapLessonComplete(unit);
-    const lessonProgress = unit.is_completed || lessonDone
-      ? 1
-      : unit.slide_count > 0
-        ? Math.min(1, Math.max(0, unit.current_slide_order / unit.slide_count))
-        : 0;
-    return (
-      total +
-      lessonProgress +
-      Number(unit.quiz_count > 0 && isRoadmapQuizComplete(unit)) +
-      Number(unit.has_coding_assessment && isRoadmapCpComplete(unit))
-    );
-  }, 0);
-  const sectionProgress = totalLevels
-    ? Math.round((sectionProgressPoints / totalLevels) * 100)
-    : 0;
+
   const upNextUnit = roadmapData.sections
     .slice(Math.max(0, activeSectionIndex))
     .flatMap((section) => section.units)
@@ -194,195 +163,19 @@ export default function LearnRoadmapClient({
       (unit) =>
         !unit.is_completed &&
         (isStaffUser || (!unit.is_locked && (!isGuest || unit.unit_id === firstUnitId))) &&
-        (unit.slide_count > 0 && unit.current_slide_order < unit.slide_count ||
+        ((unit.slide_count > 0 && unit.current_slide_order < unit.slide_count) ||
           unit.quiz_count > 0 ||
           unit.has_coding_assessment),
     );
   const upNextActivity = upNextUnit
     ? !isRoadmapLessonComplete(upNextUnit)
-      ? {
-          label: "Learn",
-          href: `/quiz/${upNextUnit.unit_id}`,
-        }
+      ? { label: "Learn", href: `/quiz/${upNextUnit.unit_id}` }
       : upNextUnit.quiz_count > 0 && !isRoadmapQuizComplete(upNextUnit)
-        ? {
-            label: "Quiz",
-            href: `/quiz/${upNextUnit.unit_id}?start=quiz`,
-          }
+        ? { label: "Quiz", href: `/quiz/${upNextUnit.unit_id}?start=quiz` }
         : upNextUnit.has_coding_assessment && !isRoadmapCpComplete(upNextUnit)
-          ? {
-              label: "Code",
-              href: `/quiz-cp/${upNextUnit.unit_id}`,
-            }
-          : {
-              label: "Review",
-              href: `/quiz/${upNextUnit.unit_id}`,
-            }
+          ? { label: "Code", href: `/quiz-cp/${upNextUnit.unit_id}` }
+          : { label: "Review", href: `/quiz/${upNextUnit.unit_id}` }
     : null;
-
-  const updateActiveSection = useCallback(
-    (secId: number, animate = hasUserNavigatedSectionsRef.current) => {
-      if (activeSectionIdRef.current === secId) return;
-      activeSectionIdRef.current = secId;
-      if (animate) setAnimateSectionDetail(true);
-      setActiveSectionId(secId);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    isJumpingRef.current = true;
-    alignSectionHeaderWithDetail(initialSectionIdRef.current);
-
-    const timeoutId = window.setTimeout(() => {
-      isJumpingRef.current = false;
-    }, 100);
-
-    return () => window.clearTimeout(timeoutId);
-  }, []);
-
-  // Auto-sync active section in left rail as the learner scrolls
-  useEffect(() => {
-    const sectionElements = document.querySelectorAll<HTMLElement>(
-      "section.curriculum-section[data-section-id]",
-    );
-    if (sectionElements.length === 0) return;
-
-    let rafId: number | null = null;
-
-    const updateActiveSectionOnScroll = () => {
-      if (isJumpingRef.current) return;
-
-      const readingZoneTop = 160;
-      let matchedSecId: number | null = null;
-
-      for (let i = 0; i < sectionElements.length; i++) {
-        const el = sectionElements[i];
-        const rect = el.getBoundingClientRect();
-        // A section is active if its top is above or near the reading line and its bottom extends below it
-        if (rect.top <= readingZoneTop && rect.bottom > readingZoneTop) {
-          const id = Number(el.getAttribute("data-section-id"));
-          if (Number.isFinite(id) && id > 0) {
-            matchedSecId = id;
-            break;
-          }
-        }
-      }
-
-      // If at top of the page before any threshold
-      if (matchedSecId === null && window.scrollY < 100) {
-        matchedSecId = roadmapData.sections[0]?.sec_id ?? 1;
-      }
-
-      if (matchedSecId !== null) {
-        updateActiveSection(matchedSecId);
-      }
-    };
-
-    const handleScroll = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateActiveSectionOnScroll);
-    };
-
-    // Also attach IntersectionObserver for responsive triggers
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isJumpingRef.current) return;
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const secId = Number(entry.target.getAttribute("data-section-id"));
-            if (Number.isFinite(secId) && secId > 0) {
-              updateActiveSection(secId);
-            }
-          }
-        }
-      },
-      {
-        rootMargin: "-15% 0px -65% 0px",
-        threshold: 0,
-      },
-    );
-
-    const headers = document.querySelectorAll<HTMLElement>(
-      ".section-header[data-section-id]",
-    );
-    headers.forEach((h) => observer.observe(h));
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    const markSectionNavigationIntent = () => {
-      hasUserNavigatedSectionsRef.current = true;
-    };
-    const markKeyboardNavigationIntent = (event: KeyboardEvent) => {
-      if (
-        ["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(
-          event.key,
-        )
-      ) {
-        markSectionNavigationIntent();
-      }
-    };
-    window.addEventListener("wheel", markSectionNavigationIntent, { passive: true });
-    window.addEventListener("touchmove", markSectionNavigationIntent, { passive: true });
-    window.addEventListener("keydown", markKeyboardNavigationIntent);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("wheel", markSectionNavigationIntent);
-      window.removeEventListener("touchmove", markSectionNavigationIntent);
-      window.removeEventListener("keydown", markKeyboardNavigationIntent);
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [roadmapData.sections, updateActiveSection]);
-
-  // Handle outside click and Escape key dismissal of popup
-  useEffect(() => {
-    const handleClickOutside = (event: globalThis.MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(target) &&
-        !target.closest(".level-btn")
-      ) {
-        closeDetail();
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeDetail();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [closeDetail]);
-
-  useEffect(() => {
-    if (!selectedNode) return;
-
-    const scrollContainer = document.querySelector<HTMLElement>(
-      ".learn-page > main",
-    );
-    if (!scrollContainer) return;
-
-    const openedAtScrollTop = scrollContainer.scrollTop;
-    const closeAfterScrollDown = () => {
-      if (scrollContainer.scrollTop - openedAtScrollTop >= 80) {
-        closeDetail();
-      }
-    };
-
-    scrollContainer.addEventListener("scroll", closeAfterScrollDown, {
-      passive: true,
-    });
-    return () =>
-      scrollContainer.removeEventListener("scroll", closeAfterScrollDown);
-  }, [closeDetail, selectedNode]);
 
   const handleSelectNode = useCallback(
     (
@@ -393,7 +186,6 @@ export default function LearnRoadmapClient({
       isLocked: boolean,
       lockReason?: string,
     ) => {
-      // Toggle closed if clicking currently selected node
       if (
         selectedNode &&
         selectedNode.unitId === unit.unit_id &&
@@ -403,17 +195,17 @@ export default function LearnRoadmapClient({
         return;
       }
       showDetail({
-          unitId: unit.unit_id,
-          unitTitle: unit.unit_title,
-          secId: section.sec_id,
-          secNum: section.sec_num,
-          catName: section.cat_name,
-          nodeType,
-          isCompleted,
-          isLocked,
-          lockReason,
-          slideCount: unit.slide_count,
-          quizCount: unit.quiz_count,
+        unitId: unit.unit_id,
+        unitTitle: unit.unit_title,
+        secId: section.sec_id,
+        secNum: section.sec_num,
+        catName: section.cat_name,
+        nodeType,
+        isCompleted,
+        isLocked,
+        lockReason,
+        slideCount: unit.slide_count,
+        quizCount: unit.quiz_count,
       });
     },
     [closeDetail, selectedNode, showDetail],
@@ -430,16 +222,16 @@ export default function LearnRoadmapClient({
         return;
       }
       showDetail({
-          unitTitle: `${section.cat_name}, Section ${section.sec_num}: ${section.sec_title}`,
-          secId: section.sec_id,
-          secNum: section.sec_num,
-          catName: section.cat_name,
-          nodeType: "checkpoint",
-          isCompleted: section.is_completed,
-          isLocked: section.is_locked,
-          lockReason: section.is_locked
-            ? "Complete earlier sections to unlock"
-            : undefined,
+        unitTitle: `${section.cat_name}, Section ${section.sec_num}: ${section.sec_title}`,
+        secId: section.sec_id,
+        secNum: section.sec_num,
+        catName: section.cat_name,
+        nodeType: "checkpoint",
+        isCompleted: section.is_completed,
+        isLocked: section.is_locked,
+        lockReason: section.is_locked
+          ? "Complete earlier sections to unlock"
+          : undefined,
       });
     },
     [closeDetail, selectedNode, showDetail],
@@ -456,22 +248,18 @@ export default function LearnRoadmapClient({
         return;
       }
       showDetail({
-          unitTitle: `${section.sec_title}`,
-          secId: section.sec_id,
-          secNum: section.sec_num,
-          catName: section.cat_name,
-          nodeType: "coming_soon",
-          isCompleted: false,
-          isLocked: true,
-          lockReason: "Units under development",
+        unitTitle: `${section.sec_title}`,
+        secId: section.sec_id,
+        secNum: section.sec_num,
+        catName: section.cat_name,
+        nodeType: "coming_soon",
+        isCompleted: false,
+        isLocked: true,
+        lockReason: "Units under development",
       });
     },
     [closeDetail, selectedNode, showDetail],
   );
-
-  const handleCloseDetail = () => {
-    closeDetail();
-  };
 
   const handleJumpToSection = (secId: number) => {
     hasUserNavigatedSectionsRef.current = true;
@@ -485,110 +273,19 @@ export default function LearnRoadmapClient({
 
   return (
     <div className="quiz-page quiz-no-footer-page learn-page">
-      <Sidebar role={userRole} username={username} />
+      <Sidebar role={userRole} username={username} email={email} />
       <main>
         <div className="learn-content">
-          {/* Left Sticky Rail: Live Section Detail & Statistics */}
-          <aside className="section-detail-rail" aria-label="Current section details">
-            <div className="section-detail">
-              <div
-                key={activeSection?.sec_id ?? "overview"}
-                className={`section-detail-content${animateSectionDetail ? " section-detail-content--animated" : ""}`}
-              >
-              <h1>{activeSection?.sec_title ?? "Curriculum Roadmap"}</h1>
-              {/* For description, chat niyo ako -clarence */}
-              <p id="section-description">
-                {activeSection?.description ??
-                  "Master essential web development skills and hands-on coding techniques."}
-              </p>
-              <div className="section-stats">
-                <div className="icon-label">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-boxes preview-icon"
-                    aria-hidden="true"
-                  >
-                    <path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" />
-                    <path d="m7 16.5-4.74-2.85" />
-                    <path d="m7 16.5 5-3" />
-                    <path d="M7 16.5v5.17" />
-                    <path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" />
-                    <path d="m17 16.5-5-3" />
-                    <path d="m17 16.5 4.74-2.85" />
-                    <path d="M17 16.5v5.17" />
-                    <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" />
-                    <path d="M12 8 7.26 5.15" />
-                    <path d="m12 8 4.74-2.85" />
-                    <path d="M12 13.5V8" />
-                  </svg>
-                  {/* Total Units ng Section */}
-                  <p>
-                    {activeSection?.total_units ?? 0}{" "}
-                    {activeSection?.total_units === 1 ? "Unit" : "Units"}
-                  </p>
-                </div>
-                <div className="icon-label">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-presentation preview-icon"
-                    aria-hidden="true"
-                  >
-                    <path d="M2 3h20" />
-                    <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
-                    <path d="m7 21 5-5 5 5" />
-                  </svg>
-                  {/* Total Lesson Slides ng Section */}
-                  <p>
-                    {activeSection?.total_slides ?? 0} Lesson{" "}
-                    {activeSection?.total_slides === 1 ? "Slide" : "Slides"}
-                  </p>
-                </div>
-                <div className="icon-label">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-circle-question-mark preview-icon"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <path d="M12 17h.01" />
-                  </svg>
-                  {/* Total Questions ng Section */}
-                  <p>
-                    {activeSection?.total_questions ?? 0}{" "}
-                    {activeSection?.total_questions === 1
-                      ? "Question"
-                      : "Questions"}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Guest Preview Notice in Left Rail */}
-              {isGuest && (
+          <SectionDetailRail
+            activeSection={activeSection}
+            animateSectionDetail={animateSectionDetail}
+            sectionProgress={sectionProgress}
+            completedLevels={completedLevels}
+            totalLevels={totalLevels}
+            upNextUnitTitle={upNextUnit?.unit_title}
+            upNextActivity={upNextActivity}
+            guestNotice={
+              isGuest ? (
                 <div className="guest-rail-notice-box">
                   <div className="guest-rail-notice-header">
                     <svg
@@ -608,309 +305,50 @@ export default function LearnRoadmapClient({
                     <span>Guest Preview Mode</span>
                   </div>
                   <p className="guest-rail-notice-desc">
-                    You are exploring as a guest. The first unit is open to preview. Sign in to save your progress, unlock all units, and track your streaks!
+                    You are exploring as a guest. The first unit is open to preview. Sign in to
+                    save your progress, unlock all units, and track your streaks!
                   </p>
                   <Link href="/login" className="guest-rail-login-btn">
                     Sign In to Unlock All
                   </Link>
                 </div>
-              )}
+              ) : null
+            }
+          />
 
-              </div>
-            </div>
-            <section className="section-progress-card" aria-labelledby="section-progress-title">
-              <h2 id="section-progress-title">Section Progress</h2>
-              <p className="section-progress-summary">
-                {sectionProgress}% complete · {completedLevels} of {totalLevels} levels finished
-              </p>
-              <div
-                className="section-progress-track"
-                role="progressbar"
-                aria-label={`${activeSection?.sec_title ?? "Section"} progress`}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={sectionProgress}
-                aria-valuetext={`${sectionProgress}% complete`}
-              >
-                <div
-                  className="section-progress-fill"
-                  style={{ width: `${sectionProgress}%` }}
-                />
-              </div>
-              <div className="section-progress-up-next">
-                <div>
-                  <span className="section-progress-eyebrow">Up next</span>
-                  <p>{upNextUnit?.unit_title ?? "No available lessons in this or later sections yet."}</p>
-                </div>
-                {upNextUnit && upNextActivity && (
-                  <Link
-                    href={upNextActivity.href}
-                    className="lesson-link section-progress-continue"
-                    aria-label={`Continue to ${upNextUnit.unit_title}`}
-                  >
-                    <p>Continue</p>
-                  </Link>
-                )}
-              </div>
-            </section>
-          </aside>
-
-          {/* Right Roadmap: Linear Level Tree */}
           <div className="roadmap" role="region" aria-label="Curriculum Learning Path">
-            {/* Interactive Floating Action Popup */}
             {selectedNode && (
-              <div
-                ref={modalRef}
-                className={`lesson-detail-container${isDetailClosing ? " is-closing" : ""}`}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="modal-node-title"
-              >
-                <button
-                  type="button"
-                  className="lesson-detail-close"
-                  onClick={handleCloseDetail}
-                  aria-label="Close details"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                  </svg>
-                </button>
-
-                <div className="lesson-detail">
-                  {selectedNode.nodeType === "lesson" && (
-                    <div className="lesson-detail-icon-label">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="lucide lucide-book-open preview-icon"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 5v16" />
-                        <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />
-                      </svg>
-                      <p>Learn</p>
-                    </div>
-                  )}
-
-                  {selectedNode.nodeType === "code_problem" && (
-                    <div className="lesson-detail-icon-label">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="lucide lucide-code preview-icon"
-                        aria-hidden="true"
-                      >
-                        <path d="m16 18 6-6-6-6" />
-                        <path d="m8 6-6 6 6 6" />
-                      </svg>
-                      <p>Code Problem</p>
-                    </div>
-                  )}
-
-                  {selectedNode.nodeType === "quiz" && (
-                    <div className="lesson-detail-icon-label">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="lucide lucide-circle-question-mark preview-icon"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                        <path d="M12 17h.01" />
-                      </svg>
-                      <p>Quiz</p>
-                    </div>
-                  )}
-
-                  {selectedNode.nodeType === "checkpoint" && (
-                    <div className="lesson-detail-icon-label">
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M14 20L21 12.5L14 5"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          stroke="currentColor"
-                        />
-                        <path
-                          d="M5 20L12 12.5L5 5"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          stroke="currentColor"
-                        />
-                      </svg>
-                      <p>Skip Section</p>
-                    </div>
-                  )}
-
-                  {selectedNode.nodeType === "coming_soon" && (
-                    <div className="lesson-detail-icon-label">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="lucide lucide-boxes preview-icon"
-                        aria-hidden="true"
-                      >
-                        <path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" />
-                        <path d="m7 16.5-4.74-2.85" />
-                        <path d="m7 16.5 5-3" />
-                        <path d="M7 16.5v5.17" />
-                        <path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" />
-                        <path d="m17 16.5-5-3" />
-                        <path d="m17 16.5 4.74-2.85" />
-                        <path d="M17 16.5v5.17" />
-                        <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" />
-                        <path d="M12 8 7.26 5.15" />
-                        <path d="m12 8 4.74-2.85" />
-                        <path d="M12 13.5V8" />
-                      </svg>
-                      <p>Coming Soon</p>
-                    </div>
-                  )}
-
-                  {/* Unit / Level Title */}
-                  <h2 id="modal-node-title">{selectedNode.unitTitle}</h2>
-                </div>
-
-                {selectedNode.nodeType === "checkpoint" ? (
-                  isGuest ? (
-                    <div className="guest-unit-lock-modal">
-                      <p className="guest-unit-lock-desc">
-                        Section skip challenges are reserved for registered learners. Sign in to take skip challenges, earn XP, and track your streak!
-                      </p>
-                      <Link href="/login" className="lesson-link">
-                        <p>Sign In to Continue</p>
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="skip-modal-content">
-                      <p className="skip-modal-desc">
-                        Skip directly to this section by passing the coding assessment for every preceding uncompleted unit.
-                      </p>
-                      <div className="section-skip-badges" style={{ marginBottom: "12px" }}>
-                        <span className="section-skip-chip">⏱️ 5 minutes/Unit</span>
-                        <span className="section-skip-chip">❤️ 5 lives only</span>
-                      </div>
-                      <Link
-                        href={`/quiz-cp/skip/${selectedNode.secId}`}
-                        className="lesson-link"
-                      >
-                        <p>Start Skip Challenge</p>
-                      </Link>
-                    </div>
-                  )
-                ) : selectedNode.nodeType === "coming_soon" ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="lesson-link disabled"
-                    style={{ cursor: "not-allowed", border: "none" }}
-                  >
-                    <p>Coming Soon</p>
-                  </button>
-                ) : selectedNode.isLocked ? (
-                  <div className="locked-node-modal-content">
-                    {isGuest ? (
-                      <div className="guest-unit-lock-modal">
-                        <p className="guest-unit-lock-desc">
-                          Guest preview includes the first unit (Document Structure). Sign in to unlock this unit, earn XP, and track your streak!
-                        </p>
-                        <Link href="/login" className="lesson-link">
-                          <p>Sign In to Continue</p>
-                        </Link>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          disabled
-                          className="lesson-link disabled"
-                          style={{ cursor: "not-allowed", border: "none" }}
-                        >
-                          <p>{selectedNode.lockReason ?? "Locked"}</p>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    href={
-                      selectedNode.nodeType === "code_problem"
-                        ? `/quiz-cp/${selectedNode.unitId}`
-                        : selectedNode.nodeType === "quiz"
-                          ? `/quiz/${selectedNode.unitId}?start=quiz`
-                          : `/quiz/${selectedNode.unitId}`
-                    }
-                    className="lesson-link"
-                  >
-                    <p>
-                      {selectedNode.nodeType === "code_problem"
-                        ? selectedNode.isCompleted
-                          ? "Review Code Problem"
-                          : "Start Code Problem"
-                        : selectedNode.nodeType === "quiz"
-                          ? selectedNode.isCompleted
-                            ? "Review Quiz"
-                            : "Take Quiz"
-                          : selectedNode.isCompleted
-                            ? "Review Lesson"
-                            : "Start Lesson"}
+              <NodeDetailModal
+                modalRef={modalRef}
+                selectedNode={selectedNode}
+                isDetailClosing={isDetailClosing}
+                isGuest={isGuest}
+                onClose={closeDetail}
+                guestCheckpointSlot={
+                  <div className="guest-unit-lock-modal">
+                    <p className="guest-unit-lock-desc">
+                      Section skip challenges are reserved for registered learners. Sign in to take
+                      skip challenges, earn XP, and track your streak!
                     </p>
-                  </Link>
-                )}
-              </div>
+                    <Link href="/login" className="lesson-link">
+                      <p>Sign In to Continue</p>
+                    </Link>
+                  </div>
+                }
+                guestLockedUnitSlot={
+                  <div className="guest-unit-lock-modal">
+                    <p className="guest-unit-lock-desc">
+                      Guest preview includes the first unit (Document Structure). Sign in to unlock
+                      this unit, earn XP, and track your streak!
+                    </p>
+                    <Link href="/login" className="lesson-link">
+                      <p>Sign In to Continue</p>
+                    </Link>
+                  </div>
+                }
+              />
             )}
 
-            {/* Sections & Interactive Nodes */}
             {roadmapData.sections.map((section) => {
               const hasUnits = section.units.length > 0;
 
@@ -922,7 +360,6 @@ export default function LearnRoadmapClient({
                   className="curriculum-section"
                   aria-labelledby={`section-title-${section.sec_id}`}
                 >
-                  {/* Section Title Header */}
                   <div
                     className={`section-header${section.is_locked ? " disabled" : ""}`}
                     data-section-id={section.sec_id}
@@ -946,12 +383,10 @@ export default function LearnRoadmapClient({
                     <h2 id={`section-title-${section.sec_id}`}>{section.sec_title}</h2>
                   </div>
 
-                  {/* If section is locked and has units, display the Skip / Jump checkpoint row for Section 3+ (Authenticated only) */}
                   {!isGuest && section.sec_id >= 3 && section.is_locked && hasUnits && (
                     <div className="level-path">
                       <div className="level-row path-left">
                         <div className="level-content">
-                          {/* Skip Section */}
                           <div className="level">
                             <button
                               type="button"
@@ -960,29 +395,7 @@ export default function LearnRoadmapClient({
                               aria-label={`Skip Section Checkpoint for ${section.sec_title}`}
                               title={`Skip ahead to ${section.sec_title}`}
                             >
-                              <svg
-                                width="28"
-                                height="28"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  d="M14 20L21 12.5L14 5"
-                                  strokeWidth="4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  stroke="currentColor"
-                                />
-                                <path
-                                  d="M5 20L12 12.5L5 5"
-                                  strokeWidth="4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  stroke="currentColor"
-                                />
-                              </svg>
+                              <FastForwardIcon />
                             </button>
                           </div>
                         </div>
@@ -990,327 +403,23 @@ export default function LearnRoadmapClient({
                     </div>
                   )}
 
-                  {/* Section Units */}
                   {hasUnits ? (
-                    section.units.map((unit, unitIndex) => {
-                      const startSide: RoadlineStartSide = unitIndex % 2 === 0 ? "left" : "right";
-                      const hasQuiz = unit.quiz_count > 0;
-                      const hasCp = unit.has_coding_assessment;
-                      const lessonSide: RoadlineStartSide = startSide;
-                      const quizSide: RoadlineStartSide = lessonSide === "left" ? "right" : "left";
-                      const cpSide: RoadlineStartSide = hasQuiz
-                        ? (quizSide === "left" ? "right" : "left")
-                        : (lessonSide === "left" ? "right" : "left");
-
-                      // Accurate per-node status determination:
-                      const isGuestUnitLocked = isGuest && unit.unit_id !== firstUnitId;
-
-                      // 1. Lesson:
-                      const isLessonCompleted = isRoadmapLessonComplete(unit);
-                      const isLessonLocked = isStaffUser
-                        ? false
-                        : isGuestUnitLocked
-                          ? true
-                          : unit.is_locked;
-                      const lessonLockReason = isGuestUnitLocked
-                        ? "Sign in to unlock"
-                        : isLessonLocked
-                          ? "Locked"
-                          : undefined;
-
-                      // 2. Quiz:
-                      const isQuizCompleted = isRoadmapQuizComplete(unit);
-                      const isQuizLocked = isStaffUser
-                        ? false
-                        : isGuestUnitLocked
-                          ? true
-                          : unit.is_locked || (!isLessonCompleted && unit.slide_count > 0);
-                      const quizLockReason = isGuestUnitLocked
-                        ? "Sign in to unlock"
-                        : unit.is_locked
-                          ? "Locked"
-                          : !isLessonCompleted && unit.slide_count > 0
-                            ? "Complete Lesson first"
-                            : undefined;
-
-                      // 3. Code Problem:
-                      const isCpCompleted = isRoadmapCpComplete(unit);
-                      const isCpPrerequisiteMet = hasQuiz ? isQuizCompleted : isLessonCompleted;
-                      const isCpLocked = isStaffUser
-                        ? false
-                        : isGuestUnitLocked
-                          ? true
-                          : unit.is_locked || !isCpPrerequisiteMet;
-                      const cpLockReason = isGuestUnitLocked
-                        ? "Sign in to unlock"
-                        : unit.is_locked
-                          ? "Locked"
-                          : hasQuiz && !isQuizCompleted
-                            ? "Complete Quiz first"
-                            : !isLessonCompleted
-                              ? "Complete Lesson first"
-                              : undefined;
-
-                      const hasNextAfterLesson = hasQuiz || hasCp;
-                      const hasNextAfterQuiz = hasCp;
-
-                      return (
-                        <div key={unit.unit_id} className="curriculum-unit-group">
-                          <div className="level-row-divider">
-                            <hr />
-                            <p>{unit.unit_title}</p>
-                            <hr />
-                          </div>
-
-                          <div className="level-path">
-                            {/* Lesson Node */}
-                            <div className={`level-row path-${lessonSide}`}>
-                              <div className="level-content">
-                                <div className="level">
-                                  <button
-                                    type="button"
-                                    className={`level-btn${
-                                      isLessonCompleted
-                                        ? " complete"
-                                        : isLessonLocked
-                                          ? " disabled"
-                                          : ""
-                                    }`}
-                                    onClick={() =>
-                                      handleSelectNode(
-                                        unit,
-                                        section,
-                                        "lesson",
-                                        isLessonCompleted,
-                                        isLessonLocked,
-                                        lessonLockReason,
-                                      )
-                                    }
-                                    aria-label={`Lesson for ${unit.unit_title}${
-                                      isLessonCompleted
-                                        ? " (Completed)"
-                                        : isLessonLocked
-                                          ? " (Locked)"
-                                          : " (Current Level)"
-                                    }`}
-                                  >
-                                    {isLessonCompleted ? (
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="28"
-                                        height="28"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="lucide lucide-check preview-icon"
-                                        aria-hidden="true"
-                                      >
-                                        <path d="M20 6 9 17l-5-5" />
-                                      </svg>
-                                    ) : (
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="28"
-                                        height="28"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="lucide lucide-book-open preview-icon"
-                                        aria-hidden="true"
-                                      >
-                                        <path d="M12 5v16" />
-                                        <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                              {hasNextAfterLesson && (
-                                <svg
-                                  className={`roadline ${lessonSide === "left" ? "roadline-to-right" : "roadline-to-left"}`}
-                                  viewBox={lessonSide === "left" ? "0 0 168 113" : "0 0 168 189"}
-                                  aria-hidden="true"
-                                >
-                                  <path d={getRoadlinePath(lessonSide, "to-top")} />
-                                </svg>
-                              )}
-                            </div>
-
-                            {/* Quiz Node */}
-                            {unit.quiz_count > 0 && (
-                              <div className={`level-row path-${quizSide}`}>
-                                <div className="level-content">
-                                  <div className="level">
-                                    <button
-                                      type="button"
-                                      className={`level-btn${
-                                        isQuizCompleted
-                                          ? " complete"
-                                          : isQuizLocked
-                                            ? " disabled"
-                                            : ""
-                                      }`}
-                                      onClick={() =>
-                                        handleSelectNode(
-                                          unit,
-                                          section,
-                                          "quiz",
-                                          isQuizCompleted,
-                                          isQuizLocked,
-                                          quizLockReason,
-                                        )
-                                      }
-                                      aria-label={`Quiz for ${unit.unit_title}${
-                                        isQuizCompleted
-                                          ? " (Completed)"
-                                          : isQuizLocked
-                                            ? " (Locked)"
-                                            : ""
-                                      }`}
-                                    >
-                                      {isQuizCompleted ? (
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="28"
-                                          height="28"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="4"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          className="lucide lucide-check preview-icon"
-                                          aria-hidden="true"
-                                        >
-                                          <path d="M20 6 9 17l-5-5" />
-                                        </svg>
-                                      ) : (
-                                        <svg
-                                          width="28"
-                                          height="28"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          aria-hidden="true"
-                                        >
-                                          <path
-                                            d="M8 8.00447C8.36294 7.00272 9.07931 6.15801 10.0222 5.61995C10.9651 5.08189 12.0738 4.88521 13.1517 5.06473C14.2297 5.24426 15.2074 5.78841 15.9118 6.60081C16.6161 7.41321 17.0016 8.44143 17 9.50335C17 12.5011 12 14.5 12 14.5"
-                                            strokeWidth="4"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            stroke="currentColor"
-                                          />
-                                          <path
-                                            d="M12 20H12.01"
-                                            strokeWidth="4"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            stroke="currentColor"
-                                          />
-                                        </svg>
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                                {hasNextAfterQuiz && (
-                                  <svg
-                                    className={`roadline ${quizSide === "left" ? "roadline-to-right" : "roadline-to-left"}`}
-                                    viewBox={quizSide === "left" ? "0 0 168 113" : "0 0 168 189"}
-                                    aria-hidden="true"
-                                  >
-                                    <path d={getRoadlinePath(quizSide, "to-side")} />
-                                  </svg>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Code Problem Node */}
-                            {unit.has_coding_assessment && (
-                              <div className={`level-row path-${cpSide}`}>
-                                <div className="level-content">
-                                  <div className="level">
-                                    <button
-                                      type="button"
-                                      className={`level-btn${
-                                        isCpCompleted
-                                          ? " complete"
-                                          : isCpLocked
-                                            ? " disabled"
-                                            : ""
-                                      }`}
-                                      onClick={() =>
-                                        handleSelectNode(
-                                          unit,
-                                          section,
-                                          "code_problem",
-                                          isCpCompleted,
-                                          isCpLocked,
-                                          cpLockReason,
-                                        )
-                                      }
-                                      aria-label={`Code Problem for ${unit.unit_title}${
-                                        isCpCompleted
-                                          ? " (Completed)"
-                                          : isCpLocked
-                                            ? " (Locked)"
-                                            : ""
-                                      }`}
-                                    >
-                                      {isCpCompleted ? (
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="28"
-                                          height="28"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="4"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          className="lucide lucide-check preview-icon"
-                                          aria-hidden="true"
-                                        >
-                                          <path d="M20 6 9 17l-5-5" />
-                                        </svg>
-                                      ) : (
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="28"
-                                          height="28"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="4"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          className="lucide lucide-code preview-icon"
-                                          aria-hidden="true"
-                                        >
-                                          <path d="m16 18 6-6-6-6" />
-                                          <path d="m8 6-6 6 6 6" />
-                                        </svg>
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
+                    section.units.map((unit, unitIndex) => (
+                      <SectionUnitGroup
+                        key={unit.unit_id}
+                        unit={unit}
+                        unitIndex={unitIndex}
+                        section={section}
+                        isGuest={isGuest}
+                        isStaffUser={isStaffUser}
+                        firstUnitId={firstUnitId}
+                        onSelectNode={handleSelectNode}
+                      />
+                    ))
                   ) : (
-                    /* Empty Section Placeholder: Units coming soon */
                     <div className="level-path">
                       <div className="level-row path-left">
                         <div className="level-content">
-                          {/* Skip Section / Coming soon */}
                           <div className="level">
                             <button
                               type="button"
@@ -1319,29 +428,7 @@ export default function LearnRoadmapClient({
                               aria-label={`Units coming soon for ${section.sec_title}`}
                               title={`Units coming soon for ${section.sec_title}`}
                             >
-                              <svg
-                                width="28"
-                                height="28"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  d="M14 20L21 12.5L14 5"
-                                  strokeWidth="4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  stroke="currentColor"
-                                />
-                                <path
-                                  d="M5 20L12 12.5L5 5"
-                                  strokeWidth="4"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  stroke="currentColor"
-                                />
-                              </svg>
+                              <FastForwardIcon />
                             </button>
                           </div>
                           <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>

@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import { DAILY_XP_GOAL_THRESHOLDS } from "@/lib/daily-goal";
 import type { DailyGoalData } from "@/lib/daily-goal";
+import {
+    getClientLocalDate,
+    getServerLocalDate,
+    subscribeClientDate,
+} from "@/lib/timezone";
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const CHART_HEIGHT_PX = 148;
@@ -28,13 +33,18 @@ export default function DailyGoalCard({
 }) {
     const [goalData, setGoalData] = useState(initialData);
     const [previewData, setPreviewData] = useState<DailyGoalPreview | null>(null);
+    const clientToday = useSyncExternalStore(
+        subscribeClientDate,
+        getClientLocalDate,
+        getServerLocalDate,
+    );
 
     useEffect(() => {
         let isActive = true;
 
         const refreshGoalData = async () => {
             try {
-                const latestData = await getDailyGoalData();
+                const latestData = await getDailyGoalData(clientToday ?? undefined);
                 if (isActive) {
                     setGoalData(latestData);
                 }
@@ -49,7 +59,6 @@ export default function DailyGoalCard({
             }
         };
 
-        void refreshGoalData();
         window.addEventListener("focus", refreshWhenVisible);
         document.addEventListener("visibilitychange", refreshWhenVisible);
 
@@ -58,11 +67,12 @@ export default function DailyGoalCard({
             window.removeEventListener("focus", refreshWhenVisible);
             document.removeEventListener("visibilitychange", refreshWhenVisible);
         };
-    }, []);
+    }, [clientToday]);
 
     const previewWeekXp = (canPreview ? previewData?.weekXp : undefined) ?? goalData.weekXp;
     const previousWeekXp = (canPreview ? previewData?.previousWeekXp : undefined) ?? goalData.previousWeekXp;
-    const todayIndex = goalData.weekDates.indexOf(new Date().toISOString().slice(0, 10));
+    const localTodayDate = clientToday ?? goalData.weekDates[0] ?? "";
+    const todayIndex = goalData.weekDates.indexOf(localTodayDate);
     const todayXp = Math.max(
         0,
         canPreview && previewData && todayIndex >= 0 ? previewWeekXp[todayIndex] : goalData.todayXp,

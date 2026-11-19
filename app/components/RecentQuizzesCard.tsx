@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -85,6 +85,14 @@ export default function RecentQuizzesCard({
   const [sortBy, setSortBy] = useState("id_desc");
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  const isFirstFilterLoadRef = useRef(true);
+
+  useEffect(() => {
+    if (copiedId === null) return;
+    const timer = window.setTimeout(() => setCopiedId(null), 1500);
+    return () => window.clearTimeout(timer);
+  }, [copiedId]);
+
   const loadPage = useCallback(async (nextPage: number) => {
     setIsPending(true);
     try {
@@ -106,6 +114,10 @@ export default function RecentQuizzesCard({
   }, [category, difficulty, id, search, section, type]);
 
   useEffect(() => {
+    if (isFirstFilterLoadRef.current) {
+      isFirstFilterLoadRef.current = false;
+      return;
+    }
     const timer = window.setTimeout(() => void loadPage(1), 150);
     return () => window.clearTimeout(timer);
   }, [loadPage]);
@@ -160,7 +172,6 @@ export default function RecentQuizzesCard({
   const copyId = (quizId: number) => {
     void navigator.clipboard?.writeText(quizId.toString());
     setCopiedId(quizId);
-    window.setTimeout(() => setCopiedId((current) => current === quizId ? null : current), 1500);
   };
 
   const toggleIdFilter = (quizId: number) => {

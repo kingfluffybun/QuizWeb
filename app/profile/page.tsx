@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { UserInfoResponse } from "@/app/api/db/user-info/route";
+import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { getUserStreakData, type StreakData } from "@/app/actions/streak";
 import { getClientLocalDate, getServerLocalDate, subscribeClientDate } from "@/lib/timezone";
+import {
+    fetchClientUserInfo,
+    invalidateClientUserInfoCache,
+} from "@/lib/user-info-client";
 import Sidebar from "@/app/components/Sidebar";
 import ProfileSkeleton from "@/app/components/skeletons/ProfileSkeleton";
 import "#css/profile.css";
-import "#css/quiz.css";
 import "#css/sidebar.css";
 
 type ProfileIconName = "calendar" | "award" | "target" | "flame" | "check" | "code" | "user-shield" | "edit" | "user" | "mail";
@@ -39,6 +41,7 @@ const learningGoalOptions = [
 
 export default function ProfilePage() {
     const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [streakData, setStreakData] = useState<StreakData | null>(null);
     const [username, setUsername] = useState<string | undefined>();
     const [email, setEmail] = useState<string | undefined>();
@@ -75,43 +78,52 @@ export default function ProfilePage() {
 
     const [isEditing, setIsEditing] = useState(false);
     const [saveMessage, setSaveMessage] = useState("");
+    const [reloadCounter, setReloadCounter] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
-        fetch("/api/db/user-info")
-            .then(async (res) => {
-                const json = await res.json();
-                if (!isMounted || !res.ok) return;
-                if (Object.keys(json).length === 0) return;
-                
-                const loadedUser: UserInfoResponse | undefined = json as UserInfoResponse | undefined;
+        fetchClientUserInfo("full")
+            .then((loadedUser) => {
+                if (!isMounted) return;
+                if (!loadedUser) {
+                    setLoadError("Unable to load profile details right now.");
+                    return;
+                }
 
-                const numericGoal = loadedUser?.learning_goal != null ? Number(loadedUser.learning_goal) : (loadedUser?.daily_xp_goal != null ? Number(loadedUser.daily_xp_goal) : undefined);
+                const numericGoal = loadedUser.learning_goal != null
+                    ? Number(loadedUser.learning_goal)
+                    : loadedUser.daily_xp_goal != null
+                        ? Number(loadedUser.daily_xp_goal)
+                        : undefined;
 
-                setUsername(loadedUser?.username);
-                setEmail(loadedUser?.email);
-                setAvaColor(loadedUser?.avatar_color);
-                setCreatedDate(loadedUser?.created_at);
+                setLoadError(null);
+                setUsername(loadedUser.username);
+                setEmail(loadedUser.email);
+                setAvaColor(loadedUser.avatar_color);
+                setCreatedDate(loadedUser.created_at);
                 setLearningGoal(numericGoal);
                 setProfileStatistics({
-                    lessonsCompleted: Number(loadedUser?.lessons_completed ?? 0),
-                    lessonsCompletedThisWeek: Number(loadedUser?.lessons_completed_this_week ?? 0),
-                    totalXp: Number(loadedUser?.xp ?? 0),
-                    xpEarnedThisWeek: Number(loadedUser?.xp_earned_this_week ?? 0),
+                    lessonsCompleted: Number(loadedUser.lessons_completed ?? 0),
+                    lessonsCompletedThisWeek: Number(loadedUser.lessons_completed_this_week ?? 0),
+                    totalXp: Number(loadedUser.xp ?? 0),
+                    xpEarnedThisWeek: Number(loadedUser.xp_earned_this_week ?? 0),
                 });
                 setDraft({
-                    username: loadedUser?.username,
+                    username: loadedUser.username,
                     learningGoal: numericGoal
                 });
-                setIsProfileLoaded(true);
             })
             .catch((err) => {
                 console.error("API Fetch encountered an error:", err);
+                if (isMounted) setLoadError("Unable to load profile details right now.");
+            })
+            .finally(() => {
+                if (isMounted) setIsProfileLoaded(true);
             });
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [reloadCounter]);
 
     const currentStreakDays = streakData?.currentStreak ?? 0;
     const longestStreakDays = streakData?.longestStreak ?? 0;
@@ -128,7 +140,8 @@ export default function ProfilePage() {
         ? oldDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         : "Recently";
 
-    const handleSave = async () => {
+    const handleSave = async (e?: FormEvent) => {
+        e?.preventDefault();
         try {
             const usernameValue = draft?.username || username;
             const emailValue = draft?.email || email;
@@ -152,8 +165,7 @@ export default function ProfilePage() {
             }
 
             const result = await response.json();
-
-            setSaveMessage("");
+            invalidateClientUserInfoCache();
 
             const returnedGoal = result.learning_goal != null ? Number(result.learning_goal) : (result.daily_xp_goal != null ? Number(result.daily_xp_goal) : undefined);
             setUsername(result.username);
@@ -176,7 +188,6 @@ export default function ProfilePage() {
                 errorMessage = "Network error - cannot connect to server.";
             }
 
-            alert(errorMessage);
             setSaveMessage(errorMessage);
         }
     };
@@ -197,6 +208,36 @@ export default function ProfilePage() {
 
     if (!isProfileLoaded) {
         return <ProfileSkeleton />;
+    }
+
+    if (loadError) {
+        return (
+            <div className="quiz-page profile-page">
+                <Sidebar />
+                <main>
+                    <div className="profile-content">
+                        <section className="profile-panel" role="alert">
+                            <h2>Unable to load profile</h2>
+                            <p>{loadError}</p>
+                            <div className="profile-form-actions" style={{ marginTop: "12px" }}>
+                                <button
+                                    type="button"
+                                    className="profile-save-button"
+                                    onClick={() => {
+                                        setIsProfileLoaded(false);
+                                        setLoadError(null);
+                                        invalidateClientUserInfoCache();
+                                        setReloadCounter((c) => c + 1);
+                                    }}
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        </section>
+                    </div>
+                </main>
+            </div>
+        );
     }
 
     return (
@@ -361,19 +402,19 @@ export default function ProfilePage() {
                                         <span className="profile-details-floating-label profile-details-floating-label--select">Learning goal</span>
                                     </label>
                                     <div className="profile-form-actions">
-                                        <button 
+                                        <button
                                             className="profile-save-button"
-                                            type="button"
-                                            onClick={handleSave}
+                                            type="submit"
                                         >Save changes</button>
-                                        <button 
-                                            className="profile-cancel-button" 
-                                            type="button" 
+                                        <button
+                                            className="profile-cancel-button"
+                                            type="button"
                                             onClick={handleCancel}
                                         >
                                             Cancel
                                         </button>
                                     </div>
+                                    {saveMessage && <p className="profile-save-message" role="alert">{saveMessage}</p>}
                                 </form>
                             ) : (
                                 <>

@@ -21,8 +21,11 @@ import {
   isUnitUnlockedForUserImpl,
 } from "@/lib/server/progress/unlock";
 
+import type { CurriculumUnlockStateResult } from "@/lib/types/progress";
+
 export type {
   CanonicalCurriculumUnitItem,
+  CurriculumUnlockStateResult,
   LearnPreloadResponse,
   PreloadedSectionMeta,
   PreloadedUnitPayload,
@@ -44,8 +47,11 @@ function revalidateLearnProgressPaths(extraPaths: string[] = []) {
   }
 }
 
-export async function getUserLastActiveProgress(explicitUserId?: number) {
-  return getUserLastActiveProgressImpl(explicitUserId);
+export async function getUserLastActiveProgress(
+  explicitUserId?: number,
+  precomputedUnlockState?: CurriculumUnlockStateResult,
+) {
+  return getUserLastActiveProgressImpl(explicitUserId, precomputedUnlockState);
 }
 
 export async function getUserCurriculumUnlockState(explicitUserId?: number) {
@@ -66,8 +72,13 @@ export async function getAvailableUnitsForUser(explicitUserId?: number) {
 export async function getUserSectionProgress(
   explicitUserId?: number,
   explicitSectionId?: number,
+  precomputedUnlockState?: CurriculumUnlockStateResult,
 ) {
-  return getUserSectionProgressImpl(explicitUserId, explicitSectionId);
+  return getUserSectionProgressImpl(
+    explicitUserId,
+    explicitSectionId,
+    precomputedUnlockState,
+  );
 }
 
 export async function recordLessonSlideProgress(

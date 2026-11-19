@@ -16,8 +16,11 @@ interface LearningGoalRow extends RowDataPacket {
     daily_xp_goal: number | string | null;
 }
 
-export async function getDailyGoalData(clientToday?: string): Promise<DailyGoalData> {
-    const userId = await resolveUserId();
+export async function getDailyGoalData(
+    clientToday?: string,
+    explicitUserId?: number,
+): Promise<DailyGoalData> {
+    const userId = await resolveUserId(explicitUserId);
     if (!userId) {
         throw new Error("Authentication required to access the daily XP goal");
     }

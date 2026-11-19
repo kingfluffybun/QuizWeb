@@ -46,7 +46,7 @@ export default function VerifyEmailClient({ token }: VerifyEmailClientProps) {
 
                 {status === "idle" && (
                     <form onSubmit={handleActivate} method="POST">
-                        <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#333", margin: "24px 0 12px" }}>
+                        <h1 style={{ fontSize: "26px", fontWeight: 700, color: "var(--text-main)", margin: "24px 0 12px" }}>
                             Activate Your Account
                         </h1>
                         <p className="message" style={{ marginBottom: "28px" }}>

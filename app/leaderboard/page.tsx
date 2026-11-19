@@ -15,10 +15,16 @@ export default async function LeaderboardPage() {
     }
 
     const entriesByPeriod = await getLeaderboardEntriesByPeriod({ includeAll: true });
+    const role = session.user.role || session.user.user_role || "user";
+    const username = session.user.name || session.user.email?.split("@")[0] || "User";
 
     return (
         <div className="dashboard-page leaderboard-page">
-            <Sidebar />
+            <Sidebar
+                role={role}
+                username={username}
+                email={session.user.email ?? undefined}
+            />
             <main>
                 <div className="leaderboard-page-content">
                     <Leaderboard

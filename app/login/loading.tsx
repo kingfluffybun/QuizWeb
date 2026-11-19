@@ -1,6 +1,5 @@
 import React from "react";
 import "#css/login.css";
-import "#css/nav.css";
 
 export default function LoginLoading() {
   return (

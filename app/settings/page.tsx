@@ -59,8 +59,14 @@ export default async function SettingsPage() {
   return (
     <div className={initialUser ? "settings-app-layout" : "settings-public-layout"}>
       {initialUser ? (
-        <Sidebar/>
-      ) : <PublicNav />}
+        <Sidebar
+          role={initialUser.role}
+          username={initialUser.username}
+          email={initialUser.email}
+        />
+      ) : (
+        <PublicNav />
+      )}
       <main className="settings-main">
         <SettingsClient initialUser={initialUser} />
       </main>

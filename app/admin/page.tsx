@@ -15,9 +15,6 @@ import Sidebar from "@/app/components/Sidebar";
 import StaffWorkspaceTools from "@/app/components/StaffWorkspaceTools";
 import AdminDashboardClient from "./AdminDashboardClient";
 import "#css/sidebar.css";
-import "#css/nav.css";
-import "#css/input.css";
-import "#css/pending.css";
 import "#css/admin.css";
 
 export const dynamic = "force-dynamic";
@@ -87,7 +84,11 @@ export default async function AdminPage() {
 
   return (
     <div className="dashboard-page admin-app-layout">
-      <Sidebar/>
+      <Sidebar
+        role={admin.role}
+        username={admin.email?.split("@")[0] || "Admin"}
+        email={admin.email || ""}
+      />
       <main className="admin-main">
         <div className="admin-container">
           <header className="admin-header admin-dashboard-header">
@@ -121,6 +122,7 @@ export default async function AdminPage() {
             recentTotalCount={workspaceRecentUnits.totalCount}
             metrics={workspaceMetrics}
             pendingQuizzes={workspacePending}
+            pendingStatusFilter="all"
             canReview
           />
         </div>

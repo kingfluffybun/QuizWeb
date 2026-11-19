@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), {
@@ -147,20 +147,24 @@ export function LessonCodeFrame({
     return () => window.removeEventListener("message", handlePreviewMessage);
   }, []);
 
-  const cancelEditorResize = () => {
+  const cancelEditorResize = useCallback(() => {
     if (editorResizeFrame.current !== null) {
       window.cancelAnimationFrame(editorResizeFrame.current);
       editorResizeFrame.current = null;
     }
-  };
+  }, []);
 
-  useEffect(() => () => {
+  const cleanupEditorListeners = useCallback(() => {
     editorContentSizeListener.current?.dispose();
+    editorContentSizeListener.current = null;
     if (editorWindowResizeListener.current) {
       window.removeEventListener("resize", editorWindowResizeListener.current);
+      editorWindowResizeListener.current = null;
     }
     cancelEditorResize();
-  }, []);
+  }, [cancelEditorResize]);
+
+  useEffect(() => cleanupEditorListeners, [cleanupEditorListeners]);
 
   return (
     <div className="lesson-code-frame">
@@ -188,6 +192,7 @@ export function LessonCodeFrame({
           value={source}
           theme="vs-dark"
           onMount={(editor) => {
+            cleanupEditorListeners();
             const updateHeight = () => {
               cancelEditorResize();
               editorResizeFrame.current = window.requestAnimationFrame(() => {
@@ -209,6 +214,7 @@ export function LessonCodeFrame({
             editorContentSizeListener.current = editor.onDidContentSizeChange(updateHeight);
             editorWindowResizeListener.current = updateHeight;
             window.addEventListener("resize", updateHeight);
+            editor.onDidDispose(cleanupEditorListeners);
             updateHeight();
           }}
           options={{

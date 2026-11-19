@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { AdminUserRecord } from "@/app/actions/admin";
 
 const USERS_PER_PAGE = 6;
+const SEARCH_DEBOUNCE_MS = 250;
 
 export interface AdminUserTableProps {
   users: AdminUserRecord[];
@@ -28,6 +29,14 @@ export default function AdminUserTable({
   const [roleFilter, setRoleFilter] = useState("all");
   const [passwordFilter, setPasswordFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
+
   const totalPages = Math.max(1, Math.ceil(users.length / USERS_PER_PAGE));
   const visiblePage = Math.min(currentPage, totalPages);
   const visibleUsers = users.slice(
@@ -40,16 +49,27 @@ export default function AdminUserTable({
   const handleQueryChange = (val: string) => {
     setSearchQuery(val);
     setCurrentPage(1);
-    onFilterChange(val, roleFilter, passwordFilter);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      onFilterChange(val, roleFilter, passwordFilter);
+    }, SEARCH_DEBOUNCE_MS);
   };
 
   const handleRoleChange = (val: string) => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
     setRoleFilter(val);
     setCurrentPage(1);
     onFilterChange(searchQuery, val, passwordFilter);
   };
 
   const handlePasswordChange = (val: string) => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
     setPasswordFilter(val);
     setCurrentPage(1);
     onFilterChange(searchQuery, roleFilter, val);

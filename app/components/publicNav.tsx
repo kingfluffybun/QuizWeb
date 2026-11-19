@@ -1,9 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import AccessibilityPanel from "../settings/AccessibilityPanel";
+import {
+  AccessibilityIcon,
+  CloseIcon,
+  MenuIcon,
+} from "@/app/components/icons/NavIcons";
 
 export default function PublicNav() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -27,17 +32,14 @@ export default function PublicNav() {
       <div className="col" id="logo-nav">
         <Link href="/">
           <div className="logo col">
-            <Image src="/assets/QuizWeb-Logo.svg" width={64} height={64} alt=""/>
+            <Image src="/assets/QuizWeb-Logo.svg" width={64} height={64} alt="" />
             <h2>QuizWeb</h2>
           </div>
         </Link>
       </div>
-      
-      <button className="menu-btn" type="button" onClick={() => setMenuOpen((isOpen) => !isOpen)} > {menuOpen ? (
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"> <path d="M6 6l12 12" /> <path d="M18 6 6 18" /> </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"> <path d="M4 5h16" /> <path d="M4 12h16" /> <path d="M4 19h16" /> </svg>
-        )}
+
+      <button className="menu-btn" type="button" onClick={() => setMenuOpen((isOpen) => !isOpen)}>
+        {menuOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
         <p>{menuOpen ? "Close" : "Menu"}</p>
       </button>
 
@@ -45,7 +47,6 @@ export default function PublicNav() {
         <div><Link href="/learn"><p>Learn</p></Link></div>
         <div><Link href="/leaderboard"><p>Leaderboard</p></Link></div>
         <div><Link href="/about"><p>About</p></Link></div>
-        {/* <div><Link href="/settings"><p>Settings</p></Link></div> */}
         <div className="nav-a11y-item">
           <button
             type="button"
@@ -65,12 +66,26 @@ export default function PublicNav() {
 
       <div className="accessibility">
         <div>
-          <button data-accessibility-trigger type="button" aria-label={accessibilityOpen ? "Close accessibility options" : "Open accessibility options"} onClick={accessibilityOpen ? closeAccessibility : openAccessibility}>
-            <div><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg></div>
+          <button
+            data-accessibility-trigger
+            type="button"
+            aria-label={accessibilityOpen ? "Close accessibility options" : "Open accessibility options"}
+            onClick={accessibilityOpen ? closeAccessibility : openAccessibility}
+          >
+            <div>
+              <AccessibilityIcon size={24} stroke="white" />
+            </div>
           </button>
         </div>
       </div>
-      {accessibilityOpen && <AccessibilityPanel isClosing={accessibilityClosing} onClose={closeAccessibility} onClosed={finishClosingAccessibility} />}
+
+      {accessibilityOpen && (
+        <AccessibilityPanel
+          isClosing={accessibilityClosing}
+          onClose={closeAccessibility}
+          onClosed={finishClosingAccessibility}
+        />
+      )}
     </nav>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useId, useState } from "react";
+import Link from "next/link";
 import type { LeaderboardEntriesByPeriod, LeaderboardPeriod } from "@/app/actions/leaderboard";
 
 interface LeaderboardProps {
@@ -41,6 +42,7 @@ export default function Leaderboard({
     currentUserId,
 }: LeaderboardProps) {
     const [period, setPeriod] = useState<LeaderboardPeriod>(initialPeriod);
+    const radioPrefix = useId();
     const entries = entriesByPeriod[period];
     const visibleEntries = maxEntries === undefined ? entries : entries.slice(0, maxEntries);
     const currentUserRank = currentUserId
@@ -75,17 +77,17 @@ export default function Leaderboard({
                             {showPeriodTitle ? periodTitles[period] : "Leaderboard"}
                         </h2>
                         {!showPeriodTitle && (
-                            <a href="/leaderboard"><h2 className="quick-action">View All</h2></a>
+                            <Link href="/leaderboard"><h2 className="quick-action">View All</h2></Link>
                         )}
                     </div>
                     <div className="sort-by-time">
                         {periodOptions.map(({ period: optionPeriod, title }) => {
-                            const id = `lb-${optionPeriod}`;
+                            const id = `${radioPrefix}-lb-${optionPeriod}`;
                             return (
                                 <Fragment key={optionPeriod}>
                                     <input
                                         type="radio"
-                                        name="leaderboard-time"
+                                        name={`${radioPrefix}-leaderboard-time`}
                                         id={id}
                                         checked={period === optionPeriod}
                                         onChange={() => changePeriod(optionPeriod)}

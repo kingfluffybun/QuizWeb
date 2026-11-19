@@ -1,7 +1,6 @@
 import React from "react";
 import SkeletonSidebar from "@/app/components/skeletons/SkeletonSidebar";
 import "#css/quiz.css";
-import "#css/nav.css";
 import "#css/sidebar.css";
 
 export default function LearnLoading() {

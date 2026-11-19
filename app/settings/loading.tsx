@@ -1,7 +1,6 @@
 import React from "react";
 import SkeletonSidebar from "@/app/components/skeletons/SkeletonSidebar";
 import "#css/sidebar.css";
-import "#css/nav.css";
 import "@/public/css/settings.css";
 
 export default function SettingsLoading() {

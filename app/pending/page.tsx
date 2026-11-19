@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/rbac";
 import { getPendingQuizzes, getPaginatedRecentQuizzes, getQuizMetadata } from "@/app/actions/quiz";
 import PendingReview from "./PendingReview";
 import RecentQuizzesCard from "@/app/components/RecentQuizzesCard";
@@ -8,6 +10,11 @@ import "#css/pending.css";
 export const dynamic = "force-dynamic";
 
 export default async function PendingPage() {
+  const admin = await requireAdmin();
+  if (!admin) {
+    redirect("/home");
+  }
+
   const [pendingQuizzes, recentQuizPage, metadata] = await Promise.all([
     getPendingQuizzes("pending"),
     getPaginatedRecentQuizzes(),
@@ -24,9 +31,7 @@ export default async function PendingPage() {
       </header>
       <main className="pending-container">
         <div className="pending-layout">
-          <PendingReview
-            initialQuizzes={pendingQuizzes}
-          />
+          <PendingReview initialQuizzes={pendingQuizzes} />
           <RecentQuizzesCard
             initialQuizzes={recentQuizPage.quizzes}
             initialPage={recentQuizPage.currentPage}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { PendingReviewItem } from "@/app/actions/admin";
 
 export interface RejectionNotesModalProps {
@@ -21,20 +21,26 @@ export default function RejectionNotesModal({
   const [isPending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => textareaRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  if (!isOpen || !targetItem) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setNotes("");
     setError(null);
     onClose();
-  };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => textareaRef.current?.focus(), 50);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, handleClose]);
+
+  if (!isOpen || !targetItem) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +126,7 @@ export default function RejectionNotesModal({
             <button
               type="button"
               className="admin-btn admin-btn-outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isPending}
             >
               Cancel

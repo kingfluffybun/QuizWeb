@@ -331,3 +331,90 @@ textarea {
         overflow-wrap: anywhere;
     }
 }
+
+/* =============================================================================
+   SHARED .quiz-page SHELL LAYOUT
+   ============================================================================= */
+.quiz-page {
+    display: grid;
+    grid-template-areas:
+        "sidebar main"
+        "sidebar footer";
+    grid-template-rows: minmax(0, 1fr) clamp(140px, 2vh, 220px);
+    grid-template-columns: 240px auto;
+    transition: grid-template-columns 0.2s ease;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    background-color: var(--bg-main);
+}
+
+.quiz-page main {
+    grid-area: main;
+    background-color: var(--bg-main);
+    width: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 48px 0;
+    gap: clamp(16px, calc(17.78vh - 144px), 48px);
+}
+
+.quiz-page.quiz-no-footer-page {
+    grid-template-areas: "sidebar main";
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.quiz-page.learn-page > main {
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+    .quiz-page {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100dvh !important;
+        height: auto !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+    }
+
+    .quiz-page.learn-page {
+        flex: 1 1 auto !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .quiz-page.learn-page > main {
+        min-height: 0 !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 24px !important;
+    }
+
+    .quiz-page.quiz-no-footer-page > .quiz-completion-main {
+        min-height: 100dvh !important;
+    }
+
+    .quiz-page main {
+        padding: 24px 24px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        gap: 14px !important;
+        align-items: stretch !important;
+        flex: 1 !important;
+        box-sizing: border-box !important;
+    }
+}
+

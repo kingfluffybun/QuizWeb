@@ -26,7 +26,12 @@ export default async function PostLoginPage({ searchParams }: PostLoginPageProps
   }
 
   // Sanitize: must be relative, not protocol-relative, not login/post-login
-  const decoded = decodeURIComponent(callbackUrl).trim();
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(callbackUrl).trim();
+  } catch {
+    redirect(defaultWorkspace);
+  }
   if (!decoded.startsWith("/") || decoded.startsWith("//") || decoded.startsWith("/\\")) {
     redirect(defaultWorkspace);
   }

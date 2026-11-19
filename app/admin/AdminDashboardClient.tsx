@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useRef, useTransition } from "react";
 import {
   type AdminUserRecord,
   type PlatformAnalytics,
@@ -40,7 +40,6 @@ export default function AdminDashboardClient({
   currentAdminId,
   currentAdminEmail,
   initialUsers,
-  initialAdminCount,
   initialAnalytics,
   initialReviewQueue,
 }: AdminDashboardClientProps) {
@@ -51,9 +50,10 @@ export default function AdminDashboardClient({
 
   // Data Stores
   const [users, setUsers] = useState<AdminUserRecord[]>(initialUsers);
-  const [adminCount, setAdminCount] = useState(initialAdminCount);
+  const [totalUserCount, setTotalUserCount] = useState(initialUsers.length);
   const [analytics, setAnalytics] = useState<PlatformAnalytics>(initialAnalytics);
   const [reviewQueue, setReviewQueue] = useState<PendingReviewItem[]>(initialReviewQueue);
+  const suppressNextPendingSyncRef = useRef(false);
 
   // Modals State
   const [secretModalUser, setSecretModalUser] = useState<AdminUserRecord | null>(null);
@@ -64,7 +64,13 @@ export default function AdminDashboardClient({
     try {
       const res = await getAdminUsers(query, roleFilter, pwdFilter);
       setUsers(res.users);
-      setAdminCount(res.adminCount);
+      const isUnfiltered =
+        (!query || query.trim() === "") &&
+        (!roleFilter || roleFilter === "all") &&
+        (!pwdFilter || pwdFilter === "all");
+      if (isUnfiltered) {
+        setTotalUserCount(res.users.length);
+      }
     } catch (err: unknown) {
       console.error("Failed to refresh users:", err);
     }
@@ -86,6 +92,10 @@ export default function AdminDashboardClient({
   // Synchronize with external pending events
   useEffect(() => {
     const handleQueueUpdated = () => {
+      if (suppressNextPendingSyncRef.current) {
+        suppressNextPendingSyncRef.current = false;
+        return;
+      }
       startTransition(async () => {
         await refreshQueueAndAnalytics();
       });
@@ -165,6 +175,7 @@ export default function AdminDashboardClient({
           message: res.message || "Unit approved and added to active curriculum.",
         });
         await refreshQueueAndAnalytics();
+        suppressNextPendingSyncRef.current = true;
         window.dispatchEvent(new Event("quizweb-pending-updated"));
       } else {
         setAlert({
@@ -184,6 +195,7 @@ export default function AdminDashboardClient({
         message: res.message || "Unit rejected with feedback notes.",
       });
       await refreshQueueAndAnalytics();
+      suppressNextPendingSyncRef.current = true;
       window.dispatchEvent(new Event("quizweb-pending-updated"));
       return true;
     } else {
@@ -218,8 +230,8 @@ export default function AdminDashboardClient({
       <AdminStatsCards
         totalQuizzes={analytics.totalQuizzes}
         pendingCount={reviewQueue.length}
-        totalUsers={users.length}
-        totalContributors={adminCount}
+        totalUsers={totalUserCount}
+        totalContributors={analytics.contributors.length}
       />
 
       {/* 3. Interactive Tab Navigation */}
@@ -234,7 +246,7 @@ export default function AdminDashboardClient({
           onClick={() => setActiveTab("users")}
         >
           <span>Users &amp; Roles</span>
-          <span className="admin-tab-badge">{users.length}</span>
+          <span className="admin-tab-badge">{totalUserCount}</span>
         </button>
 
         <button
@@ -301,7 +313,7 @@ export default function AdminDashboardClient({
             <AdminAnalyticsView
               analytics={analytics}
               pendingCount={reviewQueue.length}
-              userCount={users.length}
+              userCount={totalUserCount}
             />
           </div>
         )}

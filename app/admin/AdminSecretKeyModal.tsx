@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { AdminUserRecord } from "@/app/actions/admin";
 import { promoteUser } from "@/app/actions/admin";
 
@@ -23,20 +23,26 @@ export default function AdminSecretKeyModal({
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  if (!isOpen || !targetUser) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setSecretKey("");
     setError(null);
     onClose();
-  };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, handleClose]);
+
+  if (!isOpen || !targetUser) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +145,7 @@ export default function AdminSecretKeyModal({
             <button
               type="button"
               className="admin-btn admin-btn-outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isPending}
             >
               Cancel

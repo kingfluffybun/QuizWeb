@@ -40,6 +40,7 @@ export interface StaffWorkspaceToolsProps {
   recentTotalCount: number;
   metrics: QuizMetricsData;
   pendingQuizzes: PendingUnit[];
+  pendingStatusFilter?: "pending" | "all";
   canReview: boolean;
 }
 
@@ -55,13 +56,10 @@ export default function StaffWorkspaceTools({
   recentTotalCount,
   metrics,
   pendingQuizzes,
+  pendingStatusFilter = "pending",
   canReview,
 }: StaffWorkspaceToolsProps) {
-  const [activeTool, setActiveTool] = useState<"input" | "pending">(() =>
-    typeof window !== "undefined" && window.location.hash === "#pending-submissions"
-      ? "pending"
-      : "input",
-  );
+  const [activeTool, setActiveTool] = useState<"input" | "pending">("input");
   const [prevPendingQuizzes, setPrevPendingQuizzes] = useState<PendingUnit[]>(pendingQuizzes);
   const [livePendingQuizzes, setLivePendingQuizzes] = useState<PendingUnit[]>(pendingQuizzes);
   const [activeLaunchLabel, setActiveLaunchLabel] = useState<string | null>(null);
@@ -72,7 +70,7 @@ export default function StaffWorkspaceTools({
   }
 
   useEffect(() => {
-    const handleHash = () => {
+    const syncToolFromHash = () => {
       const hash = window.location.hash;
       if (hash === "#pending-submissions") {
         setActiveTool("pending");
@@ -80,8 +78,8 @@ export default function StaffWorkspaceTools({
         setActiveTool("input");
       }
     };
-    handleHash();
-    window.addEventListener("hashchange", handleHash);
+    queueMicrotask(syncToolFromHash);
+    window.addEventListener("hashchange", syncToolFromHash);
 
     const handleEdit = () => {
       setActiveTool("input");
@@ -116,7 +114,7 @@ export default function StaffWorkspaceTools({
 
     const handlePendingUpdated = () => {
       void import("@/app/actions/quiz")
-        .then(({ getPendingQuizzes }) => getPendingQuizzes("pending"))
+        .then(({ getPendingQuizzes }) => getPendingQuizzes(pendingStatusFilter))
         .then((fresh) => {
           if (Array.isArray(fresh)) {
             setLivePendingQuizzes(fresh);
@@ -127,12 +125,12 @@ export default function StaffWorkspaceTools({
     window.addEventListener("quizweb-pending-updated", handlePendingUpdated);
 
     return () => {
-      window.removeEventListener("hashchange", handleHash);
+      window.removeEventListener("hashchange", syncToolFromHash);
       window.removeEventListener("quizweb-edit-pending", handleEdit);
       window.removeEventListener("quizweb-studio-launch", handleStudioLaunch);
       window.removeEventListener("quizweb-pending-updated", handlePendingUpdated);
     };
-  }, []);
+  }, [pendingStatusFilter]);
 
   const reviewQuizzes: PendingReviewQuiz[] = livePendingQuizzes.map((quiz) => ({
     pending_id: quiz.pending_id,
