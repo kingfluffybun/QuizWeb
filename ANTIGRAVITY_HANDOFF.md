@@ -25,29 +25,27 @@ used for project status.
 
 ## Current work
 
-Completed. Upgraded the quiz UI hints system into a complete interactive spotlight walkthrough tutorial with curved SVG pointer arrows across all quiz types (`MCQ`, `FITB`, `Order`, `Pair`, `CP`, and `Lesson`) on branch `nextjs` (atop merged Next.js `16.4.6` security upgrade `a42e86e`).
+Completed. Fixed spotlight teleporting, duplicate first hint rendering, Unit 1 Section 1 scoping, and Unit 1 quiz-type coverage across `/quiz`, `/quiz-cp`, preload caches, and MySQL migration `017` on branch `nextjs`.
 
 Completed changes (`nextjs`):
-- `lib/quiz-ui-hints.ts`: Upgraded all 6 modes into full step-by-step interactive walkthroughs (`QuizTutorialStep` with `title`, `whatToDo`, `actionLabel`, `targetSelectors`, `preferredPlacement`, `optionalIfMissing`, `cpMobileTab`, `device`, and `shortcuts` — 32 steps total).
-- `lib/quiz-tutorial-geometry.ts`: Added pure spotlight, popover layout, even-odd SVG backdrop cutout, and quadratic Bezier curved arrow geometry engine (`computeSpotlightRect`, `computePopoverLayout`, `computeArrowPath`, `buildBackdropCutoutPath`).
-- `lib/quiz-hints-store.ts`: Added `autoShowTutorials`, `seenTutorialModes`, `useIsHydrated()`, `hasSeenTutorial()`, `markTutorialSeen()`, `setAutoShowTutorials()`, and `resetAllTutorials()`.
-- `app/components/quiz/QuizTutorialOverlay.tsx`: Replaced `QuizUiHintModal.tsx` with a live full-viewport spotlight + glowing pulse ring + animated curved SVG arrow overlay, keyboard (`Escape`, `ArrowLeft`, `ArrowRight`) navigation, step progress dots, and auto-start toggle.
-- `app/components/quiz/QuizUiHintBar.tsx`: Updated button label to `"Start Tutorial →"` to launch/replay the full walkthrough.
-- Live `data-tutorial` anchors & overlay wiring across `QuizHeader.tsx`, `InlineCodeText.tsx`, `QuizFooter.tsx`, `HeartsDisplay.tsx`, `MCQ.tsx`, `FITB.tsx`, `Order.tsx`, `Pair.tsx`, `LessonCard.tsx`, `QuizLandingClient.tsx`, `CpHeader.tsx`, `CpInstructionsPane.tsx`, `CpEditorPane.tsx`, `CpPreviewPane.tsx`, `CpMobileChrome.tsx`, and `CodeProblemRunner.tsx` (including mobile tab preparation for `CP` and hydration-safe auto-start once per unseen quiz type).
-- `public/css/quiz.css`: Added `.quiz-tutorial-*` spotlight, curved arrow, floating card, dark/system theme, mobile, and reduced-motion styles.
-- `tests/test-quiz-ui-hints.ts`: Expanded verification suite to test all 32 steps, geometry math, all 23 live component `data-tutorial` anchors, and integration wiring.
+- `lib/quiz-tutorial-geometry.ts`: Added `easeOutCubic`, `lerp`, and `lerpRect` retaining sub-pixel precision for 60fps transitions.
+- `app/components/quiz/QuizTutorialOverlay.tsx` & `public/css/quiz.css`: Refactored overlay around a single `TutorialVisualFrame` state + refs (`visualRef`, `lastAnimatedStepIdRef`, `targetFrameRef`, `isTweeningRef`), keeping `.quiz-tutorial-overlay` hidden (`opacity: 0; pointer-events: none`) during `.quiz-container`'s `quiz-elevate-in` settle (with mobile width sync and short `missingTargetRetries`), fading `.is-ready` in once on Step 0, smoothly interpolating spotlight cutout, ring, floating card, and curved arrow over `360ms` using `easeOutCubic`/`lerpRect` across steps without clearing `spotlight`, and adding bidirectional `optionalIfMissing` step skipping (`findStepIndexSkippingMissing`).
+- `lib/quiz-ui-hints.ts`: Exported `ONBOARDING_TUTORIAL_SECTION_ID = 1`, `ONBOARDING_TUTORIAL_UNIT_ORDER = 1`, `ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID = 98`, and `isOnboardingTutorialUnit(...)`; removed repeated generic `"Read the Question"` Step 1 (`quiz-prompt`) from `FITB` (`fitb-input`, 4 steps), `Order` (`order-list`, 5 steps), and `Pair` (`pair-left`, 4 steps) for 29 unique steps total.
+- `lib/unit1-onboarding-quizzes.ts`, `migrations/017_unit1_all_quiz_types.sql`, `migrations/017_unit1_all_quiz_types_rollback.sql`: Added runtime `ensureUnit1AllQuizTypes(...)` and idempotent MySQL 8.0+ migration/rollback ensuring Unit 1 Section 1 includes `MCQ`, `FITB`, `Order`, `Pair`, and fallback `CP` assessment rows.
+- Unit 1 gating & metadata propagation (`app/quiz/evaluate.ts`, `app/quiz/unwrap.ts`, `lib/learn-cache.ts`, `lib/server/quiz/queries.ts`, `lib/cp-constants.ts`, `lib/cp-schema.ts`, `lib/server/cp-assessment.ts`, `app/actions/cp-engine.ts`, `app/quiz/[unitId]/page.tsx`, `app/quiz/page.tsx`, `app/quiz-cp/types.ts`, `app/quiz-cp/[unitId]/page.tsx`, `app/quiz-cp/skip/[targetSecId]/page.tsx`, `QuizHeader.tsx`, `QuizQuestionView.tsx`, `CpHeader.tsx`, `CpInstructionsPane.tsx`, `QuizLandingClient.tsx`, `CodeProblemRunner.tsx`): Propagated `unit_id`, `sec_id`, and `unit_order`; wired `ensureUnit1AllQuizTypes` on Unit 1; strictly restricted tutorial auto-start, `?` header button, `?` hotkey, inline `QuizUiHintBar` (also hidden while overlay is open), and conditional `<QuizTutorialOverlay key={...} />` mount to Unit 1 Section 1 (`isTutorialUnit={false}` on skip mode).
+- `tests/test-quiz-ui-hints.ts`: Expanded tests for `easeOutCubic`/`lerp`/`lerpRect`, non-repeating first steps, `isOnboardingTutorialUnit`, `ensureUnit1AllQuizTypes` + `evaluateQuizAnswer`, smooth overlay/CSS checks, Unit 1 gating, and Migration `017` coverage.
 
 Validation completed:
 - `npx.cmd tsc --noEmit` (0 errors)
 - `npm.cmd run lint` (0 errors, 0 warnings)
 - `npm.cmd run build` (clean production build; Next.js `16.4.6` Turbopack)
-- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all 6 assertion groups passing: 32 steps, geometry, 23 DOM anchors, integration)
+- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all 9 assertion blocks passing: 29 steps, geometry + interpolation, 23 DOM anchors, overlay/CSS animation, Unit 1 eligibility & quiz-type coverage, Migration `017`)
 - `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing)
 - `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0)
 - `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing)
 - `npx.cmd tsx tests/test-phase2-rendering.ts` (All Phase 2 rendering & static acceleration assertions passing)
 - `npx.cmd tsx tests/test-phase3-optimization.ts` (All Phase 3 client bundle & asset optimization assertions passing)
-- Note: Live MySQL-backed test suites were not executed locally because no `.env`/`.env.local` database configuration is present in the workspace.
+- Static file contracts from `tests/test-unit-pass-completion.ts` and `tests/test-section-skip.ts` verified passing via Node assertion script; live MySQL-backed DB tests and `npm.cmd run db:migrate` were not executed locally because no `.env`/`.env.local` database configuration is present in the workspace.
 
 Before starting work, an agent should replace this section with the files it
 intends to change and a short description. After finishing, it should replace
@@ -55,6 +53,8 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-11-20: Fixed interactive tutorial overlay animations and Unit 1 onboarding scoping on `nextjs` (`QuizTutorialOverlay.tsx`, `lib/quiz-tutorial-geometry.ts`, `public/css/quiz.css`, `lib/quiz-ui-hints.ts`, `lib/unit1-onboarding-quizzes.ts`, `migrations/017_unit1_all_quiz_types.sql`, `migrations/017_unit1_all_quiz_types_rollback.sql`, `/quiz` & `/quiz-cp` routes/clients, `tests/test-quiz-ui-hints.ts`). Replaced instant spotlight jumps with 60fps `easeOutCubic` cutout/ring/card/arrow interpolation, prevented duplicate first-hint flashes via settle-gated `.is-ready` reveal and unique `FITB`/`Order`/`Pair` first steps, restricted tutorials strictly to Unit 1 Section 1, and ensured Unit 1 includes `MCQ`, `FITB`, `Order`, `Pair`, and fallback `CP` both at runtime and via Migration `017`. Verified with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, `test-quiz-ui-hints`, `test-cp-engine` (15/15), `test-assessment-json-import`, `test-leaderboard-period` (5/5), `test-phase2-rendering`, `test-phase3-optimization`, and static pass-completion/skip checks.
 
 - 2026-11-20: Upgraded the per-quiz-type hints system into a full interactive spotlight tutorial with curved SVG pointer arrows aimed directly at live UI controls across `MCQ`, `FITB`, `Order`, `Pair`, `CP`, and `Lesson` (`lib/quiz-ui-hints.ts`, `lib/quiz-tutorial-geometry.ts`, `lib/quiz-hints-store.ts`, `QuizTutorialOverlay.tsx`, `QuizUiHintBar.tsx`, 23 `data-tutorial` anchors, `QuizLandingClient.tsx`, `CodeProblemRunner.tsx`, `public/css/quiz.css`, `tests/test-quiz-ui-hints.ts`). Verified on `Next.js 16.4.6` (`a42e86e`) with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, `test-quiz-ui-hints`, `test-cp-engine` (15/15), `test-assessment-json-import`, `test-leaderboard-period` (5/5), `test-phase2-rendering`, and `test-phase3-optimization`.
 

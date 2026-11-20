@@ -299,3 +299,21 @@ export function buildBackdropCutoutPath(
 
   return `${outer} ${cutout}`;
 }
+
+export function easeOutCubic(t: number): number {
+  const clamped = clamp(t, 0, 1);
+  return 1 - (1 - clamped) ** 3;
+}
+
+export function lerp(from: number, to: number, t: number): number {
+  return from + (to - from) * t;
+}
+
+export function lerpRect(from: RectBox, to: RectBox, t: number): RectBox {
+  return {
+    left: lerp(from.left, to.left, t),
+    top: lerp(from.top, to.top, t),
+    width: lerp(from.width, to.width, t),
+    height: lerp(from.height, to.height, t),
+  };
+}

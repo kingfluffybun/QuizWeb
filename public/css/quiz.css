@@ -2955,6 +2955,13 @@ footer.incorrect {
     position: fixed;
     inset: 0;
     z-index: 2200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.quiz-tutorial-overlay.is-ready {
+    opacity: 1;
     pointer-events: auto;
 }
 
@@ -2975,6 +2982,7 @@ footer.incorrect {
         0 0 0 4px rgba(168, 85, 247, 0.28),
         0 0 28px rgba(125, 63, 255, 0.45);
     pointer-events: none;
+    will-change: left, top, width, height;
     animation: quiz-tutorial-pulse 1.8s ease-in-out infinite;
 }
 
@@ -3043,7 +3051,7 @@ footer.incorrect {
     color: var(--text-main);
     border: 1.5px solid var(--border-main);
     box-shadow: 0 20px 48px rgba(15, 10, 35, 0.32);
-    animation: quiz-elevate-in 180ms ease-out both;
+    will-change: left, top;
 }
 
 .quiz-tutorial-card-header {
@@ -3385,6 +3393,7 @@ footer.incorrect {
 }
 
 html[data-motion="reduce"] .quiz-ui-hint-bar,
+html[data-motion="reduce"] .quiz-tutorial-overlay,
 html[data-motion="reduce"] .quiz-tutorial-card,
 html[data-motion="reduce"] .quiz-tutorial-spotlight-ring,
 html[data-motion="reduce"] .quiz-tutorial-arrow-path {
@@ -3394,6 +3403,7 @@ html[data-motion="reduce"] .quiz-tutorial-arrow-path {
 
 @media (prefers-reduced-motion: reduce) {
     html:not([data-motion="normal"]) .quiz-ui-hint-bar,
+    html:not([data-motion="normal"]) .quiz-tutorial-overlay,
     html:not([data-motion="normal"]) .quiz-tutorial-card,
     html:not([data-motion="normal"]) .quiz-tutorial-spotlight-ring,
     html:not([data-motion="normal"]) .quiz-tutorial-arrow-path {

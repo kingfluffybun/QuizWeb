@@ -105,15 +105,6 @@ export const QUIZ_UI_HINTS: Record<QuizHintMode, QuizUiHintConfig> = {
     summary: "Type the missing keyword, value, or syntax into the response box.",
     steps: [
       {
-        id: "fitb-prompt",
-        title: "Spot the Missing Piece",
-        whatToDo:
-          "Read the prompt and look for the blank, missing tag, property, or output being asked for.",
-        actionLabel: "Identify the exact syntax needed",
-        targetSelectors: ['[data-tutorial="quiz-prompt"]'],
-        preferredPlacement: "bottom",
-      },
-      {
         id: "fitb-input",
         title: "Type Your Answer Here",
         whatToDo:
@@ -160,15 +151,6 @@ export const QUIZ_UI_HINTS: Record<QuizHintMode, QuizUiHintConfig> = {
       "Drag cards (or tap ↑ / ↓ arrows) to sort them from 1 to last, then Submit.",
     summary: "Arrange every step or token into its exact top-to-bottom sequence.",
     steps: [
-      {
-        id: "order-prompt",
-        title: "Check the Required Sequence",
-        whatToDo:
-          "Read what needs to go from top (slot 1.) to bottom so every tag, line, or step lands in proper order.",
-        actionLabel: "Determine the 1st through last item",
-        targetSelectors: ['[data-tutorial="quiz-prompt"]'],
-        preferredPlacement: "bottom",
-      },
       {
         id: "order-list",
         title: "Arrange Numbered Slots Top to Bottom",
@@ -229,15 +211,6 @@ export const QUIZ_UI_HINTS: Record<QuizHintMode, QuizUiHintConfig> = {
     summary:
       "Connect each item on the left column with its matching pair on the right column.",
     steps: [
-      {
-        id: "pair-prompt",
-        title: "Match Related Items",
-        whatToDo:
-          "Read the matching goal. Every card in the left column pairs with one corresponding card in the right column.",
-        actionLabel: "Scan both columns before picking",
-        targetSelectors: ['[data-tutorial="quiz-prompt"]'],
-        preferredPlacement: "bottom",
-      },
       {
         id: "pair-left",
         title: "Step 1: Pick a Left Card",
@@ -454,4 +427,46 @@ export function resolveQuizHintMode(
 
 export function getQuizUiHint(mode: QuizHintMode): QuizUiHintConfig {
   return QUIZ_UI_HINTS[mode] ?? QUIZ_UI_HINTS.MCQ;
+}
+
+export const ONBOARDING_TUTORIAL_SECTION_ID = 1;
+export const ONBOARDING_TUTORIAL_UNIT_ORDER = 1;
+export const ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID = 98;
+
+function parsePositiveInt(value?: number | string | null): number | null {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
+}
+
+export function isOnboardingTutorialUnit({
+  secId,
+  unitOrder,
+  unitId,
+  isSkipMode = false,
+}: {
+  secId?: number | string | null;
+  unitOrder?: number | string | null;
+  unitId?: number | string | null;
+  isSkipMode?: boolean;
+}): boolean {
+  if (isSkipMode) return false;
+  const parsedSecId = parsePositiveInt(secId);
+  const parsedUnitOrder = parsePositiveInt(unitOrder);
+  if (parsedSecId !== null && parsedUnitOrder !== null) {
+    return (
+      parsedSecId === ONBOARDING_TUTORIAL_SECTION_ID &&
+      parsedUnitOrder === ONBOARDING_TUTORIAL_UNIT_ORDER
+    );
+  }
+  const parsedUnitId = parsePositiveInt(unitId);
+  return (
+    parsedUnitId === ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID &&
+    (parsedSecId === null || parsedSecId === ONBOARDING_TUTORIAL_SECTION_ID)
+  );
 }

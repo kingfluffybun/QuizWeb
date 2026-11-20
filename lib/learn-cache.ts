@@ -4,6 +4,7 @@ import type {
 } from "@/app/actions/progress";
 import type { QuizData } from "@/app/quiz/types";
 import { inferQuizTypeName } from "@/app/quiz/unwrap";
+import { ensureUnit1AllQuizTypes } from "@/lib/unit1-onboarding-quizzes";
 
 export const LEARN_SECTION_CACHE_KEY = "quizweb_learn_section_cache_v1";
 export const LEARN_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -304,6 +305,7 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
       {
         quiz_id: unit.unit_id,
         unit_id: unit.unit_id,
+        unit_order: unit.unit_order,
         cat_id: unit.cat_id,
         sec_id: unit.sec_id,
         difficulty_id: unit.difficulty_id,
@@ -321,7 +323,7 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
     ];
   }
 
-  return rawQuizzes.map((entry, index) => {
+  const mapped = rawQuizzes.map((entry, index) => {
     const entryRecord = entry as Partial<QuizData> & { type?: string };
     const entryPayload = (entryRecord.quiz_payload ?? {}) as Record<string, unknown>;
     const inferredType = inferQuizTypeName(
@@ -332,6 +334,7 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
     return {
       ...entryRecord,
       unit_id: unit.unit_id,
+      unit_order: unit.unit_order,
       unit_title: unit.unit_title,
       unit_lesson_card: unit.lesson_card,
       unit_assessment: unit.assessment ?? {},
@@ -348,6 +351,12 @@ export function toQuizLandingQuizzes(unit: PreloadedUnitPayload): QuizData[] {
       type_name: inferredType,
       quiz_payload: entryPayload as QuizData["quiz_payload"],
     } as QuizData;
+  });
+
+  return ensureUnit1AllQuizTypes(mapped, {
+    secId: unit.sec_id,
+    unitOrder: unit.unit_order,
+    unitId: unit.unit_id,
   });
 }
 

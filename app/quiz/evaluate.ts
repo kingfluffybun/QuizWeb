@@ -20,6 +20,7 @@ export type UnitLessonSlide = {
 
 export type UnitQuizData = QuizData & {
   unit_id?: number;
+  unit_order?: number;
   unit_title?: string;
   unit_assessment?: unknown;
   unit_lesson_card?: {

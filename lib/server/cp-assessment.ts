@@ -6,6 +6,8 @@ import { createSafeCache } from "./cache";
 export interface AuthoritativeAssessment {
   resolvedUnitId: number;
   unitTitle: string;
+  secId?: number;
+  unitOrder?: number;
   assessment: CodeProblemAssessment;
 }
 
@@ -33,12 +35,14 @@ async function fetchAuthoritativeAssessmentUncached(
   try {
     const query =
       unitKey > 0
-        ? `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
+        ? `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome,
+                  u.unit_title, u.sec_id, u.unit_order
            FROM unit_assessment_tbl ua
            JOIN unit_tbl u ON ua.unit_id = u.unit_id
            WHERE ua.unit_id = ?
            LIMIT 1`
-        : `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
+        : `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome,
+                  u.unit_title, u.sec_id, u.unit_order
            FROM unit_assessment_tbl ua
            JOIN unit_tbl u ON ua.unit_id = u.unit_id
            WHERE u.status = 'approved'
@@ -72,6 +76,12 @@ async function fetchAuthoritativeAssessmentUncached(
     return {
       resolvedUnitId: Number(assessmentRow.unit_id),
       unitTitle,
+      secId:
+        assessmentRow.sec_id != null ? Number(assessmentRow.sec_id) : undefined,
+      unitOrder:
+        assessmentRow.unit_order != null
+          ? Number(assessmentRow.unit_order)
+          : undefined,
       assessment: {
         schemaVersion: 2,
         title: String(assessmentRow.title ?? unitTitle),
@@ -117,7 +127,8 @@ export async function resolveAuthoritativeAssessmentsByUnitIds(
   if (uniqueIds.length === 0) return result;
 
   const [assessmentRows] = await db.query<RowDataPacket[]>(
-    `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome, u.unit_title
+    `SELECT ua.assessment_id, ua.unit_id, ua.title, ua.description, ua.expected_outcome,
+            u.unit_title, u.sec_id, u.unit_order
      FROM unit_assessment_tbl ua
      JOIN unit_tbl u ON ua.unit_id = u.unit_id
      WHERE ua.unit_id IN (?)`,
@@ -157,6 +168,8 @@ export async function resolveAuthoritativeAssessmentsByUnitIds(
     result.set(unitId, {
       resolvedUnitId: unitId,
       unitTitle,
+      secId: row.sec_id != null ? Number(row.sec_id) : undefined,
+      unitOrder: row.unit_order != null ? Number(row.unit_order) : undefined,
       assessment: {
         schemaVersion: 2,
         title: String(row.title ?? unitTitle),

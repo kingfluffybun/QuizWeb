@@ -40,6 +40,7 @@ export interface CodeProblemRunnerProps {
   initialDailyGoal?: DailyGoalData | null;
   initialNextUnit?: NextUnitInfo | null;
   skipPayloadInitial?: SequentialSkipQueuePayload | null;
+  isTutorialUnit?: boolean;
 }
 
 export const CP_FILE_META: Record<

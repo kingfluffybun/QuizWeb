@@ -7,6 +7,7 @@ import {
   getNextCurriculumUnit,
   isCodeProblemUnlockedForUser,
 } from "@/app/actions/progress";
+import { isOnboardingTutorialUnit } from "@/lib/quiz-ui-hints";
 import { CodeProblemRunner } from "../CodeProblemRunner";
 import CpSuspenseShell from "../components/CpSuspenseShell";
 
@@ -36,6 +37,12 @@ export default async function UnitQuizCPPage({ params }: UnitQuizCPPageProps) {
     getNextCurriculumUnit(parsedUnitId).catch(() => null),
   ]);
 
+  const isTutorialUnit = isOnboardingTutorialUnit({
+    secId: initialProblem?.sec_id,
+    unitOrder: initialProblem?.unit_order,
+    unitId: parsedUnitId,
+  });
+
   return (
     <Suspense fallback={<CpSuspenseShell />}>
       <CodeProblemRunner
@@ -43,6 +50,7 @@ export default async function UnitQuizCPPage({ params }: UnitQuizCPPageProps) {
         initialProblem={initialProblem}
         initialDailyGoal={initialDailyGoal}
         initialNextUnit={initialNextUnit}
+        isTutorialUnit={isTutorialUnit}
       />
     </Suspense>
   );

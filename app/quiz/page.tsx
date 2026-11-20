@@ -3,6 +3,9 @@ import { auth } from "@/auth";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
 import { getQuizOrUnitById } from "@/app/actions/quiz";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
+import { isOnboardingTutorialUnit } from "@/lib/quiz-ui-hints";
+import { ensureUnit1AllQuizTypes } from "@/lib/unit1-onboarding-quizzes";
+import type { UnitQuizData } from "./evaluate";
 import { unwrapUnitQuizzes } from "./unwrap";
 import EmptyQuizState from "./components/EmptyQuizState";
 import QuizLandingClient from "./QuizLandingClient";
@@ -42,11 +45,28 @@ export default async function QuizPage({
       : Promise.resolve(null),
   ]);
 
-  const quizzesToDisplay = selectedPayload
-    ? unwrapUnitQuizzes([selectedPayload]).map((quiz, index) =>
-        shuffleQuizOptions(quiz, index !== 0),
-      )
+  const selectedMeta = selectedPayload as
+    | { unit_id?: number; sec_id?: number; unit_order?: number }
+    | null;
+  const unwrappedQuizzes = selectedPayload
+    ? unwrapUnitQuizzes([selectedPayload])
     : [];
+  const enrichedQuizzes = selectedPayload
+    ? ensureUnit1AllQuizTypes(unwrappedQuizzes, {
+        secId: selectedMeta?.sec_id,
+        unitOrder: selectedMeta?.unit_order,
+        unitId: selectedMeta?.unit_id,
+      })
+    : [];
+  const quizzesToDisplay = enrichedQuizzes.map((quiz, index) =>
+    shuffleQuizOptions(quiz, index !== 0),
+  );
+  const firstQuiz = quizzesToDisplay[0] as UnitQuizData | undefined;
+  const isTutorialUnit = isOnboardingTutorialUnit({
+    secId: selectedMeta?.sec_id ?? firstQuiz?.sec_id,
+    unitOrder: selectedMeta?.unit_order ?? firstQuiz?.unit_order,
+    unitId: selectedMeta?.unit_id ?? firstQuiz?.unit_id,
+  });
 
   if (quizzesToDisplay.length === 0) {
     return <EmptyQuizState />;
@@ -62,6 +82,7 @@ export default async function QuizPage({
       unitId={Number.isFinite(selectedQuizId) ? selectedQuizId : undefined}
       initialSlideOrder={initialSlideOrder}
       dailyGoalData={dailyGoalData}
+      isTutorialUnit={isTutorialUnit}
     />
   );
 }

@@ -8,6 +8,9 @@ import {
   isUnitUnlockedForUser,
 } from "@/app/actions/progress";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
+import { isOnboardingTutorialUnit } from "@/lib/quiz-ui-hints";
+import { ensureUnit1AllQuizTypes } from "@/lib/unit1-onboarding-quizzes";
+import type { UnitQuizData } from "../evaluate";
 import { unwrapUnitQuizzes } from "../unwrap";
 import EmptyQuizState from "../components/EmptyQuizState";
 import QuizLandingClient from "../QuizLandingClient";
@@ -51,11 +54,26 @@ export default async function UnitQuizPage({
         : Promise.resolve(false),
     ]);
 
-  const quizzesToDisplay = selectedUnit
-    ? unwrapUnitQuizzes([selectedUnit]).map((quiz, index) =>
-        shuffleQuizOptions(quiz, index !== 0),
-      )
+  const selectedMeta = selectedUnit as
+    | { sec_id?: number; unit_order?: number; unit_id?: number }
+    | null;
+  const unwrappedQuizzes = selectedUnit ? unwrapUnitQuizzes([selectedUnit]) : [];
+  const enrichedQuizzes = selectedUnit
+    ? ensureUnit1AllQuizTypes(unwrappedQuizzes, {
+        secId: selectedMeta?.sec_id,
+        unitOrder: selectedMeta?.unit_order,
+        unitId: selectedUnitId,
+      })
     : [];
+  const quizzesToDisplay = enrichedQuizzes.map((quiz, index) =>
+    shuffleQuizOptions(quiz, index !== 0),
+  );
+  const firstQuiz = quizzesToDisplay[0] as UnitQuizData | undefined;
+  const isTutorialUnit = isOnboardingTutorialUnit({
+    secId: selectedMeta?.sec_id ?? firstQuiz?.sec_id,
+    unitOrder: selectedMeta?.unit_order ?? firstQuiz?.unit_order,
+    unitId: selectedUnitId,
+  });
 
   if (quizzesToDisplay.length === 0) {
     return <EmptyQuizState />;
@@ -75,6 +93,7 @@ export default async function UnitQuizPage({
       startAtQuiz={shouldStartAtQuiz}
       nextUnit={nextCurriculumUnit}
       dailyGoalData={dailyGoalData}
+      isTutorialUnit={isTutorialUnit}
     />
   );
 }

@@ -6,13 +6,26 @@ import {
   computeArrowPath,
   computePopoverLayout,
   computeSpotlightRect,
+  easeOutCubic,
+  lerp,
+  lerpRect,
 } from "../lib/quiz-tutorial-geometry";
 import {
   getQuizUiHint,
+  isOnboardingTutorialUnit,
+  ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID,
+  ONBOARDING_TUTORIAL_SECTION_ID,
+  ONBOARDING_TUTORIAL_UNIT_ORDER,
   QUIZ_UI_HINT_ORDER,
   QUIZ_UI_HINTS,
   resolveQuizHintMode,
 } from "../lib/quiz-ui-hints";
+import {
+  ensureUnit1AllQuizTypes,
+  REQUIRED_UNIT1_QUIZ_TYPES,
+} from "../lib/unit1-onboarding-quizzes";
+import { evaluateQuizAnswer, getCorrectValue } from "../app/quiz/evaluate";
+import type { QuizData } from "../app/quiz/types";
 
 function readSource(relativePath: string): string {
   return fs.readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
@@ -207,9 +220,135 @@ function runTests() {
     cutoutPath.startsWith("M 0 0 H 1280 V 720 H 0 Z M "),
     "buildBackdropCutoutPath constructs full-screen outer + rounded hole cutout",
   );
-  console.log("  ✓ Spotlight, popover layout, cutout & curved arrow geometry verified");
 
-  // 5. Live DOM anchor integrity across component source files
+  // Interpolation helpers for smooth 60fps spotlight gliding
+  assert.equal(lerp(10, 110, 0), 10);
+  assert.equal(lerp(10, 110, 1), 110);
+  assert.equal(lerp(10, 110, 0.25), 35);
+  assert.equal(easeOutCubic(-0.5), 0);
+  assert.equal(easeOutCubic(0), 0);
+  assert.equal(easeOutCubic(1), 1);
+  assert.equal(easeOutCubic(1.5), 1);
+  assert.ok(
+    easeOutCubic(0.5) > 0.5 && easeOutCubic(0.5) < 1,
+    "easeOutCubic accelerates early and decelerates smoothly",
+  );
+  const midRect = lerpRect(
+    { left: 100, top: 200, width: 300, height: 80 },
+    { left: 201, top: 301, width: 400, height: 120 },
+    0.5,
+  );
+  assert.deepEqual(
+    midRect,
+    { left: 150.5, top: 250.5, width: 350, height: 100 },
+    "lerpRect preserves sub-pixel fractional precision",
+  );
+  console.log(
+    "  ✓ Spotlight, popover layout, cutout, arrow & interpolation math verified",
+  );
+
+  // 5. Non-repeating first step on FITB / Order / Pair
+  assert.equal(QUIZ_UI_HINTS.FITB.steps.length, 4);
+  assert.equal(QUIZ_UI_HINTS.FITB.steps[0].id, "fitb-input");
+  assert.equal(QUIZ_UI_HINTS.Order.steps.length, 5);
+  assert.equal(QUIZ_UI_HINTS.Order.steps[0].id, "order-list");
+  assert.equal(QUIZ_UI_HINTS.Pair.steps.length, 4);
+  assert.equal(QUIZ_UI_HINTS.Pair.steps[0].id, "pair-left");
+  for (const mode of ["FITB", "Order", "Pair"] as const) {
+    assert.ok(
+      !QUIZ_UI_HINTS[mode].steps.some((step) =>
+        step.targetSelectors.includes('[data-tutorial="quiz-prompt"]'),
+      ),
+      `${mode} starts on type-specific UI without repeating generic prompt hint`,
+    );
+  }
+  console.log("  ✓ Non-duplicate first-step progression verified for FITB/Order/Pair");
+
+  // 6. Unit 1 / Section 1 eligibility gating helper
+  assert.equal(ONBOARDING_TUTORIAL_SECTION_ID, 1);
+  assert.equal(ONBOARDING_TUTORIAL_UNIT_ORDER, 1);
+  assert.equal(ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID, 98);
+
+  assert.equal(isOnboardingTutorialUnit({ secId: 1, unitOrder: 1 }), true);
+  assert.equal(isOnboardingTutorialUnit({ secId: "1", unitOrder: "1" }), true);
+  assert.equal(isOnboardingTutorialUnit({ unitId: 98 }), true);
+  assert.equal(isOnboardingTutorialUnit({ secId: 1, unitOrder: 2 }), false);
+  assert.equal(isOnboardingTutorialUnit({ secId: 2, unitOrder: 1 }), false);
+  assert.equal(
+    isOnboardingTutorialUnit({ secId: 2, unitOrder: 1, unitId: 98 }),
+    false,
+  );
+  assert.equal(
+    isOnboardingTutorialUnit({ secId: 1, unitOrder: 1, isSkipMode: true }),
+    false,
+  );
+  assert.equal(isOnboardingTutorialUnit({ unitId: 103 }), false);
+  console.log("  ✓ Unit 1 Section 1 strict eligibility helper verified");
+
+  // 7. Unit 1 runtime all-quiz-type guarantee + evaluation validity
+  const singleMcq: QuizData[] = [
+    {
+      quiz_id: 9001,
+      cat_id: 1,
+      sec_id: 1,
+      type_name: "MCQ",
+      question_text: "Which element defines HTML content?",
+      quiz_payload: {
+        options: ["<html>", "<css>"],
+        correct_index: 0,
+      },
+    },
+  ];
+  const augmentedUnit1 = ensureUnit1AllQuizTypes(singleMcq, {
+    secId: 1,
+    unitOrder: 1,
+    unitId: 98,
+  });
+  const augmentedModes = new Set(
+    augmentedUnit1.map((q) => resolveQuizHintMode(q.type_name)),
+  );
+  for (const requiredType of REQUIRED_UNIT1_QUIZ_TYPES) {
+    assert.ok(
+      augmentedModes.has(requiredType),
+      `Unit 1 augmented list includes ${requiredType}`,
+    );
+  }
+  assert.equal(augmentedUnit1[0].quiz_id, 9001, "Preserves original DB quiz first");
+  for (const item of augmentedUnit1) {
+    const evalResult = evaluateQuizAnswer(item, getCorrectValue(item));
+    assert.equal(
+      evalResult.correct,
+      true,
+      `Unit 1 quiz type ${item.type_name} evaluates cleanly with its correct answer`,
+    );
+  }
+
+  // No-op when all types already exist
+  assert.equal(
+    ensureUnit1AllQuizTypes(augmentedUnit1, { secId: 1, unitOrder: 1 }),
+    augmentedUnit1,
+    "Does not duplicate quiz types when Unit 1 already has all 4",
+  );
+  // No-op for Unit 2+, Section 2+, or skip mode
+  assert.equal(
+    ensureUnit1AllQuizTypes(singleMcq, { secId: 1, unitOrder: 2 }),
+    singleMcq,
+  );
+  assert.equal(
+    ensureUnit1AllQuizTypes(singleMcq, { secId: 2, unitOrder: 1 }),
+    singleMcq,
+  );
+  assert.equal(
+    ensureUnit1AllQuizTypes(singleMcq, {
+      secId: 1,
+      unitOrder: 1,
+      isSkipMode: true,
+    }),
+    singleMcq,
+  );
+  console.log("  ✓ Unit 1 runtime all-quiz-type coverage & scoping verified");
+
+  // 8. Live DOM anchor integrity across component source files
   const anchoredSources = [
     "app/quiz/components/QuizHeader.tsx",
     "app/components/quiz/InlineCodeText.tsx",
@@ -238,26 +377,82 @@ function runTests() {
     `  ✓ All ${referencedTutorialKeys.size} live component data-tutorial anchors verified`,
   );
 
-  // 6. Overlay integration & pass-guard preservation
+  // 9. Smooth overlay animation, Unit 1 gating & pass-guard preservation
+  const overlaySource = readSource("app/components/quiz/QuizTutorialOverlay.tsx");
+  assert.ok(
+    overlaySource.includes("easeOutCubic") &&
+      overlaySource.includes("lerpRect") &&
+      overlaySource.includes("is-ready") &&
+      overlaySource.includes("settleAndRevealInitial"),
+    "QuizTutorialOverlay implements settle-before-reveal + 60fps easeOutCubic lerpRect transitions",
+  );
+
+  const quizCssSource = readSource("public/css/quiz.css");
+  assert.ok(
+    quizCssSource.includes(".quiz-tutorial-overlay.is-ready") &&
+      quizCssSource.includes("html[data-motion=\"reduce\"] .quiz-tutorial-overlay"),
+    "public/css/quiz.css gates overlay opacity on .is-ready and respects reduced motion",
+  );
+
   const quizLanding = readSource("app/quiz/QuizLandingClient.tsx");
   assert.ok(
     quizLanding.includes("QuizTutorialOverlay") &&
       quizLanding.includes("useIsHydrated") &&
       quizLanding.includes("shouldAutoOpenTutorial") &&
+      quizLanding.includes("resolvedIsTutorialUnit") &&
+      quizLanding.includes("showHelpButton={resolvedIsTutorialUnit}") &&
+      quizLanding.includes("showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}") &&
+      quizLanding.includes("isTutorialOpen && (") &&
+      quizLanding.includes("key={activeHintMode}") &&
       quizLanding.includes(
         "const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);",
       ),
-    "QuizLandingClient wires QuizTutorialOverlay + hydration-safe auto-start + strict pass guard",
+    "QuizLandingClient wires Unit 1 gating, clean overlay remount, hidden hint bar during overlay & strict pass guard",
   );
 
   const cpRunner = readSource("app/quiz-cp/CodeProblemRunner.tsx");
   assert.ok(
     cpRunner.includes("QuizTutorialOverlay") &&
       cpRunner.includes('mode="CP"') &&
-      cpRunner.includes("onPrepareStep={handlePrepareTutorialStep}"),
-    "CodeProblemRunner wires QuizTutorialOverlay with mobile tab preparation",
+      cpRunner.includes("onPrepareStep={handlePrepareTutorialStep}") &&
+      cpRunner.includes("resolvedIsTutorialUnit") &&
+      cpRunner.includes("showHelpButton={resolvedIsTutorialUnit}") &&
+      cpRunner.includes("showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}") &&
+      cpRunner.includes("isTutorialOpen && ("),
+    "CodeProblemRunner wires Unit 1 gating + mobile tab preparation + clean overlay mount",
   );
-  console.log("  ✓ QuizLandingClient & CodeProblemRunner wiring verified");
+
+  const skipPage = readSource("app/quiz-cp/skip/[targetSecId]/page.tsx");
+  assert.ok(
+    skipPage.includes("isTutorialUnit={false}"),
+    "Skip section CP route explicitly disables onboarding tutorial",
+  );
+
+  // 10. Migration 017 validation
+  const migrationUp = readSource("migrations/017_unit1_all_quiz_types.sql");
+  const migrationRollback = readSource(
+    "migrations/017_unit1_all_quiz_types_rollback.sql",
+  );
+  assert.ok(
+    !migrationUp.toUpperCase().includes("DELIMITER"),
+    "Migration 017 avoids DELIMITER syntax for mysql2 multi-statement compatibility",
+  );
+  assert.ok(
+    migrationUp.includes("quiz_mcq_option_tbl") &&
+      migrationUp.includes("quiz_fitb_tbl") &&
+      migrationUp.includes("quiz_order_item_tbl") &&
+      migrationUp.includes("quiz_pair_tbl") &&
+      migrationUp.includes("unit_assessment_tbl") &&
+      migrationUp.includes("assessment_step_tbl") &&
+      migrationUp.includes("'017_unit1_all_quiz_types.sql'"),
+    "Migration 017 idempotently provisions MCQ, FITB, Order, Pair, CP & _migrations entry",
+  );
+  assert.ok(
+    migrationRollback.includes("DELETE FROM `quiz_tbl`") &&
+      migrationRollback.includes("'017_unit1_all_quiz_types.sql'"),
+    "Rollback 017 cleans up synthetic onboarding rows cleanly",
+  );
+  console.log("  ✓ Overlay animation, Unit 1 route gating & Migration 017 verified");
 
   console.log("\n🎉 All interactive arrow tutorial tests passed!");
 }

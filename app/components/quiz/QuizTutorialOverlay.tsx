@@ -9,12 +9,16 @@ import {
   computeArrowPath,
   computePopoverLayout,
   computeSpotlightRect,
+  easeOutCubic,
+  lerp,
+  lerpRect,
   type RectBox,
 } from "@/lib/quiz-tutorial-geometry";
 import {
   getQuizUiHint,
   type QuizHintMode,
   type QuizTutorialStep,
+  type TutorialPlacement,
 } from "@/lib/quiz-ui-hints";
 
 interface QuizTutorialOverlayProps {
@@ -25,13 +29,32 @@ interface QuizTutorialOverlayProps {
   onKeepOpen?: () => void;
 }
 
-interface MeasurementState {
-  stepId: string;
+interface TutorialVisualFrame {
+  ready: boolean;
   viewportWidth: number;
   viewportHeight: number;
   spotlight: RectBox | null;
+  cardLeft: number;
+  cardTop: number;
+  cardWidth: number;
   cardHeight: number;
+  placement: TutorialPlacement;
 }
+
+const TRANSITION_DURATION_MS = 360;
+const INITIAL_SETTLE_MAX_MS = 350;
+
+const INITIAL_VISUAL_FRAME: TutorialVisualFrame = {
+  ready: false,
+  viewportWidth: 1280,
+  viewportHeight: 720,
+  spotlight: null,
+  cardLeft: 445,
+  cardTop: 210,
+  cardWidth: 390,
+  cardHeight: 300,
+  placement: "bottom",
+};
 
 function findVisibleTarget(selectors: string[]): HTMLElement | null {
   if (typeof document === "undefined") return null;
@@ -44,6 +67,92 @@ function findVisibleTarget(selectors: string[]): HTMLElement | null {
     }
   }
   return null;
+}
+
+function findStepIndexSkippingMissing(
+  steps: QuizTutorialStep[],
+  startIndex: number,
+  delta: 1 | -1,
+): number {
+  let idx = startIndex;
+  while (idx >= 0 && idx < steps.length) {
+    const candidate = steps[idx];
+    if (
+      candidate.optionalIfMissing &&
+      !candidate.cpMobileTab &&
+      !findVisibleTarget(candidate.targetSelectors)
+    ) {
+      idx += delta;
+      continue;
+    }
+    return idx;
+  }
+  return delta > 0 ? steps.length : -1;
+}
+
+function hasRunningAncestorAnimation(el: HTMLElement | null): boolean {
+  if (!el || typeof el.getAnimations !== "function") return false;
+  let current: HTMLElement | null = el;
+  while (current) {
+    const animations = current.getAnimations();
+    if (animations.some((anim) => anim.playState === "running")) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+function measureTargetFrame(
+  targetEl: HTMLElement | null,
+  preferredPlacement: TutorialPlacement | undefined,
+  cardHeight: number,
+): TutorialVisualFrame {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const targetCardWidth = Math.min(390, Math.max(260, vw - 24));
+  const rawRect = targetEl?.getBoundingClientRect() ?? null;
+  const spotlight =
+    rawRect && rawRect.width > 0 && rawRect.height > 0
+      ? computeSpotlightRect(
+          {
+            left: rawRect.left,
+            top: rawRect.top,
+            width: rawRect.width,
+            height: rawRect.height,
+          },
+          vw,
+          vh,
+        )
+      : null;
+
+  const popover = spotlight
+    ? computePopoverLayout(
+        spotlight,
+        targetCardWidth,
+        cardHeight,
+        vw,
+        vh,
+        preferredPlacement,
+      )
+    : {
+        left: Math.max(12, Math.round((vw - targetCardWidth) / 2)),
+        top: Math.max(16, Math.round((vh - cardHeight) / 2)),
+        width: targetCardWidth,
+        placement: preferredPlacement ?? ("bottom" as const),
+      };
+
+  return {
+    ready: true,
+    viewportWidth: vw,
+    viewportHeight: vh,
+    spotlight,
+    cardLeft: popover.left,
+    cardTop: popover.top,
+    cardWidth: popover.width,
+    cardHeight,
+    placement: popover.placement,
+  };
 }
 
 export default function QuizTutorialOverlay({
@@ -60,9 +169,14 @@ export default function QuizTutorialOverlay({
     forMode: QuizHintMode;
     index: number;
   }>({ forMode: mode, index: 0 });
-  const [measurement, setMeasurement] = useState<MeasurementState | null>(null);
+  const [visual, setVisual] =
+    useState<TutorialVisualFrame>(INITIAL_VISUAL_FRAME);
 
   const cardRef = useRef<HTMLElement | null>(null);
+  const visualRef = useRef<TutorialVisualFrame>(INITIAL_VISUAL_FRAME);
+  const lastAnimatedStepIdRef = useRef<string | null>(null);
+  const targetFrameRef = useRef<TutorialVisualFrame>(INITIAL_VISUAL_FRAME);
+  const isTweeningRef = useRef(false);
   const onPrepareStepRef = useRef(onPrepareStep);
   useEffect(() => {
     onPrepareStepRef.current = onPrepareStep;
@@ -84,39 +198,153 @@ export default function QuizTutorialOverlay({
   }, [markTutorialSeen, mode, onClose]);
 
   const goBack = useCallback(() => {
+    const prevIndex = findStepIndexSkippingMissing(
+      config.steps,
+      resolvedIndex - 1,
+      -1,
+    );
+    if (prevIndex < 0) return;
     setStepState({
       forMode: mode,
-      index: Math.max(0, resolvedIndex - 1),
+      index: prevIndex,
     });
-  }, [mode, resolvedIndex]);
+  }, [config.steps, mode, resolvedIndex]);
 
   const goNext = useCallback(() => {
-    if (resolvedIndex >= totalSteps - 1) {
+    const nextIndex = findStepIndexSkippingMissing(
+      config.steps,
+      resolvedIndex + 1,
+      1,
+    );
+    if (nextIndex >= totalSteps) {
       handleClose();
       return;
     }
     setStepState({
       forMode: mode,
-      index: resolvedIndex + 1,
+      index: nextIndex,
     });
-  }, [handleClose, mode, resolvedIndex, totalSteps]);
+  }, [config.steps, handleClose, mode, resolvedIndex, totalSteps]);
 
   useEffect(() => {
-    if (!isOpen || !activeStep) return;
-
     let rafPrepare = 0;
     let rafMeasure = 0;
+    let rafSettle = 0;
+    let rafTween = 0;
     let resizeObserver: ResizeObserver | null = null;
     let observedTarget: HTMLElement | null = null;
+    let observedCard: HTMLElement | null = null;
     let hasScrolledForStep = false;
+    let missingTargetRetries = 0;
+
+    const applyVisual = (next: TutorialVisualFrame) => {
+      visualRef.current = next;
+      setVisual(next);
+    };
+
+    if (!isOpen || !activeStep) {
+      rafMeasure = window.requestAnimationFrame(() => {
+        lastAnimatedStepIdRef.current = null;
+        isTweeningRef.current = false;
+        if (visualRef.current.ready) {
+          applyVisual(INITIAL_VISUAL_FRAME);
+        }
+      });
+      return () => {
+        window.cancelAnimationFrame(rafMeasure);
+      };
+    }
+
+    const startTweenFromCurrent = (toFrame: TutorialVisualFrame) => {
+      window.cancelAnimationFrame(rafTween);
+      const fromFrame = visualRef.current;
+      targetFrameRef.current = toFrame;
+
+      if (reducedMotion) {
+        isTweeningRef.current = false;
+        applyVisual(toFrame);
+        return;
+      }
+
+      isTweeningRef.current = true;
+      const startTime = performance.now();
+
+      const tick = (now: number) => {
+        const elapsed = now - startTime;
+        const rawProgress = Math.min(
+          1,
+          Math.max(0, elapsed / TRANSITION_DURATION_MS),
+        );
+        const eased = easeOutCubic(rawProgress);
+        const target = targetFrameRef.current;
+
+        const nextSpotlight =
+          fromFrame.spotlight && target.spotlight
+            ? lerpRect(fromFrame.spotlight, target.spotlight, eased)
+            : target.spotlight;
+
+        applyVisual({
+          ready: true,
+          viewportWidth: target.viewportWidth,
+          viewportHeight: target.viewportHeight,
+          spotlight: nextSpotlight,
+          cardLeft: lerp(fromFrame.cardLeft, target.cardLeft, eased),
+          cardTop: lerp(fromFrame.cardTop, target.cardTop, eased),
+          cardWidth: lerp(fromFrame.cardWidth, target.cardWidth, eased),
+          cardHeight: lerp(fromFrame.cardHeight, target.cardHeight, eased),
+          placement: target.placement,
+        });
+
+        if (rawProgress < 1) {
+          rafTween = window.requestAnimationFrame(tick);
+        } else {
+          rafTween = 0;
+          isTweeningRef.current = false;
+          applyVisual(target);
+        }
+      };
+
+      rafTween = window.requestAnimationFrame(tick);
+    };
+
+    const ensureObservers = (targetEl: HTMLElement | null) => {
+      if (targetEl === observedTarget && cardRef.current === observedCard) {
+        return;
+      }
+      resizeObserver?.disconnect();
+      observedTarget = targetEl;
+      observedCard = cardRef.current;
+      if (typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => {
+          window.cancelAnimationFrame(rafMeasure);
+          rafMeasure = window.requestAnimationFrame(measureNow);
+        });
+        if (targetEl) resizeObserver.observe(targetEl);
+        if (cardRef.current) resizeObserver.observe(cardRef.current);
+      }
+    };
+
+    const scheduleMeasure = () => {
+      window.cancelAnimationFrame(rafMeasure);
+      rafMeasure = window.requestAnimationFrame(measureNow);
+    };
 
     const measureNow = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const targetEl = findVisibleTarget(activeStep.targetSelectors);
 
-      if (!targetEl && activeStep.optionalIfMissing && resolvedIndex < totalSteps - 1) {
+      if (targetEl) {
+        missingTargetRetries = 0;
+      } else if (
+        activeStep.optionalIfMissing &&
+        resolvedIndex < totalSteps - 1
+      ) {
         setStepState({ forMode: mode, index: resolvedIndex + 1 });
+        return;
+      } else if (!activeStep.optionalIfMissing && missingTargetRetries < 6) {
+        missingTargetRetries += 1;
+        scheduleMeasure();
         return;
       }
 
@@ -137,53 +365,138 @@ export default function QuizTutorialOverlay({
         }
       }
 
-      if (targetEl !== observedTarget) {
-        resizeObserver?.disconnect();
-        observedTarget = targetEl;
-        if (typeof ResizeObserver !== "undefined") {
-          resizeObserver = new ResizeObserver(() => {
-            window.cancelAnimationFrame(rafMeasure);
-            rafMeasure = window.requestAnimationFrame(measureNow);
-          });
-          if (targetEl) resizeObserver.observe(targetEl);
-          if (cardRef.current) resizeObserver.observe(cardRef.current);
-        }
-      }
-
-      const rawRect = targetEl?.getBoundingClientRect() ?? null;
-      const spotlight =
-        rawRect && rawRect.width > 0 && rawRect.height > 0
-          ? computeSpotlightRect(
-              {
-                left: rawRect.left,
-                top: rawRect.top,
-                width: rawRect.width,
-                height: rawRect.height,
-              },
-              vw,
-              vh,
-            )
-          : null;
+      ensureObservers(targetEl);
 
       const measuredCardHeight = cardRef.current?.offsetHeight ?? 320;
+      const nextFrame = measureTargetFrame(
+        targetEl,
+        activeStep.preferredPlacement,
+        measuredCardHeight,
+      );
 
-      setMeasurement({
-        stepId: activeStep.id,
-        viewportWidth: vw,
-        viewportHeight: vh,
-        spotlight,
-        cardHeight: measuredCardHeight,
-      });
+      // Initial open: wait for quiz-container's quiz-elevate-in settle (~350ms max)
+      // while overlay remains invisible (opacity: 0), then fade in once over Step 0.
+      if (!visualRef.current.ready) {
+        targetFrameRef.current = nextFrame;
+        return;
+      }
+
+      const previousStepId = lastAnimatedStepIdRef.current;
+      if (previousStepId !== null && previousStepId !== activeStep.id) {
+        lastAnimatedStepIdRef.current = activeStep.id;
+        startTweenFromCurrent(nextFrame);
+        return;
+      }
+
+      lastAnimatedStepIdRef.current = activeStep.id;
+      if (isTweeningRef.current) {
+        targetFrameRef.current = nextFrame;
+      } else {
+        applyVisual(nextFrame);
+      }
     };
 
-    const scheduleMeasure = () => {
-      window.cancelAnimationFrame(rafMeasure);
-      rafMeasure = window.requestAnimationFrame(measureNow);
+    const settleAndRevealInitial = () => {
+      const settleStart = performance.now();
+      let prevRect: DOMRect | null = null;
+      let stableFrames = 0;
+
+      const waitFrame = () => {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const targetCardWidth = Math.min(390, Math.max(260, vw - 24));
+        if (Math.abs(visualRef.current.cardWidth - targetCardWidth) > 1) {
+          applyVisual({
+            ...visualRef.current,
+            ready: false,
+            viewportWidth: vw,
+            viewportHeight: vh,
+            cardWidth: targetCardWidth,
+          });
+          rafSettle = window.requestAnimationFrame(waitFrame);
+          return;
+        }
+
+        const targetEl = findVisibleTarget(activeStep.targetSelectors);
+
+        if (
+          !targetEl &&
+          activeStep.optionalIfMissing &&
+          resolvedIndex < totalSteps - 1
+        ) {
+          setStepState({ forMode: mode, index: resolvedIndex + 1 });
+          return;
+        }
+
+        if (targetEl && !hasScrolledForStep) {
+          hasScrolledForStep = true;
+          const raw = targetEl.getBoundingClientRect();
+          const isFullyVisible =
+            raw.top >= 16 &&
+            raw.bottom <= vh - 16 &&
+            raw.left >= 8 &&
+            raw.right <= vw - 8;
+          if (!isFullyVisible && typeof targetEl.scrollIntoView === "function") {
+            targetEl.scrollIntoView({
+              behavior: reducedMotion ? "auto" : "smooth",
+              block: "center",
+              inline: "nearest",
+            });
+          }
+        }
+
+        const currentRect = targetEl?.getBoundingClientRect() ?? null;
+        const rectStable =
+          currentRect !== null &&
+          prevRect !== null &&
+          Math.abs(currentRect.left - prevRect.left) < 0.5 &&
+          Math.abs(currentRect.top - prevRect.top) < 0.5 &&
+          Math.abs(currentRect.width - prevRect.width) < 0.5 &&
+          Math.abs(currentRect.height - prevRect.height) < 0.5;
+
+        const ancestorsBusy =
+          !reducedMotion && hasRunningAncestorAnimation(targetEl);
+
+        if (!ancestorsBusy && (rectStable || !targetEl || reducedMotion)) {
+          stableFrames += 1;
+        } else {
+          stableFrames = 0;
+        }
+        prevRect = currentRect;
+
+        const elapsed = performance.now() - settleStart;
+        const readyToReveal =
+          reducedMotion ||
+          stableFrames >= 2 ||
+          elapsed >= INITIAL_SETTLE_MAX_MS;
+
+        if (!readyToReveal) {
+          rafSettle = window.requestAnimationFrame(waitFrame);
+          return;
+        }
+
+        ensureObservers(targetEl);
+        const measuredCardHeight = cardRef.current?.offsetHeight ?? 320;
+        const initialFrame = measureTargetFrame(
+          targetEl,
+          activeStep.preferredPlacement,
+          measuredCardHeight,
+        );
+        lastAnimatedStepIdRef.current = activeStep.id;
+        targetFrameRef.current = initialFrame;
+        applyVisual(initialFrame);
+      };
+
+      rafSettle = window.requestAnimationFrame(waitFrame);
     };
 
     rafPrepare = window.requestAnimationFrame(() => {
       onPrepareStepRef.current?.(activeStep);
-      scheduleMeasure();
+      if (!visualRef.current.ready) {
+        settleAndRevealInitial();
+      } else {
+        scheduleMeasure();
+      }
     });
 
     window.addEventListener("resize", scheduleMeasure);
@@ -192,6 +505,9 @@ export default function QuizTutorialOverlay({
     return () => {
       window.cancelAnimationFrame(rafPrepare);
       window.cancelAnimationFrame(rafMeasure);
+      window.cancelAnimationFrame(rafSettle);
+      window.cancelAnimationFrame(rafTween);
+      isTweeningRef.current = false;
       resizeObserver?.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener("scroll", scheduleMeasure, true);
@@ -224,69 +540,50 @@ export default function QuizTutorialOverlay({
 
   if (!isOpen || !activeStep) return null;
 
-  const vw = measurement?.viewportWidth ?? 1280;
-  const vh = measurement?.viewportHeight ?? 720;
-  const targetCardWidth = Math.min(390, Math.max(260, vw - 24));
-  const cardHeight = measurement?.cardHeight ?? 300;
-  const isCurrentStepMeasured = measurement?.stepId === activeStep.id;
-  const spotlight = isCurrentStepMeasured ? measurement.spotlight : null;
-
-  const popover = spotlight
-    ? computePopoverLayout(
-        spotlight,
-        targetCardWidth,
-        cardHeight,
-        vw,
-        vh,
-        activeStep.preferredPlacement,
-      )
-    : {
-        left: Math.max(12, Math.round((vw - targetCardWidth) / 2)),
-        top: Math.max(16, Math.round((vh - cardHeight) / 2)),
-        width: targetCardWidth,
-        placement: activeStep.preferredPlacement ?? ("bottom" as const),
-      };
-
-  const arrow = spotlight
+  const arrow = visual.spotlight
     ? computeArrowPath(
         {
-          left: popover.left,
-          top: popover.top,
-          width: popover.width,
-          height: cardHeight,
+          left: visual.cardLeft,
+          top: visual.cardTop,
+          width: visual.cardWidth,
+          height: visual.cardHeight,
         },
-        spotlight,
-        popover.placement,
+        visual.spotlight,
+        visual.placement,
       )
     : null;
 
-  const backdropPath = buildBackdropCutoutPath(vw, vh, spotlight);
+  const backdropPath = buildBackdropCutoutPath(
+    visual.viewportWidth,
+    visual.viewportHeight,
+    visual.spotlight,
+  );
 
   return (
     <div
-      className="quiz-tutorial-overlay"
+      className={`quiz-tutorial-overlay${visual.ready ? " is-ready" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="quiz-tutorial-title"
     >
       <svg
         className="quiz-tutorial-backdrop-svg"
-        viewBox={`0 0 ${vw} ${vh}`}
+        viewBox={`0 0 ${visual.viewportWidth} ${visual.viewportHeight}`}
         preserveAspectRatio="none"
         aria-hidden="true"
       >
         <path d={backdropPath} fillRule="evenodd" />
       </svg>
 
-      {spotlight && (
+      {visual.spotlight && (
         <div
           className="quiz-tutorial-spotlight-ring"
           aria-hidden="true"
           style={{
-            left: `${spotlight.left}px`,
-            top: `${spotlight.top}px`,
-            width: `${spotlight.width}px`,
-            height: `${spotlight.height}px`,
+            left: `${visual.spotlight.left}px`,
+            top: `${visual.spotlight.top}px`,
+            width: `${visual.spotlight.width}px`,
+            height: `${visual.spotlight.height}px`,
           }}
         />
       )}
@@ -294,7 +591,7 @@ export default function QuizTutorialOverlay({
       {arrow && (
         <svg
           className="quiz-tutorial-arrow-svg"
-          viewBox={`0 0 ${vw} ${vh}`}
+          viewBox={`0 0 ${visual.viewportWidth} ${visual.viewportHeight}`}
           preserveAspectRatio="none"
           aria-hidden="true"
         >
@@ -336,9 +633,9 @@ export default function QuizTutorialOverlay({
         ref={cardRef}
         className="quiz-tutorial-card"
         style={{
-          left: `${popover.left}px`,
-          top: `${popover.top}px`,
-          width: `${popover.width}px`,
+          left: `${visual.cardLeft}px`,
+          top: `${visual.cardTop}px`,
+          width: `${visual.cardWidth}px`,
         }}
       >
         <header className="quiz-tutorial-card-header">
@@ -399,7 +696,10 @@ export default function QuizTutorialOverlay({
               >
                 <span className="quiz-ui-hint-keys">
                   {shortcut.keys.map((keyText, idx) => (
-                    <kbd key={`${shortcut.label}-${idx}`} className="quiz-ui-hint-kbd">
+                    <kbd
+                      key={`${shortcut.label}-${idx}`}
+                      className="quiz-ui-hint-kbd"
+                    >
                       {keyText}
                     </kbd>
                   ))}
@@ -412,7 +712,11 @@ export default function QuizTutorialOverlay({
           </div>
         )}
 
-        <div className="quiz-tutorial-dots" role="tablist" aria-label="Tutorial steps">
+        <div
+          className="quiz-tutorial-dots"
+          role="tablist"
+          aria-label="Tutorial steps"
+        >
           {config.steps.map((step, idx) => (
             <button
               key={step.id}

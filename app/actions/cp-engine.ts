@@ -34,6 +34,10 @@ export async function getPublicCodeProblem(
     resolved.resolvedUnitId,
     resolved.unitTitle,
     resolved.assessment,
+    {
+      secId: resolved.secId,
+      unitOrder: resolved.unitOrder,
+    },
   );
 }
 

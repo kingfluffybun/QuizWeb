@@ -11,7 +11,10 @@ import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useIsHydrated, useQuizHintsPrefs } from "@/lib/quiz-hints-store";
-import type { QuizTutorialStep } from "@/lib/quiz-ui-hints";
+import {
+  isOnboardingTutorialUnit,
+  type QuizTutorialStep,
+} from "@/lib/quiz-ui-hints";
 import CpEditorPane from "./components/CpEditorPane";
 import CpHeader from "./components/CpHeader";
 import CpInstructionsPane from "./components/CpInstructionsPane";
@@ -31,6 +34,7 @@ export function CodeProblemRunner({
   initialProblem,
   initialDailyGoal,
   initialNextUnit,
+  isTutorialUnit,
 }: CodeProblemRunnerProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -92,15 +96,25 @@ export function CodeProblemRunner({
 
   const isFinished =
     session.status === "completed" || session.status === "gameover";
+  const resolvedIsTutorialUnit =
+    isTutorialUnit ??
+    isOnboardingTutorialUnit({
+      secId: session.problem?.sec_id,
+      unitOrder: session.problem?.unit_order,
+      unitId: session.problem?.unit_id ?? requestedUnitId,
+      isSkipMode: Boolean(requestedSkipTargetSecId),
+    });
   const isTutorialReady = !session.isLoading && Boolean(session.problem);
   const shouldAutoOpenTutorial =
+    resolvedIsTutorialUnit &&
     isHydrated &&
     !isFinished &&
     !accessibilityOpen &&
     isTutorialReady &&
     hintPrefs.autoShowTutorials &&
     !hasSeenTutorial("CP");
-  const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;
+  const isTutorialOpen =
+    resolvedIsTutorialUnit && (helpOpen || shouldAutoOpenTutorial);
 
   const handlePrepareTutorialStep = useCallback(
     (step: QuizTutorialStep) => {
@@ -114,6 +128,7 @@ export function CodeProblemRunner({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
+        !resolvedIsTutorialUnit ||
         isFinished ||
         isTyping ||
         event.key !== "?" ||
@@ -147,7 +162,14 @@ export function CodeProblemRunner({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFinished, isTyping, isTutorialOpen, accessibilityOpen, markTutorialSeen]);
+  }, [
+    resolvedIsTutorialUnit,
+    isFinished,
+    isTyping,
+    isTutorialOpen,
+    accessibilityOpen,
+    markTutorialSeen,
+  ]);
   const animatedStats = useAnimatedStats(
     isFinished,
     session.totalCpXp,
@@ -308,6 +330,7 @@ export function CodeProblemRunner({
               setAccessibilityOpen(true);
             }
           }}
+          showHelpButton={resolvedIsTutorialUnit}
           helpOpen={isTutorialOpen}
           onToggleHelp={() => {
             if (isTutorialOpen) {
@@ -343,16 +366,19 @@ export function CodeProblemRunner({
           </div>
         )}
 
-        <QuizTutorialOverlay
-          isOpen={isTutorialOpen}
-          mode="CP"
-          onClose={() => {
-            markTutorialSeen("CP");
-            setHelpOpen(false);
-          }}
-          onPrepareStep={handlePrepareTutorialStep}
-          onKeepOpen={() => setHelpOpen(true)}
-        />
+        {isTutorialOpen && (
+          <QuizTutorialOverlay
+            key="CP"
+            isOpen
+            mode="CP"
+            onClose={() => {
+              markTutorialSeen("CP");
+              setHelpOpen(false);
+            }}
+            onPrepareStep={handlePrepareTutorialStep}
+            onKeepOpen={() => setHelpOpen(true)}
+          />
+        )}
 
         <div
           className="cp-workspace"
@@ -395,6 +421,7 @@ export function CodeProblemRunner({
               skipPayload={session.skipPayload}
               queueIndex={session.queueIndex}
               isSkipMode={Boolean(requestedSkipTargetSecId && session.skipPayload)}
+              showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}
               onOpenHelp={() => {
                 if (accessibilityOpen) setAccessibilityClosing(true);
                 setHelpOpen(true);

@@ -396,10 +396,18 @@ export function toPublicCodeProblem(
   unitId: number,
   unitTitle: string,
   assessment: CodeProblemAssessment,
+  unitMeta?: {
+    secId?: number;
+    unitOrder?: number;
+  },
 ): PublicCodeProblem {
   return {
     unit_id: unitId,
     unit_title: unitTitle,
+    ...(unitMeta?.secId !== undefined ? { sec_id: unitMeta.secId } : {}),
+    ...(unitMeta?.unitOrder !== undefined
+      ? { unit_order: unitMeta.unitOrder }
+      : {}),
     title: assessment.title || unitTitle,
     description: assessment.description,
     expected_outcome: assessment.expected_outcome,

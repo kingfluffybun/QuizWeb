@@ -849,7 +849,7 @@ export async function fetchQuizOrUnitById(id: number) {
     const [quizzes] = await db.query<QuizRow[]>(
       `SELECT q.quiz_id, q.unit_id, q.difficulty_id, q.quiz_type_id, q.quiz_order, q.question_text,
               d.difficulty_name, t.type_name,
-              u.sec_id, s.sec_num, s.cat_id, c.cat_name
+              u.sec_id, u.unit_order, s.sec_num, s.cat_id, c.cat_name
        FROM quiz_tbl q
        JOIN unit_tbl u ON q.unit_id = u.unit_id
        JOIN sec_tbl s ON u.sec_id = s.sec_id

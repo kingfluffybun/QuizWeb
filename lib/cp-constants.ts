@@ -39,6 +39,8 @@ export interface PublicCPStep {
 export interface PublicCodeProblem {
   unit_id: number;
   unit_title: string;
+  sec_id?: number;
+  unit_order?: number;
   title: string;
   description: string;
   expected_outcome: string;

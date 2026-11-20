@@ -16,6 +16,7 @@ interface CpInstructionsPaneProps {
   skipPayload: SequentialSkipQueuePayload | null;
   queueIndex: number;
   isSkipMode: boolean;
+  showHintBar?: boolean;
   onOpenHelp: () => void;
 }
 
@@ -30,6 +31,7 @@ export default function CpInstructionsPane({
   skipPayload,
   queueIndex,
   isSkipMode,
+  showHintBar = true,
   onOpenHelp,
 }: CpInstructionsPaneProps) {
   return (
@@ -116,7 +118,9 @@ export default function CpInstructionsPane({
               </div>
             )}
 
-            <QuizUiHintBar mode="CP" onOpenGuide={onOpenHelp} compact />
+            {showHintBar && (
+              <QuizUiHintBar mode="CP" onOpenGuide={onOpenHelp} compact />
+            )}
 
             {problem?.steps.map((step, index) => {
               const isCompleted = index < currentStepIndex;

@@ -20,6 +20,7 @@ interface QuizQuestionViewProps {
   disabled: boolean;
   onPairMatched: () => void;
   onIncorrectPair: () => void;
+  showHintBar?: boolean;
   onOpenHelp: () => void;
 }
 
@@ -32,6 +33,7 @@ export default function QuizQuestionView({
   disabled,
   onPairMatched,
   onIncorrectPair,
+  showHintBar = true,
   onOpenHelp,
 }: QuizQuestionViewProps) {
   const questionParts = parseQuizQuestion(
@@ -57,7 +59,7 @@ export default function QuizQuestionView({
       key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}
     >
       <QuizQuestionPrompt parts={questionParts} />
-      {quiz && (
+      {quiz && showHintBar && (
         <QuizUiHintBar
           mode={resolveQuizHintMode(quiz.type_name)}
           onOpenGuide={onOpenHelp}

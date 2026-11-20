@@ -15,7 +15,10 @@ import QuizTutorialOverlay from "@/app/components/quiz/QuizTutorialOverlay";
 import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import { useIsHydrated, useQuizHintsPrefs } from "@/lib/quiz-hints-store";
-import { resolveQuizHintMode } from "@/lib/quiz-ui-hints";
+import {
+  isOnboardingTutorialUnit,
+  resolveQuizHintMode,
+} from "@/lib/quiz-ui-hints";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { recordQuizCompletion } from "@/app/actions/streak";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
@@ -58,6 +61,7 @@ export default function QuizLandingClient({
   startAtQuiz = false,
   nextUnit,
   dailyGoalData,
+  isTutorialUnit,
 }: {
   initialQuizzes?: QuizData[];
   completionDestination?: "home" | "input";
@@ -65,6 +69,7 @@ export default function QuizLandingClient({
   initialSlideOrder?: number;
   startAtQuiz?: boolean;
   dailyGoalData?: DailyGoalData | null;
+  isTutorialUnit?: boolean;
   nextUnit?: {
     unit_id: number;
     unit_title: string;
@@ -601,16 +606,28 @@ export default function QuizLandingClient({
   });
 
   const areChoicesLocked = Boolean(result);
+  const resolvedIsTutorialUnit =
+    isTutorialUnit ??
+    isOnboardingTutorialUnit({
+      secId: cachedUnit?.sec_id ?? selectedQuiz?.sec_id ?? quiz?.sec_id,
+      unitOrder:
+        cachedUnit?.unit_order ??
+        selectedQuiz?.unit_order ??
+        (quiz as UnitQuizData | undefined)?.unit_order,
+      unitId: resolvedUnitId,
+    });
   const activeHintMode = resolveQuizHintMode(quiz?.type_name, isShowingLesson);
   const isTutorialReady = isShowingLesson || Boolean(quiz);
   const shouldAutoOpenTutorial =
+    resolvedIsTutorialUnit &&
     isHydrated &&
     !isFinished &&
     !accessibilityOpen &&
     isTutorialReady &&
     hintPrefs.autoShowTutorials &&
     !hasSeenTutorial(activeHintMode);
-  const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;
+  const isTutorialOpen =
+    resolvedIsTutorialUnit && (helpOpen || shouldAutoOpenTutorial);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -625,6 +642,7 @@ export default function QuizLandingClient({
           ));
 
       if (
+        resolvedIsTutorialUnit &&
         event.key === "?" &&
         !event.ctrlKey &&
         !event.metaKey &&
@@ -693,6 +711,7 @@ export default function QuizLandingClient({
     isFinished,
     isShowingLesson,
     isTutorialOpen,
+    resolvedIsTutorialUnit,
     accessibilityOpen,
     activeHintMode,
     markTutorialSeen,
@@ -908,6 +927,7 @@ export default function QuizLandingClient({
               setAccessibilityOpen(true);
             }
           }}
+          showHelpButton={resolvedIsTutorialUnit}
           helpOpen={isTutorialOpen}
           onToggleHelp={() => {
             if (isTutorialOpen) {
@@ -936,15 +956,18 @@ export default function QuizLandingClient({
           />
         )}
 
-        <QuizTutorialOverlay
-          isOpen={isTutorialOpen}
-          mode={activeHintMode}
-          onClose={() => {
-            markTutorialSeen(activeHintMode);
-            setHelpOpen(false);
-          }}
-          onKeepOpen={() => setHelpOpen(true)}
-        />
+        {isTutorialOpen && (
+          <QuizTutorialOverlay
+            key={activeHintMode}
+            isOpen
+            mode={activeHintMode}
+            onClose={() => {
+              markTutorialSeen(activeHintMode);
+              setHelpOpen(false);
+            }}
+            onKeepOpen={() => setHelpOpen(true)}
+          />
+        )}
 
         <div
           className="quiz-content-region"
@@ -959,14 +982,16 @@ export default function QuizLandingClient({
         >
           {isShowingLesson ? (
             <>
-              <QuizUiHintBar
-                mode="Lesson"
-                compact
-                onOpenGuide={() => {
-                  if (accessibilityOpen) setAccessibilityClosing(true);
-                  setHelpOpen(true);
-                }}
-              />
+              {resolvedIsTutorialUnit && !isTutorialOpen && (
+                <QuizUiHintBar
+                  mode="Lesson"
+                  compact
+                  onOpenGuide={() => {
+                    if (accessibilityOpen) setAccessibilityClosing(true);
+                    setHelpOpen(true);
+                  }}
+                />
+              )}
               <LessonSlideTransition
                 slideIndex={lessonSlideIndex}
                 slideCount={lessonSlides.length}
@@ -993,6 +1018,7 @@ export default function QuizLandingClient({
               disabled={areChoicesLocked}
               onPairMatched={() => playQuizSound("correct-answer1")}
               onIncorrectPair={handleIncorrectPair}
+              showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}
               onOpenHelp={() => {
                 if (accessibilityOpen) setAccessibilityClosing(true);
                 setHelpOpen(true);

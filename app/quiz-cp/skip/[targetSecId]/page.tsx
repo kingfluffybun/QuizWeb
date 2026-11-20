@@ -24,7 +24,10 @@ export default async function SkipQuizCPPage({ params }: SkipQuizCPPageProps) {
 
   return (
     <Suspense fallback={<CpSuspenseShell label="Loading Section Skip Challenge..." />}>
-      <CodeProblemRunner skipTargetSecId={parsedTargetSecId} />
+      <CodeProblemRunner
+        skipTargetSecId={parsedTargetSecId}
+        isTutorialUnit={false}
+      />
     </Suspense>
   );
 }
