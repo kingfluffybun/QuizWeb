@@ -2,11 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
 import { clearLearnCache } from "@/lib/learn-cache";
+import {
+  clearActiveOnboardingUser,
+  replaySystemTutorial,
+} from "@/lib/quiz-hints-store";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
 import {
   isExcludedMobileRoute,
@@ -33,6 +37,7 @@ import {
 
 export default function MobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
@@ -98,7 +103,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
   return (
     <div className={`mobile-shell${pathname === "/learn" ? " mobile-shell--learn" : ""}`}>
       {/* Sticky Top Mobile App Bar */}
-      <header className="mobile-app-bar">
+      <header className="mobile-app-bar" data-tutorial="mobile-app-bar">
         <Link href="/home" className="mobile-app-brand" aria-label="QuizWeb home">
           <Image src="/assets/QuizWeb-Logo.svg" width={32} height={32} alt="" priority />
           <span>QuizWeb</span>
@@ -134,10 +139,17 @@ export default function MobileShell({ children }: { children: React.ReactNode })
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         {bottomNavItems.map((item) => {
           const active = isRouteActive(pathname, item.href);
+          const tutorialTarget =
+            item.href === "/learn"
+              ? "mobile-nav-learn"
+              : item.href === "/settings"
+                ? "mobile-nav-settings"
+                : undefined;
           return (
             <Link
               key={item.href}
               href={item.href}
+              data-tutorial={tutorialTarget}
               className={`mobile-bottom-nav-item${active ? " active" : ""}`}
               aria-current={active ? "page" : undefined}
             >
@@ -236,6 +248,35 @@ export default function MobileShell({ children }: { children: React.ReactNode })
             <button
               type="button"
               className="mobile-drawer-link mobile-drawer-link-button"
+              onClick={() => {
+                replaySystemTutorial("Home");
+                setIsDrawerOpen(false);
+                if (pathname !== "/home") {
+                  router.push("/home");
+                }
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <path d="M12 17h.01" />
+              </svg>
+              <span>Replay Tutorial</span>
+            </button>
+            <button
+              type="button"
+              className="mobile-drawer-link mobile-drawer-link-button"
               data-accessibility-trigger
               onClick={openAccessibility}
             >
@@ -284,7 +325,10 @@ export default function MobileShell({ children }: { children: React.ReactNode })
         <div className="mobile-drawer-footer">
           <form
             action={signOutAction}
-            onSubmit={() => clearLearnCache()}
+            onSubmit={() => {
+              clearLearnCache();
+              clearActiveOnboardingUser();
+            }}
             className="mobile-drawer-signout-form"
           >
             <button type="submit" className="mobile-drawer-signout-btn">

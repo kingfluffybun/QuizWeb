@@ -54,7 +54,12 @@ export default function SectionUnitGroup({
   const hasNextAfterQuiz = hasCp;
 
   return (
-    <div className="curriculum-unit-group">
+    <div
+      className="curriculum-unit-group"
+      data-tutorial={
+        section.sec_id === 1 && unitIndex === 0 ? "learn-unit-path" : undefined
+      }
+    >
       <div className="level-row-divider">
         <hr />
         <p>{unit.unit_title}</p>
@@ -68,6 +73,11 @@ export default function SectionUnitGroup({
             <div className="level">
               <button
                 type="button"
+                data-tutorial={
+                  section.sec_id === 1 && unitIndex === 0
+                    ? "learn-first-lesson"
+                    : undefined
+                }
                 className={`level-btn${
                   isLessonCompleted ? " complete" : isLessonLocked ? " disabled" : ""
                 }`}

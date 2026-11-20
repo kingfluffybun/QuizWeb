@@ -80,7 +80,8 @@
     }
 }
 
-.profile-logout {
+.profile-logout,
+.profile-replay-tutorial {
     width: 100%;
     border: 0;
     background: transparent;

@@ -5,6 +5,7 @@ import "./globals.css";
 import "@/public/css/accessibility-dialog.css";
 import "@/public/css/skeleton.css";
 import "@/public/css/mobile-shell.css";
+import "@/public/css/tutorial-overlay.css";
 import MobileShell from "@/app/components/MobileShell";
 import SessionWrapper from "@/app/components/SessionWrapper";
 

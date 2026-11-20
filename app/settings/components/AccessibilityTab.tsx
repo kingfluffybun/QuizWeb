@@ -1,12 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAccessibilitySettings } from "@/lib/accessibility-store";
+import { useQuizHintsPrefs } from "@/lib/quiz-hints-store";
 
 const SCALE_MIN = 90;
 const SCALE_MAX = 125;
 
 export default function AccessibilityTab() {
+  const router = useRouter();
   const { settings, setTheme, setUiScale, setReduceMotion } = useAccessibilitySettings();
+  const { prefs, setAutoShowTutorials, replaySystemTutorial } = useQuizHintsPrefs();
   const { theme, uiScale, reduceMotion } = settings;
   const scalePercentage = ((uiScale - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100;
 
@@ -96,6 +100,36 @@ export default function AccessibilityTab() {
           />
           <span className="slider"></span>
         </label>
+      </div>
+
+      <h2 className="settings-section-title">Interactive Tutorials</h2>
+      <div className="toggle-row">
+        <div className="toggle-info">
+          <strong>Auto-Start Guided Tutorials</strong>
+          <span>Show spotlight tutorials automatically for new accounts and unseen quiz types.</span>
+        </div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={prefs.autoShowTutorials}
+            onChange={(e) => setAutoShowTutorials(e.target.checked)}
+            aria-label="Toggle auto-start interactive tutorials"
+          />
+          <span className="slider"></span>
+        </label>
+      </div>
+
+      <div className="settings-form-actions" style={{ marginTop: "12px" }}>
+        <button
+          type="button"
+          className="settings-btn settings-btn-primary"
+          onClick={() => {
+            replaySystemTutorial("Home");
+            router.push("/home");
+          }}
+        >
+          Replay System Tutorial
+        </button>
       </div>
     </section>
   );

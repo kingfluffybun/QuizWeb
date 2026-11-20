@@ -61,7 +61,7 @@ export default function Leaderboard({
     ];
 
     return (
-        <div className="leaderboard" id="leaderboard">
+        <div className="leaderboard" id="leaderboard" data-tutorial="home-leaderboard">
             <div className="card">
                 <div className="leaderboard-header">
                     <div className={`leaderboard-heading${showPeriodTitle ? "" : " card-title dashboard-leaderboard-title"}`}>

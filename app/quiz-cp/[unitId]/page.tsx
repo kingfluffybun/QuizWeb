@@ -8,6 +8,7 @@ import {
   isCodeProblemUnlockedForUser,
 } from "@/app/actions/progress";
 import { isOnboardingTutorialUnit } from "@/lib/quiz-ui-hints";
+import { getCanonicalCurriculumUnitSequence } from "@/lib/server/progress/catalog";
 import { CodeProblemRunner } from "../CodeProblemRunner";
 import CpSuspenseShell from "../components/CpSuspenseShell";
 
@@ -31,16 +32,23 @@ export default async function UnitQuizCPPage({ params }: UnitQuizCPPageProps) {
   }
 
   // Parallel server prefetch eliminates client mount waterfall for /quiz-cp/[unitId]
-  const [initialProblem, initialDailyGoal, initialNextUnit] = await Promise.all([
+  const [
+    initialProblem,
+    initialDailyGoal,
+    initialNextUnit,
+    canonicalSequence,
+  ] = await Promise.all([
     getPublicCodeProblem(parsedUnitId),
     getDailyGoalData().catch(() => null),
     getNextCurriculumUnit(parsedUnitId).catch(() => null),
+    getCanonicalCurriculumUnitSequence().catch(() => []),
   ]);
 
   const isTutorialUnit = isOnboardingTutorialUnit({
     secId: initialProblem?.sec_id,
     unitOrder: initialProblem?.unit_order,
     unitId: parsedUnitId,
+    canonicalFirstUnitId: canonicalSequence[0]?.unit_id,
   });
 
   return (

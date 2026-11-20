@@ -1,4 +1,12 @@
-export type QuizHintMode = "MCQ" | "FITB" | "Order" | "Pair" | "CP" | "Lesson";
+export type QuizHintMode =
+  | "Home"
+  | "Learn"
+  | "MCQ"
+  | "FITB"
+  | "Order"
+  | "Pair"
+  | "CP"
+  | "Lesson";
 
 export type TutorialPlacement = "top" | "bottom" | "left" | "right";
 
@@ -38,7 +46,157 @@ export const QUIZ_UI_HINT_ORDER: readonly QuizHintMode[] = [
   "Lesson",
 ];
 
+export const APP_TUTORIAL_MODE_ORDER: readonly QuizHintMode[] = [
+  "Home",
+  "Learn",
+];
+
+export const ALL_TUTORIAL_MODE_ORDER: readonly QuizHintMode[] = [
+  "Home",
+  "Learn",
+  "Lesson",
+  "MCQ",
+  "FITB",
+  "Order",
+  "Pair",
+  "CP",
+];
+
 export const QUIZ_UI_HINTS: Record<QuizHintMode, QuizUiHintConfig> = {
+  Home: {
+    mode: "Home",
+    badge: "Welcome Tour",
+    title: "Welcome to QuizWeb",
+    shortHint:
+      "Your central workspace for lessons, daily XP goals, streaks, and leaderboards.",
+    summary:
+      "Take a quick interactive tour of QuizWeb before starting Unit 1.",
+    steps: [
+      {
+        id: "home-welcome",
+        title: "Welcome to QuizWeb!",
+        whatToDo:
+          "Glad you joined! This quick tour shows you how QuizWeb works — from picking lessons and building streaks to competing on the leaderboard.",
+        actionLabel: "Follow the highlighted areas to explore your workspace",
+        targetSelectors: [
+          '[data-tutorial="home-welcome"]',
+          '[data-tutorial="nav-sidebar"]',
+          '[data-tutorial="mobile-app-bar"]',
+        ],
+        preferredPlacement: "bottom",
+        shortcuts: [
+          { keys: ["→"], label: "Next step" },
+          { keys: ["Esc"], label: "Skip tour" },
+        ],
+      },
+      {
+        id: "home-nav-learn",
+        title: "Open Curriculum & Lessons Anytime",
+        whatToDo:
+          "Use Learn in the navigation menu to view the full roadmap of HTML, CSS, and JavaScript sections and unlock units step by step.",
+        actionLabel: "Click Learn anytime to jump to your curriculum path",
+        targetSelectors: [
+          '[data-tutorial="nav-learn"]',
+          '[data-tutorial="mobile-nav-learn"]',
+        ],
+        preferredPlacement: "right",
+      },
+      {
+        id: "home-progress",
+        title: "Jump Right Into Unit 1",
+        whatToDo:
+          "Your active section and unlocked units appear here with real-time completion percentages. Click the first unlocked unit whenever you are ready to learn.",
+        actionLabel: "Open an unlocked unit card to launch its Lesson & Quiz",
+        targetSelectors: ['[data-tutorial="home-progress"]'],
+        preferredPlacement: "top",
+        optionalIfMissing: true,
+      },
+      {
+        id: "home-daily-goal",
+        title: "Track Your Daily XP Goal",
+        whatToDo:
+          "Every question and lesson earns XP toward your daily target. Customize your daily XP goal anytime from your Profile or account settings.",
+        actionLabel: "Watch your daily progress fill the XP ring and weekly chart",
+        targetSelectors: ['[data-tutorial="home-daily-goal"]'],
+        preferredPlacement: "left",
+        optionalIfMissing: true,
+      },
+      {
+        id: "home-streak",
+        title: "Keep Your Streak Alive",
+        whatToDo:
+          "Complete at least one lesson or quiz each day to build your streak calendar and celebrate consecutive active learning days.",
+        actionLabel: "Log in and complete one activity daily to grow your streak",
+        targetSelectors: ['[data-tutorial="home-streak"]'],
+        preferredPlacement: "top",
+        optionalIfMissing: true,
+      },
+      {
+        id: "home-leaderboard",
+        title: "Compete on the Leaderboard",
+        whatToDo:
+          "Earn XP from accurate answers and streaks to climb Daily, Weekly, Monthly, and All-Time rankings against other learners.",
+        actionLabel: "Filter by Day, Week, Month, or All Time right from the card",
+        targetSelectors: ['[data-tutorial="home-leaderboard"]'],
+        preferredPlacement: "left",
+        optionalIfMissing: true,
+      },
+      {
+        id: "home-profile-settings",
+        title: "Profile, Settings & Replay Tutorial",
+        whatToDo:
+          "Open your profile menu (or Settings) to change themes, text scale, preferences, or click Replay Tutorial anytime to revisit this guide.",
+        actionLabel: "Click Go to Learn → to preview your curriculum roadmap next",
+        targetSelectors: [
+          '[data-tutorial="nav-profile"]',
+          '[data-tutorial="mobile-nav-settings"]',
+        ],
+        preferredPlacement: "right",
+      },
+    ],
+  },
+  Learn: {
+    mode: "Learn",
+    badge: "Curriculum Tour",
+    title: "Curriculum Roadmap Walkthrough",
+    shortHint:
+      "Follow Lesson → Quiz → Code circles in order to unlock new units and sections.",
+    summary:
+      "See how roadmap nodes, progress tracking, and Quick Continue work.",
+    steps: [
+      {
+        id: "learn-section-rail",
+        title: "Track Your Current Section",
+        whatToDo:
+          "The sticky detail panel updates as you scroll, summarizing units, lesson slides, total questions, and your section completion progress.",
+        actionLabel: "Watch section stats and Up Next progress update live",
+        targetSelectors: ['[data-tutorial="learn-section-rail"]'],
+        preferredPlacement: "right",
+      },
+      {
+        id: "learn-unit-path",
+        title: "Follow Lesson → Quiz → Code Nodes",
+        whatToDo:
+          "Units unlock sequentially. Click this glowing first Lesson node to open Unit 1 — interactive walkthroughs will guide you through every question type there!",
+        actionLabel: "Select a glowing node to open Lesson, Quiz, or Code Problem",
+        targetSelectors: [
+          '[data-tutorial="learn-first-lesson"]',
+          '[data-tutorial="learn-unit-path"]',
+        ],
+        preferredPlacement: "left",
+      },
+      {
+        id: "learn-continue",
+        title: "Ready to Start Learning!",
+        whatToDo:
+          "Use Continue anytime to jump straight back into your next incomplete activity across the curriculum.",
+        actionLabel: "Click Start Learning, then press Continue or open Unit 1",
+        targetSelectors: ['[data-tutorial="learn-continue-btn"]'],
+        preferredPlacement: "bottom",
+        optionalIfMissing: true,
+      },
+    ],
+  },
   MCQ: {
     mode: "MCQ",
     badge: "Multiple Choice",
@@ -400,6 +558,10 @@ export function resolveQuizHintMode(
 
   const normalized = typeName?.trim().toLowerCase() ?? "";
   switch (normalized) {
+    case "home":
+      return "Home";
+    case "learn":
+      return "Learn";
     case "mcq":
     case "multiple choice":
       return "MCQ";
@@ -448,14 +610,25 @@ export function isOnboardingTutorialUnit({
   secId,
   unitOrder,
   unitId,
+  canonicalFirstUnitId,
   isSkipMode = false,
 }: {
   secId?: number | string | null;
   unitOrder?: number | string | null;
   unitId?: number | string | null;
+  canonicalFirstUnitId?: number | string | null;
   isSkipMode?: boolean;
 }): boolean {
   if (isSkipMode) return false;
+  const parsedUnitId = parsePositiveInt(unitId);
+  const parsedCanonicalFirst = parsePositiveInt(canonicalFirstUnitId);
+  if (
+    parsedUnitId !== null &&
+    parsedCanonicalFirst !== null &&
+    parsedUnitId === parsedCanonicalFirst
+  ) {
+    return true;
+  }
   const parsedSecId = parsePositiveInt(secId);
   const parsedUnitOrder = parsePositiveInt(unitOrder);
   if (parsedSecId !== null && parsedUnitOrder !== null) {
@@ -464,7 +637,6 @@ export function isOnboardingTutorialUnit({
       parsedUnitOrder === ONBOARDING_TUTORIAL_UNIT_ORDER
     );
   }
-  const parsedUnitId = parsePositiveInt(unitId);
   return (
     parsedUnitId === ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID &&
     (parsedSecId === null || parsedSecId === ONBOARDING_TUTORIAL_SECTION_ID)

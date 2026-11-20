@@ -11,6 +11,8 @@ import {
   lerpRect,
 } from "../lib/quiz-tutorial-geometry";
 import {
+  ALL_TUTORIAL_MODE_ORDER,
+  APP_TUTORIAL_MODE_ORDER,
   getQuizUiHint,
   isOnboardingTutorialUnit,
   ONBOARDING_TUTORIAL_FALLBACK_UNIT_ID,
@@ -20,6 +22,17 @@ import {
   QUIZ_UI_HINTS,
   resolveQuizHintMode,
 } from "../lib/quiz-ui-hints";
+import {
+  beginOnboardingUserSync,
+  clearActiveOnboardingUser,
+  getQuizHintsSnapshot,
+  getQuizHintsStorageKey,
+  getQuizHintsStoreSnapshot,
+  hydrateUserOnboarding,
+  markOnboardingSyncFailed,
+  markTutorialSeenPref,
+  replaySystemTutorial,
+} from "../lib/quiz-hints-store";
 import {
   ensureUnit1AllQuizTypes,
   REQUIRED_UNIT1_QUIZ_TYPES,
@@ -34,17 +47,29 @@ function readSource(relativePath: string): string {
 function runTests() {
   console.log("=== Running Interactive Arrow Tutorial Test Suite ===");
 
-  // 1. Validate all 6 modes and walkthrough steps
+  // 1. Validate all 8 system + quiz walkthrough modes
   assert.deepEqual(
     QUIZ_UI_HINT_ORDER,
     ["MCQ", "FITB", "Order", "Pair", "CP", "Lesson"],
     "Expected all 6 quiz hint modes in order",
   );
+  assert.deepEqual(
+    APP_TUTORIAL_MODE_ORDER,
+    ["Home", "Learn"],
+    "Expected system-wide app tour modes",
+  );
+  assert.deepEqual(
+    ALL_TUTORIAL_MODE_ORDER,
+    ["Home", "Learn", "Lesson", "MCQ", "FITB", "Order", "Pair", "CP"],
+    "Expected all 8 tutorial modes in order",
+  );
+  assert.equal(QUIZ_UI_HINTS.Home.steps.length, 7, "Home tour has 7 guided steps");
+  assert.equal(QUIZ_UI_HINTS.Learn.steps.length, 3, "Learn tour has 3 guided steps");
 
   const seenStepIds = new Set<string>();
   const referencedTutorialKeys = new Set<string>();
 
-  for (const mode of QUIZ_UI_HINT_ORDER) {
+  for (const mode of ALL_TUTORIAL_MODE_ORDER) {
     const config = getQuizUiHint(mode);
     assert.equal(config.mode, mode, `${mode} config.mode matches key`);
     assert.ok(config.badge.trim().length > 0, `${mode} badge is non-empty`);
@@ -54,9 +79,10 @@ function runTests() {
       `${mode} shortHint is non-empty`,
     );
     assert.ok(config.summary.trim().length > 0, `${mode} summary is non-empty`);
+    const minSteps = mode === "Learn" ? 3 : 4;
     assert.ok(
-      config.steps.length >= 4,
-      `${mode} walkthrough should have at least 4 guided steps (got ${config.steps.length})`,
+      config.steps.length >= minSteps,
+      `${mode} walkthrough should have at least ${minSteps} guided steps (got ${config.steps.length})`,
     );
 
     for (const step of config.steps) {
@@ -86,10 +112,12 @@ function runTests() {
     }
   }
   console.log(
-    `  ✓ Validated all 6 modes (${seenStepIds.size} unique walkthrough steps)`,
+    `  ✓ Validated all 8 modes (${seenStepIds.size} unique walkthrough steps)`,
   );
 
   // 2. Mode normalization, aliases, fallback, and Lesson override
+  assert.equal(resolveQuizHintMode("home"), "Home");
+  assert.equal(resolveQuizHintMode("learn"), "Learn");
   assert.equal(resolveQuizHintMode("mcq"), "MCQ");
   assert.equal(resolveQuizHintMode("Multiple Choice"), "MCQ");
   assert.equal(resolveQuizHintMode("FITB"), "FITB");
@@ -283,6 +311,25 @@ function runTests() {
     false,
   );
   assert.equal(isOnboardingTutorialUnit({ unitId: 103 }), false);
+  assert.equal(
+    isOnboardingTutorialUnit({
+      unitId: 500,
+      canonicalFirstUnitId: 500,
+      secId: 1,
+      unitOrder: 1,
+    }),
+    true,
+    "Canonical first unit ID matches even on custom DB unit IDs",
+  );
+  assert.equal(
+    isOnboardingTutorialUnit({
+      unitId: 500,
+      canonicalFirstUnitId: 500,
+      isSkipMode: true,
+    }),
+    false,
+    "Skip mode never triggers tutorial even for canonical first unit ID",
+  );
   console.log("  ✓ Unit 1 Section 1 strict eligibility helper verified");
 
   // 7. Unit 1 runtime all-quiz-type guarantee + evaluation validity
@@ -348,8 +395,16 @@ function runTests() {
   );
   console.log("  ✓ Unit 1 runtime all-quiz-type coverage & scoping verified");
 
-  // 8. Live DOM anchor integrity across component source files
+  // 8. Live DOM anchor integrity across all app + quiz components
   const anchoredSources = [
+    "app/home/page.tsx",
+    "app/home/DailyGoalCard.tsx",
+    "app/home/StreakCalendar.tsx",
+    "app/components/Leaderboard.tsx",
+    "app/components/Sidebar.tsx",
+    "app/components/MobileShell.tsx",
+    "app/learn/components/SectionDetailRail.tsx",
+    "app/learn/components/SectionUnitGroup.tsx",
     "app/quiz/components/QuizHeader.tsx",
     "app/components/quiz/InlineCodeText.tsx",
     "app/quiz/components/QuizFooter.tsx",
@@ -377,27 +432,179 @@ function runTests() {
     `  ✓ All ${referencedTutorialKeys.size} live component data-tutorial anchors verified`,
   );
 
-  // 9. Smooth overlay animation, Unit 1 gating & pass-guard preservation
+  // 9. User-scoped & DB-synced hints store behavior
+  assert.equal(
+    getQuizHintsStorageKey(null),
+    "quizweb-ui-hints-prefs:guest",
+    "Guest storage key is isolated",
+  );
+  assert.equal(
+    getQuizHintsStorageKey("42"),
+    "quizweb-ui-hints-prefs:u:42",
+    "User storage key is scoped per user ID",
+  );
+
+  const storageData = new Map<string, string>();
+  const globalRecord = globalThis as Record<string, unknown>;
+  const previousWindow = globalRecord.window;
+  globalRecord.window = {
+    localStorage: {
+      getItem: (key: string) => storageData.get(key) ?? null,
+      setItem: (key: string, val: string) => {
+        storageData.set(key, val);
+      },
+      removeItem: (key: string) => {
+        storageData.delete(key);
+      },
+    },
+    addEventListener: () => {},
+  };
+
+  try {
+    // Old account saw everything; legacy global key also set
+    storageData.set(
+      "quizweb-ui-hints-prefs",
+      JSON.stringify({ seenTutorialModes: ["Home", "Learn", "Lesson", "MCQ"] }),
+    );
+    storageData.set(
+      getQuizHintsStorageKey("1"),
+      JSON.stringify({
+        showInlineHints: true,
+        dismissedModes: [],
+        autoShowTutorials: true,
+        seenTutorialModes: ["Home", "Learn", "MCQ"],
+        welcomeTourCompleted: true,
+      }),
+    );
+
+    // Newly registered user #99 signs in
+    beginOnboardingUserSync("99");
+    assert.equal(getQuizHintsStoreSnapshot().activeUserId, "99");
+    assert.equal(getQuizHintsStoreSnapshot().isOnboardingReady, false);
+
+    hydrateUserOnboarding("99", {
+      userId: 99,
+      tutorialEnabled: true,
+      welcomeTourCompleted: false,
+      seenModes: [],
+      isFirstLogin: true,
+      source: "db",
+    });
+
+    const user99 = getQuizHintsStoreSnapshot();
+    assert.equal(user99.isOnboardingReady, true);
+    assert.equal(user99.prefs.welcomeTourCompleted, false);
+    assert.deepEqual(
+      user99.prefs.seenTutorialModes,
+      [],
+      "New user #99 does NOT inherit user #1 or legacy browser dismissals",
+    );
+
+    markTutorialSeenPref("Home");
+    assert.equal(getQuizHintsSnapshot().welcomeTourCompleted, true);
+    assert.ok(getQuizHintsSnapshot().seenTutorialModes.includes("Home"));
+
+    // Fallback mode when migration 018 hasn't run preserves user-local vs server prior activity
+    beginOnboardingUserSync("100");
+    hydrateUserOnboarding("100", {
+      userId: 100,
+      tutorialEnabled: true,
+      welcomeTourCompleted: false,
+      seenModes: [],
+      isFirstLogin: true,
+      source: "fallback",
+    });
+    assert.equal(getQuizHintsSnapshot().welcomeTourCompleted, false);
+
+    replaySystemTutorial("Home");
+    assert.equal(getQuizHintsStoreSnapshot().manualOpenMode, "Home");
+    assert.equal(getQuizHintsSnapshot().welcomeTourCompleted, false);
+    assert.deepEqual(getQuizHintsSnapshot().seenTutorialModes, []);
+
+    markOnboardingSyncFailed("100");
+    assert.equal(getQuizHintsStoreSnapshot().isOnboardingReady, true);
+    clearActiveOnboardingUser();
+  } finally {
+    if (previousWindow === undefined) {
+      delete globalRecord.window;
+    } else {
+      globalRecord.window = previousWindow;
+    }
+  }
+  console.log(
+    "  ✓ User-scoped storage, DB hydration, fallback mode & replaySystemTutorial verified",
+  );
+
+  // 10. Portal overlay, global CSS, system orchestrator & registration wiring
   const overlaySource = readSource("app/components/quiz/QuizTutorialOverlay.tsx");
   assert.ok(
     overlaySource.includes("easeOutCubic") &&
       overlaySource.includes("lerpRect") &&
       overlaySource.includes("is-ready") &&
-      overlaySource.includes("settleAndRevealInitial"),
-    "QuizTutorialOverlay implements settle-before-reveal + 60fps easeOutCubic lerpRect transitions",
+      overlaySource.includes("settleAndRevealInitial") &&
+      overlaySource.includes("createPortal(") &&
+      overlaySource.includes("document.body") &&
+      overlaySource.includes("revealFailsafeTimer") &&
+      overlaySource.includes("findStepIndexSkippingMissing"),
+    "QuizTutorialOverlay renders via document.body portal with settle failsafe, bidirectional skip & 60fps transitions",
   );
 
-  const quizCssSource = readSource("public/css/quiz.css");
+  const tutorialCssSource = readSource("public/css/tutorial-overlay.css");
   assert.ok(
-    quizCssSource.includes(".quiz-tutorial-overlay.is-ready") &&
-      quizCssSource.includes("html[data-motion=\"reduce\"] .quiz-tutorial-overlay"),
-    "public/css/quiz.css gates overlay opacity on .is-ready and respects reduced motion",
+    tutorialCssSource.includes("z-index: 10050") &&
+      tutorialCssSource.includes(".quiz-tutorial-overlay:not(.is-ready)") &&
+      tutorialCssSource.includes(".quiz-tutorial-overlay.is-ready") &&
+      tutorialCssSource.includes('html[data-motion="reduce"] .quiz-tutorial-overlay'),
+    "public/css/tutorial-overlay.css renders above sidebar, blocks pointer events until ready & respects reduced motion",
+  );
+
+  const rootLayoutSource = readSource("app/layout.tsx");
+  assert.ok(
+    rootLayoutSource.includes("@/public/css/tutorial-overlay.css") &&
+      !rootLayoutSource.includes("await auth()"),
+    "RootLayout loads global tutorial-overlay.css while remaining synchronous for static routes",
+  );
+
+  const sessionWrapperSource = readSource("app/components/SessionWrapper.tsx");
+  assert.ok(
+    sessionWrapperSource.includes("SystemTutorialOrchestrator"),
+    "SessionWrapper mounts SystemTutorialOrchestrator system-wide",
+  );
+
+  const orchestratorSource = readSource(
+    "app/components/SystemTutorialOrchestrator.tsx",
+  );
+  assert.ok(
+    orchestratorSource.includes("/api/onboarding") &&
+      orchestratorSource.includes("beginOnboardingUserSync") &&
+      orchestratorSource.includes("hydrateUserOnboarding") &&
+      orchestratorSource.includes('mode={activeMode}') &&
+      orchestratorSource.includes("welcomeTourCompleted"),
+    "SystemTutorialOrchestrator syncs per-user DB onboarding state and triggers first-login tours",
+  );
+
+  const regSource = readSource("lib/server/auth/registration.ts");
+  const oauthSource = readSource("lib/auth-oauth.ts");
+  assert.ok(
+    regSource.includes("initializeUserOnboardingRow") &&
+      oauthSource.includes("initializeUserOnboardingRow"),
+    "Email verification signup and OAuth first-login signup both initialize user_onboarding_tbl",
+  );
+
+  const onboardingApiSource = readSource("app/api/onboarding/route.ts");
+  assert.ok(
+    onboardingApiSource.includes("getOrCreateUserOnboardingState") &&
+      onboardingApiSource.includes("markUserTutorialModeSeen") &&
+      onboardingApiSource.includes("resetUserOnboardingTutorial") &&
+      onboardingApiSource.includes("setUserTutorialEnabled"),
+    "Onboarding REST API supports GET + PATCH mark_seen, complete_welcome, set_enabled & reset",
   );
 
   const quizLanding = readSource("app/quiz/QuizLandingClient.tsx");
   assert.ok(
     quizLanding.includes("QuizTutorialOverlay") &&
       quizLanding.includes("useIsHydrated") &&
+      quizLanding.includes("isOnboardingReady") &&
       quizLanding.includes("shouldAutoOpenTutorial") &&
       quizLanding.includes("resolvedIsTutorialUnit") &&
       quizLanding.includes("showHelpButton={resolvedIsTutorialUnit}") &&
@@ -407,7 +614,7 @@ function runTests() {
       quizLanding.includes(
         "const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);",
       ),
-    "QuizLandingClient wires Unit 1 gating, clean overlay remount, hidden hint bar during overlay & strict pass guard",
+    "QuizLandingClient wires DB-synced Unit 1 gating, clean overlay remount, hidden hint bar during overlay & strict pass guard",
   );
 
   const cpRunner = readSource("app/quiz-cp/CodeProblemRunner.tsx");
@@ -415,11 +622,12 @@ function runTests() {
     cpRunner.includes("QuizTutorialOverlay") &&
       cpRunner.includes('mode="CP"') &&
       cpRunner.includes("onPrepareStep={handlePrepareTutorialStep}") &&
+      cpRunner.includes("isOnboardingReady") &&
       cpRunner.includes("resolvedIsTutorialUnit") &&
       cpRunner.includes("showHelpButton={resolvedIsTutorialUnit}") &&
       cpRunner.includes("showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}") &&
       cpRunner.includes("isTutorialOpen && ("),
-    "CodeProblemRunner wires Unit 1 gating + mobile tab preparation + clean overlay mount",
+    "CodeProblemRunner wires DB-synced Unit 1 gating + mobile tab preparation + clean overlay mount",
   );
 
   const skipPage = readSource("app/quiz-cp/skip/[targetSecId]/page.tsx");
@@ -428,7 +636,7 @@ function runTests() {
     "Skip section CP route explicitly disables onboarding tutorial",
   );
 
-  // 10. Migration 017 validation
+  // 11. Migrations 017 & 018 validation
   const migrationUp = readSource("migrations/017_unit1_all_quiz_types.sql");
   const migrationRollback = readSource(
     "migrations/017_unit1_all_quiz_types_rollback.sql",
@@ -452,9 +660,33 @@ function runTests() {
       migrationRollback.includes("'017_unit1_all_quiz_types.sql'"),
     "Rollback 017 cleans up synthetic onboarding rows cleanly",
   );
-  console.log("  ✓ Overlay animation, Unit 1 route gating & Migration 017 verified");
 
-  console.log("\n🎉 All interactive arrow tutorial tests passed!");
+  const migration018Up = readSource("migrations/018_user_onboarding_tutorial.sql");
+  const migration018Rollback = readSource(
+    "migrations/018_user_onboarding_tutorial_rollback.sql",
+  );
+  assert.ok(
+    !migration018Up.toUpperCase().includes("DELIMITER"),
+    "Migration 018 avoids DELIMITER syntax for mysql2 multi-statement compatibility",
+  );
+  assert.ok(
+    migration018Up.includes("CREATE TABLE IF NOT EXISTS `user_onboarding_tbl`") &&
+      migration018Up.includes("welcome_tour_completed") &&
+      migration018Up.includes("seen_modes") &&
+      migration018Up.includes("INSERT IGNORE INTO `user_onboarding_tbl`") &&
+      migration018Up.includes("'018_user_onboarding_tutorial.sql'"),
+    "Migration 018 creates user_onboarding_tbl, backfills existing accounts & records migration",
+  );
+  assert.ok(
+    migration018Rollback.includes("DROP TABLE IF EXISTS `user_onboarding_tbl`") &&
+      migration018Rollback.includes("'018_user_onboarding_tutorial.sql'"),
+    "Rollback 018 drops user_onboarding_tbl cleanly",
+  );
+  console.log(
+    "  ✓ Portal overlay, system orchestrator, Unit 1 gating & Migrations 017/018 verified",
+  );
+
+  console.log("\n🎉 All system & interactive arrow tutorial tests passed!");
 }
 
 runTests();

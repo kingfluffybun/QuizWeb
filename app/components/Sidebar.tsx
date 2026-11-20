@@ -2,11 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
 import { clearLearnCache } from "@/lib/learn-cache";
+import {
+  clearActiveOnboardingUser,
+  replaySystemTutorial,
+} from "@/lib/quiz-hints-store";
 import { fetchClientUserInfo } from "@/lib/user-info-client";
 import {
   getSidebarConfig,
@@ -83,6 +87,7 @@ export default function Sidebar(props: SidebarProps = {}) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const pathname = usePathname();
+  const router = useRouter();
   const profileContainerRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -162,7 +167,12 @@ export default function Sidebar(props: SidebarProps = {}) {
   }, [isProfileMenuOpen]);
 
   return (
-    <div className={`sidebar${isCollapsed ? " is-collapsed" : ""}`} id="quiz-sidebar" ref={sidebarRef}>
+    <div
+      className={`sidebar${isCollapsed ? " is-collapsed" : ""}`}
+      id="quiz-sidebar"
+      data-tutorial="nav-sidebar"
+      ref={sidebarRef}
+    >
       <div className="sidebar-nav">
         <div className="logo-container">
           <div className="logo">
@@ -193,6 +203,7 @@ export default function Sidebar(props: SidebarProps = {}) {
               <Link
                 key={item.href}
                 href={item.href}
+                data-tutorial={item.href === "/learn" ? "nav-learn" : undefined}
                 aria-current={isRouteActive(pathname, item.href) ? "page" : undefined}
                 className={`sidebar-option${active ? " active" : ""}`}
                 title={isCollapsed ? item.label : undefined}
@@ -213,6 +224,7 @@ export default function Sidebar(props: SidebarProps = {}) {
             <button
               type="button"
               className="profile-menu-toggle"
+              data-tutorial="nav-profile"
               title={isCollapsed ? displayName : undefined}
               aria-label={`${isProfileMenuOpen ? "Close" : "Open"} profile menu for ${displayName}`}
               aria-expanded={isProfileMenuOpen}
@@ -275,6 +287,35 @@ export default function Sidebar(props: SidebarProps = {}) {
                     <p>Question Studio</p>
                   </Link>
                 )}
+                <button
+                  type="button"
+                  className="profile-options profile-replay-tutorial"
+                  onClick={() => {
+                    replaySystemTutorial("Home");
+                    setIsProfileMenuOpen(false);
+                    if (pathname !== "/home") {
+                      router.push("/home");
+                    }
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" />
+                  </svg>
+                  <p>Replay Tutorial</p>
+                </button>
                 <Link
                   href="/settings"
                   className={`profile-options${isRouteActive(pathname, ["/settings"]) ? " active" : ""}`}
@@ -284,7 +325,13 @@ export default function Sidebar(props: SidebarProps = {}) {
                 </Link>
               </div>
               <hr />
-              <form action={signOutAction} onSubmit={() => clearLearnCache()}>
+              <form
+                action={signOutAction}
+                onSubmit={() => {
+                  clearLearnCache();
+                  clearActiveOnboardingUser();
+                }}
+              >
                 <button type="submit" className="profile-options profile-logout">
                   <LogoutIcon className="preview-icon" />
                   <p>Log Out</p>

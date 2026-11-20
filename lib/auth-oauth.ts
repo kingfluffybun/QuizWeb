@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { db } from "@/lib/db";
+import { initializeUserOnboardingRow } from "@/lib/server/onboarding";
 
 export interface OAuthSignInUser {
   id?: string;
@@ -264,6 +265,8 @@ export async function handleOAuthSignIn(
       const userId = authResult.insertId;
 
       await insertPlayerWithUniqueUsername(conn, userId, extUser.name);
+
+      await initializeUserOnboardingRow(conn, userId);
 
       await conn.query(
         "INSERT INTO user_oauth_tbl (user_id, provider_name, provider_account_id) VALUES (?, ?, ?)",

@@ -30,7 +30,11 @@ export default function SectionDetailRail({
   guestNotice,
 }: SectionDetailRailProps) {
   return (
-    <aside className="section-detail-rail" aria-label="Current section details">
+    <aside
+      className="section-detail-rail"
+      data-tutorial="learn-section-rail"
+      aria-label="Current section details"
+    >
       <div className="section-detail">
         <div
           key={activeSection?.sec_id ?? "overview"}
@@ -94,6 +98,7 @@ export default function SectionDetailRail({
             <Link
               href={upNextActivity.href}
               className="lesson-link section-progress-continue"
+              data-tutorial="learn-continue-btn"
               aria-label={`Continue to ${upNextUnitTitle}`}
             >
               <p>Continue</p>

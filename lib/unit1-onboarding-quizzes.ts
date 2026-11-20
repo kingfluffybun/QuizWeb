@@ -18,6 +18,7 @@ export interface Unit1OnboardingContext {
   secId?: number | string | null;
   unitOrder?: number | string | null;
   unitId?: number | string | null;
+  canonicalFirstUnitId?: number | string | null;
   isSkipMode?: boolean;
 }
 
@@ -124,6 +125,7 @@ export function ensureUnit1AllQuizTypes<T extends UnitQuizData>(
     secId: context?.secId ?? sample?.sec_id,
     unitOrder: context?.unitOrder ?? sample?.unit_order,
     unitId: context?.unitId ?? sample?.unit_id,
+    canonicalFirstUnitId: context?.canonicalFirstUnitId,
     isSkipMode: context?.isSkipMode,
   });
 

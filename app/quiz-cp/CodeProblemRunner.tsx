@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import Sidebar from "@/app/components/Sidebar";
@@ -65,9 +66,11 @@ export function CodeProblemRunner({
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { status: sessionStatus } = useSession();
   const isHydrated = useIsHydrated();
   const {
     prefs: hintPrefs,
+    isOnboardingReady,
     hasSeenTutorial,
     markTutorialSeen,
   } = useQuizHintsPrefs();
@@ -105,9 +108,13 @@ export function CodeProblemRunner({
       isSkipMode: Boolean(requestedSkipTargetSecId),
     });
   const isTutorialReady = !session.isLoading && Boolean(session.problem);
+  const isSessionTutorialReady =
+    sessionStatus !== "loading" &&
+    (sessionStatus === "unauthenticated" || isOnboardingReady);
   const shouldAutoOpenTutorial =
     resolvedIsTutorialUnit &&
     isHydrated &&
+    isSessionTutorialReady &&
     !isFinished &&
     !accessibilityOpen &&
     isTutorialReady &&

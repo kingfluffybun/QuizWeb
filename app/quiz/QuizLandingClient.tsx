@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import "#css/quiz.css";
 import "#css/sidebar.css";
@@ -129,9 +130,11 @@ export default function QuizLandingClient({
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { status: sessionStatus } = useSession();
   const isHydrated = useIsHydrated();
   const {
     prefs: hintPrefs,
+    isOnboardingReady,
     hasSeenTutorial,
     markTutorialSeen,
   } = useQuizHintsPrefs();
@@ -618,9 +621,13 @@ export default function QuizLandingClient({
     });
   const activeHintMode = resolveQuizHintMode(quiz?.type_name, isShowingLesson);
   const isTutorialReady = isShowingLesson || Boolean(quiz);
+  const isSessionTutorialReady =
+    sessionStatus !== "loading" &&
+    (sessionStatus === "unauthenticated" || isOnboardingReady);
   const shouldAutoOpenTutorial =
     resolvedIsTutorialUnit &&
     isHydrated &&
+    isSessionTutorialReady &&
     !isFinished &&
     !accessibilityOpen &&
     isTutorialReady &&

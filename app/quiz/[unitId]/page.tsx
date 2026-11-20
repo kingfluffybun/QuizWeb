@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/progress";
 import { shuffleQuizOptions } from "@/app/quiz/shuffle";
 import { isOnboardingTutorialUnit } from "@/lib/quiz-ui-hints";
+import { getCanonicalCurriculumUnitSequence } from "@/lib/server/progress/catalog";
 import { ensureUnit1AllQuizTypes } from "@/lib/unit1-onboarding-quizzes";
 import type { UnitQuizData } from "../evaluate";
 import { unwrapUnitQuizzes } from "../unwrap";
@@ -44,16 +45,23 @@ export default async function UnitQuizPage({
   const initialSlideOrder = slide ? Math.max(1, parseInt(slide, 10)) : undefined;
 
   // Parallel data loading after authorization & unlock gate
-  const [dailyGoalData, selectedUnit, nextCurriculumUnit, isLessonDone] =
-    await Promise.all([
-      session?.user?.id ? getDailyGoalData().catch(() => null) : Promise.resolve(null),
-      getUnitById(selectedUnitId),
-      getNextCurriculumUnit(selectedUnitId),
-      start === "quiz"
-        ? isLessonCompletedForUser(selectedUnitId, userId)
-        : Promise.resolve(false),
-    ]);
+  const [
+    dailyGoalData,
+    selectedUnit,
+    nextCurriculumUnit,
+    isLessonDone,
+    canonicalSequence,
+  ] = await Promise.all([
+    session?.user?.id ? getDailyGoalData().catch(() => null) : Promise.resolve(null),
+    getUnitById(selectedUnitId),
+    getNextCurriculumUnit(selectedUnitId),
+    start === "quiz"
+      ? isLessonCompletedForUser(selectedUnitId, userId)
+      : Promise.resolve(false),
+    getCanonicalCurriculumUnitSequence().catch(() => []),
+  ]);
 
+  const canonicalFirstUnitId = canonicalSequence[0]?.unit_id;
   const selectedMeta = selectedUnit as
     | { sec_id?: number; unit_order?: number; unit_id?: number }
     | null;
@@ -63,6 +71,7 @@ export default async function UnitQuizPage({
         secId: selectedMeta?.sec_id,
         unitOrder: selectedMeta?.unit_order,
         unitId: selectedUnitId,
+        canonicalFirstUnitId,
       })
     : [];
   const quizzesToDisplay = enrichedQuizzes.map((quiz, index) =>
@@ -73,6 +82,7 @@ export default async function UnitQuizPage({
     secId: selectedMeta?.sec_id ?? firstQuiz?.sec_id,
     unitOrder: selectedMeta?.unit_order ?? firstQuiz?.unit_order,
     unitId: selectedUnitId,
+    canonicalFirstUnitId,
   });
 
   if (quizzesToDisplay.length === 0) {

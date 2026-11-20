@@ -120,7 +120,7 @@ export default function StreakCalendar({ initialData }: { initialData: StreakDat
     const isFlameActive = streakData.currentStreak > 0 || streakData.todayCompleted;
 
     return (
-        <div className="card" id="streak-calendar">
+        <div className="card" id="streak-calendar" data-tutorial="home-streak">
             <div className="calendar-container">
                 {/* Left column: streak summary & current week */}
                 <div className="streak">

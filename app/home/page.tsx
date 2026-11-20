@@ -85,7 +85,7 @@ export default async function DashboardPage() {
             />
             <main>
                 <div className="dashboard-content">
-                    <div className="welcome-banner">
+                    <div className="welcome-banner" data-tutorial="home-welcome">
                         <div>
                             <h1>Welcome, {firstName}</h1>
                             <p>Your daily goal is waiting — jump in and earn some XP!</p>
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
                             </div>
                         )}
                         <div className="two-col-card" id="dashboard-progress">
-                            <div className="card">
+                            <div className="card" data-tutorial="home-progress">
                                 <div className="card-title">
                                     <h2>Lesson Progress</h2>
                                     <Link href="/learn"><h2 className="quick-action">View All</h2></Link>

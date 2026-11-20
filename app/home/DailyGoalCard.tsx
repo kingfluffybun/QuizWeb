@@ -116,7 +116,7 @@ export default function DailyGoalCard({
 
     return (
         <>
-            <div className="card">
+            <div className="card" data-tutorial="home-daily-goal">
                 <div className="card-title">
                     <h2>Daily Goal</h2>
                 </div>

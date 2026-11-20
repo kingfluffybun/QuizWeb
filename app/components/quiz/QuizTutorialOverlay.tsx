@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CloseIcon } from "@/app/components/icons/NavIcons";
 import { useIsReducedMotion } from "@/lib/accessibility-store";
-import { useQuizHintsPrefs } from "@/lib/quiz-hints-store";
+import { useIsHydrated, useQuizHintsPrefs } from "@/lib/quiz-hints-store";
 import {
   buildBackdropCutoutPath,
   computeArrowPath,
@@ -27,6 +28,8 @@ interface QuizTutorialOverlayProps {
   onClose: () => void;
   onPrepareStep?: (step: QuizTutorialStep) => void;
   onKeepOpen?: () => void;
+  primaryFinishLabel?: string;
+  onPrimaryFinish?: () => void;
 }
 
 interface TutorialVisualFrame {
@@ -161,6 +164,8 @@ export default function QuizTutorialOverlay({
   onClose,
   onPrepareStep,
   onKeepOpen,
+  primaryFinishLabel,
+  onPrimaryFinish,
 }: QuizTutorialOverlayProps) {
   const config = getQuizUiHint(mode);
   const totalSteps = config.steps.length;
@@ -172,6 +177,7 @@ export default function QuizTutorialOverlay({
   const [visual, setVisual] =
     useState<TutorialVisualFrame>(INITIAL_VISUAL_FRAME);
 
+  const isHydrated = useIsHydrated();
   const cardRef = useRef<HTMLElement | null>(null);
   const visualRef = useRef<TutorialVisualFrame>(INITIAL_VISUAL_FRAME);
   const lastAnimatedStepIdRef = useRef<string | null>(null);
@@ -197,6 +203,11 @@ export default function QuizTutorialOverlay({
     onClose();
   }, [markTutorialSeen, mode, onClose]);
 
+  const handleCloseRef = useRef(handleClose);
+  useEffect(() => {
+    handleCloseRef.current = handleClose;
+  }, [handleClose]);
+
   const goBack = useCallback(() => {
     const prevIndex = findStepIndexSkippingMissing(
       config.steps,
@@ -217,20 +228,34 @@ export default function QuizTutorialOverlay({
       1,
     );
     if (nextIndex >= totalSteps) {
-      handleClose();
+      if (onPrimaryFinish) {
+        onPrimaryFinish();
+      } else {
+        handleClose();
+      }
       return;
     }
     setStepState({
       forMode: mode,
       index: nextIndex,
     });
-  }, [config.steps, handleClose, mode, resolvedIndex, totalSteps]);
+  }, [
+    config.steps,
+    handleClose,
+    mode,
+    onPrimaryFinish,
+    resolvedIndex,
+    totalSteps,
+  ]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     let rafPrepare = 0;
     let rafMeasure = 0;
     let rafSettle = 0;
     let rafTween = 0;
+    let revealFailsafeTimer = 0;
     let resizeObserver: ResizeObserver | null = null;
     let observedTarget: HTMLElement | null = null;
     let observedCard: HTMLElement | null = null;
@@ -329,6 +354,21 @@ export default function QuizTutorialOverlay({
       rafMeasure = window.requestAnimationFrame(measureNow);
     };
 
+    const advancePastMissingOptional = (): boolean => {
+      if (!activeStep.optionalIfMissing) return false;
+      const nextIndex = findStepIndexSkippingMissing(
+        config.steps,
+        resolvedIndex + 1,
+        1,
+      );
+      if (nextIndex < totalSteps) {
+        setStepState({ forMode: mode, index: nextIndex });
+      } else {
+        handleCloseRef.current();
+      }
+      return true;
+    };
+
     const measureNow = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -336,11 +376,7 @@ export default function QuizTutorialOverlay({
 
       if (targetEl) {
         missingTargetRetries = 0;
-      } else if (
-        activeStep.optionalIfMissing &&
-        resolvedIndex < totalSteps - 1
-      ) {
-        setStepState({ forMode: mode, index: resolvedIndex + 1 });
+      } else if (advancePastMissingOptional()) {
         return;
       } else if (!activeStep.optionalIfMissing && missingTargetRetries < 6) {
         missingTargetRetries += 1;
@@ -374,8 +410,6 @@ export default function QuizTutorialOverlay({
         measuredCardHeight,
       );
 
-      // Initial open: wait for quiz-container's quiz-elevate-in settle (~350ms max)
-      // while overlay remains invisible (opacity: 0), then fade in once over Step 0.
       if (!visualRef.current.ready) {
         targetFrameRef.current = nextFrame;
         return;
@@ -401,6 +435,28 @@ export default function QuizTutorialOverlay({
       let prevRect: DOMRect | null = null;
       let stableFrames = 0;
 
+      const revealNow = (targetEl: HTMLElement | null) => {
+        window.clearTimeout(revealFailsafeTimer);
+        ensureObservers(targetEl);
+        const measuredCardHeight = cardRef.current?.offsetHeight ?? 320;
+        const initialFrame = measureTargetFrame(
+          targetEl,
+          activeStep.preferredPlacement,
+          measuredCardHeight,
+        );
+        lastAnimatedStepIdRef.current = activeStep.id;
+        targetFrameRef.current = initialFrame;
+        applyVisual(initialFrame);
+      };
+
+      // Hard failsafe ensures overlay can never stall invisibly at opacity: 0
+      revealFailsafeTimer = window.setTimeout(() => {
+        if (!visualRef.current.ready) {
+          window.cancelAnimationFrame(rafSettle);
+          revealNow(findVisibleTarget(activeStep.targetSelectors));
+        }
+      }, INITIAL_SETTLE_MAX_MS + 120);
+
       const waitFrame = () => {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
@@ -419,12 +475,8 @@ export default function QuizTutorialOverlay({
 
         const targetEl = findVisibleTarget(activeStep.targetSelectors);
 
-        if (
-          !targetEl &&
-          activeStep.optionalIfMissing &&
-          resolvedIndex < totalSteps - 1
-        ) {
-          setStepState({ forMode: mode, index: resolvedIndex + 1 });
+        if (!targetEl && advancePastMissingOptional()) {
+          window.clearTimeout(revealFailsafeTimer);
           return;
         }
 
@@ -475,16 +527,7 @@ export default function QuizTutorialOverlay({
           return;
         }
 
-        ensureObservers(targetEl);
-        const measuredCardHeight = cardRef.current?.offsetHeight ?? 320;
-        const initialFrame = measureTargetFrame(
-          targetEl,
-          activeStep.preferredPlacement,
-          measuredCardHeight,
-        );
-        lastAnimatedStepIdRef.current = activeStep.id;
-        targetFrameRef.current = initialFrame;
-        applyVisual(initialFrame);
+        revealNow(targetEl);
       };
 
       rafSettle = window.requestAnimationFrame(waitFrame);
@@ -507,15 +550,25 @@ export default function QuizTutorialOverlay({
       window.cancelAnimationFrame(rafMeasure);
       window.cancelAnimationFrame(rafSettle);
       window.cancelAnimationFrame(rafTween);
+      window.clearTimeout(revealFailsafeTimer);
       isTweeningRef.current = false;
       resizeObserver?.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener("scroll", scheduleMeasure, true);
     };
-  }, [isOpen, activeStep, mode, resolvedIndex, totalSteps, reducedMotion]);
+  }, [
+    isHydrated,
+    isOpen,
+    activeStep,
+    config.steps,
+    mode,
+    resolvedIndex,
+    totalSteps,
+    reducedMotion,
+  ]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isHydrated) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -536,9 +589,11 @@ export default function QuizTutorialOverlay({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, handleClose, goNext, goBack]);
+  }, [isHydrated, isOpen, handleClose, goNext, goBack]);
 
-  if (!isOpen || !activeStep) return null;
+  if (!isHydrated || !isOpen || !activeStep || typeof document === "undefined") {
+    return null;
+  }
 
   const arrow = visual.spotlight
     ? computeArrowPath(
@@ -559,7 +614,12 @@ export default function QuizTutorialOverlay({
     visual.spotlight,
   );
 
-  return (
+  const finishButtonLabel =
+    resolvedIndex === totalSteps - 1
+      ? (primaryFinishLabel ?? "Finish Tutorial")
+      : "Next →";
+
+  return createPortal(
     <div
       className={`quiz-tutorial-overlay${visual.ready ? " is-ready" : ""}`}
       role="dialog"
@@ -752,7 +812,7 @@ export default function QuizTutorialOverlay({
               className="quiz-tutorial-next-btn"
               onClick={goNext}
             >
-              {resolvedIndex === totalSteps - 1 ? "Finish Tutorial" : "Next →"}
+              {finishButtonLabel}
             </button>
           </div>
         </div>
@@ -767,10 +827,11 @@ export default function QuizTutorialOverlay({
                 setAutoShowTutorials(event.target.checked);
               }}
             />
-            <span>Auto-start tutorial on new quiz types</span>
+            <span>Auto-start tutorials for walkthroughs</span>
           </label>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

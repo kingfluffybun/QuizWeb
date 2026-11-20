@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { ARGON2_OPTIONS, hashToken } from "@/lib/server/crypto";
 import { renderVerificationEmail } from "@/lib/server/email-templates";
+import { initializeUserOnboardingRow } from "@/lib/server/onboarding";
 import { verifyRecaptchaToken } from "./recaptcha";
 
 const AVATAR_COLOR_PALETTE = [
@@ -213,6 +214,8 @@ export async function verifyEmailImpl(token: string) {
       "INSERT INTO player_tbl (user_id, username) VALUES (?, ?)",
       [newUserId, pendingUser.username],
     );
+
+    await initializeUserOnboardingRow(connection, newUserId);
 
     await connection.query("DELETE FROM user_vrfy_tbl WHERE verify_id = ?", [
       pendingUser.verify_id,
