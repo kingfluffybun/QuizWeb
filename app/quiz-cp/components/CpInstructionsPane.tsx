@@ -2,6 +2,7 @@
 
 import type { PublicCodeProblem } from "@/lib/cp-constants";
 import type { SequentialSkipQueuePayload } from "@/app/actions/section-skip";
+import QuizUiHintBar from "@/app/components/quiz/QuizUiHintBar";
 import type { StepFeedback } from "../types";
 
 interface CpInstructionsPaneProps {
@@ -15,6 +16,7 @@ interface CpInstructionsPaneProps {
   skipPayload: SequentialSkipQueuePayload | null;
   queueIndex: number;
   isSkipMode: boolean;
+  onOpenHelp: () => void;
 }
 
 export default function CpInstructionsPane({
@@ -28,6 +30,7 @@ export default function CpInstructionsPane({
   skipPayload,
   queueIndex,
   isSkipMode,
+  onOpenHelp,
 }: CpInstructionsPaneProps) {
   return (
     <div id="instructions">
@@ -112,6 +115,8 @@ export default function CpInstructionsPane({
                 {problem.description}
               </div>
             )}
+
+            <QuizUiHintBar mode="CP" onOpenGuide={onOpenHelp} compact />
 
             {problem?.steps.map((step, index) => {
               const isCompleted = index < currentStepIndex;

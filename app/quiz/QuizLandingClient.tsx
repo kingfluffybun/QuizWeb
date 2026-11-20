@@ -10,8 +10,11 @@ import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import CompletionScreen from "@/app/components/quiz/CompletionScreen";
+import QuizUiHintBar from "@/app/components/quiz/QuizUiHintBar";
+import QuizUiHintModal from "@/app/components/quiz/QuizUiHintModal";
 import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
+import { resolveQuizHintMode } from "@/lib/quiz-ui-hints";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { recordQuizCompletion } from "@/app/actions/streak";
 import { getDailyGoalData } from "@/app/actions/daily-goal";
@@ -119,6 +122,7 @@ export default function QuizLandingClient({
   >(() => new Set());
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const startedAtRef = useRef<number>(0);
   const [finalElapsedSeconds, setFinalElapsedSeconds] = useState(0);
   const [lessonProgressState, setLessonProgressState] = useState<
@@ -591,7 +595,32 @@ export default function QuizLandingClient({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isFinished || isShowingLesson) return;
+      if (isFinished) return;
+
+      const target = event.target;
+      const isTextInputTarget =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          Boolean(
+            target.closest("textarea, select, input:not([type='radio'])"),
+          ));
+
+      if (
+        event.key === "?" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !isTextInputTarget
+      ) {
+        event.preventDefault();
+        if (accessibilityOpen) {
+          setAccessibilityClosing(true);
+        }
+        setHelpOpen((open) => !open);
+        return;
+      }
+
+      if (isShowingLesson || helpOpen || accessibilityOpen) return;
 
       if (
         event.key === "Enter" &&
@@ -599,7 +628,6 @@ export default function QuizLandingClient({
         !event.metaKey &&
         !event.altKey
       ) {
-        const target = event.target;
         if (
           target instanceof HTMLElement &&
           (target.isContentEditable ||
@@ -625,12 +653,7 @@ export default function QuizLandingClient({
         return;
       }
 
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          target.closest("textarea, select, input:not([type='radio'])"))
-      ) {
+      if (isTextInputTarget) {
         return;
       }
 
@@ -640,7 +663,7 @@ export default function QuizLandingClient({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [quiz, result, isFinished, isShowingLesson]);
+  }, [quiz, result, isFinished, isShowingLesson, helpOpen, accessibilityOpen]);
 
   const areChoicesLocked = Boolean(result);
 
@@ -846,8 +869,18 @@ export default function QuizLandingClient({
             if (accessibilityOpen) {
               setAccessibilityClosing(true);
             } else {
+              setHelpOpen(false);
               setAccessibilityClosing(false);
               setAccessibilityOpen(true);
+            }
+          }}
+          helpOpen={helpOpen}
+          onToggleHelp={() => {
+            if (helpOpen) {
+              setHelpOpen(false);
+            } else {
+              if (accessibilityOpen) setAccessibilityClosing(true);
+              setHelpOpen(true);
             }
           }}
           onBack={handleBack}
@@ -868,6 +901,12 @@ export default function QuizLandingClient({
           />
         )}
 
+        <QuizUiHintModal
+          isOpen={helpOpen}
+          activeMode={resolveQuizHintMode(quiz?.type_name, isShowingLesson)}
+          onClose={() => setHelpOpen(false)}
+        />
+
         <div
           className="quiz-content-region"
           style={{
@@ -880,21 +919,31 @@ export default function QuizLandingClient({
           }}
         >
           {isShowingLesson ? (
-            <LessonSlideTransition
-              slideIndex={lessonSlideIndex}
-              slideCount={lessonSlides.length}
-              slideHasCode={(index) => Boolean(lessonSlides[index]?.lesson_code)}
-              renderSlide={(slideIndex) => (
-                <LessonCard
-                  key={`${selectedQuiz?.quiz_id ?? currentIndex}-${slideIndex}`}
-                  slides={lessonSlides}
-                  className="unit-meta"
-                  slideIndex={slideIndex}
-                  onSlideIndexChange={setLessonSlideIndex}
-                  showControls={false}
-                />
-              )}
-            />
+            <>
+              <QuizUiHintBar
+                mode="Lesson"
+                compact
+                onOpenGuide={() => {
+                  if (accessibilityOpen) setAccessibilityClosing(true);
+                  setHelpOpen(true);
+                }}
+              />
+              <LessonSlideTransition
+                slideIndex={lessonSlideIndex}
+                slideCount={lessonSlides.length}
+                slideHasCode={(index) => Boolean(lessonSlides[index]?.lesson_code)}
+                renderSlide={(slideIndex) => (
+                  <LessonCard
+                    key={`${selectedQuiz?.quiz_id ?? currentIndex}-${slideIndex}`}
+                    slides={lessonSlides}
+                    className="unit-meta"
+                    slideIndex={slideIndex}
+                    onSlideIndexChange={setLessonSlideIndex}
+                    showControls={false}
+                  />
+                )}
+              />
+            </>
           ) : (
             <QuizQuestionView
               quiz={quiz}
@@ -905,6 +954,10 @@ export default function QuizLandingClient({
               disabled={areChoicesLocked}
               onPairMatched={() => playQuizSound("correct-answer1")}
               onIncorrectPair={handleIncorrectPair}
+              onOpenHelp={() => {
+                if (accessibilityOpen) setAccessibilityClosing(true);
+                setHelpOpen(true);
+              }}
             />
           )}
         </div>

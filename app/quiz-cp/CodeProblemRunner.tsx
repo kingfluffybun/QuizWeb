@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import Sidebar from "@/app/components/Sidebar";
 import CompletionScreen from "@/app/components/quiz/CompletionScreen";
+import QuizUiHintModal from "@/app/components/quiz/QuizUiHintModal";
 import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
@@ -57,6 +58,7 @@ export function CodeProblemRunner({
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
   const clearConsoleRef = useRef<() => void>(() => {});
@@ -82,6 +84,39 @@ export function CodeProblemRunner({
 
   const isFinished =
     session.status === "completed" || session.status === "gameover";
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        isFinished ||
+        isTyping ||
+        event.key !== "?" ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          Boolean(target.closest("textarea, input, select, .monaco-editor")))
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      if (accessibilityOpen) {
+        setAccessibilityClosing(true);
+      }
+      setHelpOpen((open) => !open);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFinished, isTyping, accessibilityOpen]);
   const animatedStats = useAnimatedStats(
     isFinished,
     session.totalCpXp,
@@ -234,8 +269,18 @@ export function CodeProblemRunner({
             if (accessibilityOpen) {
               setAccessibilityClosing(true);
             } else {
+              setHelpOpen(false);
               setAccessibilityClosing(false);
               setAccessibilityOpen(true);
+            }
+          }}
+          helpOpen={helpOpen}
+          onToggleHelp={() => {
+            if (helpOpen) {
+              setHelpOpen(false);
+            } else {
+              if (accessibilityOpen) setAccessibilityClosing(true);
+              setHelpOpen(true);
             }
           }}
         />
@@ -262,6 +307,12 @@ export function CodeProblemRunner({
             </div>
           </div>
         )}
+
+        <QuizUiHintModal
+          isOpen={helpOpen}
+          activeMode="CP"
+          onClose={() => setHelpOpen(false)}
+        />
 
         <div
           className="cp-workspace"
@@ -304,6 +355,10 @@ export function CodeProblemRunner({
               skipPayload={session.skipPayload}
               queueIndex={session.queueIndex}
               isSkipMode={Boolean(requestedSkipTargetSecId && session.skipPayload)}
+              onOpenHelp={() => {
+                if (accessibilityOpen) setAccessibilityClosing(true);
+                setHelpOpen(true);
+              }}
             />
 
             <CpEditorPane

@@ -25,26 +25,32 @@ used for project status.
 
 ## Current work
 
-Completed. Comprehensive optimization, refactoring, and modularization across the full repository on branch `preview-2.0` (Phases 0–5).
+Completed. Added the Per-Quiz-Type UI Interaction Hints System across `/quiz` and `/quiz-cp` on `preview-2.0`, and completed the Next.js `16.4.2` → `16.4.6` security upgrade in the separate Git worktree `..\QuizWeb-next-upgrade` (`chore/next-security-upgrade-16.4.6`, commit `870f385`).
 
-Completed changes:
-- **Core, Auth, Utilities & API (`a0beca1`)**: Consolidated caching/session/crypto/email/assessment helpers under `lib/server/{cache,crypto,email-templates,session,cp-assessment}.ts`, `lib/{auth-cache,auth-oauth,user-info-client,cp-constants}.ts`, `auth.ts`, `proxy.ts`, `app/api/db/user-info/route.ts`, `app/api/learn/preload/route.ts`, and `app/quiz/unwrap.ts`; removed unused `app/api/recaptcha/route.ts`.
-- **Server Actions & Queries (`6bbd9c2`)**: Modularized `app/actions/{quiz,progress,auth}.ts` into `lib/types/{quiz,progress}.ts` and `lib/server/{quiz,progress,auth}/*`; optimized `cp-engine.ts`, `streak.ts`, `section-skip.ts`, `daily-goal.ts`, `admin.ts`, `credentials.ts`, `curriculum-roadmap.ts`, `maintainer.ts`, and `leaderboard.ts` to eliminate N+1 queries and redundant DB round-trips.
-- **Authoring & Assessment UI (`46935eb`)**: Modularized `app/input/`, `app/components/quiz/`, `app/quiz-cp/`, and `app/quiz/`; enforced `requireStaff()` in `app/input/page.tsx`; sandboxed preview iframes; eliminated 1Hz timer re-renders; unified desktop/mobile Monaco editors in `app/quiz-cp/`.
-- **App Shell, Pages, Animations & Stylesheets (`55f3a36`)**: Extracted `lib/accessibility-store.ts`, `lib/navigation.ts`, `lib/roadmap-progress.ts`, `lib/cheat-sheet-data.ts`, and shared `app/components/icons/NavIcons.tsx`; added `viewport` export in `app/layout.tsx` and moved `@/public/css/accessibility-dialog.css`; lazily loaded `animejs` in `app/components/animations/` with reduced-motion support; converted `app/page.tsx`, `app/about/page.tsx`, and `app/cheat-sheet/page.tsx` to static RSCs (replacing 37 simultaneous Monaco instances on `/cheat-sheet` with `StaticCodeBlock`); modularized `app/login/`, `app/learn/`, `app/settings/`, `app/maintainer/`; enforced `requireAdmin()` in `app/pending/page.tsx`; pruned duplicate/dead styles in `public/css/` and unused CSS imports.
-- **Test Lint Cleanup & Handoff**: Removed unused `getUserSectionProgress` import in `tests/test-lesson-quiz-cp-progression.ts`.
+Completed changes (`preview-2.0`):
+- `lib/quiz-ui-hints.ts`: Added typed UI interaction hints catalog (`QUIZ_UI_HINTS`, `QUIZ_UI_HINT_ORDER`, `resolveQuizHintMode`, `getQuizUiHint`) covering `MCQ`, `FITB`, `Order`, `Pair`, `CP`, and `Lesson`.
+- `lib/quiz-hints-store.ts`: Added `useSyncExternalStore`-backed preference store (`quizweb-ui-hints-prefs`) with global toggle, per-type dismissal, and cross-tab sync.
+- `app/components/quiz/QuizUiHintBar.tsx` & `app/components/quiz/QuizUiHintModal.tsx`: Added dismissible inline tip banner and tabbed interactive "How to Interact" modal with device badges, keyboard shortcuts, and tip visibility controls.
+- `app/quiz/components/{QuizHeader,QuizQuestionView}.tsx` & `app/quiz/QuizLandingClient.tsx`: Wired header `?` button & keyboard shortcut (safe around text inputs), inline hint bars for Lesson slides and Quiz questions, and the UI hints modal while preserving all pass guards.
+- `app/quiz-cp/components/{CpHeader,CpInstructionsPane}.tsx` & `app/quiz-cp/CodeProblemRunner.tsx`: Wired workspace `?` help button & shortcut (inactive while typing in Monaco), compact `CP` inline tip bar, and modal.
+- `public/css/quiz.css`: Styled `.quiz-help-button`, `.quiz-ui-hint-bar`, and `.quiz-ui-hint-dialog` with light/dark/system themes, mobile responsiveness, and reduced-motion rules.
+- `tests/test-quiz-ui-hints.ts`: Added verification suite for hint content, mode resolution, and component integration.
 
-Validation completed:
-- `npx.cmd tsc --noEmit` (0 errors)
-- `npm.cmd run lint` (0 errors, 0 warnings)
-- `npm.cmd run build` (clean production build; Next.js 16.4.2 Turbopack)
-- `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing)
-- `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0)
-- `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing)
-- `npx.cmd tsx tests/test-phase2-rendering.ts` (All Phase 2 rendering & static acceleration assertions passing)
-- `npx.cmd tsx tests/test-phase3-optimization.ts` (All Phase 3 client bundle & asset optimization assertions passing)
-- Static source contract checks (22/22 assertions from `tests/test-unit-pass-completion.ts`, `tests/test-curriculum-roadmap-integration.ts`, and `tests/test-section-skip.ts` passing)
-- Note: Live MySQL-backed test suites were not executed in this workspace because no `.env`/`.env.local` database configuration is present locally.
+Completed changes (`..\QuizWeb-next-upgrade` @ `chore/next-security-upgrade-16.4.6` `870f385`):
+- Upgraded `next` and `eslint-config-next` from `16.4.2` → `16.4.6` in `package.json` / `package-lock.json` and configured `experimental.agentUpgrade: "security"` in `next.config.ts`.
+
+Validation completed (`preview-2.0` & worktree):
+- `npx.cmd tsc --noEmit` (0 errors in both checkouts)
+- `npm.cmd run lint` (0 errors, 0 warnings in both checkouts)
+- `npm.cmd run build` (clean production builds; Next.js `16.4.6` worktree and Next.js `16.4.2` main checkout)
+- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all 4 assertion groups passing)
+- `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing in both checkouts)
+- `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0 in both checkouts)
+- `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing in both checkouts)
+- `npx.cmd tsx tests/test-phase2-rendering.ts` (all static/dynamic rendering assertions passing in both checkouts)
+- `npx.cmd tsx tests/test-phase3-optimization.ts` (all optimization assertions passing in both checkouts)
+- `QuizLandingClient.tsx` pass-completion contracts from `tests/test-unit-pass-completion.ts` (3/3 assertions passing)
+- Note: Live MySQL-backed test suites were not executed locally because no `.env`/`.env.local` database configuration is present in the workspace.
 
 Before starting work, an agent should replace this section with the files it
 intends to change and a short description. After finishing, it should replace
@@ -52,6 +58,8 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-11-20: Implemented the Per-Quiz-Type UI Interaction Hints System on `preview-2.0` (`lib/quiz-ui-hints.ts`, `lib/quiz-hints-store.ts`, `QuizUiHintBar.tsx`, `QuizUiHintModal.tsx`, `/quiz` & `/quiz-cp` wiring, `public/css/quiz.css`, `tests/test-quiz-ui-hints.ts`) and completed the Next.js `16.4.2` → `16.4.6` security upgrade in separate Git worktree `..\QuizWeb-next-upgrade` (`chore/next-security-upgrade-16.4.6`, commit `870f385`). Verified both checkouts cleanly with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, offline `tsx` test suites (`test-quiz-ui-hints`, `test-cp-engine` 15/15, `test-assessment-json-import`, `test-leaderboard-period` 5/5, `test-phase2-rendering`, `test-phase3-optimization`), and pass-completion static contracts.
 
 - 2026-11-20: Completed repository-wide optimization, refactoring, and modularization across Phases 0–5 on `preview-2.0` (`a0beca1`, `6bbd9c2`, `46935eb`, `55f3a36`, plus final test lint cleanup & handoff update). Passed TypeScript (0 errors), ESLint (0 errors, 0 warnings), Next.js production build, `test-cp-engine.ts` (15/15), `test-assessment-json-import.ts`, `test-leaderboard-period.ts` (5/5), `test-phase2-rendering.ts`, `test-phase3-optimization.ts`, and 22 static file-contract assertions (live MySQL tests skipped locally due to missing `.env`/`.env.local`).
 

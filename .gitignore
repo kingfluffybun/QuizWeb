@@ -51,6 +51,7 @@ tests/*
 !tests/test-guest-learn-ui.ts
 !tests/test-unit-pass-completion.ts
 !tests/test-lesson-quiz-cp-progression.ts
+!tests/test-quiz-ui-hints.ts
 !tests/env-loader.ts
 
 # debug
