@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
     reactCompiler: true,
     poweredByHeader: false,
     serverExternalPackages: ["argon2", "mysql2"],
+    experimental: {
+        agentUpgrade: "security",
+    },
     images: {
         remotePatterns: [
             { hostname: "lh3.googleusercontent.com" },
