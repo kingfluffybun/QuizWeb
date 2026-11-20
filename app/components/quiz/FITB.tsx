@@ -14,6 +14,7 @@ export default function FITB ({ value, onChange, disabled = false }: QuestionPro
     return (
         <div className={`options-container row${disabled ? " is-locked" : ""}`} id="ftb">
         <textarea className="answer-box"
+            data-tutorial="fitb-input"
             ref={answerInputRef}
             value={answer}
             disabled={disabled}

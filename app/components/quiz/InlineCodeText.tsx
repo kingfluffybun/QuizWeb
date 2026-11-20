@@ -51,11 +51,15 @@ export function QuizQuestionPrompt({ parts }: { parts: QuizQuestionPart[] }) {
   const textParts = parts.filter((part) => part.type === "text" && part.content.trim());
 
   if (!hasCode) {
-    return <h1>{renderInlineCode(parts.map((part) => part.content).join(""))}</h1>;
+    return (
+      <h1 data-tutorial="quiz-prompt">
+        {renderInlineCode(parts.map((part) => part.content).join(""))}
+      </h1>
+    );
   }
 
   return (
-    <div className="quiz-question-prompt">
+    <div className="quiz-question-prompt" data-tutorial="quiz-prompt">
       {textParts.map((part, index) => (
         <p className="quiz-question-copy" key={index}>
           {renderInlineCode(part.content)}

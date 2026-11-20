@@ -84,7 +84,7 @@ export default function CpEditorPane({
 
   return (
     <div id="tab">
-      <div className="header">
+      <div className="header" data-tutorial="cp-file-tabs">
         {CP_FILE_KEYS.map((fileKey) => {
           const { label, language } = CP_FILE_META[fileKey];
           const isActive = activeFile === fileKey;
@@ -136,7 +136,10 @@ export default function CpEditorPane({
       </div>
 
       {/* Unified Monaco Editor wrapper shared across desktop and mobile viewports */}
-      <div className="code-editor-container monaco-editor-shell row">
+      <div
+        className="code-editor-container monaco-editor-shell row"
+        data-tutorial="cp-editor"
+      >
         <div
           className={isMobileViewport ? "cp-mobile-editor" : undefined}
           style={isMobileViewport ? undefined : { display: "contents" }}
@@ -223,7 +226,7 @@ export default function CpEditorPane({
           )}
         </div>
 
-        <div className="code-options">
+        <div className="code-options" data-tutorial="cp-reset-run">
           <button
             type="button"
             className="run-code-btn"
@@ -276,6 +279,7 @@ export default function CpEditorPane({
           <button
             type="button"
             className="submit-btn"
+            data-tutorial="cp-submit"
             onClick={onSubmitStep}
             disabled={!problem || isLoading || isSubmitting}
             style={{ cursor: "pointer" }}

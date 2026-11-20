@@ -33,7 +33,7 @@ export default function CpInstructionsPane({
   onOpenHelp,
 }: CpInstructionsPaneProps) {
   return (
-    <div id="instructions">
+    <div id="instructions" data-tutorial="cp-instructions">
       <div className="header">
         <div>
           <svg

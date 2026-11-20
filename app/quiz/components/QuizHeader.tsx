@@ -69,9 +69,13 @@ export default function QuizHeader({
           type="button"
           className="quiz-help-button"
           data-quiz-help-trigger
-          aria-label={helpOpen ? "Close quiz UI guide" : "Open quiz UI guide"}
+          aria-label={
+            helpOpen
+              ? "Close interactive tutorial"
+              : "Start interactive tutorial (?)"
+          }
           aria-expanded={helpOpen}
-          title="How to use this quiz UI (?)"
+          title="Start interactive tutorial (?)"
           onClick={onToggleHelp}
         >
           <svg
@@ -123,7 +127,7 @@ export default function QuizHeader({
         <HeartsDisplay lives={lives} />
       </div>
 
-      <div className="quiz-progress-row">
+      <div className="quiz-progress-row" data-tutorial="quiz-progress">
         <button
           type="button"
           className="quiz-progress-back"

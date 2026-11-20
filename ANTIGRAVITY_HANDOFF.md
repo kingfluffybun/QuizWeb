@@ -25,31 +25,28 @@ used for project status.
 
 ## Current work
 
-Completed. Added the Per-Quiz-Type UI Interaction Hints System across `/quiz` and `/quiz-cp` on `preview-2.0`, and completed the Next.js `16.4.2` → `16.4.6` security upgrade in the separate Git worktree `..\QuizWeb-next-upgrade` (`chore/next-security-upgrade-16.4.6`, commit `870f385`).
+Completed. Upgraded the quiz UI hints system into a complete interactive spotlight walkthrough tutorial with curved SVG pointer arrows across all quiz types (`MCQ`, `FITB`, `Order`, `Pair`, `CP`, and `Lesson`) on branch `nextjs` (atop merged Next.js `16.4.6` security upgrade `a42e86e`).
 
-Completed changes (`preview-2.0`):
-- `lib/quiz-ui-hints.ts`: Added typed UI interaction hints catalog (`QUIZ_UI_HINTS`, `QUIZ_UI_HINT_ORDER`, `resolveQuizHintMode`, `getQuizUiHint`) covering `MCQ`, `FITB`, `Order`, `Pair`, `CP`, and `Lesson`.
-- `lib/quiz-hints-store.ts`: Added `useSyncExternalStore`-backed preference store (`quizweb-ui-hints-prefs`) with global toggle, per-type dismissal, and cross-tab sync.
-- `app/components/quiz/QuizUiHintBar.tsx` & `app/components/quiz/QuizUiHintModal.tsx`: Added dismissible inline tip banner and tabbed interactive "How to Interact" modal with device badges, keyboard shortcuts, and tip visibility controls.
-- `app/quiz/components/{QuizHeader,QuizQuestionView}.tsx` & `app/quiz/QuizLandingClient.tsx`: Wired header `?` button & keyboard shortcut (safe around text inputs), inline hint bars for Lesson slides and Quiz questions, and the UI hints modal while preserving all pass guards.
-- `app/quiz-cp/components/{CpHeader,CpInstructionsPane}.tsx` & `app/quiz-cp/CodeProblemRunner.tsx`: Wired workspace `?` help button & shortcut (inactive while typing in Monaco), compact `CP` inline tip bar, and modal.
-- `public/css/quiz.css`: Styled `.quiz-help-button`, `.quiz-ui-hint-bar`, and `.quiz-ui-hint-dialog` with light/dark/system themes, mobile responsiveness, and reduced-motion rules.
-- `tests/test-quiz-ui-hints.ts`: Added verification suite for hint content, mode resolution, and component integration.
+Completed changes (`nextjs`):
+- `lib/quiz-ui-hints.ts`: Upgraded all 6 modes into full step-by-step interactive walkthroughs (`QuizTutorialStep` with `title`, `whatToDo`, `actionLabel`, `targetSelectors`, `preferredPlacement`, `optionalIfMissing`, `cpMobileTab`, `device`, and `shortcuts` — 32 steps total).
+- `lib/quiz-tutorial-geometry.ts`: Added pure spotlight, popover layout, even-odd SVG backdrop cutout, and quadratic Bezier curved arrow geometry engine (`computeSpotlightRect`, `computePopoverLayout`, `computeArrowPath`, `buildBackdropCutoutPath`).
+- `lib/quiz-hints-store.ts`: Added `autoShowTutorials`, `seenTutorialModes`, `useIsHydrated()`, `hasSeenTutorial()`, `markTutorialSeen()`, `setAutoShowTutorials()`, and `resetAllTutorials()`.
+- `app/components/quiz/QuizTutorialOverlay.tsx`: Replaced `QuizUiHintModal.tsx` with a live full-viewport spotlight + glowing pulse ring + animated curved SVG arrow overlay, keyboard (`Escape`, `ArrowLeft`, `ArrowRight`) navigation, step progress dots, and auto-start toggle.
+- `app/components/quiz/QuizUiHintBar.tsx`: Updated button label to `"Start Tutorial →"` to launch/replay the full walkthrough.
+- Live `data-tutorial` anchors & overlay wiring across `QuizHeader.tsx`, `InlineCodeText.tsx`, `QuizFooter.tsx`, `HeartsDisplay.tsx`, `MCQ.tsx`, `FITB.tsx`, `Order.tsx`, `Pair.tsx`, `LessonCard.tsx`, `QuizLandingClient.tsx`, `CpHeader.tsx`, `CpInstructionsPane.tsx`, `CpEditorPane.tsx`, `CpPreviewPane.tsx`, `CpMobileChrome.tsx`, and `CodeProblemRunner.tsx` (including mobile tab preparation for `CP` and hydration-safe auto-start once per unseen quiz type).
+- `public/css/quiz.css`: Added `.quiz-tutorial-*` spotlight, curved arrow, floating card, dark/system theme, mobile, and reduced-motion styles.
+- `tests/test-quiz-ui-hints.ts`: Expanded verification suite to test all 32 steps, geometry math, all 23 live component `data-tutorial` anchors, and integration wiring.
 
-Completed changes (`..\QuizWeb-next-upgrade` @ `chore/next-security-upgrade-16.4.6` `870f385`):
-- Upgraded `next` and `eslint-config-next` from `16.4.2` → `16.4.6` in `package.json` / `package-lock.json` and configured `experimental.agentUpgrade: "security"` in `next.config.ts`.
-
-Validation completed (`preview-2.0` & worktree):
-- `npx.cmd tsc --noEmit` (0 errors in both checkouts)
-- `npm.cmd run lint` (0 errors, 0 warnings in both checkouts)
-- `npm.cmd run build` (clean production builds; Next.js `16.4.6` worktree and Next.js `16.4.2` main checkout)
-- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all 4 assertion groups passing)
-- `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing in both checkouts)
-- `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0 in both checkouts)
-- `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing in both checkouts)
-- `npx.cmd tsx tests/test-phase2-rendering.ts` (all static/dynamic rendering assertions passing in both checkouts)
-- `npx.cmd tsx tests/test-phase3-optimization.ts` (all optimization assertions passing in both checkouts)
-- `QuizLandingClient.tsx` pass-completion contracts from `tests/test-unit-pass-completion.ts` (3/3 assertions passing)
+Validation completed:
+- `npx.cmd tsc --noEmit` (0 errors)
+- `npm.cmd run lint` (0 errors, 0 warnings)
+- `npm.cmd run build` (clean production build; Next.js `16.4.6` Turbopack)
+- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all 6 assertion groups passing: 32 steps, geometry, 23 DOM anchors, integration)
+- `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing)
+- `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0)
+- `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing)
+- `npx.cmd tsx tests/test-phase2-rendering.ts` (All Phase 2 rendering & static acceleration assertions passing)
+- `npx.cmd tsx tests/test-phase3-optimization.ts` (All Phase 3 client bundle & asset optimization assertions passing)
 - Note: Live MySQL-backed test suites were not executed locally because no `.env`/`.env.local` database configuration is present in the workspace.
 
 Before starting work, an agent should replace this section with the files it
@@ -58,6 +55,8 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-11-20: Upgraded the per-quiz-type hints system into a full interactive spotlight tutorial with curved SVG pointer arrows aimed directly at live UI controls across `MCQ`, `FITB`, `Order`, `Pair`, `CP`, and `Lesson` (`lib/quiz-ui-hints.ts`, `lib/quiz-tutorial-geometry.ts`, `lib/quiz-hints-store.ts`, `QuizTutorialOverlay.tsx`, `QuizUiHintBar.tsx`, 23 `data-tutorial` anchors, `QuizLandingClient.tsx`, `CodeProblemRunner.tsx`, `public/css/quiz.css`, `tests/test-quiz-ui-hints.ts`). Verified on `Next.js 16.4.6` (`a42e86e`) with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, `test-quiz-ui-hints`, `test-cp-engine` (15/15), `test-assessment-json-import`, `test-leaderboard-period` (5/5), `test-phase2-rendering`, and `test-phase3-optimization`.
 
 - 2026-11-20: Implemented the Per-Quiz-Type UI Interaction Hints System on `preview-2.0` (`lib/quiz-ui-hints.ts`, `lib/quiz-hints-store.ts`, `QuizUiHintBar.tsx`, `QuizUiHintModal.tsx`, `/quiz` & `/quiz-cp` wiring, `public/css/quiz.css`, `tests/test-quiz-ui-hints.ts`) and completed the Next.js `16.4.2` → `16.4.6` security upgrade in separate Git worktree `..\QuizWeb-next-upgrade` (`chore/next-security-upgrade-16.4.6`, commit `870f385`). Verified both checkouts cleanly with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, offline `tsx` test suites (`test-quiz-ui-hints`, `test-cp-engine` 15/15, `test-assessment-json-import`, `test-leaderboard-period` 5/5, `test-phase2-rendering`, `test-phase3-optimization`), and pass-completion static contracts.
 

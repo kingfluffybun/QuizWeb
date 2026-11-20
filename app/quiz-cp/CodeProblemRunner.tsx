@@ -6,10 +6,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import Sidebar from "@/app/components/Sidebar";
 import CompletionScreen from "@/app/components/quiz/CompletionScreen";
-import QuizUiHintModal from "@/app/components/quiz/QuizUiHintModal";
+import QuizTutorialOverlay from "@/app/components/quiz/QuizTutorialOverlay";
 import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
+import { useIsHydrated, useQuizHintsPrefs } from "@/lib/quiz-hints-store";
+import type { QuizTutorialStep } from "@/lib/quiz-ui-hints";
 import CpEditorPane from "./components/CpEditorPane";
 import CpHeader from "./components/CpHeader";
 import CpInstructionsPane from "./components/CpInstructionsPane";
@@ -59,6 +61,12 @@ export function CodeProblemRunner({
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const isHydrated = useIsHydrated();
+  const {
+    prefs: hintPrefs,
+    hasSeenTutorial,
+    markTutorialSeen,
+  } = useQuizHintsPrefs();
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
   const clearConsoleRef = useRef<() => void>(() => {});
@@ -84,6 +92,24 @@ export function CodeProblemRunner({
 
   const isFinished =
     session.status === "completed" || session.status === "gameover";
+  const isTutorialReady = !session.isLoading && Boolean(session.problem);
+  const shouldAutoOpenTutorial =
+    isHydrated &&
+    !isFinished &&
+    !accessibilityOpen &&
+    isTutorialReady &&
+    hintPrefs.autoShowTutorials &&
+    !hasSeenTutorial("CP");
+  const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;
+
+  const handlePrepareTutorialStep = useCallback(
+    (step: QuizTutorialStep) => {
+      if (isMobileViewport && step.cpMobileTab) {
+        setMobileTab(step.cpMobileTab);
+      }
+    },
+    [isMobileViewport],
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -108,15 +134,20 @@ export function CodeProblemRunner({
       }
 
       event.preventDefault();
-      if (accessibilityOpen) {
-        setAccessibilityClosing(true);
+      if (isTutorialOpen) {
+        markTutorialSeen("CP");
+        setHelpOpen(false);
+      } else {
+        if (accessibilityOpen) {
+          setAccessibilityClosing(true);
+        }
+        setHelpOpen(true);
       }
-      setHelpOpen((open) => !open);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFinished, isTyping, accessibilityOpen]);
+  }, [isFinished, isTyping, isTutorialOpen, accessibilityOpen, markTutorialSeen]);
   const animatedStats = useAnimatedStats(
     isFinished,
     session.totalCpXp,
@@ -269,14 +300,18 @@ export function CodeProblemRunner({
             if (accessibilityOpen) {
               setAccessibilityClosing(true);
             } else {
-              setHelpOpen(false);
+              if (isTutorialOpen) {
+                markTutorialSeen("CP");
+                setHelpOpen(false);
+              }
               setAccessibilityClosing(false);
               setAccessibilityOpen(true);
             }
           }}
-          helpOpen={helpOpen}
+          helpOpen={isTutorialOpen}
           onToggleHelp={() => {
-            if (helpOpen) {
+            if (isTutorialOpen) {
+              markTutorialSeen("CP");
               setHelpOpen(false);
             } else {
               if (accessibilityOpen) setAccessibilityClosing(true);
@@ -308,10 +343,15 @@ export function CodeProblemRunner({
           </div>
         )}
 
-        <QuizUiHintModal
-          isOpen={helpOpen}
-          activeMode="CP"
-          onClose={() => setHelpOpen(false)}
+        <QuizTutorialOverlay
+          isOpen={isTutorialOpen}
+          mode="CP"
+          onClose={() => {
+            markTutorialSeen("CP");
+            setHelpOpen(false);
+          }}
+          onPrepareStep={handlePrepareTutorialStep}
+          onKeepOpen={() => setHelpOpen(true)}
         />
 
         <div

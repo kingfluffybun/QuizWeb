@@ -6,6 +6,8 @@ import { QUIZ_UI_HINT_ORDER, type QuizHintMode } from "@/lib/quiz-ui-hints";
 export interface QuizHintsPrefs {
   showInlineHints: boolean;
   dismissedModes: QuizHintMode[];
+  autoShowTutorials: boolean;
+  seenTutorialModes: QuizHintMode[];
 }
 
 export const QUIZ_HINTS_STORAGE_KEY = "quizweb-ui-hints-prefs";
@@ -13,6 +15,8 @@ export const QUIZ_HINTS_STORAGE_KEY = "quizweb-ui-hints-prefs";
 export const DEFAULT_QUIZ_HINTS_PREFS: QuizHintsPrefs = {
   showInlineHints: true,
   dismissedModes: [],
+  autoShowTutorials: true,
+  seenTutorialModes: [],
 };
 
 const VALID_HINT_MODES = new Set<string>(QUIZ_UI_HINT_ORDER);
@@ -22,26 +26,32 @@ let cachedSnapshot: QuizHintsPrefs = DEFAULT_QUIZ_HINTS_PREFS;
 const listeners = new Set<() => void>();
 let storageListenerAttached = false;
 
+function normalizeModeList(input: unknown): QuizHintMode[] {
+  if (!Array.isArray(input)) return [];
+  return Array.from(
+    new Set(
+      input.filter(
+        (mode): mode is QuizHintMode =>
+          typeof mode === "string" && VALID_HINT_MODES.has(mode),
+      ),
+    ),
+  );
+}
+
 function normalizePrefs(
   raw: Partial<QuizHintsPrefs> | null | undefined,
 ): QuizHintsPrefs {
-  const dismissedModes = Array.isArray(raw?.dismissedModes)
-    ? Array.from(
-        new Set(
-          raw.dismissedModes.filter(
-            (mode): mode is QuizHintMode =>
-              typeof mode === "string" && VALID_HINT_MODES.has(mode),
-          ),
-        ),
-      )
-    : [];
-
   return {
     showInlineHints:
       typeof raw?.showInlineHints === "boolean"
         ? raw.showInlineHints
         : DEFAULT_QUIZ_HINTS_PREFS.showInlineHints,
-    dismissedModes,
+    dismissedModes: normalizeModeList(raw?.dismissedModes),
+    autoShowTutorials:
+      typeof raw?.autoShowTutorials === "boolean"
+        ? raw.autoShowTutorials
+        : DEFAULT_QUIZ_HINTS_PREFS.autoShowTutorials,
+    seenTutorialModes: normalizeModeList(raw?.seenTutorialModes),
   };
 }
 
@@ -123,6 +133,16 @@ export function updateQuizHintsPrefs(
   emitChange();
 }
 
+const subscribeNoop = () => () => {};
+
+export function useIsHydrated(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
+}
+
 export function useQuizHintsPrefs() {
   const prefs = useSyncExternalStore(
     subscribeQuizHints,
@@ -144,5 +164,23 @@ export function useQuizHintsPrefs() {
           : [...prev.dismissedModes, mode],
       })),
     resetDismissedHints: () => updateQuizHintsPrefs({ dismissedModes: [] }),
+    hasSeenTutorial: (mode: QuizHintMode) =>
+      prefs.seenTutorialModes.includes(mode),
+    markTutorialSeen: (mode: QuizHintMode) =>
+      updateQuizHintsPrefs((prev) => ({
+        ...prev,
+        seenTutorialModes: prev.seenTutorialModes.includes(mode)
+          ? prev.seenTutorialModes
+          : [...prev.seenTutorialModes, mode],
+      })),
+    setAutoShowTutorials: (autoShowTutorials: boolean) =>
+      updateQuizHintsPrefs({ autoShowTutorials }),
+    resetAllTutorials: () =>
+      updateQuizHintsPrefs({
+        showInlineHints: true,
+        dismissedModes: [],
+        autoShowTutorials: true,
+        seenTutorialModes: [],
+      }),
   };
 }

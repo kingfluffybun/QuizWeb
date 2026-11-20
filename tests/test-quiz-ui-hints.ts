@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  buildBackdropCutoutPath,
+  computeArrowPath,
+  computePopoverLayout,
+  computeSpotlightRect,
+} from "../lib/quiz-tutorial-geometry";
+import {
   getQuizUiHint,
   QUIZ_UI_HINT_ORDER,
   QUIZ_UI_HINTS,
@@ -13,14 +19,17 @@ function readSource(relativePath: string): string {
 }
 
 function runTests() {
-  console.log("=== Running Per-Quiz-Type UI Interaction Hints Test Suite ===");
+  console.log("=== Running Interactive Arrow Tutorial Test Suite ===");
 
-  // 1. All 6 modes exist and have complete structured guidance
+  // 1. Validate all 6 modes and walkthrough steps
   assert.deepEqual(
     QUIZ_UI_HINT_ORDER,
     ["MCQ", "FITB", "Order", "Pair", "CP", "Lesson"],
     "Expected all 6 quiz hint modes in order",
   );
+
+  const seenStepIds = new Set<string>();
+  const referencedTutorialKeys = new Set<string>();
 
   for (const mode of QUIZ_UI_HINT_ORDER) {
     const config = getQuizUiHint(mode);
@@ -33,15 +42,39 @@ function runTests() {
     );
     assert.ok(config.summary.trim().length > 0, `${mode} summary is non-empty`);
     assert.ok(
-      config.steps.length >= 2,
-      `${mode} has at least 2 detailed UI steps`,
+      config.steps.length >= 4,
+      `${mode} walkthrough should have at least 4 guided steps (got ${config.steps.length})`,
     );
+
     for (const step of config.steps) {
-      assert.ok(step.title.trim().length > 0, `${mode} step title non-empty`);
-      assert.ok(step.detail.trim().length > 0, `${mode} step detail non-empty`);
+      assert.ok(step.id.trim().length > 0, `${mode} step.id non-empty`);
+      assert.ok(!seenStepIds.has(step.id), `Duplicate step id: ${step.id}`);
+      seenStepIds.add(step.id);
+
+      assert.ok(step.title.trim().length > 0, `${step.id} title non-empty`);
+      assert.ok(step.whatToDo.trim().length > 0, `${step.id} whatToDo non-empty`);
+      assert.ok(
+        step.actionLabel.trim().length > 0,
+        `${step.id} actionLabel non-empty`,
+      );
+      assert.ok(
+        step.targetSelectors.length >= 1,
+        `${step.id} defines at least one target selector`,
+      );
+
+      for (const selector of step.targetSelectors) {
+        const match = /^\[data-tutorial="([^"]+)"\]$/.exec(selector);
+        assert.ok(
+          match,
+          `${step.id} uses clean data-tutorial selector format: ${selector}`,
+        );
+        referencedTutorialKeys.add(match[1]);
+      }
     }
   }
-  console.log("  ✓ All 6 quiz hint modes validated for structure and completeness");
+  console.log(
+    `  ✓ Validated all 6 modes (${seenStepIds.size} unique walkthrough steps)`,
+  );
 
   // 2. Mode normalization, aliases, fallback, and Lesson override
   assert.equal(resolveQuizHintMode("mcq"), "MCQ");
@@ -59,92 +92,174 @@ function runTests() {
   assert.equal(resolveQuizHintMode("MCQ", true), "Lesson");
   console.log("  ✓ Mode normalization, aliases, fallback, and Lesson override passed");
 
-  // 3. Domain-accurate UI interaction coverage per quiz type
-  const mcqText = `${QUIZ_UI_HINTS.MCQ.shortHint} ${QUIZ_UI_HINTS.MCQ.steps.map((s) => s.detail).join(" ")}`;
-  assert.ok(mcqText.includes("1–5"), "MCQ guidance documents 1-5 shortcuts");
-
-  const fitbText = `${QUIZ_UI_HINTS.FITB.shortHint} ${QUIZ_UI_HINTS.FITB.steps.map((s) => s.detail).join(" ")}`;
+  // 3. Domain-accurate UI interaction details
   assert.ok(
-    fitbText.toLowerCase().includes("case-insensitive") ||
-      fitbText.toLowerCase().includes("ignores capitalization"),
-    "FITB guidance explains case-insensitive matching",
-  );
-
-  const orderText = `${QUIZ_UI_HINTS.Order.shortHint} ${QUIZ_UI_HINTS.Order.steps.map((s) => s.detail).join(" ")}`;
-  assert.ok(
-    orderText.toLowerCase().includes("drag") &&
-      orderText.includes("↑") &&
-      orderText.includes("↓"),
-    "Order guidance covers drag-and-drop and arrow controls",
-  );
-
-  const pairText = `${QUIZ_UI_HINTS.Pair.shortHint} ${QUIZ_UI_HINTS.Pair.steps.map((s) => `${s.title} ${s.detail}`).join(" ")}`;
-  assert.ok(
-    pairText.toLowerCase().includes("column") &&
-      pairText.toLowerCase().includes("auto"),
-    "Pair guidance covers column selection and automatic completion",
-  );
-
-  const cpText = `${QUIZ_UI_HINTS.CP.shortHint} ${QUIZ_UI_HINTS.CP.steps.map((s) => s.detail).join(" ")}`;
-  assert.ok(
-    cpText.includes("index.html") &&
-      cpText.includes("style.css") &&
-      cpText.includes("script.js") &&
-      cpText.includes("Ctrl/Cmd + Enter"),
-    "CP guidance documents HTML/CSS/JS tabs and Ctrl/Cmd + Enter shortcut",
-  );
-  console.log("  ✓ Per-type UI interaction details verified");
-
-  // 4. Component wiring & existing pass-guard preservation checks
-  const quizHeader = readSource("app/quiz/components/QuizHeader.tsx");
-  assert.ok(
-    quizHeader.includes("quiz-help-button") &&
-      quizHeader.includes("onToggleHelp"),
-    "QuizHeader wires help button trigger",
-  );
-
-  const quizQuestionView = readSource(
-    "app/quiz/components/QuizQuestionView.tsx",
+    QUIZ_UI_HINTS.MCQ.steps.some((s) => s.whatToDo.includes("1–5")),
+    "MCQ tutorial covers 1-5 shortcuts",
   );
   assert.ok(
-    quizQuestionView.includes("QuizUiHintBar") &&
-      quizQuestionView.includes("resolveQuizHintMode"),
-    "QuizQuestionView renders QuizUiHintBar for active question type",
+    QUIZ_UI_HINTS.FITB.steps.some((s) =>
+      s.whatToDo.toLowerCase().includes("case-insensitive"),
+    ),
+    "FITB tutorial explains case-insensitive evaluation",
+  );
+  assert.ok(
+    QUIZ_UI_HINTS.Order.steps.some((s) => s.whatToDo.includes("⋮⋮")) &&
+      QUIZ_UI_HINTS.Order.steps.some(
+        (s) => s.whatToDo.includes("↑") && s.whatToDo.includes("↓"),
+      ),
+    "Order tutorial covers drag handle and ↑/↓ arrow controls",
+  );
+  assert.ok(
+    QUIZ_UI_HINTS.Pair.steps.some((s) =>
+      s.whatToDo.toLowerCase().includes("automatically"),
+    ),
+    "Pair tutorial explains automatic completion",
+  );
+  assert.ok(
+    QUIZ_UI_HINTS.CP.steps.some(
+      (s) => s.title.includes("index.html") || s.whatToDo.includes("index.html"),
+    ) &&
+      QUIZ_UI_HINTS.CP.steps.some((s) => s.whatToDo.includes("Ctrl/Cmd + Enter")),
+    "CP tutorial covers file tabs and Ctrl/Cmd + Enter",
+  );
+  console.log("  ✓ Domain-accurate per-mode walkthrough guidance verified");
+
+  // 4. Spotlight, Popover & Arrow Geometry Math
+  const desktopSpotlight = computeSpotlightRect(
+    { left: 200, top: 140, width: 320, height: 120 },
+    1280,
+    720,
+    8,
+  );
+  assert.deepEqual(desktopSpotlight, {
+    left: 192,
+    top: 132,
+    width: 336,
+    height: 136,
+  });
+
+  const clampedSpotlight = computeSpotlightRect(
+    { left: 0, top: 0, width: 2000, height: 1000 },
+    375,
+    667,
+    8,
+  );
+  assert.ok(
+    clampedSpotlight.left >= 4 &&
+      clampedSpotlight.top >= 4 &&
+      clampedSpotlight.left + clampedSpotlight.width <= 371 &&
+      clampedSpotlight.top + clampedSpotlight.height <= 663,
+    "computeSpotlightRect clamps cleanly inside viewport bounds",
   );
 
-  const quizLandingClient = readSource("app/quiz/QuizLandingClient.tsx");
+  const bottomLayout = computePopoverLayout(
+    desktopSpotlight,
+    380,
+    260,
+    1280,
+    720,
+    "bottom",
+  );
+  assert.equal(bottomLayout.placement, "bottom");
   assert.ok(
-    quizLandingClient.includes("QuizUiHintModal") &&
-      quizLandingClient.includes("QuizUiHintBar") &&
-      quizLandingClient.includes(
+    bottomLayout.top >= desktopSpotlight.top + desktopSpotlight.height,
+    "Bottom popover sits cleanly below spotlight without overlap",
+  );
+
+  const mobileLayout = computePopoverLayout(
+    { left: 20, top: 520, width: 335, height: 80 },
+    380,
+    280,
+    375,
+    667,
+    "bottom",
+  );
+  assert.ok(
+    mobileLayout.left >= 12 &&
+      mobileLayout.top >= 12 &&
+      mobileLayout.left + mobileLayout.width <= 363 &&
+      mobileLayout.top + 280 <= 655,
+    "Mobile popover stays completely within 375x667 viewport",
+  );
+
+  const arrow = computeArrowPath(
+    {
+      left: bottomLayout.left,
+      top: bottomLayout.top,
+      width: bottomLayout.width,
+      height: 260,
+    },
+    desktopSpotlight,
+    bottomLayout.placement,
+  );
+  assert.ok(
+    arrow.path.startsWith("M ") && arrow.path.includes(" Q "),
+    `Expected quadratic Bezier SVG arrow path, got: ${arrow.path}`,
+  );
+  assert.ok(
+    arrow.end.y < arrow.start.y,
+    "Bottom-placed card arrow points upward toward spotlight",
+  );
+
+  const cutoutPath = buildBackdropCutoutPath(1280, 720, desktopSpotlight);
+  assert.ok(
+    cutoutPath.startsWith("M 0 0 H 1280 V 720 H 0 Z M "),
+    "buildBackdropCutoutPath constructs full-screen outer + rounded hole cutout",
+  );
+  console.log("  ✓ Spotlight, popover layout, cutout & curved arrow geometry verified");
+
+  // 5. Live DOM anchor integrity across component source files
+  const anchoredSources = [
+    "app/quiz/components/QuizHeader.tsx",
+    "app/components/quiz/InlineCodeText.tsx",
+    "app/quiz/components/QuizFooter.tsx",
+    "app/components/quiz/HeartsDisplay.tsx",
+    "app/components/quiz/MCQ.tsx",
+    "app/components/quiz/FITB.tsx",
+    "app/components/quiz/Order.tsx",
+    "app/components/quiz/Pair.tsx",
+    "app/components/LessonCard.tsx",
+    "app/quiz-cp/components/CpInstructionsPane.tsx",
+    "app/quiz-cp/components/CpEditorPane.tsx",
+    "app/quiz-cp/components/CpPreviewPane.tsx",
+    "app/quiz-cp/components/CpMobileChrome.tsx",
+  ]
+    .map(readSource)
+    .join("\n");
+
+  for (const key of referencedTutorialKeys) {
+    assert.ok(
+      anchoredSources.includes(`"${key}"`),
+      `Missing live component anchor for data-tutorial="${key}"`,
+    );
+  }
+  console.log(
+    `  ✓ All ${referencedTutorialKeys.size} live component data-tutorial anchors verified`,
+  );
+
+  // 6. Overlay integration & pass-guard preservation
+  const quizLanding = readSource("app/quiz/QuizLandingClient.tsx");
+  assert.ok(
+    quizLanding.includes("QuizTutorialOverlay") &&
+      quizLanding.includes("useIsHydrated") &&
+      quizLanding.includes("shouldAutoOpenTutorial") &&
+      quizLanding.includes(
         "const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);",
       ),
-    "QuizLandingClient wires hints modal/bar while preserving strict pass guard",
-  );
-
-  const cpHeader = readSource("app/quiz-cp/components/CpHeader.tsx");
-  assert.ok(
-    cpHeader.includes("quiz-help-button") && cpHeader.includes("onToggleHelp"),
-    "CpHeader wires help button trigger",
-  );
-
-  const cpInstructions = readSource(
-    "app/quiz-cp/components/CpInstructionsPane.tsx",
-  );
-  assert.ok(
-    cpInstructions.includes('<QuizUiHintBar mode="CP"'),
-    "CpInstructionsPane renders compact QuizUiHintBar for CP mode",
+    "QuizLandingClient wires QuizTutorialOverlay + hydration-safe auto-start + strict pass guard",
   );
 
   const cpRunner = readSource("app/quiz-cp/CodeProblemRunner.tsx");
   assert.ok(
-    cpRunner.includes("QuizUiHintModal") &&
-      cpRunner.includes('activeMode="CP"'),
-    "CodeProblemRunner wires QuizUiHintModal for CP mode",
+    cpRunner.includes("QuizTutorialOverlay") &&
+      cpRunner.includes('mode="CP"') &&
+      cpRunner.includes("onPrepareStep={handlePrepareTutorialStep}"),
+    "CodeProblemRunner wires QuizTutorialOverlay with mobile tab preparation",
   );
-  console.log("  ✓ Component integration checks passed");
+  console.log("  ✓ QuizLandingClient & CodeProblemRunner wiring verified");
 
-  console.log("\n🎉 All quiz UI interaction hint tests passed!");
+  console.log("\n🎉 All interactive arrow tutorial tests passed!");
 }
 
 runTests();

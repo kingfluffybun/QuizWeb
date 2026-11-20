@@ -15,6 +15,7 @@ export default function MCQ({
     <div
       className={`options-container${disabled ? " is-locked" : ""}`}
       id="multiple-choice"
+      data-tutorial="mcq-options"
     >
       {options.map((option, index) => (
         <label

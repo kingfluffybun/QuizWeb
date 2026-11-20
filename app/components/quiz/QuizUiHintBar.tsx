@@ -35,7 +35,7 @@ export default function QuizUiHintBar({
           data-quiz-help-trigger
           onClick={onOpenGuide}
         >
-          How to use
+          Start Tutorial →
         </button>
         <button
           type="button"

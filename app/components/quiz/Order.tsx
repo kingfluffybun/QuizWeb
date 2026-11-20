@@ -151,7 +151,10 @@ export default function Order({
 
   return (
     <div className={`options-container row${disabled ? " is-locked" : ""}`} id="order">
-      <div className={`order-options col ${draggedIdx !== null ? "is-dragging" : ""}`}>
+      <div
+        className={`order-options col ${draggedIdx !== null ? "is-dragging" : ""}`}
+        data-tutorial="order-list"
+      >
         {keyedItems.map(({ item, key }, index) => {
           const isMoved = swapAnimation?.to === index;
           const isShifted =
@@ -183,6 +186,7 @@ export default function Order({
               >
                 <span
                   className="order-grip"
+                  data-tutorial={index === 0 ? "order-grip" : undefined}
                   onPointerDown={(event) => handleGripPointerDown(event, index)}
                   onPointerMove={handleGripPointerMove}
                   onPointerUp={handleGripPointerEnd}
@@ -210,7 +214,10 @@ export default function Order({
                   </svg>
                 </span>
                 <p>{item}</p>
-                <span className="order-move-btns">
+                <span
+                  className="order-move-btns"
+                  data-tutorial={index === 0 ? "order-move-btns" : undefined}
+                >
                   <button
                     type="button"
                     className="order-move-btn"

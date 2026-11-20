@@ -141,7 +141,10 @@ export function CpMobileActionBar({
   onSubmitStep,
 }: CpMobileActionBarProps) {
   return (
-    <div className={`cp-mobile-actionbar${activeFile === "js" ? "" : " no-run"}`}>
+    <div
+      className={`cp-mobile-actionbar${activeFile === "js" ? "" : " no-run"}`}
+      data-tutorial="cp-mobile-reset-run"
+    >
       <button
         type="button"
         className="cp-mobile-action-btn"
@@ -163,6 +166,7 @@ export function CpMobileActionBar({
       <button
         type="button"
         className="cp-mobile-action-btn primary"
+        data-tutorial="cp-mobile-submit"
         onClick={onSubmitStep}
         disabled={!problem || isLoading || isSubmitting}
       >

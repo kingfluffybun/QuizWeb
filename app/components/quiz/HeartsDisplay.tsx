@@ -16,6 +16,7 @@ export default function HeartsDisplay({
   return (
     <div
       className="heart-container"
+      data-tutorial="quiz-hearts"
       data-lives={lives}
       title={title}
       aria-label={ariaLabel ?? `${lives} of ${total} hearts remaining`}

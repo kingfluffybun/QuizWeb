@@ -176,7 +176,10 @@ export function LessonCodeFrame({
                 <div className="circle"></div>
             </div>
             {toggleable && !editorOnly && (
-              <div className="lesson-code-frame-controls-pill">
+              <div
+                className="lesson-code-frame-controls-pill"
+                data-tutorial="lesson-code-toggle"
+              >
                   <button type="button" className={`lesson-code-frame-tab${view === "code" ? " active" : ""}`} aria-pressed={view === "code"} onClick={() => { cancelEditorResize(); setView("code"); }} > <p>Code</p> </button>
                   <button type="button" className={`lesson-code-frame-tab${view === "result" ? " active" : ""}`} aria-pressed={view === "result"} onClick={() => { cancelEditorResize(); setView("result"); }} > <p>Result</p> </button>
               </div>
@@ -293,7 +296,7 @@ export default function LessonCard({
           source={slide.lesson_code}
         />
       )}
-      <div className="lesson-text-container">
+      <div className="lesson-text-container" data-tutorial="lesson-content">
         {slide.lesson_title && <h1 className="lesson-slide-title">{slide.lesson_title}</h1>}
         {slide.lesson_text && (
           <div className="lesson-card-text">

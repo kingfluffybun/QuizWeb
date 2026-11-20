@@ -138,7 +138,7 @@ export default function PairQuestion({
 
   return (
     <div className={`options-container row${disabled ? " is-locked" : ""}`} id="pair">
-      <div className="pair-left-column col">
+      <div className="pair-left-column col" data-tutorial="pair-left">
         {leftItems.map((item, index) => {
           const inputId = `pair-left-${quiz.quiz_id ?? 0}-${index}`;
           const isItemMatched = resolvedMatchedLeft.includes(item);
@@ -164,7 +164,7 @@ export default function PairQuestion({
           );
         })}
       </div>
-      <div className="pair-right-column col">
+      <div className="pair-right-column col" data-tutorial="pair-right">
         {rightItems.map((item, index) => {
           const inputId = `pair-right-${quiz.quiz_id ?? 0}-${index}`;
           const isItemMatched = resolvedMatchedRight.includes(item);

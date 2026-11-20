@@ -61,7 +61,7 @@ export default function QuizFooter({
         {lessonProgressError && <p role="alert">{lessonProgressError}</p>}
 
         {isShowingLesson ? (
-          <div className="lesson-footer-controls">
+          <div className="lesson-footer-controls" data-tutorial="lesson-nav">
             <button
               type="button"
               className="options"
@@ -149,6 +149,7 @@ export default function QuizFooter({
             <button
               className="options"
               id="skip"
+              data-tutorial="quiz-skip"
               type="button"
               onClick={onSkipQuestion}
               disabled={!quiz || Boolean(result)}
@@ -158,6 +159,7 @@ export default function QuizFooter({
             <button
               className="options"
               id="submit"
+              data-tutorial="quiz-submit"
               type="button"
               onClick={result ? onContinueQuiz : onSubmitAnswer}
               disabled={!quiz || (!result && isAnswerIncomplete)}

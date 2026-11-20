@@ -23,7 +23,7 @@ export default function CpPreviewPane({
   consoleMessages,
 }: CpPreviewPaneProps) {
   return (
-    <div id="preview">
+    <div id="preview" data-tutorial="cp-preview">
       <div className="header">
         <div>
           <svg

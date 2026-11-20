@@ -11,9 +11,10 @@ import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import CompletionScreen from "@/app/components/quiz/CompletionScreen";
 import QuizUiHintBar from "@/app/components/quiz/QuizUiHintBar";
-import QuizUiHintModal from "@/app/components/quiz/QuizUiHintModal";
+import QuizTutorialOverlay from "@/app/components/quiz/QuizTutorialOverlay";
 import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
+import { useIsHydrated, useQuizHintsPrefs } from "@/lib/quiz-hints-store";
 import { resolveQuizHintMode } from "@/lib/quiz-ui-hints";
 import { useQuizSounds } from "@/app/quiz/useQuizSounds";
 import { recordQuizCompletion } from "@/app/actions/streak";
@@ -123,6 +124,12 @@ export default function QuizLandingClient({
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [accessibilityClosing, setAccessibilityClosing] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const isHydrated = useIsHydrated();
+  const {
+    prefs: hintPrefs,
+    hasSeenTutorial,
+    markTutorialSeen,
+  } = useQuizHintsPrefs();
   const startedAtRef = useRef<number>(0);
   const [finalElapsedSeconds, setFinalElapsedSeconds] = useState(0);
   const [lessonProgressState, setLessonProgressState] = useState<
@@ -593,6 +600,18 @@ export default function QuizLandingClient({
     }
   });
 
+  const areChoicesLocked = Boolean(result);
+  const activeHintMode = resolveQuizHintMode(quiz?.type_name, isShowingLesson);
+  const isTutorialReady = isShowingLesson || Boolean(quiz);
+  const shouldAutoOpenTutorial =
+    isHydrated &&
+    !isFinished &&
+    !accessibilityOpen &&
+    isTutorialReady &&
+    hintPrefs.autoShowTutorials &&
+    !hasSeenTutorial(activeHintMode);
+  const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isFinished) return;
@@ -613,14 +632,19 @@ export default function QuizLandingClient({
         !isTextInputTarget
       ) {
         event.preventDefault();
-        if (accessibilityOpen) {
-          setAccessibilityClosing(true);
+        if (isTutorialOpen) {
+          markTutorialSeen(activeHintMode);
+          setHelpOpen(false);
+        } else {
+          if (accessibilityOpen) {
+            setAccessibilityClosing(true);
+          }
+          setHelpOpen(true);
         }
-        setHelpOpen((open) => !open);
         return;
       }
 
-      if (isShowingLesson || helpOpen || accessibilityOpen) return;
+      if (isShowingLesson || isTutorialOpen || accessibilityOpen) return;
 
       if (
         event.key === "Enter" &&
@@ -663,9 +687,16 @@ export default function QuizLandingClient({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [quiz, result, isFinished, isShowingLesson, helpOpen, accessibilityOpen]);
-
-  const areChoicesLocked = Boolean(result);
+  }, [
+    quiz,
+    result,
+    isFinished,
+    isShowingLesson,
+    isTutorialOpen,
+    accessibilityOpen,
+    activeHintMode,
+    markTutorialSeen,
+  ]);
 
   if (isFinished) {
     const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);
@@ -869,14 +900,18 @@ export default function QuizLandingClient({
             if (accessibilityOpen) {
               setAccessibilityClosing(true);
             } else {
-              setHelpOpen(false);
+              if (isTutorialOpen) {
+                markTutorialSeen(activeHintMode);
+                setHelpOpen(false);
+              }
               setAccessibilityClosing(false);
               setAccessibilityOpen(true);
             }
           }}
-          helpOpen={helpOpen}
+          helpOpen={isTutorialOpen}
           onToggleHelp={() => {
-            if (helpOpen) {
+            if (isTutorialOpen) {
+              markTutorialSeen(activeHintMode);
               setHelpOpen(false);
             } else {
               if (accessibilityOpen) setAccessibilityClosing(true);
@@ -901,10 +936,14 @@ export default function QuizLandingClient({
           />
         )}
 
-        <QuizUiHintModal
-          isOpen={helpOpen}
-          activeMode={resolveQuizHintMode(quiz?.type_name, isShowingLesson)}
-          onClose={() => setHelpOpen(false)}
+        <QuizTutorialOverlay
+          isOpen={isTutorialOpen}
+          mode={activeHintMode}
+          onClose={() => {
+            markTutorialSeen(activeHintMode);
+            setHelpOpen(false);
+          }}
+          onKeepOpen={() => setHelpOpen(true)}
         />
 
         <div
