@@ -469,8 +469,6 @@ function runTests() {
     storageData.set(
       getQuizHintsStorageKey("1"),
       JSON.stringify({
-        showInlineHints: true,
-        dismissedModes: [],
         autoShowTutorials: true,
         seenTutorialModes: ["Home", "Learn", "MCQ"],
         welcomeTourCompleted: true,
@@ -554,8 +552,53 @@ function runTests() {
     tutorialCssSource.includes("z-index: 10050") &&
       tutorialCssSource.includes(".quiz-tutorial-overlay:not(.is-ready)") &&
       tutorialCssSource.includes(".quiz-tutorial-overlay.is-ready") &&
-      tutorialCssSource.includes('html[data-motion="reduce"] .quiz-tutorial-overlay'),
-    "public/css/tutorial-overlay.css renders above sidebar, blocks pointer events until ready & respects reduced motion",
+      tutorialCssSource.includes('html[data-motion="reduce"] .quiz-tutorial-overlay') &&
+      !tutorialCssSource.includes(".quiz-ui-hint-bar"),
+    "public/css/tutorial-overlay.css renders above sidebar, blocks pointer events until ready, drops hint bar CSS & respects reduced motion",
+  );
+
+  assert.equal(
+    fs.existsSync(
+      path.resolve(process.cwd(), "app/components/quiz/QuizUiHintBar.tsx"),
+    ),
+    false,
+    "Inline QuizUiHintBar component is completely removed",
+  );
+
+  const quizHeaderSource = readSource("app/quiz/components/QuizHeader.tsx");
+  const cpHeaderSource = readSource("app/quiz-cp/components/CpHeader.tsx");
+  for (const [label, src] of [
+    ["QuizHeader", quizHeaderSource],
+    ["CpHeader", cpHeaderSource],
+  ] as const) {
+    assert.ok(
+      src.includes('data-tutorial="quiz-help"') &&
+        src.includes('Open hints (?)'),
+      `${label} exposes ? button anchor with data-tutorial="quiz-help" and hints label`,
+    );
+  }
+
+  for (const mode of ["MCQ", "CP", "Lesson"] as const) {
+    assert.ok(
+      QUIZ_UI_HINTS[mode].steps.some((step) =>
+        step.targetSelectors.includes('[data-tutorial="quiz-help"]'),
+      ),
+      `${mode} walkthrough directly points to the ? header button for hints`,
+    );
+  }
+
+  const questionViewSource = readSource(
+    "app/quiz/components/QuizQuestionView.tsx",
+  );
+  const cpInstructionsSource = readSource(
+    "app/quiz-cp/components/CpInstructionsPane.tsx",
+  );
+  assert.ok(
+    !questionViewSource.includes("QuizUiHintBar") &&
+      !questionViewSource.includes("showHintBar") &&
+      !cpInstructionsSource.includes("QuizUiHintBar") &&
+      !cpInstructionsSource.includes("showHintBar"),
+    "QuizQuestionView and CpInstructionsPane contain no inline hint bar",
   );
 
   const rootLayoutSource = readSource("app/layout.tsx");
@@ -607,14 +650,15 @@ function runTests() {
       quizLanding.includes("isOnboardingReady") &&
       quizLanding.includes("shouldAutoOpenTutorial") &&
       quizLanding.includes("resolvedIsTutorialUnit") &&
-      quizLanding.includes("showHelpButton={resolvedIsTutorialUnit}") &&
-      quizLanding.includes("showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}") &&
+      !quizLanding.includes("QuizUiHintBar") &&
+      !quizLanding.includes("showHintBar") &&
+      quizLanding.includes("const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;") &&
       quizLanding.includes("isTutorialOpen && (") &&
       quizLanding.includes("key={activeHintMode}") &&
       quizLanding.includes(
         "const isPassed = lives > 0 && (quizzes.length === 0 || score >= quizzes.length);",
       ),
-    "QuizLandingClient wires DB-synced Unit 1 gating, clean overlay remount, hidden hint bar during overlay & strict pass guard",
+    "QuizLandingClient gates auto-open to Unit 1, removes inline hint bar, keeps ? hints openable & preserves pass guard",
   );
 
   const cpRunner = readSource("app/quiz-cp/CodeProblemRunner.tsx");
@@ -624,10 +668,10 @@ function runTests() {
       cpRunner.includes("onPrepareStep={handlePrepareTutorialStep}") &&
       cpRunner.includes("isOnboardingReady") &&
       cpRunner.includes("resolvedIsTutorialUnit") &&
-      cpRunner.includes("showHelpButton={resolvedIsTutorialUnit}") &&
-      cpRunner.includes("showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}") &&
+      !cpRunner.includes("showHintBar") &&
+      cpRunner.includes("const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;") &&
       cpRunner.includes("isTutorialOpen && ("),
-    "CodeProblemRunner wires DB-synced Unit 1 gating + mobile tab preparation + clean overlay mount",
+    "CodeProblemRunner gates auto-open to Unit 1, removes inline hint bar, keeps ? hints openable & prepares mobile tabs",
   );
 
   const skipPage = readSource("app/quiz-cp/skip/[targetSecId]/page.tsx");

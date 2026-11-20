@@ -25,22 +25,20 @@ used for project status.
 
 ## Current work
 
-Completed. Fixed tutorial visibility bugs (global un-scoped storage collisions, sidebar z-index overlap, portal rendering, global stylesheet loading, and settle failsafe) and implemented a database-backed, system-wide first-login interactive tutorial across QuizWeb on branch `nextjs`.
+Completed. Removed the inline hint bar completely (`QuizUiHintBar`) and directed all hint triggers and walkthrough references strictly to the header `?` button (`data-tutorial="quiz-help"`) on branch `nextjs`.
 
 Completed changes (`nextjs`):
-- `migrations/018_user_onboarding_tutorial.sql` & `migrations/018_user_onboarding_tutorial_rollback.sql`: Added `user_onboarding_tbl` (`user_id`, `tutorial_enabled`, `welcome_tour_completed`, `seen_modes`, `first_login_at`, `welcome_completed_at`, timestamps), backfilled existing accounts so only newly registered users auto-start the onboarding tour, and registered migration `018`.
-- `lib/server/onboarding.ts`, `app/api/onboarding/route.ts`, `app/actions/onboarding.ts`, `lib/server/auth/registration.ts`, & `lib/auth-oauth.ts`: Implemented DB onboarding initialization on email verification and OAuth first sign-in (`initializeUserOnboardingRow`), `GET/PATCH /api/onboarding`, and server actions with graceful `ER_NO_SUCH_TABLE` fallback before migration `018` runs.
-- `lib/quiz-hints-store.ts`: Replaced single browser-wide storage key with user-scoped keys (`quizweb-ui-hints-prefs:u:<userId>` / `:guest`), added DB hydration (`beginOnboardingUserSync`, `hydrateUserOnboarding`, `markOnboardingSyncFailed`, `clearActiveOnboardingUser`), `replaySystemTutorial()`, and automatic `/api/onboarding` `PATCH` syncing.
-- `lib/quiz-ui-hints.ts` & `lib/unit1-onboarding-quizzes.ts`: Added system-wide `Home` (7 steps) and `Learn` (3 steps) tutorial modes (`APP_TUTORIAL_MODE_ORDER`, `ALL_TUTORIAL_MODE_ORDER`, 39 steps total across 8 modes) and `canonicalFirstUnitId` matching in `isOnboardingTutorialUnit` / `ensureUnit1AllQuizTypes`.
-- `public/css/tutorial-overlay.css`, `public/css/quiz.css`, `public/css/sidebar.css`, `app/layout.tsx`, & `app/components/quiz/QuizTutorialOverlay.tsx`: Extracted tutorial styles globally into `public/css/tutorial-overlay.css` (imported in `app/layout.tsx`) with `z-index: 10050`/`10060` above sidebar (`9999`), pointer-events guard on `:not(.is-ready)`, `document.body` `createPortal`, hard `revealFailsafeTimer`, and `primaryFinishLabel`/`onPrimaryFinish`.
-- `app/components/SystemTutorialOrchestrator.tsx`, `app/components/SessionWrapper.tsx`, & UI anchors/triggers: Mounted global orchestrator for first-login `Home` -> `Learn` walkthroughs; added 38 total `data-tutorial` anchors and Replay Tutorial controls in `Sidebar.tsx`, `MobileShell.tsx`, `AccessibilityTab.tsx`, `app/home/page.tsx`, `DailyGoalCard.tsx`, `StreakCalendar.tsx`, `Leaderboard.tsx`, `SectionDetailRail.tsx`, and `SectionUnitGroup.tsx`; wired `canonicalFirstUnitId` and `isOnboardingReady` gating into `app/quiz/[unitId]/page.tsx`, `app/quiz-cp/[unitId]/page.tsx`, `QuizLandingClient.tsx`, and `CodeProblemRunner.tsx`.
-- `tests/test-quiz-ui-hints.ts`: Expanded to verify all 8 modes (39 steps), all 38 DOM anchors, per-user storage isolation & DB/fallback hydration, portal + failsafe overlay, global CSS, orchestrator + registration wiring, API route, and Migrations `017` & `018`.
+- Removed `app/components/quiz/QuizUiHintBar.tsx` and stripped inline hint bar props/rendering from `app/quiz/QuizLandingClient.tsx`, `app/quiz/components/QuizQuestionView.tsx`, `app/quiz-cp/CodeProblemRunner.tsx`, and `app/quiz-cp/components/CpInstructionsPane.tsx`.
+- Removed `.quiz-ui-hint-bar*` CSS rules from `public/css/tutorial-overlay.css` and removed `showInlineHints`/`dismissedModes` store fields from `lib/quiz-hints-store.ts`.
+- Added `data-tutorial="quiz-help"` (`aria-label` `"Open hints (?)"` / `"Close hints"`, `title="Hints (?)"`) on `.quiz-help-button` in `app/quiz/components/QuizHeader.tsx` and `app/quiz-cp/components/CpHeader.tsx`. Kept auto-opening tutorials gated on Unit 1 Section 1 (`resolvedIsTutorialUnit`) while making the `?` button and `?` shortcut available on all `/quiz` and `/quiz-cp` sessions for on-demand hints.
+- Updated `lib/quiz-ui-hints.ts` (`MCQ`, `FITB`, `Order`, `Pair`, `CP`, `Lesson` — `42` steps across all `8` modes) to point directly at `[data-tutorial="quiz-help"]` / `?` with `"Open hints"` copy and removed references to any other hint bar/button.
+- Updated `tests/test-quiz-ui-hints.ts` to assert deletion of `QuizUiHintBar.tsx`, absence of hint bar markup/styles, header `?` anchors, and all `42` steps / `39` `data-tutorial` anchors.
 
 Validation completed:
 - `npx.cmd tsc --noEmit` (0 errors)
 - `npm.cmd run lint` (0 errors, 0 warnings)
 - `npm.cmd run build` (clean production build; Next.js `16.4.6` Turbopack, `18/18` static pages + `/api/onboarding`)
-- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all 11 assertion blocks passing: 8 modes / 39 steps, geometry + interpolation, 38 DOM anchors, per-user storage & DB hydration, portal overlay, system orchestrator, Unit 1 gating, Migrations `017` & `018`)
+- `npx.cmd tsx tests/test-quiz-ui-hints.ts` (all assertion blocks passing: 8 modes / 42 steps, 39 DOM anchors, no hint bar, `?` anchors, Migrations `017` & `018`)
 - `npx.cmd tsx tests/test-cp-engine.ts` (15/15 passing)
 - `npx.cmd tsx tests/test-assessment-json-import.ts` (exit 0)
 - `npx.cmd tsx tests/test-leaderboard-period.ts` (5/5 passing)
@@ -54,6 +52,8 @@ the section with the completed changes and validation results, then append a
 handoff-history entry.
 
 ## Handoff history
+
+- 2026-11-20: Removed the inline hint bar (`QuizUiHintBar.tsx` + `.quiz-ui-hint-bar*` CSS + store flags) and directed all hint triggers and walkthrough guidance strictly to the header `?` button (`data-tutorial="quiz-help"` in `QuizHeader.tsx` & `CpHeader.tsx`, `MCQ`/`FITB`/`Order`/`Pair`/`CP`/`Lesson` copy & `42` total steps in `lib/quiz-ui-hints.ts`, `tests/test-quiz-ui-hints.ts`). Verified with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, `test-quiz-ui-hints`, `test-cp-engine` (15/15), `test-assessment-json-import`, `test-leaderboard-period` (5/5), `test-phase2-rendering`, `test-phase3-optimization`, and static pass-completion/skip checks.
 
 - 2026-11-20: Fixed tutorial visibility bugs and added a DB-backed, system-wide first-login tutorial for newly registered users on `nextjs` (`migrations/018_user_onboarding_tutorial.sql` + rollback, `lib/server/onboarding.ts`, `app/api/onboarding/route.ts`, `app/actions/onboarding.ts`, `registration.ts`, `auth-oauth.ts`, `lib/quiz-hints-store.ts`, `lib/quiz-ui-hints.ts`, `public/css/tutorial-overlay.css`, `app/layout.tsx`, `QuizTutorialOverlay.tsx`, `SystemTutorialOrchestrator.tsx`, `SessionWrapper.tsx`, `Sidebar.tsx`, `MobileShell.tsx`, `AccessibilityTab.tsx`, `/home` & `/learn` anchors, `/quiz` & `/quiz-cp` `canonicalFirstUnitId`/`isOnboardingReady` gating, `tests/test-quiz-ui-hints.ts`). Scoped storage per user with `user_onboarding_tbl` sync, moved overlay styles globally above sidebar (`z-index: 10050`), rendered via `document.body` portal with `revealFailsafeTimer`, added `Home` (`7` steps) and `Learn` (`3` steps) first-login walkthroughs, and added Replay Tutorial controls in Sidebar, Mobile drawer, and Settings. Verified with `tsc` (0 errors), `eslint` (0 errors, 0 warnings), `next build`, `test-quiz-ui-hints`, `test-cp-engine` (15/15), `test-assessment-json-import`, `test-leaderboard-period` (5/5), `test-phase2-rendering`, `test-phase3-optimization`, and static pass-completion/skip checks.
 

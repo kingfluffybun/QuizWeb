@@ -120,8 +120,7 @@ export function CodeProblemRunner({
     isTutorialReady &&
     hintPrefs.autoShowTutorials &&
     !hasSeenTutorial("CP");
-  const isTutorialOpen =
-    resolvedIsTutorialUnit && (helpOpen || shouldAutoOpenTutorial);
+  const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;
 
   const handlePrepareTutorialStep = useCallback(
     (step: QuizTutorialStep) => {
@@ -135,7 +134,6 @@ export function CodeProblemRunner({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
-        !resolvedIsTutorialUnit ||
         isFinished ||
         isTyping ||
         event.key !== "?" ||
@@ -170,7 +168,6 @@ export function CodeProblemRunner({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    resolvedIsTutorialUnit,
     isFinished,
     isTyping,
     isTutorialOpen,
@@ -337,7 +334,6 @@ export function CodeProblemRunner({
               setAccessibilityOpen(true);
             }
           }}
-          showHelpButton={resolvedIsTutorialUnit}
           helpOpen={isTutorialOpen}
           onToggleHelp={() => {
             if (isTutorialOpen) {
@@ -428,11 +424,6 @@ export function CodeProblemRunner({
               skipPayload={session.skipPayload}
               queueIndex={session.queueIndex}
               isSkipMode={Boolean(requestedSkipTargetSecId && session.skipPayload)}
-              showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}
-              onOpenHelp={() => {
-                if (accessibilityOpen) setAccessibilityClosing(true);
-                setHelpOpen(true);
-              }}
             />
 
             <CpEditorPane

@@ -11,7 +11,6 @@ import type { AnswerValue, QuizData } from "@/app/quiz/types";
 import LessonCard from "@/app/components/LessonCard";
 import Sidebar from "@/app/components/Sidebar";
 import CompletionScreen from "@/app/components/quiz/CompletionScreen";
-import QuizUiHintBar from "@/app/components/quiz/QuizUiHintBar";
 import QuizTutorialOverlay from "@/app/components/quiz/QuizTutorialOverlay";
 import { useAnimatedStats } from "@/app/components/quiz/useAnimatedStats";
 import AccessibilityPanel from "@/app/settings/AccessibilityPanel";
@@ -633,8 +632,7 @@ export default function QuizLandingClient({
     isTutorialReady &&
     hintPrefs.autoShowTutorials &&
     !hasSeenTutorial(activeHintMode);
-  const isTutorialOpen =
-    resolvedIsTutorialUnit && (helpOpen || shouldAutoOpenTutorial);
+  const isTutorialOpen = helpOpen || shouldAutoOpenTutorial;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -649,7 +647,6 @@ export default function QuizLandingClient({
           ));
 
       if (
-        resolvedIsTutorialUnit &&
         event.key === "?" &&
         !event.ctrlKey &&
         !event.metaKey &&
@@ -718,7 +715,6 @@ export default function QuizLandingClient({
     isFinished,
     isShowingLesson,
     isTutorialOpen,
-    resolvedIsTutorialUnit,
     accessibilityOpen,
     activeHintMode,
     markTutorialSeen,
@@ -934,7 +930,6 @@ export default function QuizLandingClient({
               setAccessibilityOpen(true);
             }
           }}
-          showHelpButton={resolvedIsTutorialUnit}
           helpOpen={isTutorialOpen}
           onToggleHelp={() => {
             if (isTutorialOpen) {
@@ -988,33 +983,21 @@ export default function QuizLandingClient({
           }}
         >
           {isShowingLesson ? (
-            <>
-              {resolvedIsTutorialUnit && !isTutorialOpen && (
-                <QuizUiHintBar
-                  mode="Lesson"
-                  compact
-                  onOpenGuide={() => {
-                    if (accessibilityOpen) setAccessibilityClosing(true);
-                    setHelpOpen(true);
-                  }}
+            <LessonSlideTransition
+              slideIndex={lessonSlideIndex}
+              slideCount={lessonSlides.length}
+              slideHasCode={(index) => Boolean(lessonSlides[index]?.lesson_code)}
+              renderSlide={(slideIndex) => (
+                <LessonCard
+                  key={`${selectedQuiz?.quiz_id ?? currentIndex}-${slideIndex}`}
+                  slides={lessonSlides}
+                  className="unit-meta"
+                  slideIndex={slideIndex}
+                  onSlideIndexChange={setLessonSlideIndex}
+                  showControls={false}
                 />
               )}
-              <LessonSlideTransition
-                slideIndex={lessonSlideIndex}
-                slideCount={lessonSlides.length}
-                slideHasCode={(index) => Boolean(lessonSlides[index]?.lesson_code)}
-                renderSlide={(slideIndex) => (
-                  <LessonCard
-                    key={`${selectedQuiz?.quiz_id ?? currentIndex}-${slideIndex}`}
-                    slides={lessonSlides}
-                    className="unit-meta"
-                    slideIndex={slideIndex}
-                    onSlideIndexChange={setLessonSlideIndex}
-                    showControls={false}
-                  />
-                )}
-              />
-            </>
+            />
           ) : (
             <QuizQuestionView
               quiz={quiz}
@@ -1025,11 +1008,6 @@ export default function QuizLandingClient({
               disabled={areChoicesLocked}
               onPairMatched={() => playQuizSound("correct-answer1")}
               onIncorrectPair={handleIncorrectPair}
-              showHintBar={resolvedIsTutorialUnit && !isTutorialOpen}
-              onOpenHelp={() => {
-                if (accessibilityOpen) setAccessibilityClosing(true);
-                setHelpOpen(true);
-              }}
             />
           )}
         </div>

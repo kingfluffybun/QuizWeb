@@ -2,8 +2,6 @@
    SYSTEM-WIDE & PER-QUIZ-TYPE INTERACTIVE TUTORIALS
    ========================================= */
 
-.quiz-ui-hint-guide-btn:focus-visible,
-.quiz-ui-hint-dismiss-btn:focus-visible,
 .quiz-tutorial-close:focus-visible,
 .quiz-tutorial-dot:focus-visible,
 .quiz-tutorial-skip-btn:focus-visible,
@@ -11,100 +9,6 @@
 .quiz-tutorial-next-btn:focus-visible {
     outline: 2px solid var(--selected-color);
     outline-offset: 2px;
-}
-
-.quiz-ui-hint-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    background: var(--bg-card);
-    border: 1.5px solid var(--border-main);
-    border-left: 4px solid var(--selected-color);
-    color: var(--text-main);
-    box-sizing: border-box;
-}
-
-.quiz-ui-hint-bar.is-compact {
-    padding: 8px 12px;
-    gap: 8px;
-}
-
-.quiz-ui-hint-badge {
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: rgba(125, 63, 255, 0.12);
-    color: var(--selected-color);
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-
-.quiz-ui-hint-text {
-    flex: 1 1 220px;
-    min-width: 0;
-    margin: 0;
-    font-size: 0.88rem;
-    line-height: 1.4;
-    color: var(--text-muted);
-}
-
-.quiz-ui-hint-bar.is-compact .quiz-ui-hint-text {
-    font-size: 0.82rem;
-}
-
-.quiz-ui-hint-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.quiz-ui-hint-guide-btn {
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border-main);
-    background: var(--bg-main);
-    color: var(--selected-color);
-    font-family: inherit;
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 150ms ease, border-color 150ms ease;
-}
-
-.quiz-ui-hint-guide-btn:hover {
-    background: rgba(125, 63, 255, 0.1);
-    border-color: var(--selected-color);
-}
-
-.quiz-ui-hint-dismiss-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: background-color 150ms ease, color 150ms ease;
-}
-
-.quiz-ui-hint-dismiss-btn:hover {
-    background: rgba(125, 63, 255, 0.08);
-    color: var(--text-main);
 }
 
 /* =========================================
@@ -474,7 +378,6 @@
     cursor: pointer;
 }
 
-[data-theme="dark"] .quiz-ui-hint-badge,
 [data-theme="dark"] .quiz-ui-hint-device-badge,
 [data-theme="dark"] .quiz-tutorial-mode-badge {
     color: #c4b5fd;
@@ -486,7 +389,6 @@
     background: rgba(16, 185, 129, 0.18);
 }
 
-[data-theme="dark"] .quiz-ui-hint-guide-btn,
 [data-theme="dark"] .quiz-tutorial-action-callout {
     color: #c4b5fd;
 }
@@ -500,7 +402,6 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    [data-theme="system"] .quiz-ui-hint-badge,
     [data-theme="system"] .quiz-ui-hint-device-badge,
     [data-theme="system"] .quiz-tutorial-mode-badge {
         color: #c4b5fd;
@@ -512,7 +413,6 @@
         background: rgba(16, 185, 129, 0.18);
     }
 
-    [data-theme="system"] .quiz-ui-hint-guide-btn,
     [data-theme="system"] .quiz-tutorial-action-callout {
         color: #c4b5fd;
     }
@@ -527,21 +427,6 @@
 }
 
 @media (max-width: 768px) {
-    .quiz-ui-hint-bar {
-        padding: 8px 10px;
-        gap: 6px 8px;
-    }
-
-    .quiz-ui-hint-text {
-        flex-basis: 100%;
-        order: 2;
-        font-size: 0.82rem;
-    }
-
-    .quiz-ui-hint-actions {
-        order: 1;
-    }
-
     .quiz-tutorial-card {
         padding: 15px 16px 12px;
         border-radius: 16px;
@@ -557,7 +442,6 @@
     }
 }
 
-html[data-motion="reduce"] .quiz-ui-hint-bar,
 html[data-motion="reduce"] .quiz-tutorial-overlay,
 html[data-motion="reduce"] .quiz-tutorial-card,
 html[data-motion="reduce"] .quiz-tutorial-spotlight-ring,
@@ -567,7 +451,6 @@ html[data-motion="reduce"] .quiz-tutorial-arrow-path {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    html:not([data-motion="normal"]) .quiz-ui-hint-bar,
     html:not([data-motion="normal"]) .quiz-tutorial-overlay,
     html:not([data-motion="normal"]) .quiz-tutorial-card,
     html:not([data-motion="normal"]) .quiz-tutorial-spotlight-ring,

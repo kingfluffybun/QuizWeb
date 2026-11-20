@@ -7,8 +7,6 @@ import {
 } from "@/lib/quiz-ui-hints";
 
 export interface QuizHintsPrefs {
-  showInlineHints: boolean;
-  dismissedModes: QuizHintMode[];
   autoShowTutorials: boolean;
   seenTutorialModes: QuizHintMode[];
   welcomeTourCompleted: boolean;
@@ -33,8 +31,6 @@ export interface ClientOnboardingPayload {
 export const QUIZ_HINTS_STORAGE_KEY = "quizweb-ui-hints-prefs";
 
 export const DEFAULT_QUIZ_HINTS_PREFS: QuizHintsPrefs = {
-  showInlineHints: true,
-  dismissedModes: [],
   autoShowTutorials: true,
   seenTutorialModes: [],
   welcomeTourCompleted: false,
@@ -77,11 +73,6 @@ function normalizePrefs(
   raw: Partial<QuizHintsPrefs> | null | undefined,
 ): QuizHintsPrefs {
   return {
-    showInlineHints:
-      typeof raw?.showInlineHints === "boolean"
-        ? raw.showInlineHints
-        : DEFAULT_QUIZ_HINTS_PREFS.showInlineHints,
-    dismissedModes: normalizeModeList(raw?.dismissedModes),
     autoShowTutorials:
       typeof raw?.autoShowTutorials === "boolean"
         ? raw.autoShowTutorials
@@ -369,8 +360,6 @@ export function setAutoShowTutorialsPref(autoShowTutorials: boolean): void {
 export function replaySystemTutorial(openMode?: QuizHintMode): void {
   const current = getClientState();
   const resetPrefs: QuizHintsPrefs = {
-    showInlineHints: true,
-    dismissedModes: [],
     autoShowTutorials: true,
     seenTutorialModes: [],
     welcomeTourCompleted: false,
@@ -411,18 +400,6 @@ export function useQuizHintsPrefs() {
     requestOpenTutorialMode,
     clearManualOpenMode,
     replaySystemTutorial,
-    isInlineHintVisible: (mode: QuizHintMode) =>
-      prefs.showInlineHints && !prefs.dismissedModes.includes(mode),
-    setShowInlineHints: (showInlineHints: boolean) =>
-      updateQuizHintsPrefs({ showInlineHints }),
-    dismissModeHint: (mode: QuizHintMode) =>
-      updateQuizHintsPrefs((prev) => ({
-        ...prev,
-        dismissedModes: prev.dismissedModes.includes(mode)
-          ? prev.dismissedModes
-          : [...prev.dismissedModes, mode],
-      })),
-    resetDismissedHints: () => updateQuizHintsPrefs({ dismissedModes: [] }),
     hasSeenTutorial: (mode: QuizHintMode) =>
       prefs.seenTutorialModes.includes(mode),
     markTutorialSeen: markTutorialSeenPref,

@@ -1,14 +1,12 @@
 "use client";
 
 import QuizRender from "@/app/components/quiz/quizRender";
-import QuizUiHintBar from "@/app/components/quiz/QuizUiHintBar";
 import {
   getQuizCodeLanguage,
   parseQuizQuestion,
   QuizQuestionCodeBlocks,
   QuizQuestionPrompt,
 } from "@/app/components/quiz/InlineCodeText";
-import { resolveQuizHintMode } from "@/lib/quiz-ui-hints";
 import type { AnswerValue, QuizData } from "@/app/quiz/types";
 
 interface QuizQuestionViewProps {
@@ -20,8 +18,6 @@ interface QuizQuestionViewProps {
   disabled: boolean;
   onPairMatched: () => void;
   onIncorrectPair: () => void;
-  showHintBar?: boolean;
-  onOpenHelp: () => void;
 }
 
 export default function QuizQuestionView({
@@ -33,8 +29,6 @@ export default function QuizQuestionView({
   disabled,
   onPairMatched,
   onIncorrectPair,
-  showHintBar = true,
-  onOpenHelp,
 }: QuizQuestionViewProps) {
   const questionParts = parseQuizQuestion(
     quiz?.question_text ?? "Loading question...",
@@ -59,12 +53,6 @@ export default function QuizQuestionView({
       key={`${quiz?.quiz_id ?? "quiz"}-${currentIndex}`}
     >
       <QuizQuestionPrompt parts={questionParts} />
-      {quiz && showHintBar && (
-        <QuizUiHintBar
-          mode={resolveQuizHintMode(quiz.type_name)}
-          onOpenGuide={onOpenHelp}
-        />
-      )}
       {questionHasCode ? (
         <div className="quiz-question-layout">
           <div className="quiz-question-code-column">

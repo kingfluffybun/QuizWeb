@@ -69,13 +69,10 @@ export default function CpHeader({
             type="button"
             className="quiz-help-button"
             data-quiz-help-trigger
-            aria-label={
-              helpOpen
-                ? "Close interactive tutorial"
-                : "Start interactive tutorial (?)"
-            }
+            data-tutorial="quiz-help"
+            aria-label={helpOpen ? "Close hints" : "Open hints (?)"}
             aria-expanded={helpOpen}
-            title="Start interactive tutorial (?)"
+            title="Hints (?)"
             onClick={onToggleHelp}
           >
             <svg
